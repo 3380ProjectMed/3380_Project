@@ -1,5 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
+// import "./landingpage.css";
+// import "./index.css"; 
 import { Calendar, Stethoscope, Building2, Users, ShieldCheck, Phone, Globe, LogIn, ArrowRight } from "lucide-react";
 // Simple replacements until you add shadcn/ui
 const Button = (props) => <button {...props} className="px-4 py-2 bg-blue-600 text-white rounded-lg" />;
