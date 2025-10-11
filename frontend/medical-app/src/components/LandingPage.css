@@ -25,9 +25,9 @@
   padding: 0 1.5rem;
 }
 
-  html {
+html {
   scroll-padding-top: 70px;
-  }
+}
 
 /* Header */
 .landing-header {
@@ -365,7 +365,7 @@
 /* Contact Section */
 .contact-section {
   padding: 5rem 1.5rem;
-  background: var(--fifth-color);
+  background: white;
 }
 
 .contact-grid {
@@ -376,7 +376,7 @@
 }
 
 .contact-card {
-  background: white;
+  background: linear-gradient(135deg, var(--fifth-color), white);
   padding: 2rem;
   border-radius: 0.75rem;
   border: 1px solid var(--forth-color);
@@ -424,8 +424,98 @@
   font-size: 0.9rem;
 }
 
-.contact-cta {
+/* Location Section */
+.location-section {
+  padding: 5rem 1.5rem;
+  background: var(--fifth-color);
+}
+
+.location-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.location-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--forth-color);
   text-align: center;
+  transition: all 0.3s;
+}
+
+.location-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 119, 182, 0.15);
+}
+
+.location-icon {
+  width: 3rem;
+  height: 3rem;
+  background: linear-gradient(135deg, var(--secondary-color), var(--third-color));
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.location-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: white;
+}
+
+.location-card h3 {
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+}
+
+.location-card p {
+  color: var(--gray);
+  margin: 0.25rem 0;
+  font-size: 0.95rem;
+}
+
+/* FAQ Section */
+.faq-section {
+  padding: 5rem 1.5rem;
+  background: white;
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+.faq-card {
+  background: linear-gradient(135deg, var(--fifth-color), white);
+  padding: 2rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--forth-color);
+  transition: all 0.3s;
+}
+
+.faq-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 119, 182, 0.15);
+}
+
+.faq-card h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 0.75rem;
+}
+
+.faq-card p {
+  color: var(--gray);
+  line-height: 1.6;
+  margin: 0;
 }
 
 /* Footer */
@@ -456,8 +546,9 @@
   }
 
   .about-grid,
-  .contact-grid {
+  .contact-grid,
+  .location-grid,
+  .faq-grid {
     grid-template-columns: 1fr;
   }
-
 }
