@@ -1,62 +1,19 @@
+
 import React from "react";
 import { 
   Calendar, 
   Stethoscope, 
-  Building2, 
-  Users, 
-  ShieldCheck, 
   Phone, 
-  Globe, 
-  LogIn, 
-  ArrowRight 
+  Mail,
+  MapPin,
+  Clock,
+  Users,
+  Heart,
+  Award,
+  ArrowRight,
+  LogIn
 } from "lucide-react";
 import "./landingpage.css";
-
-// Simple button component
-const Button = ({ children, variant = "primary", href }) => {
-  const className = variant === "primary" ? "btn" : "btn alt";
-  return <a href={href} className={className}>{children}</a>;
-};
-
-const features = [
-  {
-    icon: Building2,
-    title: "Multi-Office Support",
-    desc: "Manage locations across states with unified provider & patient records.",
-  },
-  {
-    icon: Stethoscope,
-    title: "Doctor & Patient Mapping",
-    desc: "Assign patients to one or multiple doctors; support primary & specialists.",
-  },
-  {
-    icon: Calendar,
-    title: "Appointments",
-    desc: "Schedule/cancel via phone or web with automated reminders.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Approvals Flow",
-    desc: "Require primary physician approval before booking specialists.",
-  },
-  {
-    icon: Users,
-    title: "Role-Based Access",
-    desc: "Admin, Doctor, and Patient portals with scoped permissions.",
-  },
-  {
-    icon: Globe,
-    title: "Web Portal",
-    desc: "Mobile-first UI, fast search, and secure patient self-service.",
-  },
-];
-
-const stats = [
-  { label: "Offices", value: "12+" },
-  { label: "Doctors", value: "150+" },
-  { label: "Patients", value: "25k+" },
-  { label: "Avg. Wait", value: "< 5 min" },
-];
 
 export default function LandingPage() {
   return (
@@ -66,23 +23,51 @@ export default function LandingPage() {
       <header className="landing-header">
         <div className="landing-container">
           <div className="logo">
-            <Stethoscope className="icon" />
+            <div className="logo-icon">
+              <Stethoscope className="icon" />
+            </div>
             <span>MedConnect</span>
           </div>
           
           <nav className="nav-links">
-            <a href="#features">Features</a>
-            <a href="#workflow">Workflow</a>
-            <a href="#contact">Contact</a>
+            <a 
+              href="#about" 
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('about').scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              About
+            </a>
+            <a 
+              href="#hours" 
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('hours').scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Hours
+            </a>
+            <a 
+              href="#contact" 
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Contact
+            </a>
           </nav>
           
           <div className="header-actions">
-            <Button variant="secondary" href="/login">
-              <LogIn className="icon" /> Sign in
-            </Button>
-            <Button variant="primary" href="/portal">
-              Patient Portal <ArrowRight className="icon" />
-            </Button>
+            <a href="/login" className="btn btn-secondary">
+              <LogIn className="icon" />
+              Sign In
+            </a>
+            <a href="/portal" className="btn btn-primary">
+              Patient Portal
+              <ArrowRight className="icon" />
+            </a>
           </div>
         </div>
       </header>
@@ -91,127 +76,107 @@ export default function LandingPage() {
       <section className="hero">
         <div className="landing-container">
           <div className="hero-content">
+            <h1 className="hero-title">
+              Modern Healthcare,{" "}
+              <span className="highlight">Simplified</span>
+            </h1>
+            <p className="hero-description">
+              Manage multi-office providers, doctor-patient assignments, and appointments—all in one streamlined portal.
+            </p>
             
-            {/* Left side - Text */}
-            <div className="hero-text">
-              <h1 className="h1">
-                A modern front-end for your <span>Medical Clinic Database</span>
-              </h1>
-              <p className="lead">
-                Manage multi-office providers, doctor-patient assignments, 
-                approvals, and appointments—all in one streamlined portal.
+            <div className="hero-buttons">
+              <a href="/signup" className="btn btn-primary btn-large">
+                Get Started
+                <ArrowRight className="icon" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section id="about" className="about-section">
+        <div className="landing-container">
+          <div className="section-header">
+            <h2>About MedConnect</h2>
+            <p>Your trusted partner in modern healthcare management</p>
+          </div>
+          
+          <div className="about-grid">
+            <div className="about-card">
+              <div className="about-icon">
+                <Users />
+              </div>
+              <h3>Expert Care</h3>
+              <p>
+                Our network of 150+ doctors across 12 offices provides comprehensive medical care with expertise you can trust.
               </p>
-              
-              <div className="hero-buttons">
-                <Button variant="primary" href="/signup">
-                  Get Started <ArrowRight className="icon" />
-                </Button>
-                <Button variant="secondary" href="#features">
-                  Explore Features
-                </Button>
-              </div>
-              
-              {/* Quick search */}
-              <div className="card search-card">
-                <h3>Quick lookup</h3>
-                <div className="search-box">
-                  <input 
-                    type="text" 
-                    placeholder="Search doctors, patients, or offices…" 
-                  />
-                  <button className="btn">
-                    Search <ArrowRight className="icon" />
-                  </button>
-                </div>
-              </div>
             </div>
 
-            {/* Right side - Stats */}
-            <div className="hero-stats">
-              <div className="stats-grid">
-                {stats.map((stat, i) => (
-                  <div key={i} className="card stat-card">
-                    <div className="stat-value">{stat.value}</div>
-                    <div className="stat-label">{stat.label}</div>
-                  </div>
-                ))}
+            <div className="about-card">
+              <div className="about-icon">
+                <Heart />
+              </div>
+              <h3>Patient-Centered</h3>
+              <p>
+                We put your health first with personalized care, easy appointment scheduling, and dedicated support for every patient.
+              </p>
+            </div>
+
+            <div className="about-card">
+              <div className="about-icon">
+                <Award />
+              </div>
+              <h3>Quality Service</h3>
+              <p>
+                With less than 5 minutes average wait time and 25,000+ satisfied patients, we deliver healthcare excellence daily.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Hours Section */}
+      <section id="hours" className="hours-section">
+        <div className="landing-container hours-container">
+          <div className="section-header">
+            <h2>Clinic Hours</h2>
+            <p>We're here when you need us</p>
+          </div>
+          
+          <div className="hours-card">
+            <div className="hours-header">
+              <Clock className="icon" />
+              <h3>Operating Hours</h3>
+            </div>
+            
+            <div className="hours-content">
+              <div className="hours-list">
+                <div className="hours-row">
+                  <span className="day">Monday - Friday</span>
+                  <span className="time">8:00 AM - 6:00 PM</span>
+                </div>
+                <div className="hours-row">
+                  <span className="day">Saturday</span>
+                  <span className="time">9:00 AM - 3:00 PM</span>
+                </div>
+                <div className="hours-row">
+                  <span className="day">Sunday</span>
+                  <span className="time">Closed</span>
+                </div>
+                <div className="hours-row">
+                  <span className="day">Holidays</span>
+                  <span className="time">Emergency Only</span>
+                </div>
               </div>
               
-              <div className="card availability-card">
-                <h4>Today's availability</h4>
+              <div className="hours-note">
+                <Calendar className="icon" />
                 <p>
-                  <Calendar className="icon" />
-                  12 open slots across 3 offices
+                  <strong>Need urgent care?</strong> Call our 24/7 emergency hotline or visit your nearest location for immediate assistance.
                 </p>
               </div>
             </div>
-            
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="features-section">
-        <div className="landing-container">
-          <div className="section-header">
-            <h2>Everything clinics need—built-in</h2>
-            <p>Design focuses on speed, clarity, and the exact workflows clinics use daily.</p>
-          </div>
-          
-          <div className="features-grid">
-            {features.map((feature, i) => {
-              const Icon = feature.icon;
-              return (
-                <div key={i} className="feature">
-                  <div className="feature-icon">
-                    <Icon />
-                  </div>
-                  <div className="feature-content">
-                    <h3 className="title">{feature.title}</h3>
-                    <p className="desc">{feature.desc}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Workflow Section */}
-      <section id="workflow" className="workflow-section">
-        <div className="landing-container">
-          <div className="workflow-grid">
-            
-            <div className="card workflow-card">
-              <h3>
-                <LogIn className="icon" /> Patient Portal
-              </h3>
-              <p>Book/cancel appointments and request specialist approvals.</p>
-              <Button variant="primary" href="/portal">
-                Open Portal <ArrowRight className="icon" />
-              </Button>
-            </div>
-
-            <div className="card workflow-card">
-              <h3>
-                <Users className="icon" /> Doctor Dashboard
-              </h3>
-              <p>View day lists, manage panels, and approve specialist referrals.</p>
-              <Button variant="secondary" href="/doctor">
-                Go to Dashboard
-              </Button>
-            </div>
-
-            <div className="card workflow-card">
-              <h3>
-                <ShieldCheck className="icon" /> Admin Console
-              </h3>
-              <p>Manage offices, providers, schedules, and system policies.</p>
-              <Button variant="secondary" href="/admin">
-                Open Console
-              </Button>
-            </div>
-            
           </div>
         </div>
       </section>
@@ -219,21 +184,38 @@ export default function LandingPage() {
       {/* Contact Section */}
       <section id="contact" className="contact-section">
         <div className="landing-container">
-          <div className="card contact-card">
-            <div className="contact-content">
-              <div className="contact-text">
-                <h3>Questions? Let's talk.</h3>
-                <p>We can tailor the front-end to your exact database schema and auth setup.</p>
+          <div className="section-header">
+            <h2>Contact Us</h2>
+            <p>We're here to help with any questions</p>
+          </div>
+          
+          <div className="contact-grid">
+            <a href="tel:+18001234567" className="contact-card">
+              <div className="contact-icon">
+                <Phone />
               </div>
-              <div className="contact-actions">
-                <Button variant="secondary" href="tel:+18001234567">
-                  <Phone className="icon" /> Call
-                </Button>
-                <Button variant="primary" href="mailto:hello@medconnect.example">
-                  Email us <ArrowRight className="icon" />
-                </Button>
+              <h3>Phone</h3>
+              <p>(800) 123-4567</p>
+            </a>
+
+            <a href="mailto:hello@medconnect.example" className="contact-card">
+              <div className="contact-icon">
+                <Mail />
               </div>
+              <h3>Email</h3>
+              <p className="email-text">hello@medconnect.example</p>
+            </a>
+
+            <div className="contact-card">
+              <div className="contact-icon">
+                <MapPin />
+              </div>
+              <h3>Location</h3>
+              <p>12 Offices Nationwide</p>
             </div>
+          </div>
+
+          <div className="contact-cta">
           </div>
         </div>
       </section>
@@ -241,7 +223,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="footer">
         <div className="landing-container">
-          © {new Date().getFullYear()} MedConnect • Built with React & Vite
+          © {new Date().getFullYear()} MedConnect • Modern Healthcare Management
         </div>
       </footer>
       
