@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import clinicLogo from '/logo.jpg'
 import './App.css'
 import LandingPage from './components/LandingPage.jsx'
+import TestPhpConnection from './components/TestPhpConnection.jsx'
 // import './components/LandingPage.jsx'
 
 function App() {
   // const [count, setCount] = useState(0)
-  return <LandingPage />
+  return <LandingPage logo={clinicLogo} />
 }
+
 
 export default App
