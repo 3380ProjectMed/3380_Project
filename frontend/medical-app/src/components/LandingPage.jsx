@@ -1,4 +1,3 @@
-
 import React from "react";
 import { 
   Calendar, 
@@ -57,16 +56,35 @@ export default function LandingPage() {
             >
               Contact
             </a>
+            <a 
+              href="#Location" 
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('Location').scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              Location
+            </a>
+            <a 
+              href="#faq-section" 
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('faq-section').scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              FAQs
+            </a>
+            
           </nav>
           
           <div className="header-actions">
-            <a href="/login" className="btn btn-secondary">
+            <a href="/login" className="btn btn-primary">
               <LogIn className="icon" />
-              Sign In
+              Log In
             </a>
-            <a href="/portal" className="btn btn-primary">
-              Patient Portal
-              <ArrowRight className="icon" />
+            <a href="/signup" className="btn btn-secondary">
+              <LogIn className="icon" />
+              Sign Up
             </a>
           </div>
         </div>
@@ -81,7 +99,7 @@ export default function LandingPage() {
               <span className="highlight">Simplified</span>
             </h1>
             <p className="hero-description">
-              Manage multi-office providers, doctor-patient assignments, and appointments—all in one streamlined portal.
+              At MedConnect your health is our priority. We're a community-focused medical clinic offering primary care, urgent care, preventive screenings, and chronic-condition management — all delivered by an experienced team of physicians, nurses, and care coordinators. We believe medicine should be straightforward, respectful, and centered on you.
             </p>
             
             <div className="hero-buttons">
@@ -109,7 +127,7 @@ export default function LandingPage() {
               </div>
               <h3>Expert Care</h3>
               <p>
-                Our network of 150+ doctors across 12 offices provides comprehensive medical care with expertise you can trust.
+                Our network of doctors across 4 offices provides comprehensive medical care with expertise you can trust.
               </p>
             </div>
 
@@ -205,17 +223,96 @@ export default function LandingPage() {
               <h3>Email</h3>
               <p className="email-text">hello@medconnect.example</p>
             </a>
+          </div>
+        </div>
+      </section>
 
-            <div className="contact-card">
-              <div className="contact-icon">
+      {/* Location Section */}
+      <section id="Location" className="location-section">
+        <div className="landing-container">
+          <div className="section-header">
+            <h2>Our Locations</h2>
+            <p>Find a MedConnect clinic near you</p>
+          </div>
+          
+          <div className="location-grid">
+            <div className="location-card">
+              <div className="location-icon">
                 <MapPin />
               </div>
-              <h3>Location</h3>
-              <p>12 Offices Nationwide</p>
+              <h3>Downtown Medical Center</h3>
+              <p>425 Main Street, Suite 100</p>
+              <p>Houston, TX 77002</p>
+            </div>
+
+            <div className="location-card">
+              <div className="location-icon">
+                <MapPin />
+              </div>
+              <h3>Westside Family Clinic</h3>
+              <p>8920 Katy Freeway, Building B</p>
+              <p>Houston, TX 77024</p>
+            </div>
+
+            <div className="location-card">
+              <div className="location-icon">
+                <MapPin />
+              </div>
+              <h3>Memorial Park Healthcare</h3>
+              <p>1550 Memorial Drive</p>
+              <p>Houston, TX 77007</p>
+            </div>
+
+            <div className="location-card">
+              <div className="location-icon">
+                <MapPin />
+              </div>
+              <h3>Galleria Medical Plaza</h3>
+              <p>5085 Westheimer Road, Floor 3</p>
+              <p>Houston, TX 77056</p>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="contact-cta">
+      {/* FAQ Section */}
+      <section id="faq-section" className="faq-section">
+        <div className="landing-container">
+          <div className="section-header">
+            <h2>Frequently Asked Questions</h2>
+            <p>Find answers to common questions about our services</p>
+          </div>
+          
+          <div className="faq-grid">
+            <div className="faq-card">
+              <h3>Do I need an appointment?</h3>
+              <p>We recommend scheduling appointments for routine visits.</p>
+            </div>
+
+            <div className="faq-card">
+              <h3>What insurance do you accept?</h3>
+              <p>We accept most major insurance plans including Medicare and Medicaid.</p>
+            </div>
+
+            <div className="faq-card">
+              <h3>How do I access my medical records?</h3>
+              <p>You can view and download your medical records through our secure patient portal. Sign up or log in to get started.</p>
+            </div>
+
+            <div className="faq-card">
+              <h3>What should I bring to my first visit?</h3>
+              <p>Please bring a valid ID, insurance card, list of current medications, and any relevant medical records from previous providers.</p>
+            </div>
+
+            <div className="faq-card">
+              <h3>Do you offer telemedicine appointments?</h3>
+              <p>No. We only offer in person consultations. Schedule through our patient portal or call us to make an appointment.</p>
+            </div>
+
+            <div className="faq-card">
+              <h3>How can I refill my prescriptions?</h3>
+              <p>You can request prescription refills through our patient portal, by phone, or by contacting your pharmacy directly to send us a refill request.</p>
+            </div>
           </div>
         </div>
       </section>
