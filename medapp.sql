@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS `CodesAllergies` (
   PRIMARY KEY (`AllergiesCode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table med-app-db.CodesAllergies: ~25 rows (approximately)
+-- Dumping data for table med-app-db.CodesAllergies: ~26 rows (approximately)
 INSERT INTO `CodesAllergies` (`AllergiesCode`, `Allergies_Text`) VALUES
 	(1, 'Penicillin'),
 	(2, 'Pollen'),
@@ -75,7 +75,8 @@ INSERT INTO `CodesAllergies` (`AllergiesCode`, `Allergies_Text`) VALUES
 	(22, 'Codeine'),
 	(23, 'Sulfa Drugs'),
 	(24, 'Cephalosporin'),
-	(25, 'No Known Allergies');
+	(25, 'No Known Allergies'),
+	(26, 'Grass');
 
 -- Dumping structure for table med-app-db.CodesAssignedAtBirth_Gender
 DROP TABLE IF EXISTS `CodesAssignedAtBirth_Gender`;
