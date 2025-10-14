@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   Calendar, 
   Stethoscope, 
@@ -10,11 +10,36 @@ import {
   Heart,
   Award,
   ArrowRight,
-  LogIn
+  LogIn,
+  X
 } from "lucide-react";
 import "./landingpage.css";
+import { pingDb, pingPhp }  from "../api.js";
 
 export default function LandingPage() {
+  const [showTest, setShowTest] = useState(false);
+  const [php, setPhp] = useState(null);
+  const [db, setDb] = useState(null);
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const runTest = async () => {
+    setLoading(true);
+    setErr('');
+    setPhp(null);
+    setDb(null);
+    try {
+      const p = await pingPhp();
+      const d = await pingDb();
+      setPhp(p);
+      setDb(d);
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="landing-root">
       
@@ -78,6 +103,20 @@ export default function LandingPage() {
           </nav>
           
           <div className="header-actions">
+            <button 
+              onClick={() => setShowTest(true)}
+              style={{
+                padding: '8px 12px',
+                marginRight: '8px',
+                fontSize: '12px',
+                backgroundColor: '#000000ff',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Test Connection
+            </button>
             <a href="/login" className="btn btn-primary">
               <LogIn className="icon" />
               Log In
@@ -89,6 +128,145 @@ export default function LandingPage() {
           </div>
         </div>
       </header>
+
+      {/* Connection Test Modal */}
+      {showTest && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '32px',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '24px'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '24px' }}>Connection Test</h2>
+              <button
+                onClick={() => setShowTest(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {err && (
+              <div style={{
+                backgroundColor: '#fee',
+                color: '#c33',
+                padding: '12px',
+                borderRadius: '4px',
+                marginBottom: '16px'
+              }}>
+                <strong>Error:</strong> {err}
+              </div>
+            )}
+
+            {loading ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '24px'
+              }}>
+                <p>Testing connections...</p>
+                <div style={{
+                  display: 'inline-block',
+                  width: '30px',
+                  height: '30px',
+                  border: '3px solid #f3f3f3',
+                  borderTop: '3px solid #3498db',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <style>{`
+                  @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                  }
+                `}</style>
+              </div>
+            ) : (
+              <>
+                <div style={{
+                  backgroundColor: '#db0000ff',
+                  padding: '16px',
+                  borderRadius: '4px',
+                  marginBottom: '16px',
+                  fontFamily: 'monospace',
+                  fontSize: '12px',
+                  maxHeight: '300px',
+                  overflow: 'auto'
+                }}>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                    {JSON.stringify({ php, db }, null, 2)}
+                  </pre>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '12px'
+                }}>
+                  <button
+                    onClick={runTest}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#3498db',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#2980b9'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#3498db'}
+                  >
+                    Run Test
+                  </button>
+                  <button
+                    onClick={() => setShowTest(false)}
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#95a5a6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#7f8c8d'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#95a5a6'}
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="hero">
