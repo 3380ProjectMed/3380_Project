@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `CodesAllergies` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Dumping data for table med-app-db.CodesAllergies: ~26 rows (approximately)
-INSERT INTO `CodesAllergies` (`AllergiesCode`, `Allergies_Text`) VALUES
+REPLACE INTO `CodesAllergies` (`AllergiesCode`, `Allergies_Text`) VALUES
 	(1, 'Penicillin'),
 	(2, 'Pollen'),
 	(3, 'Shellfish'),
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `CodesAssignedAtBirth_Gender` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Dumping data for table med-app-db.CodesAssignedAtBirth_Gender: ~5 rows (approximately)
-INSERT INTO `CodesAssignedAtBirth_Gender` (`GenderCode`, `Gender_Text`) VALUES
+REPLACE INTO `CodesAssignedAtBirth_Gender` (`GenderCode`, `Gender_Text`) VALUES
 	(1, 'Male'),
 	(2, 'Female'),
 	(3, 'Intersex'),
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS `CodesEthnicity` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Dumping data for table med-app-db.CodesEthnicity: ~4 rows (approximately)
-INSERT INTO `CodesEthnicity` (`EthnicityCode`, `Ethnicity_Text`) VALUES
+REPLACE INTO `CodesEthnicity` (`EthnicityCode`, `Ethnicity_Text`) VALUES
 	(1, 'Hispanic or Latino'),
 	(2, 'Non-Hispanic or Latino'),
 	(3, 'Not Specified'),
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS `CodesGender` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Dumping data for table med-app-db.CodesGender: ~6 rows (approximately)
-INSERT INTO `CodesGender` (`GenderCode`, `Gender_Text`) VALUES
+REPLACE INTO `CodesGender` (`GenderCode`, `Gender_Text`) VALUES
 	(1, 'Male'),
 	(2, 'Female'),
 	(3, 'Non-Binary'),
@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS `CodesRace` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Dumping data for table med-app-db.CodesRace: ~8 rows (approximately)
-INSERT INTO `CodesRace` (`RaceCode`, `Race_Text`) VALUES
+REPLACE INTO `CodesRace` (`RaceCode`, `Race_Text`) VALUES
 	(1, 'White'),
 	(2, 'Black or African American'),
 	(3, 'American Indian/Alaska Native'),
@@ -143,7 +143,8 @@ INSERT INTO `CodesRace` (`RaceCode`, `Race_Text`) VALUES
 	(5, 'Native Hawaiian/Pacific Islander'),
 	(6, 'Two or More Races'),
 	(7, 'Not Specified'),
-	(8, 'Other');
+	(8, 'Other'),
+	(9, 'Aliens');
 
 -- Dumping structure for table med-app-db.Doctor
 DROP TABLE IF EXISTS `Doctor`;
@@ -269,14 +270,17 @@ CREATE TABLE IF NOT EXISTS `Office` (
   `Name` varchar(30) NOT NULL,
   `City` varchar(30) NOT NULL,
   `State` varchar(20) NOT NULL,
-  `BuildingNo` varchar(10) NOT NULL,
+  `address` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `ZipCode` varchar(10) NOT NULL,
   `DeptCount` int DEFAULT NULL,
   `Phone` varchar(15) NOT NULL,
   PRIMARY KEY (`Office_ID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table med-app-db.Office: ~0 rows (approximately)
+-- Dumping data for table med-app-db.Office: ~2 rows (approximately)
+REPLACE INTO `Office` (`Office_ID`, `Name`, `City`, `State`, `address`, `ZipCode`, `DeptCount`, `Phone`) VALUES
+	(1, 'Downtown Medical Center', 'Houston', 'TX', '425 Main Street, Suite 100', '77002', 6, '7374928165'),
+	(2, 'Westside Family Clinic', 'Houston', 'TX', '8920 Katy Freeway, Building B', '77024', 5, '7378797156');
 
 -- Dumping structure for table med-app-db.Patient
 DROP TABLE IF EXISTS `Patient`;
@@ -493,7 +497,7 @@ CREATE TABLE IF NOT EXISTS `Specialty` (
 ) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Dumping data for table med-app-db.Specialty: ~18 rows (approximately)
-INSERT INTO `Specialty` (`specialty_id`, `specialty_name`) VALUES
+REPLACE INTO `Specialty` (`specialty_id`, `specialty_name`) VALUES
 	(1, 'Family Medicine'),
 	(2, 'General Practice'),
 	(3, 'Internal Medicine'),
