@@ -1,4 +1,5 @@
 <?php
+// dbcheck.php
 header('Content-Type: application/json');
 $host = getenv('DB_HOST') ?: 'db';
 $user = getenv('DB_USER') ?: 'app';
@@ -7,7 +8,50 @@ $name = getenv('DB_NAME') ?: 'med-app-db';
 $port = (int)(getenv('DB_PORT') ?: 3306);
 
 $mysqli = @new mysqli($host, $user, $pass, $name, $port);
-echo json_encode($mysqli->connect_errno
-  ? ['ok'=>false,'error'=>$mysqli->connect_error]
-  : ['ok'=>true,'db'=>'connected']);
-//curl.exe -i http://localhost:8080/dbcheck.php
+
+if ($mysqli->connect_errno) {
+  echo json_encode([
+    'ok' => false,
+    'status' => 'disconnected',
+    'database' => $name,
+    'host' => $host,
+    'port' => $port,
+    'error' => $mysqli->connect_error,
+    'error_code' => $mysqli->connect_errno
+  ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+} else {
+  // Test basic connectivity
+  $testQuery = $mysqli->query('SELECT 1 as connection_test');
+  $version = $mysqli->get_server_info();
+  
+  // Get table count
+  $tableQuery = $mysqli->query(
+    "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = '$name'"
+  );
+  $tableRow = $tableQuery->fetch_assoc();
+  $tableCount = $tableRow['table_count'];
+  
+  // List all tables
+  $listQuery = $mysqli->query(
+    "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = '$name'"
+  );
+  $tables = [];
+  while ($row = $listQuery->fetch_assoc()) {
+    $tables[] = $row['TABLE_NAME'];
+  }
+  
+  $mysqli->close();
+  
+  echo json_encode([
+    'ok' => true,
+    'status' => 'connected',
+    'database' => $name,
+    'host' => $host,
+    'port' => $port,
+    'mysql_version' => $version,
+    'connection_test' => 'successful',
+    'table_count' => $tableCount,
+    'tables' => $tables
+  ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+}
+?>

@@ -49,7 +49,34 @@ CREATE TABLE IF NOT EXISTS `CodesAllergies` (
   PRIMARY KEY (`AllergiesCode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table med-app-db.CodesAllergies: ~0 rows (approximately)
+-- Dumping data for table med-app-db.CodesAllergies: ~26 rows (approximately)
+INSERT INTO `CodesAllergies` (`AllergiesCode`, `Allergies_Text`) VALUES
+	(1, 'Penicillin'),
+	(2, 'Pollen'),
+	(3, 'Shellfish'),
+	(4, 'Peanuts'),
+	(5, 'Tree Nuts'),
+	(6, 'Milk'),
+	(7, 'Eggs'),
+	(8, 'Wheat'),
+	(9, 'Soy'),
+	(10, 'Fish'),
+	(11, 'Sulfonamides'),
+	(12, 'Aspirin'),
+	(13, 'Ibuprofen'),
+	(14, 'Latex'),
+	(15, 'Dust Mites'),
+	(16, 'Mold'),
+	(17, 'Pet Dander'),
+	(18, 'Sesame'),
+	(19, 'Mustard'),
+	(20, 'Celery'),
+	(21, 'NSAIDs'),
+	(22, 'Codeine'),
+	(23, 'Sulfa Drugs'),
+	(24, 'Cephalosporin'),
+	(25, 'No Known Allergies'),
+	(26, 'Grass');
 
 -- Dumping structure for table med-app-db.CodesAssignedAtBirth_Gender
 DROP TABLE IF EXISTS `CodesAssignedAtBirth_Gender`;
@@ -59,7 +86,13 @@ CREATE TABLE IF NOT EXISTS `CodesAssignedAtBirth_Gender` (
   PRIMARY KEY (`GenderCode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table med-app-db.CodesAssignedAtBirth_Gender: ~0 rows (approximately)
+-- Dumping data for table med-app-db.CodesAssignedAtBirth_Gender: ~5 rows (approximately)
+INSERT INTO `CodesAssignedAtBirth_Gender` (`GenderCode`, `Gender_Text`) VALUES
+	(1, 'Male'),
+	(2, 'Female'),
+	(3, 'Intersex'),
+	(4, 'Not Specified'),
+	(5, 'Other');
 
 -- Dumping structure for table med-app-db.CodesEthnicity
 DROP TABLE IF EXISTS `CodesEthnicity`;
@@ -69,7 +102,12 @@ CREATE TABLE IF NOT EXISTS `CodesEthnicity` (
   PRIMARY KEY (`EthnicityCode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table med-app-db.CodesEthnicity: ~0 rows (approximately)
+-- Dumping data for table med-app-db.CodesEthnicity: ~4 rows (approximately)
+INSERT INTO `CodesEthnicity` (`EthnicityCode`, `Ethnicity_Text`) VALUES
+	(1, 'Hispanic or Latino'),
+	(2, 'Non-Hispanic or Latino'),
+	(3, 'Not Specified'),
+	(4, 'Other');
 
 -- Dumping structure for table med-app-db.CodesGender
 DROP TABLE IF EXISTS `CodesGender`;
@@ -79,17 +117,33 @@ CREATE TABLE IF NOT EXISTS `CodesGender` (
   PRIMARY KEY (`GenderCode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table med-app-db.CodesGender: ~0 rows (approximately)
+-- Dumping data for table med-app-db.CodesGender: ~6 rows (approximately)
+INSERT INTO `CodesGender` (`GenderCode`, `Gender_Text`) VALUES
+	(1, 'Male'),
+	(2, 'Female'),
+	(3, 'Non-Binary'),
+	(4, 'Prefer to Self-Describe'),
+	(5, 'Not Specified'),
+	(6, 'Other');
 
 -- Dumping structure for table med-app-db.CodesRace
 DROP TABLE IF EXISTS `CodesRace`;
 CREATE TABLE IF NOT EXISTS `CodesRace` (
   `RaceCode` smallint NOT NULL,
-  `Race_Text` varchar(20) NOT NULL,
+  `Race_Text` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   PRIMARY KEY (`RaceCode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table med-app-db.CodesRace: ~0 rows (approximately)
+-- Dumping data for table med-app-db.CodesRace: ~8 rows (approximately)
+INSERT INTO `CodesRace` (`RaceCode`, `Race_Text`) VALUES
+	(1, 'White'),
+	(2, 'Black or African American'),
+	(3, 'American Indian/Alaska Native'),
+	(4, 'Asian'),
+	(5, 'Native Hawaiian/Pacific Islander'),
+	(6, 'Two or More Races'),
+	(7, 'Not Specified'),
+	(8, 'Other');
 
 -- Dumping structure for table med-app-db.Doctor
 DROP TABLE IF EXISTS `Doctor`;
@@ -436,9 +490,28 @@ CREATE TABLE IF NOT EXISTS `Specialty` (
   `specialty_name` varchar(100) NOT NULL,
   PRIMARY KEY (`specialty_id`) USING BTREE,
   UNIQUE KEY `ux_specialty_name` (`specialty_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table med-app-db.Specialty: ~0 rows (approximately)
+-- Dumping data for table med-app-db.Specialty: ~18 rows (approximately)
+INSERT INTO `Specialty` (`specialty_id`, `specialty_name`) VALUES
+	(1, 'Family Medicine'),
+	(2, 'General Practice'),
+	(3, 'Internal Medicine'),
+	(4, 'Pediatrics'),
+	(5, 'Obstetrics and Gynecology'),
+	(6, 'General Dentistry'),
+	(7, 'Nursing'),
+	(8, 'Physician Assistant'),
+	(9, 'Nurse Practitioner'),
+	(10, 'Urgent Care'),
+	(11, 'Preventive Medicine'),
+	(12, 'Mental Health Counseling'),
+	(13, 'Dermatology'),
+	(14, 'Cardiology'),
+	(15, 'Orthopedics'),
+	(16, 'Physical Therapy'),
+	(17, 'Nutrition and Dietetics'),
+	(18, 'Pharmacy');
 
 -- Dumping structure for table med-app-db.Staff
 DROP TABLE IF EXISTS `Staff`;
