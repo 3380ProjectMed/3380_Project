@@ -1,14 +1,16 @@
 import { useState } from 'react'
+import { Routes, Route } from "react-router-dom";
 import clinicLogo from '/logo.jpg'
+import LandingPage from "./components/LandingPage.jsx";
+import PatientPortal from "./components/PatientPortal";
 import './App.css'
-import LandingPage from './components/LandingPage.jsx'
-import TestPhpConnection from './components/TestPhpConnection.jsx'
-// import './components/LandingPage.jsx'
 
-function App() {
-  // const [count, setCount] = useState(0)
-  return <LandingPage logo={clinicLogo} />
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/patientportal" element={<PatientPortal />} />
+    </Routes>
+  );
 }
 
-
-export default App
