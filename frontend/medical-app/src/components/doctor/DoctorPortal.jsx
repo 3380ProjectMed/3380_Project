@@ -7,6 +7,9 @@ import Dashboard from './Dashboard';
 import Schedule from './Schedule';
 import PatientList from './PatientList';
 import ClinicalWorkSpace from './ClinicalWorkSpace';
+import Reports from './Report';     
+import Profile from './Profile';    
+import Referral from './Referral';
 import './DoctorPortal.css';
 
 function DoctorPortal() {
@@ -44,7 +47,6 @@ function DoctorPortal() {
   const handleBackToDashboard = () => {
     setCurrentPage('dashboard');
     setSelectedAppointment(null);
-    setSelectedPatient(null);
   };
 
   return (
@@ -59,7 +61,10 @@ function DoctorPortal() {
         {currentPage === 'dashboard' && (
           <Dashboard
             setCurrentPage={setCurrentPage}
-            onAppointmentClick={handleAppointmentClick}
+            onAppointmentClick={(apt) => {
+              setSelectedAppointment(apt);
+              setCurrentPage('clinical');
+            }}
           />
         )}
 
@@ -78,7 +83,6 @@ function DoctorPortal() {
         {currentPage === 'clinical' && (
           <ClinicalWorkSpace
             appointment={selectedAppointment}
-            patient={selectedPatient}
             onBack={handleBackToDashboard}
             selectedTab={selectedClinicalTab}
             setSelectedTab={setSelectedClinicalTab}

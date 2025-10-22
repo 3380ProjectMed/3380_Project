@@ -1,5 +1,6 @@
 <?php
 // dbcheck.php
+#getting env variables to establish database connection
 header('Content-Type: application/json');
 $host = getenv('DB_HOST') ?: 'db';
 $user = getenv('DB_USER') ?: 'app';
@@ -7,8 +8,10 @@ $pass = getenv('DB_PASSWORD') ?: '';
 $name = getenv('DB_NAME') ?: 'med-app-db';
 $port = (int)(getenv('DB_PORT') ?: 3306);
 
+#attempt connection
 $mysqli = @new mysqli($host, $user, $pass, $name, $port);
 
+#checking for connection errors
 if ($mysqli->connect_errno) {
   echo json_encode([
     'ok' => false,
@@ -21,6 +24,7 @@ if ($mysqli->connect_errno) {
   ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 } else {
   // Test basic connectivity
+  $stmt = "SELECT * FROM information_schema.tables WHERE table_schema = '$name' LIMIT 1";
   $testQuery = $mysqli->query('SELECT 1 as connection_test');
   $version = $mysqli->get_server_info();
   
