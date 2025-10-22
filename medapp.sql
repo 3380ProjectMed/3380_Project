@@ -46,18 +46,7 @@ CREATE TABLE `Appointment` (
 
 LOCK TABLES `Appointment` WRITE;
 /*!40000 ALTER TABLE `Appointment` DISABLE KEYS */;
-INSERT INTO `Appointment` VALUES 
-(1001,101,201,1,'2024-01-15 09:00:00','2023-12-20 14:30:00','Annual physical examination'),
-(1002,103,201,3,'2024-01-16 14:00:00','2024-01-02 16:45:00','Follow-up consultation'),
-(1003,105,202,1,'2024-01-15 10:30:00','2023-12-22 09:15:00','Cardiology checkup'),
-(1004,107,202,4,'2024-01-17 11:00:00','2024-01-08 14:25:00','Heart condition monitoring'),
-(1005,102,203,2,'2024-01-15 13:30:00','2023-12-28 11:20:00','Pediatric wellness visit'),
-(1006,108,203,2,'2024-01-18 15:45:00','2024-01-11 12:15:00','Vaccination'),
-(1007,104,204,3,'2024-01-16 08:45:00','2023-12-28 11:20:00','Orthopedic consultation'),
-(1008,101,204,1,'2024-01-19 16:00:00','2024-01-09 17:40:00','Knee pain evaluation'),
-(1009,106,205,4,'2024-01-17 09:30:00','2024-01-05 08:30:00','OB/GYN appointment'),
-(1010,103,206,2,'2024-01-18 10:00:00','2024-01-12 09:50:00','Internal medicine consultation'),
-(1011,104,207,4,'2024-01-19 14:30:00','2024-01-15 16:20:00','Dermatology screening');
+INSERT INTO `Appointment` VALUES (1001,101,201,1,'2025-11-05 09:00:00','2025-12-20 14:30:00','Annual physical examination'),(1002,103,201,3,'2025-10-27 14:00:00','2025-11-02 16:45:00','Follow-up consultation'),(1003,105,202,1,'2025-10-21 10:30:00','2025-10-30 09:15:00','Cardiology checkup'),(1004,107,202,4,'2025-10-29 11:00:00','2025-10-29 14:25:00','Heart condition monitoring'),(1005,102,203,2,'2025-10-30 13:30:00','2025-10-31 11:20:00','Pediatric wellness visit'),(1006,108,203,2,'2025-10-29 15:45:00','2025-11-11 12:15:00','Vaccination'),(1007,104,204,3,'2025-10-27 08:45:00','2025-11-01 11:20:00','Orthopedic consultation'),(1008,101,204,1,'2025-11-01 16:00:00','2025-11-01 17:40:00','Knee pain evaluation'),(1009,106,205,4,'2025-10-28 09:30:00','2025-10-21 08:30:00','OB/GYN appointment'),(1010,103,206,2,'2025-10-21 08:30:00','2025-10-28 09:50:00','Internal medicine consultation'),(1011,104,207,4,'2025-10-22 14:30:00','2025-11-03 16:20:00','Dermatology screening');
 /*!40000 ALTER TABLE `Appointment` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -81,11 +70,7 @@ CREATE TABLE `CodesAllergies` (
 
 LOCK TABLES `CodesAllergies` WRITE;
 /*!40000 ALTER TABLE `CodesAllergies` DISABLE KEYS */;
-INSERT INTO `CodesAllergies` VALUES 
-(1,'Penicillin'),
-(2,'Pollen'),
-(3,'Shellfish'),
-(4,'Peanuts'),(5,'Tree Nuts'),(6,'Milk'),(7,'Eggs'),(8,'Wheat'),(9,'Soy'),(10,'Fish'),(11,'Sulfonamides'),(12,'Aspirin'),(13,'Ibuprofen'),(14,'Latex'),(15,'Dust Mites'),(16,'Mold'),(17,'Pet Dander'),(18,'Sesame'),(19,'Mustard'),(20,'Celery'),(21,'NSAIDs'),(22,'Codeine'),(23,'Sulfa Drugs'),(24,'Cephalosporin'),(25,'No Known Allergies'),(26,'Grass');
+INSERT INTO `CodesAllergies` VALUES (1,'Penicillin'),(2,'Pollen'),(3,'Shellfish'),(4,'Peanuts'),(5,'Tree Nuts'),(6,'Milk'),(7,'Eggs'),(8,'Wheat'),(9,'Soy'),(10,'Fish'),(11,'Sulfonamides'),(12,'Aspirin'),(13,'Ibuprofen'),(14,'Latex'),(15,'Dust Mites'),(16,'Mold'),(17,'Pet Dander'),(18,'Sesame'),(19,'Mustard'),(20,'Celery'),(21,'NSAIDs'),(22,'Codeine'),(23,'Sulfa Drugs'),(24,'Cephalosporin'),(25,'No Known Allergies'),(26,'Grass');
 /*!40000 ALTER TABLE `CodesAllergies` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -431,15 +416,7 @@ CREATE TABLE `Patient` (
 
 LOCK TABLES `Patient` WRITE;
 /*!40000 ALTER TABLE `Patient` DISABLE KEYS */;
-INSERT INTO `Patient` VALUES 
-(101,'John','Smith','1985-03-15','123-45-6789','555-1001',1,1,2,1,'john.smith@email.com','Y',201,NULL,1,101,NULL,NULL,'O+','Private'),
-(102,'Maria','Garcia','1978-07-22','123-45-6790','555-1002',2,2,1,2,'maria.garcia@email.com','Y',203,NULL,2,102,NULL,NULL,'A+','Private'),
-(103,'David','Johnson','1992-11-30','123-45-6791','555-1003',1,1,2,1,'david.johnson@email.com','Y',201,NULL,3,105,NULL,NULL,'B+','Medicare'),
-(104,'Sarah','Williams','1980-05-14','123-45-6792','555-1004',2,2,2,1,'sarah.williams@email.com','Y',204,NULL,4,103,NULL,NULL,'AB-','Private'),
-(105,'Michael','Brown','1975-09-08','123-45-6793','555-1005',1,1,2,2,'michael.brown@email.com','Y',202,NULL,5,104,NULL,NULL,'O-','Private'),
-(106,'Jennifer','Davis','1988-12-25','123-45-6794','555-1006',2,2,2,1,'jennifer.davis@email.com','Y',205,NULL,6,101,NULL,NULL,'A-','Private'),
-(107,'Robert','Miller','1965-02-18','123-45-6795','555-1007',1,1,2,1,'robert.miller@email.com','Y',202,NULL,7,105,NULL,NULL,'B-','Medicare'),
-(108,'Lisa','Wilson','1990-08-11','123-45-6796','555-1008',2,2,1,3,'lisa.wilson@email.com','Y',203,NULL,8,102,NULL,NULL,'AB+','Private');
+INSERT INTO `Patient` VALUES (101,'John','Smith','1985-03-15','123-45-6789','555-1001',1,1,2,1,'john.smith@email.com','Y',201,NULL,1,101,NULL,NULL,'O+','Private'),(102,'Maria','Garcia','1978-07-22','123-45-6790','555-1002',2,2,1,2,'maria.garcia@email.com','Y',203,NULL,2,102,NULL,NULL,'A+','Private'),(103,'David','Johnson','1992-11-30','123-45-6791','555-1003',1,1,2,1,'david.johnson@email.com','Y',201,NULL,3,105,NULL,NULL,'B+','Medicare'),(104,'Sarah','Williams','1980-05-14','123-45-6792','555-1004',2,2,2,1,'sarah.williams@email.com','Y',204,NULL,4,103,NULL,NULL,'AB-','Private'),(105,'Michael','Brown','1975-09-08','123-45-6793','555-1005',1,1,2,2,'michael.brown@email.com','Y',202,NULL,5,104,NULL,NULL,'O-','Private'),(106,'Jennifer','Davis','1988-12-25','123-45-6794','555-1006',2,2,2,1,'jennifer.davis@email.com','Y',205,NULL,6,101,NULL,NULL,'A-','Private'),(107,'Robert','Miller','1965-02-18','123-45-6795','555-1007',1,1,2,1,'robert.miller@email.com','Y',202,NULL,7,105,NULL,NULL,'B-','Medicare'),(108,'Lisa','Wilson','1990-08-11','123-45-6796','555-1008',2,2,1,3,'lisa.wilson@email.com','Y',203,NULL,8,102,NULL,NULL,'AB+','Private');
 /*!40000 ALTER TABLE `Patient` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -773,12 +750,7 @@ CREATE TABLE `insurance_payer` (
 
 LOCK TABLES `insurance_payer` WRITE;
 /*!40000 ALTER TABLE `insurance_payer` DISABLE KEYS */;
-INSERT INTO `insurance_payer` VALUES 
-(1,'Blue Cross Blue Shield','Commercial'),
-(2,'Aetna','Commercial'),
-(3,'UnitedHealthcare','Commercial'),
-(4,'Medicare','Government'),
-(5,'Medicaid','Government');
+INSERT INTO `insurance_payer` VALUES (1,'Blue Cross Blue Shield','Commercial'),(2,'Aetna','Commercial'),(3,'UnitedHealthcare','Commercial'),(4,'Medicare','Government'),(5,'Medicaid','Government');
 /*!40000 ALTER TABLE `insurance_payer` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -900,4 +872,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-18 19:22:14
+-- Dump completed on 2025-10-21 13:24:23
