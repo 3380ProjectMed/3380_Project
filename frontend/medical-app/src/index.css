@@ -16,22 +16,37 @@
   --third-color: #00b4d8;
   --forth-color: #90e0ef;
   --fifth-color: #caf0f8;
+  
+  /* ADD THESE NEW VARIABLES */
+  --border: #e6eef8;
+  --dark: #0f172a;
+  
+  /* Status Colors */
+  --success: #059669;
+  --error: #dc2626;
+  --warning: #f59e0b;
+  
+  /* Text Colors */
+  --muted-foreground: #6b7280;
+  --foreground: #1f2937;
+  
+  /* Background Colors */
+  --card: #ffffff;
+  --muted: #f3f4f6;
 }
 
 a {
   font-weight: 500;
-  color: var(--third-color); 
+  color: var(--third-color);
   text-decoration: inherit;
 }
 
 a:hover {
-  color: var(--secondary-color); 
+  color: var(--secondary-color);
 }
 
 body {
   margin: 0;
-  /* display: flex;
-  place-items: center; */
   min-width: 320px;
   min-height: 100vh;
 }
@@ -54,7 +69,7 @@ button {
 }
 
 button:hover {
-  border-color: var(--third-color);  /* Changed from purple to bright blue */
+  border-color: var(--third-color);
 }
 
 button:focus,
@@ -69,10 +84,12 @@ button:focus-visible {
   }
   
   a:hover {
-    color: var(--secondary-color);  /* Changed from purple to medium blue */
+    color: var(--secondary-color);
   }
   
   button {
     background-color: #f9f9f9;
   }
 }
+
+
