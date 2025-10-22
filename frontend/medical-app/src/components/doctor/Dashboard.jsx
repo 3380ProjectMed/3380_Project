@@ -16,7 +16,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       // load doctor profile first
       try {
         const doctorId = 202;
-        const pr = await fetch(`http://localhost:8080/api/profile/get.php?doctor_id=${doctorId}`);
+        const pr = await fetch(`http://localhost:8080/doctor_api/profile/get.php?doctor_id=${doctorId}`);
         const pj = await pr.json();
         if (pj.success) setDoctorProfile(pj.profile);
       } catch (e) {
@@ -53,7 +53,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       
       // ✅ FIXED: Changed port from 8080 to 8000
       const response = await fetch(
-        `http://localhost:8080/api/appointments/get-today.php?doctor_id=${doctorId}`
+        `http://localhost:8080/doctor_api/appointments/get-today.php?doctor_id=${doctorId}`
       );
       
       const data = await response.json();
@@ -120,7 +120,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
               e.preventDefault(); 
               setCurrentPage('schedule');
             }}>
-              Main Clinic, Suite 305
+              Main Clinic, Suite 305 {doctorProfile ? doctorProfile.workLocation : 'WorkLocation'}
             </a>
           </p>
         </div>

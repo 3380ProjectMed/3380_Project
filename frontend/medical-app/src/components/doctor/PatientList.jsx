@@ -53,7 +53,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       try {
         // TODO: derive doctor_id from auth; hardcoded for now
         const doctorId = 201;
-        const res = await fetch(`http://localhost:8080/api/patients/get-all.php?doctor_id=${doctorId}`);
+        const res = await fetch(`http://localhost:8080/doctor_api/patients/get-all.php?doctor_id=${doctorId}`);
         const payload = await res.json();
         if (payload.success) {
           setPatients(payload.patients);

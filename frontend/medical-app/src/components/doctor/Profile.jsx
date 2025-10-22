@@ -19,7 +19,7 @@ function Profile() {
       setLoading(true);
       try {
         const doctorId = 201;
-        const res = await fetch(`http://localhost:8080/api/profile/get.php?doctor_id=${doctorId}`);
+        const res = await fetch(`http://localhost:8080/doctor_api/profile/get.php?doctor_id=${doctorId}`);
         const json = await res.json();
         if (json.success && json.profile) {
           setProfile(prev => ({ ...prev, ...json.profile }));
