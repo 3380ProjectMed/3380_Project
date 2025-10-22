@@ -1,5 +1,14 @@
 import React from 'react';
-import { Home, Calendar, Users, FileText, LogOut, Stethoscope } from 'lucide-react';
+import { 
+  Home, 
+  Calendar, 
+  Users, 
+  FileText, 
+  LogOut, 
+  Stethoscope,
+  BarChart3,  
+  User        
+} from 'lucide-react';
 import './Sidebar.css';
 function Sidebar({ currentPage, setCurrentPage, onLogout }) {
   const menuItems = [
@@ -7,6 +16,9 @@ function Sidebar({ currentPage, setCurrentPage, onLogout }) {
     { id: 'schedule', label: 'My Schedule', icon: Calendar },
     { id: 'patients', label: 'My Patients', icon: Users },
     { id: 'clinical', label: 'Clinical Workspace', icon: FileText }
+    , { id: 'reports', label: 'Reports', icon: FileText }
+    , { id: 'referrals', label: 'Referrals', icon: Stethoscope }
+    , { id: 'profile', label: 'Profile', icon: User }
   ];
 
   const handleLogout = () => {
