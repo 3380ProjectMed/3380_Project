@@ -1,0 +1,3 @@
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^api/([A-Za-z0-9_-]+)$ api/$1.php [L,QSA]
