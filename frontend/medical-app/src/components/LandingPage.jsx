@@ -14,7 +14,7 @@ import {
   X
 } from "lucide-react";
 import "./landingpage.css";
-import { pingDb, pingPhp }  from "../api.js";
+import { pingDb, pingPhp }  from "../api/api.js";
 
 export default function LandingPage() {
   const [showTest, setShowTest] = useState(false);
@@ -109,7 +109,7 @@ export default function LandingPage() {
                 padding: '8px 12px',
                 marginRight: '8px',
                 fontSize: '12px',
-                backgroundColor: '#000000ff',
+                backgroundColor: '#f30000ff',
                 border: '1px solid #ccc',
                 borderRadius: '4px',
                 cursor: 'pointer'
