@@ -36,7 +36,8 @@ CREATE TABLE `Appointment` (
   KEY `ix_appt_office` (`Office_id`),
   CONSTRAINT `fk_appt__doctor` FOREIGN KEY (`Doctor_id`) REFERENCES `Doctor` (`Doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_appt__office` FOREIGN KEY (`Office_id`) REFERENCES `Office` (`Office_ID`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `fk_appt__patient` FOREIGN KEY (`Patient_id`) REFERENCES `Patient` (`Patient_ID`) ON DELETE SET NULL ON UPDATE CASCADE
+  CONSTRAINT `fk_appt__patient` FOREIGN KEY (`Patient_id`) REFERENCES `Patient` (`Patient_ID`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `chk_appointment_dates` CHECK ((`Date_created` <= `Appointment_date`))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -46,7 +47,7 @@ CREATE TABLE `Appointment` (
 
 LOCK TABLES `Appointment` WRITE;
 /*!40000 ALTER TABLE `Appointment` DISABLE KEYS */;
-INSERT INTO `Appointment` VALUES (1001,101,201,1,'2025-11-05 09:00:00','2025-12-20 14:30:00','Annual physical examination'),(1002,103,201,3,'2025-10-27 14:00:00','2025-11-02 16:45:00','Follow-up consultation'),(1003,105,202,1,'2025-10-21 10:30:00','2025-10-30 09:15:00','Cardiology checkup'),(1004,107,202,4,'2025-10-29 11:00:00','2025-10-29 14:25:00','Heart condition monitoring'),(1005,102,203,2,'2025-10-30 13:30:00','2025-10-31 11:20:00','Pediatric wellness visit'),(1006,108,203,2,'2025-10-29 15:45:00','2025-11-11 12:15:00','Vaccination'),(1007,104,204,3,'2025-10-27 08:45:00','2025-11-01 11:20:00','Orthopedic consultation'),(1008,101,204,1,'2025-11-01 16:00:00','2025-11-01 17:40:00','Knee pain evaluation'),(1009,106,205,4,'2025-10-28 09:30:00','2025-10-21 08:30:00','OB/GYN appointment'),(1010,103,206,2,'2025-10-21 08:30:00','2025-10-28 09:50:00','Internal medicine consultation'),(1011,104,207,4,'2025-10-22 14:30:00','2025-11-03 16:20:00','Dermatology screening');
+INSERT INTO `Appointment` VALUES (1001,101,201,1,'2025-11-05 09:00:00','2025-11-04 09:00:00','Annual physical examination'),(1002,103,201,3,'2025-10-27 14:00:00','2025-10-26 14:00:00','Follow-up consultation'),(1003,105,202,1,'2025-10-21 10:30:00','2025-10-20 10:30:00','Cardiology checkup'),(1004,107,202,4,'2025-10-29 11:00:00','2025-10-28 11:00:00','Heart condition monitoring'),(1005,102,203,2,'2025-10-30 13:30:00','2025-10-29 13:30:00','Pediatric wellness visit'),(1006,108,203,2,'2025-10-29 15:45:00','2025-10-28 15:45:00','Vaccination'),(1007,104,204,3,'2025-10-27 08:45:00','2025-10-26 08:45:00','Orthopedic consultation'),(1008,101,204,1,'2025-11-01 16:00:00','2025-10-31 16:00:00','Knee pain evaluation'),(1009,106,205,4,'2025-10-28 09:30:00','2025-10-21 08:30:00','OB/GYN appointment'),(1010,103,206,2,'2025-10-21 08:30:00','2025-10-20 08:30:00','Internal medicine consultation'),(1011,104,207,4,'2025-10-22 14:30:00','2025-10-21 14:30:00','Dermatology screening');
 /*!40000 ALTER TABLE `Appointment` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -210,7 +211,7 @@ CREATE TABLE `Doctor` (
 
 LOCK TABLES `Doctor` WRITE;
 /*!40000 ALTER TABLE `Doctor` DISABLE KEYS */;
-INSERT INTO `Doctor` VALUES (201,'Emily','Chen','123-45-6781',2,3,NULL,1,'echen@medconnect.com','737-492-810','TXMD123456'),(202,'James','Rodriguez','123-45-6782',1,14,NULL,1,'jrodriguez@medconnect.com','737-492-8102','TXMD123457'),(203,'Susan','Lee','123-45-6783',2,4,NULL,2,'slee@medconnect.com','737-879-710','TXMD123458'),(204,'Richard','Patel','123-45-6784',1,15,NULL,3,'rpatel@medconnect.com','737-879-7102','TXMD123459'),(205,'Maria','Garcia','123-45-6785',2,5,NULL,4,'mgarcia@medconnect.com','737-492-8103','TXMD123460'),(206,'David','Kim','123-45-6786',1,3,NULL,2,'dkim@medconnect.com','737-879-7103','TXMD123461'),(207,'Lisa','Wong','123-45-6787',2,13,NULL,4,'lwong@medconnect.com','737-492-8104','TXMD123462');
+INSERT INTO `Doctor` VALUES (201,'Amy','Chen','123-45-6781',2,3,NULL,1,'echen@medconnect.com','737-492-8101','TXMD123456'),(202,'James','Rodriguez','123-45-6782',1,14,NULL,1,'jrodriguez@medconnect.com','737-492-8102','TXMD123457'),(203,'Susan','Lee','123-45-6783',2,4,NULL,2,'slee@medconnect.com','737-879-710','TXMD123458'),(204,'Richard','Patel','123-45-6784',1,15,NULL,3,'rpatel@medconnect.com','737-879-7102','TXMD123459'),(205,'Maria','Garcia','123-45-6785',2,5,NULL,4,'mgarcia@medconnect.com','737-492-8103','TXMD123460'),(206,'David','Kim','123-45-6786',1,3,NULL,2,'dkim@medconnect.com','737-879-7103','TXMD123461'),(207,'Lisa','Wong','123-45-6787',2,13,NULL,4,'lwong@medconnect.com','737-492-8104','TXMD123462');
 /*!40000 ALTER TABLE `Doctor` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -545,6 +546,7 @@ CREATE TABLE `Referral` (
   `Reason` varchar(300) DEFAULT NULL,
   `appointment_id` int DEFAULT NULL,
   `Status` enum('Pending','Approved','Denied') DEFAULT 'Pending',
+  `notes` text,
   PRIMARY KEY (`Referral_ID`),
   KEY `ix_ref_patient` (`Patient_ID`),
   KEY `ix_ref_refdoc` (`referring_doctor_staff_id`),
@@ -554,7 +556,7 @@ CREATE TABLE `Referral` (
   CONSTRAINT `fk_ref__patient` FOREIGN KEY (`Patient_ID`) REFERENCES `Patient` (`Patient_ID`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_ref__referring_doctor` FOREIGN KEY (`referring_doctor_staff_id`) REFERENCES `Doctor` (`Doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_ref__specialist_doctor` FOREIGN KEY (`specialist_doctor_staff_id`) REFERENCES `Doctor` (`Doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -563,6 +565,7 @@ CREATE TABLE `Referral` (
 
 LOCK TABLES `Referral` WRITE;
 /*!40000 ALTER TABLE `Referral` DISABLE KEYS */;
+INSERT INTO `Referral` VALUES (9,101,NULL,201,202,'Test referral from curl',NULL,'Pending',NULL),(12,101,'2025-10-21',201,202,'Chest pain, possible cardiac issue',NULL,'Approved','Family history of heart disease'),(13,101,NULL,201,203,'crying',NULL,'Pending',''),(14,101,NULL,202,206,'test',NULL,'Pending',NULL);
 /*!40000 ALTER TABLE `Referral` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -872,4 +875,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-21 13:24:23
+-- Dump completed on 2025-10-21 21:52:39
