@@ -8,7 +8,10 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     ports: ["3306:3306"]
-    volumes: [db_data:/var/lib/mysql]
+    volumes: 
+      - db_data:/var/lib/mysql
+      - ./medapp.sql:/docker-entrypoint-initdb.d/medapp.sql  # Auto-runs on first start
+      - ./medapp.sql:/sql/medapp.sql  # Also available for manual re-runs
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -p${DB_ROOT_PASSWORD} --silent"]
       interval: 10s
