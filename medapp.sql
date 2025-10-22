@@ -89,19 +89,13 @@ CREATE TABLE `CodesAssignedAtBirth_Gender` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping data for table `CodesAssignedAtBirth_Gender`
---
-
-LOCK TABLES `CodesAssignedAtBirth_Gender` WRITE;
-/*!40000 ALTER TABLE `CodesAssignedAtBirth_Gender` DISABLE KEYS */;
-INSERT INTO `CodesAssignedAtBirth_Gender` VALUES (1,'Male'),(2,'Female'),(3,'Intersex'),(4,'Not Specified'),(5,'Other');
-/*!40000 ALTER TABLE `CodesAssignedAtBirth_Gender` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `CodesEthnicity`
---
+-- Dumping data for table med-app-db.CodesAssignedAtBirth_Gender: ~5 rows (approximately)
+INSERT INTO `CodesAssignedAtBirth_Gender` (`GenderCode`, `Gender_Text`) VALUES
+	(1, 'Male'),
+	(2, 'Female'),
+	(3, 'Intersex'),
+	(4, 'Not Specified'),
+	(5, 'Other');
 
 DROP TABLE IF EXISTS `CodesEthnicity`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -117,15 +111,12 @@ CREATE TABLE `CodesEthnicity` (
 -- Dumping data for table `CodesEthnicity`
 --
 
-LOCK TABLES `CodesEthnicity` WRITE;
-/*!40000 ALTER TABLE `CodesEthnicity` DISABLE KEYS */;
-INSERT INTO `CodesEthnicity` VALUES (1,'Hispanic or Latino'),(2,'Non-Hispanic or Latino'),(3,'Not Specified'),(4,'Other');
-/*!40000 ALTER TABLE `CodesEthnicity` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `CodesGender`
---
+-- Dumping data for table med-app-db.CodesEthnicity: ~4 rows (approximately)
+INSERT INTO `CodesEthnicity` (`EthnicityCode`, `Ethnicity_Text`) VALUES
+	(1, 'Hispanic or Latino'),
+	(2, 'Non-Hispanic or Latino'),
+	(3, 'Not Specified'),
+	(4, 'Other');
 
 DROP TABLE IF EXISTS `CodesGender`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -147,9 +138,7 @@ INSERT INTO `CodesGender` VALUES (1,'Male'),(2,'Female'),(3,'Non-Binary'),(4,'Pr
 /*!40000 ALTER TABLE `CodesGender` ENABLE KEYS */;
 UNLOCK TABLES;
 
---
--- Table structure for table `CodesRace`
---
+-- Dumping data for table med-app-db.CodesGender: ~6 rows (approximately)
 
 DROP TABLE IF EXISTS `CodesRace`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
