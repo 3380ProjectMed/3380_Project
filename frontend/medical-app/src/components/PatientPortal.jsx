@@ -22,7 +22,7 @@ import {
   LogOut,
   Home
 } from 'lucide-react';
-import api from './api';
+import api from '../api';
 import './patientportal.css';
 
 export default function PatientPortal({ user, onLogout }) {
