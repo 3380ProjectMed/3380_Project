@@ -1,36 +1,73 @@
+// src/components/nurse/NurseSidebar.jsx
 import React from "react";
-import { Calendar, Users, ClipboardList, LogOut, Home } from "lucide-react";
+import {
+  Home,
+  Calendar,
+  Users,
+  ClipboardList,
+  LogOut,
+  Stethoscope,
+} from "lucide-react";
+import "./NurseSidebar.css";
 
-export default function NurseSidebar({ currentPage, setCurrentPage, onLogout }) {
+/**
+ * NurseSidebar
+ * - Left navigation for the Nurse Portal
+ * - Highlights the active page
+ * - Calls setCurrentPage(id) when a menu item is clicked
+ * - Calls onLogout() when Logout is pressed
+ */
+export default function NurseSidebar({
+  currentPage = "dashboard",
+  setCurrentPage = () => {},
+  onLogout,
+}) {
   const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: <Home /> },
-    { id: "schedule", label: "My Schedule", icon: <Calendar /> },
-    { id: "patients", label: "My Patients", icon: <Users /> },
-    { id: "clinical", label: "Clinical Workspace", icon: <ClipboardList /> },
+    { id: "dashboard", label: "Dashboard", icon: Home },
+    { id: "schedule", label: "My Schedule", icon: Calendar },
+    { id: "patients", label: "My Patients", icon: Users },
+    { id: "clinical", label: "Clinical Workspace", icon: ClipboardList },
   ];
 
+  const handleLogout = () => {
+    if (onLogout) return onLogout();
+    if (window.confirm("Log out of Nurse Portal?")) {
+      // fallback behavior; wire to your auth when ready
+      window.location.href = "/";
+    }
+  };
+
   return (
-    <aside className="fixed h-full w-64 bg-white border-r flex flex-col">
-      <div className="px-6 py-4 font-bold text-lg">Nurse Portal</div>
-      <nav className="flex-1 px-2">
-        {menuItems.map((item) => (
+    <aside className="nurse-sidebar" aria-label="Nurse navigation">
+      {/* Header / Brand */}
+      <div className="nurse-sidebar__header">
+        <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+          <Stethoscope className="nurse-sidebar__icon" />
+          Nurse Portal
+        </span>
+      </div>
+
+      {/* Menu */}
+      <nav className="nurse-sidebar__nav">
+        {menuItems.map(({ id, label, icon: Icon }) => (
           <button
-            key={item.id}
-            onClick={() => setCurrentPage(item.id)}
-            className={`flex items-center gap-2 w-full px-4 py-2 rounded-md text-left hover:bg-blue-50 ${
-              currentPage === item.id ? "bg-blue-100 font-semibold" : ""
+            key={id}
+            type="button"
+            className={`nurse-sidebar__button ${
+              currentPage === id ? "active" : ""
             }`}
+            onClick={() => setCurrentPage(id)}
+            aria-current={currentPage === id ? "page" : undefined}
           >
-            {item.icon}
-            {item.label}
+            <Icon className="nurse-sidebar__icon" />
+            {label}
           </button>
         ))}
       </nav>
-      <button
-        onClick={onLogout}
-        className="m-4 flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-      >
-        <LogOut className="w-4 h-4" />
+
+      {/* Logout */}
+      <button type="button" className="nurse-sidebar__logout" onClick={handleLogout}>
+        <LogOut className="nurse-sidebar__icon" />
         Logout
       </button>
     </aside>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import ClinicalWorkSpace from "../ClinicalWorkSpace";
+import ClinicalWorkSpace from "../doctor/ClinicalWorkSpace";
 
 /**
  * Wraps ClinicalWorkSpace and nudges it to "Vitals" after mount by

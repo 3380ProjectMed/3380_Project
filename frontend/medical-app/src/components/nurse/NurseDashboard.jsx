@@ -1,23 +1,27 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Dashboard from "../doctor/Dashboard";
 import "./NurseDashboard.css";
 
-/**
- * Thin wrapper over the existing Dashboard that:
- *  - Shows a nurse friendly greeting
- *  - Injects a Task List widget below the stats
- */
 export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const h1 = document.querySelector(".welcome-section h1");
+      if (h1 && h1.textContent.includes("Dr.")) {
+        h1.textContent = h1.textContent.replace("Dr.", "Nurse");
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="nurse-dashboard-wrapper">
-      {/* Similar UI to doctor */}
       <Dashboard
-        role="nurse"
         setCurrentPage={setCurrentPage}
         onAppointmentClick={onAppointmentClick}
       />
 
-      {/* Nurse Task List (simple placeholder) */}
+      {/* Nurse Task List */}
       <section className="nurse-tasklist">
         <h2 className="nurse-tasklist__title">Task List</h2>
 
