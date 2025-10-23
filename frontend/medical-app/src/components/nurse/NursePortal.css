@@ -1,13 +1,12 @@
 /* src/components/nurse/NursePortal.css */
-
 .nurse-portal {
   min-height: 100vh;
   display: flex;
-  background: linear-gradient(180deg, var(--fifth-color), #ffffff);
+  background: linear-gradient(180deg, var(--fifth-color, #e6f7ff), #ffffff);
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
-.main-content {
+.nurse-main-content {
   flex: 1;
   margin-left: 0;
   transition: all 0.3s ease;
@@ -18,8 +17,8 @@
 }
 
 @media (min-width: 1024px) {
-  .main-content {
-    margin-left: 16rem; /* Same width as sidebar */
+  .nurse-main-content {
+    margin-left: 16rem; /* must match sidebar width */
     padding: 2rem 3rem;
   }
 }
