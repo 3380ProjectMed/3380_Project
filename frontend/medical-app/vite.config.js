@@ -6,10 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      // anything under /api/* goes to backend/public (docroot) unchanged
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        //rewrite: p => p.replace(/^\/api/, ''), // /api/... -> /...
+        // no rewrite because the files actually live under /api/
       },
     },
   },

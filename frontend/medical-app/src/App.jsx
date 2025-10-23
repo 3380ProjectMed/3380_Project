@@ -6,11 +6,18 @@ import { useAuth } from "./auth/AuthProvider.jsx";
 import LandingPage from "./components/LandingPage.jsx";
 import PatientPortal from "./components/patient/PatientPortal.jsx";
 import DoctorPortal from "./components/doctor/DoctorPortal.jsx";
-import LoginPage from "./components/LoginPage.jsx"; // <-- adjust path if yours differs
+import LoginPage from "./components/LoginPage.jsx"; 
+// Nurse module
+import NursePortal from "./components/nurse/NursePortal.jsx";
+import NurseDashboard from "./components/nurse/NurseDashboard.jsx";
+import NurseIntake from "./components/nurse/NurseIntake.jsx";
+
+import "./App.css";
 
 export default function App() {
   return (
     <Routes>
+      {/* Existing app routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
@@ -26,12 +33,22 @@ export default function App() {
         element={
           <RequireRole roles={["DOCTOR", "ADMIN"]}>
             <DoctorPortal />
-          </RequireRole>
+          </RequireRole>  
         }
       />
       {/* Optional: neutral entry that bounces users to their role home */}
       <Route path="/portal" element={<AutoPortal />} />
       {/* 404 */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+
+      {/* Nurse routes */}
+      <Route path="/nurse" element={<NursePortal />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<NurseDashboard />} />
+        <Route path="intake/:appointmentId" element={<NurseIntake />} />
+      </Route>
+
+      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
