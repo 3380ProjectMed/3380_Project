@@ -8,10 +8,31 @@ require_once __DIR__ . '/../../../cors.php';
 require_once __DIR__ . '/../../../database.php';
 
 try {
-    $conn = getDBConnection();
+    session_start();
+
+    if (isset($_GET['doctor_id'])) {
+        $doctor_id = intval($_GET['doctor_id']);
+    } else {
+        if (empty($_SESSION['uid'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+            exit;
+        }
+        $user_id = (int)$_SESSION['uid'];
+
+        $conn = getDBConnection();
+        // Resolve doctor_id from user's email
+        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        if (empty($rows)) {
+            closeDBConnection($conn);
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'No doctor associated with this user']);
+            exit;
+        }
+        $doctor_id = (int)$rows[0]['Doctor_id'];
+    }
     
-    // Get doctor_id from query parameter
-    $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 201;
+    $conn = $conn ?? getDBConnection();
     
     // SQL query for doctor info
     $sql = "SELECT 

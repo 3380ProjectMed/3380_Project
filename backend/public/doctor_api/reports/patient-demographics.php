@@ -4,7 +4,27 @@ require_once __DIR__ . '/../../../database.php';
 
 try {
     $conn = getDBConnection();
-    $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 201;
+    $doctor_id = null;
+    if (isset($_GET['doctor_id'])) {
+        $doctor_id = intval($_GET['doctor_id']);
+    } else {
+        session_start();
+        if (!isset($_SESSION['uid'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+            closeDBConnection($conn);
+            exit;
+        }
+        $user_id = intval($_SESSION['uid']);
+        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        if (!is_array($rows) || count($rows) === 0) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
+            closeDBConnection($conn);
+            exit;
+        }
+        $doctor_id = (int)$rows[0]['Doctor_id'];
+    }
     
     $sql = "SELECT 
                 p.Patient_ID,

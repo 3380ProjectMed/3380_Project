@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useAuth } from '../../auth/AuthProvider';
 import { Search, X, Calendar, Mail, AlertCircle, FileText } from 'lucide-react';
 import './PatientList.css';
 /**
@@ -17,6 +18,7 @@ import './PatientList.css';
  * @param {Function} setSelectedPatient - Set selected patient (optional)
  */
 function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient, setSelectedPatient: externalSetSelectedPatient }) {
+  const auth = useAuth();
   // Local state for search and selected patient
   const [searchTerm, setSearchTerm] = useState('');
   const [localSelectedPatient, setLocalSelectedPatient] = useState(null);
@@ -45,15 +47,20 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     );
   }, [searchTerm, patients]);
 
-  // Load all patients for the doctor on mount
+  // Load all patients for the doctor when auth provides doctor_id
   useEffect(() => {
-    const loadPatients = async () => {
+    if (auth.loading) return;
+    const doctorId = auth.user?.doctor_id ?? null;
+    if (!doctorId) {
+      setError('No doctor account is associated with this user.');
+      return;
+    }
+
+    const loadPatients = async (did) => {
       setLoading(true);
       setError(null);
       try {
-        // TODO: derive doctor_id from auth; hardcoded for now
-        const doctorId = 201;
-        const res = await fetch(`http://localhost:8080/doctor_api/patients/get-all.php?doctor_id=${doctorId}`);
+        const res = await fetch(`http://localhost:8080/doctor_api/patients/get-all.php?doctor_id=${did}`, { credentials: 'include' });
         const payload = await res.json();
         if (payload.success) {
           setPatients(payload.patients);
@@ -67,8 +74,8 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
         setLoading(false);
       }
     };
-    loadPatients();
-  }, []);
+    loadPatients(doctorId);
+  }, [auth.user, auth.loading]);
 
   // Search by ID using the API (if the input looks like an ID)
   const handleSearchKeyPress = async (e) => {
@@ -82,7 +89,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`http://localhost:8080/api/patients/get-by-id.php?id=${encodeURIComponent(q)}`);
+  const res = await fetch(`http://localhost:8080/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(q)}`, { credentials: 'include' });
         const payload = await res.json();
         if (payload.success) {
           setPatients([payload.patient]);
@@ -117,7 +124,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     setError(null);
     try {
       // patient.id is formatted like 'P001' — pass that as `id`
-      const res = await fetch(`http://localhost:8080/api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`);
+  const res = await fetch(`http://localhost:8080/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`, { credentials: 'include' });
       const payload = await res.json();
       if (payload.success && payload.patient) {
         setSelectedPatient(payload.patient);

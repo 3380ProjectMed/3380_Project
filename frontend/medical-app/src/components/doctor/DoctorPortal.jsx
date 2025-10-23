@@ -89,15 +89,9 @@ function DoctorPortal() {
           />
         )}
 
-        {currentPage === 'report' && (
-          <ClinicalWorkSpace
-            appointment={selectedAppointment}
-            patient={selectedPatient}
-            onBack={handleBackToDashboard}
-            selectedTab={selectedClinicalTab}
-            setSelectedTab={setSelectedClinicalTab}
-          />
-        )}
+        {currentPage === 'reports' && <Reports />}  
+  {currentPage === 'referrals' && <Referral />}
+  {currentPage === 'profile' && <Profile />}  
       </main>
     </div>
   );

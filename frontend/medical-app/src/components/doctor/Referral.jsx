@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useAuth } from '../../auth/AuthProvider';
 import './Referral.css';
 
 function Referral() {
@@ -22,7 +23,8 @@ function Referral() {
     }).slice(0, 50);
   }, [form.patient_name, patients]);
 
-  const apiBase = 'http://localhost:8080/api/referrals';
+  const apiBase = 'http://localhost:8080/doctor_api/referrals';
+  const auth = useAuth();
 
   const loadPending = async () => {
     setLoading(true);
@@ -48,10 +50,13 @@ function Referral() {
   useEffect(() => {
     const loadLists = async () => {
       try {
-        const doctorId = 201; // TODO: derive from auth/profile
+        if (auth.loading) return;
+        const doctorId = auth.user?.doctor_id ?? null;
+        if (!doctorId) return; // no doctor context available yet
+
         const [pRes, dRes] = await Promise.all([
-          fetch(`http://localhost:8080/api/patients/get-all.php?doctor_id=${doctorId}`),
-          fetch('http://localhost:8080/api/doctors/get-all.php')
+          fetch(`http://localhost:8080/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' }),
+          fetch('http://localhost:8080/doctor_api/doctors/get-all.php', { credentials: 'include' })
         ]);
 
         const pJson = await pRes.json();
@@ -68,7 +73,7 @@ function Referral() {
 
   const handleApprove = async (id, approve = true) => {
     try {
-      const body = { referral_id: id, status: approve ? 'Approved' : 'Denied', doctor_id: 201 };
+      const body = { referral_id: id, status: approve ? 'Approved' : 'Denied', doctor_id: auth.user?.doctor_id ?? null };
       const res = await fetch(`${apiBase}/approve.php`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
       });
@@ -108,7 +113,7 @@ function Referral() {
 
       const payload = {
         patient_id: patientId,
-        referring_doctor_id: parseInt(form.referring_doctor_staff_id, 10),
+        referring_doctor_id: parseInt(form.referring_doctor_staff_id, 10) || (auth.user?.doctor_id ?? null),
         specialist_doctor_id: parseInt(form.specialist_doctor_staff_id, 10),
         reason: form.reason,
         notes: form.notes
