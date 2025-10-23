@@ -7,8 +7,26 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
     
     $patient_id = intval($input['patient_id']);
-    $referring_doctor_id = intval($input['referring_doctor_id']);
     $specialist_doctor_id = intval($input['specialist_doctor_id']);
+    // Determine referring doctor: body overrides, otherwise session user
+    if (isset($input['referring_doctor_id']) && intval($input['referring_doctor_id']) > 0) {
+        $referring_doctor_id = intval($input['referring_doctor_id']);
+    } else {
+        session_start();
+        if (!isset($_SESSION['uid'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+            exit;
+        }
+        $user_id = intval($_SESSION['uid']);
+        $rows = executeQuery(getDBConnection(), 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        if (!is_array($rows) || count($rows) === 0) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
+            exit;
+        }
+        $referring_doctor_id = (int)$rows[0]['Doctor_id'];
+    }
     $reason = isset($input['reason']) ? $input['reason'] : null;
     $notes = isset($input['notes']) ? $input['notes'] : null;
     

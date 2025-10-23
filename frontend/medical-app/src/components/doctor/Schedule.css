@@ -64,6 +64,9 @@
   gap: 1rem;
   border: 2px solid #e5e7eb;
   transition: all 0.2s ease;
+  flex-wrap: wrap; /* allow items to wrap on small screens */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .filter-section label {
@@ -90,7 +93,10 @@
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  min-width: 200px;
+  /* allow select to shrink on small screens but keep a sensible basis */
+  min-width: 120px;
+  flex: 0 1 220px;
+  max-width: 100%;
 }
 .location-select:hover {
   border-color: #00b4d8;
@@ -310,8 +316,10 @@
 
 /* Responsive Design */
 @media (max-width: 1400px) {
+  /* avoid forcing a large min-width which pushes other elements out of view
+     allow calendar container to scroll horizontally while filter stays in place */
   .calendar-grid {
-    min-width: 800px;
+    min-width: auto;
   }
 }
 

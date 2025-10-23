@@ -8,12 +8,38 @@ require_once __DIR__ . '/../../../cors.php';
 require_once __DIR__ . '/../../../database.php';
 
 try {
-    $conn = getDBConnection();
+    session_start();
+    if (empty($_SESSION['uid'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit;
+    }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    if (!$input) throw new Exception('Invalid JSON body');
+    if (!$input || !is_array($input)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid JSON body']);
+        exit;
+    }
 
-    $doctor_id = isset($input['doctor_id']) ? intval($input['doctor_id']) : (isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 201);
+    $conn = getDBConnection();
+
+    // Resolve doctor_id: body overrides query param; if absent, resolve from logged-in user
+    if (isset($input['doctor_id'])) {
+        $doctor_id = intval($input['doctor_id']);
+    } elseif (isset($_GET['doctor_id'])) {
+        $doctor_id = intval($_GET['doctor_id']);
+    } else {
+        $user_id = (int)$_SESSION['uid'];
+        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        if (empty($rows)) {
+            closeDBConnection($conn);
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'No doctor associated with the logged-in user']);
+            exit;
+        }
+        $doctor_id = (int)$rows[0]['Doctor_id'];
+    }
 
     // Validate required fields (at least one field to update)
     $allowed = ['firstName','lastName','email','phone','licenseNumber'];

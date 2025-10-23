@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useAuth } from '../../auth/AuthProvider';
 import './Referral.css';
 
 function Referral() {
@@ -22,7 +23,8 @@ function Referral() {
     }).slice(0, 50);
   }, [form.patient_name, patients]);
 
-  const apiBase = 'http://localhost:8080/api/referrals';
+  const apiBase = 'http://localhost:8080/doctor_api/referrals';
+  const auth = useAuth();
 
   const loadPending = async () => {
     setLoading(true);
@@ -48,10 +50,13 @@ function Referral() {
   useEffect(() => {
     const loadLists = async () => {
       try {
-        const doctorId = 201; // TODO: derive from auth/profile
+        if (auth.loading) return;
+        const doctorId = auth.user?.doctor_id ?? null;
+        if (!doctorId) return; // no doctor context available yet
+
         const [pRes, dRes] = await Promise.all([
-          fetch(`http://localhost:8080/api/patients/get-all.php?doctor_id=${doctorId}`),
-          fetch('http://localhost:8080/api/doctors/get-all.php')
+          fetch(`http://localhost:8080/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' }),
+          fetch('http://localhost:8080/doctor_api/doctors/get-all.php', { credentials: 'include' })
         ]);
 
         const pJson = await pRes.json();
@@ -68,7 +73,7 @@ function Referral() {
 
   const handleApprove = async (id, approve = true) => {
     try {
-      const body = { referral_id: id, status: approve ? 'Approved' : 'Denied', doctor_id: 201 };
+      const body = { referral_id: id, status: approve ? 'Approved' : 'Denied', doctor_id: auth.user?.doctor_id ?? null };
       const res = await fetch(`${apiBase}/approve.php`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
       });
@@ -108,7 +113,7 @@ function Referral() {
 
       const payload = {
         patient_id: patientId,
-        referring_doctor_id: parseInt(form.referring_doctor_staff_id, 10),
+        referring_doctor_id: parseInt(form.referring_doctor_staff_id, 10) || (auth.user?.doctor_id ?? null),
         specialist_doctor_id: parseInt(form.specialist_doctor_staff_id, 10),
         reason: form.reason,
         notes: form.notes
@@ -141,7 +146,7 @@ function Referral() {
 
   return (
     <div className="referral-page">
-      <h2>Referrals</h2>
+      <h2 className="page-title">Referrals</h2>
       <div className="referral-grid">
         <div className="referral-column">
           <h3>Pending Referrals</h3>
@@ -158,8 +163,8 @@ function Referral() {
                       {r.Date_of_approval && <span className="approved-date">Approved on: {r.Date_of_approval}</span>}
                     </div>
                     <div className="referral-actions">
-                      <button className="btn btn-approve" onClick={() => handleApprove(r.Referral_ID, true)}>Approve</button>
-                      <button className="btn btn-deny" onClick={() => handleApprove(r.Referral_ID, false)}>Deny</button>
+                      <button className="btn btn-primary btn-small" onClick={() => handleApprove(r.Referral_ID, true)}>Approve</button>
+                      <button className="btn btn-danger btn-small" onClick={() => handleApprove(r.Referral_ID, false)}>Deny</button>
                     </div>
                   </li>
                 ))}
@@ -180,23 +185,25 @@ function Referral() {
                   onFocus={() => setShowPatientList(true)}
                   required
                 />
-                <div className={`patient-list-dropdown ${showPatientList ? 'open' : ''}`}>
-                  {filteredPatientResults.length === 0 ? (
-                    <div className="patient-list-empty">No matching patients</div>
-                  ) : (
-                    filteredPatientResults.map(p => (
-                      <div key={p.id} className="patient-list-item" onClick={() => {
-                        // p.id is like 'P101' and p.name is 'First Last'
-                        const numeric = parseInt((p.id || '').replace(/^P/i, ''), 10) || null;
-                        setForm({ ...form, patient_name: `${p.name} (${p.id})`, patient_id: numeric });
-                        setShowPatientList(false);
-                      }}>
-                        <div className="patient-list-item-name">{p.name}</div>
-                        <div className="patient-list-item-id">{p.id}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                {showPatientList && (form.patient_name || '').trim() !== '' && !form.patient_id && (
+                  <div className={`patient-list-dropdown open`}>
+                    {filteredPatientResults.length === 0 ? (
+                      <div className="patient-list-empty">No matching patients</div>
+                    ) : (
+                      filteredPatientResults.map(p => (
+                        <div key={p.id} className="patient-list-item" onClick={() => {
+                          // p.id is like 'P101' and p.name is 'First Last'
+                          const numeric = parseInt((p.id || '').replace(/^P/i, ''), 10) || null;
+                          setForm({ ...form, patient_name: `${p.name} (${p.id})`, patient_id: numeric });
+                          setShowPatientList(false);
+                        }}>
+                          <div className="patient-list-item-name">{p.name}</div>
+                          <div className="patient-list-item-id">{p.id}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </label>
             <label>Referring Doctor Staff ID
@@ -214,7 +221,7 @@ function Referral() {
               <textarea value={form.reason} onChange={e => setForm({...form, reason: e.target.value})} required />
             </label>
             <div style={{ marginTop: 8 }}>
-              <button className="btn" type="submit">Create Referral</button>
+              <button className="btn btn-primary" type="submit">Create Referral</button>
             </div>
           </form>
               {status && <div className={`alert ${status.type}`}>{status.text}</div>}

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../auth/AuthProvider';
 import { User, Mail, Phone, Save } from 'lucide-react';
 import './Profile.css';
 
 function Profile() {
+  const auth = useAuth();
   const [profile, setProfile] = useState({
     firstName: '',
     lastName: '',
@@ -18,8 +20,14 @@ function Profile() {
     const load = async () => {
       setLoading(true);
       try {
-        const doctorId = 201;
-        const res = await fetch(`http://localhost:8080/doctor_api/profile/get.php?doctor_id=${doctorId}`);
+        if (auth.loading) return;
+        const doctorId = auth.user?.doctor_id ?? null;
+        if (!doctorId) {
+          // No doctor associated with this user
+          setLoading(false);
+          return;
+        }
+        const res = await fetch(`http://localhost:8080/doctor_api/profile/get.php?doctor_id=${doctorId}`, { credentials: 'include' });
         const json = await res.json();
         if (json.success && json.profile) {
           setProfile(prev => ({ ...prev, ...json.profile }));
@@ -31,7 +39,7 @@ function Profile() {
       }
     };
     load();
-  }, []);
+  }, [auth.user, auth.loading]);
 
   const handleChange = (field, value) => {
     setProfile(prev => ({ ...prev, [field]: value }));
@@ -42,16 +50,17 @@ function Profile() {
     setStatus(null);
     try {
       const body = {
-        doctor_id: 201,
+  doctor_id: auth.user?.doctor_id ?? null,
         firstName: profile.firstName,
         lastName: profile.lastName,
         email: profile.email,
         phone: profile.phone,
         licenseNumber: profile.licenseNumber
       };
-      const res = await fetch('http://localhost:8080/api/profile/update.php', {
+      const res = await fetch('http://localhost:8080/doctor_api/profile/update.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(body)
       });
       const json = await res.json();
