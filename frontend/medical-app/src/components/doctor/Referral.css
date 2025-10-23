@@ -1,94 +1,55 @@
-.referral-page{
-  padding:18px;
+.referral-page {
+  padding: 0 6px 12px; /* main-content already provides larger padding */
 }
-
-:root{
-  --card-bg: #ffffff;
-  --muted:#6b7280;
-  --primary:#2563eb;
-  --success:#10b981;
-  --danger:#ef4444;
-  --surface-shadow: 0 6px 20px rgba(16,24,40,0.08);
-}
-
-.referral-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:12px;
-}
-.referral-title{font-size:1.25rem;font-weight:600;color:#111827}
-.referral-count{color:var(--muted);font-size:0.95rem}
 
 .referral-grid{
-  display:grid;
-  grid-template-columns: 1fr 380px;
-  gap:20px;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 18px;
 }
 
 .referral-column{
-  background:var(--card-bg);
-  border-radius:10px;
-  padding:14px;
-  box-shadow: var(--surface-shadow);
+  background: linear-gradient(135deg, var(--fifth-color), white);
+  border-radius: 0.75rem;
+  padding: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 10px rgba(2,6,23,0.04);
 }
 
-.pending-list{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-  max-height:72vh;
-  overflow:auto;
-  padding-right:6px;
-}
+.referral-column h3{ color: var(--primary-color); margin-top:0; margin-bottom:8px }
 
-.referral-card{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px;
-  border-radius:8px;
-  background:linear-gradient(180deg, #ffffff, #fbfdff);
-  border:1px solid #eef2ff;
-  transition:transform .12s ease, box-shadow .12s ease;
-}
-.referral-card:hover{ transform:translateY(-3px); box-shadow:0 10px 30px rgba(2,6,23,0.06); }
+.pending-list{ display:flex; flex-direction:column; gap:12px; max-height:70vh; overflow:auto; padding-right:6px }
 
-.referral-info{ display:flex; flex-direction:column; gap:6px; }
-.referral-meta-row{ display:flex; gap:12px; color:var(--muted); font-size:0.92rem; align-items:center; flex-wrap:wrap }
-.referral-reason{ font-weight:600; color:#0f172a }
-.referral-notes{ color:var(--muted); font-size:0.92rem }
-.approved-date{ color:var(--muted); font-size:0.85rem }
+.referral-card{ background: #fff; border-radius:0.5rem; padding:12px; border:1px solid var(--border); display:flex; justify-content:space-between; gap:12px }
+.referral-card:hover{ box-shadow: 0 8px 24px rgba(2,6,23,0.06); transform: translateY(-2px); }
+
+.referral-info{ display:flex; flex-direction:column; gap:6px }
+.referral-reason{ font-weight:600; color:var(--dark) }
+.referral-meta-row{ display:flex; gap:12px; color:var(--muted-foreground); font-size:0.92rem; flex-wrap:wrap }
+.referral-notes{ color:var(--muted-foreground); font-size:0.92rem }
+.approved-date{ color:var(--muted-foreground); font-size:0.85rem }
 
 .referral-actions{ display:flex; gap:8px; align-items:center }
-.btn{ background:var(--primary); color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600 }
-.btn.sm{ padding:6px 10px; font-size:0.9rem }
-.btn-approve{ background:var(--success) }
-.btn-deny{ background:var(--danger) }
-.btn.ghost{ background:transparent; color:var(--muted); border:1px solid #e6edf7 }
 
 .referral-form{ display:flex; flex-direction:column; gap:10px }
 .form-row{ display:flex; gap:10px }
 .form-row .field{ flex:1 }
-.referral-form label{ font-size:0.95rem; color:#111827 }
-.referral-form input, .referral-form textarea, .referral-form select{ width:100%; padding:10px; border:1px solid #e6eef8; border-radius:8px; background:#fbfeff }
+.referral-form label{ font-size:0.95rem; color:var(--dark) }
+.referral-form input, .referral-form textarea, .referral-form select{ width:100%; padding:10px; border:1px solid var(--border); border-radius:0.5rem; background: #fff }
 .referral-form textarea{ min-height:100px; resize:vertical }
 
 .patient-select{ position:relative }
-.patient-list-dropdown{ position:absolute; left:0; right:0; top:calc(100% + 8px); background:#fff; border:1px solid #e6eef8; border-radius:8px; box-shadow:0 8px 24px rgba(2,6,23,0.06); max-height:220px; overflow:auto; z-index:30; display:none }
+.patient-list-dropdown{ position:absolute; left:0; right:0; top:calc(100% + 8px); background:#fff; border:1px solid var(--border); border-radius:0.5rem; box-shadow:0 8px 24px rgba(2,6,23,0.06); max-height:220px; overflow:auto; z-index:30; display:none }
 .patient-list-dropdown.open{ display:block }
 .patient-list-item{ padding:8px 10px; display:flex; justify-content:space-between; gap:8px; cursor:pointer }
-.patient-list-item:hover{ background:#f8fafc }
+.patient-list-item:hover{ background:var(--fifth-color) }
 .patient-list-item-name{ font-weight:600 }
-.patient-list-item-id{ color:var(--muted); font-size:0.9rem }
+.patient-list-item-id{ color:var(--muted-foreground); font-size:0.9rem }
 
 .alert{ margin-top:8px; padding:10px; border-radius:8px; font-weight:600 }
-.alert.success{ color:#065f46; background:#ecfdf5 }
-.alert.error{ color:#7f1d1d; background:#fff1f2 }
-.empty{ color:var(--muted); padding:12px; text-align:center }
+.alert.success{ color:var(--success); background:#ecfdf5 }
+.alert.error{ color:var(--error); background:#fff1f2 }
+.empty{ color:var(--muted-foreground); padding:12px; text-align:center }
 
-@media (max-width: 900px){
-  .referral-grid{ grid-template-columns: 1fr; }
-  .referral-column{ padding:12px }
-}
+@media (max-width: 900px){ .referral-grid{ grid-template-columns: 1fr } }
 
