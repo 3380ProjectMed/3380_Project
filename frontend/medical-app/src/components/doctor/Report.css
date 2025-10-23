@@ -1,0 +1,422 @@
+/* ========== REPORTS COMPONENT ========== */
+.reports-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Reports Dashboard */
+.reports-dashboard h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-subtitle {
+  color: #6b7280;
+  font-size: 1.05rem;
+  margin-bottom: 2rem;
+}
+
+.report-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.report-selector-card {
+  background: white;
+  border: 2px solid var(--fifth-color);
+  border-radius: 1rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.report-selector-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 119, 182, 0.15);
+  border-color: var(--third-color);
+}
+
+.selector-icon {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 1.5rem;
+  background: linear-gradient(135deg, var(--fifth-color), var(--forth-color));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--secondary-color);
+}
+
+.report-selector-card h3 {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.report-selector-card p {
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.btn-view-report {
+  background: linear-gradient(135deg, var(--secondary-color), var(--third-color));
+  color: white;
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-view-report:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
+}
+
+.btn-back-reports {
+  background: white;
+  border: 2px solid var(--fifth-color);
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.5rem;
+  color: var(--secondary-color);
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-back-reports:hover {
+  background: var(--fifth-color);
+  border-color: var(--third-color);
+}
+
+/* Report View */
+.report-view {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid var(--fifth-color);
+}
+
+.report-header h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin: 0 0 0.5rem 0;
+}
+
+.report-subtitle {
+  color: #6b7280;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.report-header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.date-range-select {
+  padding: 0.625rem 1rem;
+  border: 2px solid var(--fifth-color);
+  border-radius: 0.5rem;
+  background: white;
+  color: var(--primary-color);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.date-range-select:hover {
+  border-color: var(--third-color);
+}
+
+.btn-export {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  background: var(--secondary-color);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-export:hover {
+  background: var(--third-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
+}
+
+/* Report Cards */
+.report-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.report-card {
+  background: linear-gradient(135deg, var(--fifth-color), white);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 2px solid var(--forth-color);
+  transition: all 0.2s ease;
+}
+
+.report-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 119, 182, 0.15);
+}
+
+.report-card.primary .card-icon {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1e40af;
+}
+
+.report-card.success .card-icon {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  color: #065f46;
+}
+
+.report-card.warning .card-icon {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+}
+
+.report-card.info .card-icon {
+  background: linear-gradient(135deg, var(--fifth-color), var(--forth-color));
+  color: var(--secondary-color);
+}
+
+.card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.card-content h3 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  margin: 0 0 0.25rem 0;
+}
+
+.card-content p {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Charts */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.chart-container {
+  background: white;
+  border: 2px solid var(--fifth-color);
+  border-radius: 1rem;
+  padding: 1.5rem;
+}
+
+.chart-container.full-width {
+  grid-column: 1 / -1;
+}
+
+.chart-container h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin: 0 0 1.5rem 0;
+}
+
+/* Tables */
+.report-section {
+  margin-top: 2rem;
+}
+
+.report-section h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.risk-table,
+.diagnoses-table {
+  background: white;
+  border: 2px solid var(--fifth-color);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, var(--fifth-color), white);
+  font-weight: 700;
+  color: var(--primary-color);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--fifth-color);
+  align-items: center;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.risk-badge {
+  padding: 0.375rem 0.875rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.813rem;
+  text-align: center;
+}
+
+.risk-badge.high {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.risk-badge.medium {
+  background: #fef3c7;
+  color: #f59e0b;
+}
+
+.risk-badge.low {
+  background: #d1fae5;
+  color: #059669;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.metric-card {
+  background: linear-gradient(135deg, var(--fifth-color), white);
+  border: 2px solid var(--forth-color);
+  border-radius: 1rem;
+  padding: 1.5rem;
+}
+
+.metric-card h4 {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: 0 0 0.75rem 0;
+  font-weight: 600;
+}
+
+.metric-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.progress-bar {
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.progress-fill.success {
+  background: linear-gradient(90deg, #059669, #10b981);
+}
+
+.progress-fill.info {
+  background: linear-gradient(90deg, var(--secondary-color), var(--third-color));
+}
+
+.stars {
+  font-size: 1.5rem;
+  color: #fbbf24;
+}
+
+/* Diagnoses Table Specific */
+.code {
+  font-family: 'Courier New', monospace;
+  background: var(--fifth-color);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+
+.percentage-bar {
+  position: relative;
+  height: 24px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--secondary-color), var(--third-color));
+  transition: width 0.3s ease;
+}
+
+.percentage-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 700;
+  font-size: 0.813rem;
+  color: var(--primary-color);
+}

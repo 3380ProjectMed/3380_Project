@@ -9,7 +9,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: p => p.replace(/^\/api/, ''), // /api/... -> /...
+        //rewrite: p => p.replace(/^\/api/, ''), // /api/... -> /...
       },
     },
   },

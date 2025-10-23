@@ -1,0 +1,26 @@
+.referral-page {
+  padding: 16px;
+}
+.referral-grid {
+  display: flex;
+  gap: 24px;
+}
+.referral-column {
+  flex: 1;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.referral-list { list-style: none; padding: 0; margin: 0; }
+.referral-item { display:flex; justify-content:space-between; padding:8px 6px; border-bottom:1px solid #f0f0f0; }
+.referral-meta { display:flex; gap:12px; align-items:center; }
+.referral-actions { display:flex; gap:8px; }
+.btn { background:#2563eb; color:#fff; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; }
+.btn-approve { background:#10b981; }
+.btn-deny { background:#ef4444; }
+.referral-form label { display:block; margin-bottom:8px; }
+.referral-form input, .referral-form textarea { width:100%; padding:8px; border:1px solid #e5e7eb; border-radius:6px; }
+.alert.success { margin-top:8px; color:#065f46; background:#ecfdf5; padding:8px; border-radius:6px }
+.alert.error { margin-top:8px; color:#7f1d1d; background:#fff1f2; padding:8px; border-radius:6px }
+.empty { color:#6b7280; padding:8px; }

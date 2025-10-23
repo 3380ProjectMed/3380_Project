@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, X, Calendar, Mail, AlertCircle, FileText } from 'lucide-react';
 import './PatientList.css';
 /**
@@ -17,87 +17,13 @@ import './PatientList.css';
  * @param {Function} setSelectedPatient - Set selected patient (optional)
  */
 function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient, setSelectedPatient: externalSetSelectedPatient }) {
-  /**
-   * Mock patient data
-   * TODO: Replace with API call to fetch patients
-   * API endpoint: GET /api/patients
-   */
-  const mockPatients = useMemo(() => [
-    { 
-      id: 'P001', 
-      name: 'James Patterson', 
-      dob: '1975-04-12',
-      age: 48,
-      allergies: 'Penicillin',
-      email: 'james.p@email.com',
-      phone: '(555) 123-4567',
-      lastVisit: '2023-10-15',
-      nextAppointment: '2023-11-01',
-      notes: 'Regular checkup needed. Patient has history of high blood pressure.',
-      medicalHistory: ['Hypertension', 'Type 2 Diabetes'],
-      bloodType: 'O+'
-    },
-    { 
-      id: 'P002', 
-      name: 'Sarah Connor', 
-      dob: '1990-08-23',
-      age: 33,
-      allergies: 'None',
-      email: 'sarah.c@email.com',
-      phone: '(555) 234-5678',
-      lastVisit: '2023-09-30',
-      nextAppointment: '2023-10-30',
-      notes: 'Follow-up on medication adjustment for anxiety management.',
-      medicalHistory: ['Anxiety Disorder'],
-      bloodType: 'A+'
-    },
-    { 
-      id: 'P003', 
-      name: 'Robert Miller', 
-      dob: '2001-11-05',
-      age: 22,
-      allergies: 'Latex, Aspirin',
-      email: 'robert.m@email.com',
-      phone: '(555) 345-6789',
-      lastVisit: '2023-10-01',
-      nextAppointment: '2023-11-15',
-      notes: 'Allergy review scheduled. Patient experiences severe reactions.',
-      medicalHistory: ['Severe Allergies', 'Asthma'],
-      bloodType: 'B+'
-    },
-    { 
-      id: 'P004', 
-      name: 'Emily Chen', 
-      dob: '1988-03-17',
-      age: 35,
-      allergies: 'Sulfa drugs',
-      email: 'emily.c@email.com',
-      phone: '(555) 456-7890',
-      lastVisit: '2023-10-10',
-      nextAppointment: '2023-11-20',
-      notes: 'Annual physical examination scheduled.',
-      medicalHistory: ['Migraine'],
-      bloodType: 'AB+'
-    },
-    { 
-      id: 'P005', 
-      name: 'Michael Johnson', 
-      dob: '1965-12-30',
-      age: 57,
-      allergies: 'None',
-      email: 'michael.j@email.com',
-      phone: '(555) 567-8901',
-      lastVisit: '2023-10-05',
-      nextAppointment: '2023-12-01',
-      notes: 'Monitoring cholesterol levels. Patient doing well on current medication.',
-      medicalHistory: ['High Cholesterol', 'Arthritis'],
-      bloodType: 'O-'
-    },
-  ], []);
-
   // Local state for search and selected patient
   const [searchTerm, setSearchTerm] = useState('');
   const [localSelectedPatient, setLocalSelectedPatient] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  // Patients list comes from the API
+  const [patients, setPatients] = useState([]);
 
   // Use external state if provided, otherwise use local state
   const selectedPatient = externalSelectedPatient || localSelectedPatient;
@@ -107,24 +33,103 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
    * Filter patients based on search term
    * Searches in: name and patient ID
    */
+  // Filter patients (search by name or ID).
   const filteredPatients = useMemo(() => {
-    if (!searchTerm.trim()) return mockPatients;
-    
+    const source = patients || [];
+    if (!searchTerm.trim()) return source;
+
     const searchLower = searchTerm.toLowerCase();
-    return mockPatients.filter(patient =>
-      patient.name.toLowerCase().includes(searchLower) ||
-      patient.id.toLowerCase().includes(searchLower)
+    return source.filter(patient =>
+      (patient.name && patient.name.toLowerCase().includes(searchLower)) ||
+      (patient.id && patient.id.toLowerCase().includes(searchLower))
     );
-  }, [searchTerm, mockPatients]);
+  }, [searchTerm, patients]);
+
+  // Load all patients for the doctor on mount
+  useEffect(() => {
+    const loadPatients = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // TODO: derive doctor_id from auth; hardcoded for now
+        const doctorId = 201;
+        const res = await fetch(`http://localhost:8080/doctor_api/patients/get-all.php?doctor_id=${doctorId}`);
+        const payload = await res.json();
+        if (payload.success) {
+          setPatients(payload.patients);
+        } else {
+          setError(payload.error || 'Failed to load patients');
+        }
+      } catch (err) {
+        console.error('Error fetching patients', err);
+        setError(err.message || String(err));
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPatients();
+  }, []);
+
+  // Search by ID using the API (if the input looks like an ID)
+  const handleSearchKeyPress = async (e) => {
+    if (e.key !== 'Enter') return;
+    const q = searchTerm.trim();
+    if (!q) return;
+
+    // If user typed an ID (P### or numeric), query the API get-by-id.php
+    const isId = /^P?\d+$/i.test(q);
+    if (isId) {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`http://localhost:8080/api/patients/get-by-id.php?id=${encodeURIComponent(q)}`);
+        const payload = await res.json();
+        if (payload.success) {
+          setPatients([payload.patient]);
+          setSelectedPatient(payload.patient);
+        } else {
+          setError(payload.error || 'Patient not found');
+        }
+      } catch (err) {
+        console.error('Error fetching patient by id', err);
+        setError(err.message || String(err));
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   /**
    * Handle patient row click
    * Opens patient details sidebar
    */
-  const handlePatientClick = (patient) => {
-    setSelectedPatient(patient);
-    if (onPatientClick) {
-      onPatientClick(patient);
+  const handlePatientClick = async (patient) => {
+    // If the patient already has rich details, use it. Otherwise fetch by id.
+    const hasDetails = patient && (Array.isArray(patient.medicalHistory) || patient.notes || patient.currentMedications);
+    if (hasDetails) {
+      setSelectedPatient(patient);
+      if (onPatientClick) onPatientClick(patient);
+      return;
+    }
+
+    // Fetch full patient details from API
+    setLoading(true);
+    setError(null);
+    try {
+      // patient.id is formatted like 'P001' — pass that as `id`
+      const res = await fetch(`http://localhost:8080/api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`);
+      const payload = await res.json();
+      if (payload.success && payload.patient) {
+        setSelectedPatient(payload.patient);
+        if (onPatientClick) onPatientClick(payload.patient);
+      } else {
+        setError(payload.error || 'Failed to load patient details');
+      }
+    } catch (err) {
+      console.error('Error loading patient details', err);
+      setError(err.message || String(err));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -139,6 +144,9 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
    * Format date for display
    */
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    // if already a human-readable placeholder like 'No visits yet' return it
+    if (isNaN(Date.parse(dateString))) return dateString;
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -160,6 +168,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
           placeholder="Search patients by name or ID..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyPress={handleSearchKeyPress}
           aria-label="Search patients"
         />
         {searchTerm && (
@@ -174,6 +183,16 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       </div>
 
       {/* ===== PATIENTS TABLE ===== */}
+      {loading && (
+        <div className="patient-list__loading">Loading patients...</div>
+      )}
+
+      {error && (
+        <div className="patient-list__error">Error: {error}
+          <button onClick={() => { setError(null); setSearchTerm(''); /* reload all */ window.location.reload(); }} style={{ marginLeft: '8px'}}>Reload</button>
+        </div>
+      )}
+
       <div className="patient-list__table-container">
         {/* Table Header */}
         <div className="table-header">
@@ -311,7 +330,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
               Medical History
             </h3>
             <div className="patient-summary__medical-history">
-              {selectedPatient.medicalHistory.map((condition, index) => (
+              {(selectedPatient.medicalHistory || []).map((condition, index) => (
                 <span key={index} className="medical-history-tag">
                   {condition}
                 </span>
