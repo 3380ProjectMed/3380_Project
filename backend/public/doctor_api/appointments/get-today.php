@@ -6,17 +6,38 @@
 // ✅ CORRECT PATHS - Two levels up from api/appointments/
 require_once __DIR__ . '/../../../cors.php';
 require_once __DIR__ . '/../../../database.php';
-
 try {
+    // Start session and require that the user is logged in
+    session_start();
+    if (empty($_SESSION['uid'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit;
+    }
+
+    $user_id = (int)$_SESSION['uid'];
+
+    // Resolve the doctor's id for this logged-in user by joining on email
     $conn = getDBConnection();
+    try {
+        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+    } catch (Exception $ex) {
+        closeDBConnection($conn);
+        throw $ex;
+    }
+
+    if (empty($rows)) {
+        closeDBConnection($conn);
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'No doctor account associated with the logged-in user']);
+        exit;
+    }
+
+    $doctor_id = (int)$rows[0]['Doctor_id'];
     
-    // Get doctor_id from query parameter
-    $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 202;
-    
-    // Get today's date
+    // $conn is already opened above when resolving doctor id
     $today = date('Y-m-d');
     
-    // SQL query
     $sql = "SELECT 
                 a.Appointment_id,
                 a.Appointment_date,
@@ -37,7 +58,6 @@ try {
     
     $appointments = executeQuery($conn, $sql, 'is', [$doctor_id, $today]);
     
-    // Format response
     $formatted_appointments = [];
     foreach ($appointments as $apt) {
         $formatted_appointments[] = [
@@ -52,7 +72,6 @@ try {
         ];
     }
     
-    // Calculate stats
     $stats = [
         'total' => count($formatted_appointments),
         'scheduled' => count($formatted_appointments),
