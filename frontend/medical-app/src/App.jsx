@@ -26,7 +26,7 @@ export default function App() {
         element={
           <RequireRole roles={["DOCTOR", "ADMIN"]}>
             <DoctorPortal />
-          </RequireRole>
+          </RequireRole>  
         }
       />
       {/* Optional: neutral entry that bounces users to their role home */}
