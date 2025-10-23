@@ -146,34 +146,46 @@ function Referral() {
 
   return (
     <div className="referral-page">
-      <h2>Referrals</h2>
+      <div className="referral-header">
+        <div>
+          <div className="referral-title">Referrals</div>
+          <div className="referral-count">{pending.length} pending</div>
+        </div>
+        <div>
+          <button className="btn ghost sm" onClick={loadPending}>Refresh</button>
+        </div>
+      </div>
+
       <div className="referral-grid">
         <div className="referral-column">
-          <h3>Pending Referrals</h3>
+          <h3 style={{marginTop:0}}>Pending Referrals</h3>
           {loading ? <div>Loading...</div> : (
-            <ul className="referral-list">
-              {pending.length === 0 && <li className="empty">No pending referrals</li>}
+            <div className="pending-list">
+              {pending.length === 0 && <div className="empty">No pending referrals</div>}
               {pending.map(r => (
-                  <li key={r.Referral_ID} className="referral-item">
-                    <div className="referral-meta">
-                      <strong>#{r.Referral_ID}</strong>
-                      <span>Patient: {r.Patient_ID} - {r.patient_name}</span>
-                      <span>Reason: {r.Reason}</span>
-                      {r.notes && <span>Notes: {r.notes}</span>}
-                      {r.Date_of_approval && <span className="approved-date">Approved on: {r.Date_of_approval}</span>}
+                <div key={r.Referral_ID} className="referral-card">
+                  <div className="referral-info">
+                    <div className="referral-reason">#{r.Referral_ID} — {r.patient_name || `P${r.Patient_ID}`}</div>
+                    <div className="referral-meta-row">
+                      <div>Patient ID: {r.Patient_ID}</div>
+                      <div>Reason: {r.Reason}</div>
+                      {r.Date_of_approval && <div className="approved-date">Approved on: {r.Date_of_approval}</div>}
                     </div>
-                    <div className="referral-actions">
-                      <button className="btn btn-approve" onClick={() => handleApprove(r.Referral_ID, true)}>Approve</button>
-                      <button className="btn btn-deny" onClick={() => handleApprove(r.Referral_ID, false)}>Deny</button>
-                    </div>
-                  </li>
-                ))}
-            </ul>
+                    {r.notes && <div className="referral-notes">{r.notes}</div>}
+                  </div>
+
+                  <div className="referral-actions">
+                    <button className="btn btn-approve sm" onClick={() => handleApprove(r.Referral_ID, true)}>Approve</button>
+                    <button className="btn btn-deny sm" onClick={() => handleApprove(r.Referral_ID, false)}>Deny</button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
         <div className="referral-column">
-          <h3>Create Referral</h3>
+          <h3 style={{marginTop:0}}>Create Referral</h3>
           <form className="referral-form" onSubmit={handleCreate}>
             <label>Patient
               <div className="patient-select">
@@ -191,7 +203,6 @@ function Referral() {
                   ) : (
                     filteredPatientResults.map(p => (
                       <div key={p.id} className="patient-list-item" onClick={() => {
-                        // p.id is like 'P101' and p.name is 'First Last'
                         const numeric = parseInt((p.id || '').replace(/^P/i, ''), 10) || null;
                         setForm({ ...form, patient_name: `${p.name} (${p.id})`, patient_id: numeric });
                         setShowPatientList(false);
@@ -204,25 +215,39 @@ function Referral() {
                 </div>
               </div>
             </label>
-            <label>Referring Doctor Staff ID
-              <input value={form.referring_doctor_staff_id} onChange={e => setForm({...form, referring_doctor_staff_id: e.target.value})} required />
-            </label>
-            <label>Specialist
-              <select value={form.specialist_doctor_staff_id} onChange={e => setForm({...form, specialist_doctor_staff_id: e.target.value})} required>
-                <option value="">-- select specialist --</option>
-                {doctors.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}{d.specialty_name ? ` — ${d.specialty_name}` : ''}</option>
-                ))}
-              </select>
-            </label>
+
+            <div className="form-row">
+              <div className="field">
+                <label>Referring Doctor Staff ID
+                  <input value={form.referring_doctor_staff_id} onChange={e => setForm({...form, referring_doctor_staff_id: e.target.value})} required />
+                </label>
+              </div>
+
+              <div className="field">
+                <label>Specialist
+                  <select value={form.specialist_doctor_staff_id} onChange={e => setForm({...form, specialist_doctor_staff_id: e.target.value})} required>
+                    <option value="">-- select specialist --</option>
+                    {doctors.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}{d.specialty_name ? ` — ${d.specialty_name}` : ''}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+
             <label>Reason
               <textarea value={form.reason} onChange={e => setForm({...form, reason: e.target.value})} required />
             </label>
-            <div style={{ marginTop: 8 }}>
+
+            <label>Notes (optional)
+              <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} />
+            </label>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
               <button className="btn" type="submit">Create Referral</button>
             </div>
           </form>
-              {status && <div className={`alert ${status.type}`}>{status.text}</div>}
+          {status && <div className={`alert ${status.type}`}>{status.text}</div>}
         </div>
       </div>
     </div>
