@@ -1,112 +1,97 @@
-/* ==============================
-   NurseSidebar.css
-   ============================== */
-
-/* Sidebar container */
+/* src/components/nurse/NurseSidebar.css */
 .nurse-sidebar {
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  width: 16rem;              /* keep in sync with .nurse-main-content margin-left */
   position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  width: 16rem;
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
+  inset: 0 auto 0 0;
+  border-right: 1px solid #e6eef8;
+  box-shadow: 4px 0 12px rgba(0, 119, 182, 0.08);
   display: flex;
   flex-direction: column;
-  font-family: system-ui, -apple-system, sans-serif;
-  z-index: 50;
+  z-index: 1000;
 }
 
-/* Header */
-.nurse-sidebar__header {
-  padding: 1.25rem;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1e40af; /* blue-800 */
-  border-bottom: 1px solid #e5e7eb;
-}
-
-/* Navigation list */
-.nurse-sidebar__nav {
+.nurse-sidebar__content {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 0.5rem;
+  padding: 1.5rem 0.5rem;
+  overflow-y: auto;
 }
 
-/* Menu buttons */
-.nurse-sidebar__button {
+.nurse-sidebar__brand {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0b5fa5;
+  padding: 0 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.nurse-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nurse-sidebar__link {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.75rem 1rem;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.5rem;
+  color: #1f2a44;
   background: transparent;
   border: none;
-  font-size: 0.95rem;
   text-align: left;
   cursor: pointer;
-  border-radius: 0.5rem;
-  transition: background 0.2s, color 0.2s;
-  color: #374151; /* gray-700 */
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
-.nurse-sidebar__button:hover {
-  background: #eff6ff; /* blue-50 */
-  color: #1e40af;
+.nurse-sidebar__link:hover {
+  background: linear-gradient(135deg, #e7f5ff, #ffffff);
+  color: #0b5fa5;
+  transform: translateX(3px);
 }
 
-.nurse-sidebar__button.active {
-  background: #dbeafe; /* blue-100 */
-  color: #1e3a8a; /* blue-900 */
-  font-weight: 600;
+.nurse-sidebar__link.active {
+  background: linear-gradient(135deg, #0b5fa5, #00a2db);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
 }
 
-/* Icon styling */
-.nurse-sidebar__icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
+.nurse-sidebar__footer {
+  padding: 0.75rem 0.5rem 1rem;
+  border-top: 1px solid #e6eef8;
+  background: rgba(250, 250, 250, 0.6);
 }
 
-/* Logout button */
-.nurse-sidebar__logout {
-  margin: 1rem;
-  padding: 0.75rem 1rem;
-  background: #ef4444; /* red-500 */
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  display: flex;
+.nurse-logout-btn {
+  width: 100%;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.5rem;
+  color: #c01515;
+  background: #fff;
+  border: 2px solid #fecaca;
+  font-weight: 700;
   cursor: pointer;
-  font-size: 0.95rem;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
 }
 
-.nurse-sidebar__logout:hover {
-  background: #dc2626; /* red-600 */
+.nurse-logout-btn:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+  transform: translateX(3px);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .nurse-sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-    flex-direction: row;
-    border-right: none;
-    border-bottom: 1px solid #e5e7eb;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
   }
-
-  .nurse-sidebar__nav {
-    flex-direction: row;
-    overflow-x: auto;
-  }
-
-  .nurse-sidebar__button {
-    flex: 1;
-    justify-content: center;
+  .nurse-sidebar.mobile-open {
+    transform: translateX(0);
   }
 }

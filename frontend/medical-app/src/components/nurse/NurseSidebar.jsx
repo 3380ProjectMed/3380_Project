@@ -1,58 +1,44 @@
 // src/components/nurse/NurseSidebar.jsx
 import React from "react";
-import { Home, Calendar, Users, FileText, LogOut, Stethoscope } from "lucide-react";
-// Reuse the doctor sidebar styles so layout matches exactly
-import "../doctor/Sidebar.css";
+import { Home, Calendar, Users, ClipboardList, LogOut } from "lucide-react";
+import "./NurseSidebar.css";
 
 export default function NurseSidebar({ currentPage, setCurrentPage, onLogout }) {
-  const menuItems = [
+  const menu = [
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "schedule", label: "My Schedule", icon: Calendar },
     { id: "patients", label: "My Patients", icon: Users },
-    { id: "clinical", label: "Clinical Workspace", icon: FileText },
+    { id: "clinical", label: "Clinical Workspace", icon: ClipboardList },
   ];
 
-  const handleLogout = () => {
-    if (window.confirm("Are you sure you want to log out?")) {
-      onLogout?.();
-    }
-  };
-
   return (
-    <div className="sidebar">
-      <div className="sidebar-content">
-        <div className="sidebar-brand">
-          <Stethoscope size={28} />
-          <span>Nurse Portal</span>
-        </div>
-
-        <nav>
-          {menuItems.map((item) => {
+    <aside className="nurse-sidebar">
+      <div className="nurse-sidebar__content">
+        <div className="nurse-sidebar__brand">Nurse Portal</div>
+        <nav className="nurse-sidebar__nav">
+          {menu.map((item) => {
             const Icon = item.icon;
+            const active = currentPage === item.id;
             return (
-              <a
+              <button
                 key={item.id}
-                href="#"
-                className={currentPage === item.id ? "active" : ""}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setCurrentPage(item.id);
-                }}
+                className={`nurse-sidebar__link ${active ? "active" : ""}`}
+                onClick={() => setCurrentPage(item.id)}
               >
-                <Icon size={20} />
+                <Icon size={18} />
                 <span>{item.label}</span>
-              </a>
+              </button>
             );
           })}
         </nav>
       </div>
 
-      <div className="sidebar-footer">
-        <button className="logout-btn" onClick={handleLogout}>
-          <LogOut size={20} />
+      <div className="nurse-sidebar__footer">
+        <button className="nurse-logout-btn" onClick={onLogout}>
+          <LogOut size={18} />
           <span>Logout</span>
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
