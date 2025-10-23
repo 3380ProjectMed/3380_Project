@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../auth/AuthProvider';
 import { Calendar, Users, Clock, FileText, Search, Filter } from 'lucide-react';
 import './Dashboard.css';
 function Dashboard({ setCurrentPage, onAppointmentClick }) {
+  const auth = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [doctorProfile, setDoctorProfile] = useState(null);
   const [stats, setStats] = useState({ total: 0, waiting: 0, pending: 0, completed: 0 });
@@ -10,23 +12,34 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  // Fetch appointments on component mount
+  // Fetch appointments when authenticated user (and doctor_id) becomes available
   useEffect(() => {
-    const load = async () => {
+    const doctorId = auth.user?.doctor_id ?? null;
+    // If auth is still loading, wait
+    if (auth.loading) return;
+
+    if (!doctorId) {
+      // No doctor associated with this user — surface a friendly message
+      setError('No doctor account found for the logged-in user.');
+      setLoading(false);
+      return;
+    }
+
+    const loadForDoctor = async (did) => {
       // load doctor profile first
       try {
-        const doctorId = 202;
-        const pr = await fetch(`http://localhost:8080/doctor_api/profile/get.php?doctor_id=${doctorId}`);
+        const pr = await fetch(`http://localhost:8080/doctor_api/profile/get.php?doctor_id=${did}`, { credentials: 'include' });
         const pj = await pr.json();
         if (pj.success) setDoctorProfile(pj.profile);
       } catch (e) {
         // ignore profile load failures for now
         console.error('Failed to load profile', e);
       }
-      fetchAppointments();
+      fetchAppointments(did);
     };
-    load();
-  }, []);
+
+    loadForDoctor(doctorId);
+  }, [auth.user, auth.loading]);
 
   /**
    * Get formatted current date
@@ -44,17 +57,14 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
   /**
    * Fetch appointments from API
    */
-  const fetchAppointments = async () => {
+  const fetchAppointments = async (doctorIdParam) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const doctorId = 202; // TODO: Get from auth context
-      
-      // ✅ FIXED: Changed port from 8080 to 8000
-      const response = await fetch(
-        `http://localhost:8080/doctor_api/appointments/get-today.php?doctor_id=${doctorId}`
-      );
+      const doctorId = doctorIdParam ?? auth.user?.doctor_id;
+      if (!doctorId) throw new Error('doctor_id missing');
+
+      const response = await fetch(`http://localhost:8080/doctor_api/appointments/get-today.php?doctor_id=${doctorId}`, { credentials: 'include' });
       
       const data = await response.json();
       

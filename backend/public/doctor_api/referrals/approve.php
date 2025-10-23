@@ -6,8 +6,26 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
     
         $referral_id = intval($input['referral_id']);
-        $doctor_id = intval($input['doctor_id']); // Doctor approving
         $action = isset($input['action']) ? $input['action'] : null; // 'approve' or 'deny'
+        // Determine acting doctor
+        if (isset($input['doctor_id']) && intval($input['doctor_id']) > 0) {
+            $doctor_id = intval($input['doctor_id']);
+        } else {
+            session_start();
+            if (!isset($_SESSION['uid'])) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+                exit;
+            }
+            $user_id = intval($_SESSION['uid']);
+            $rows = executeQuery(getDBConnection(), 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+            if (!is_array($rows) || count($rows) === 0) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
+                exit;
+            }
+            $doctor_id = (int)$rows[0]['Doctor_id'];
+        }
     
     $conn = getDBConnection();
     
