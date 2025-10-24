@@ -7,6 +7,7 @@ import LandingPage from "./components/LandingPage.jsx";
 import PatientPortal from "./components/patient/PatientPortal.jsx";
 import DoctorPortal from "./components/doctor/DoctorPortal.jsx";
 import LoginPage from "./components/LoginPage.jsx";
+import SignUp  from "./components/SignUp.jsx";
 
 // Nurse module
 import NursePortal from "./components/nurse/NursePortal.jsx";
@@ -31,6 +32,7 @@ export default function App() {
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path ="/signup" element={<SignUp />} />
 
       {/* Patient */}
       <Route
