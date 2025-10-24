@@ -20,7 +20,12 @@ try {
     // Resolve the doctor's id for this logged-in user by joining on email
     $conn = getDBConnection();
     try {
-        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $rows = executeQuery($conn, '
+        SELECT d.Doctor_id 
+        FROM Doctor d 
+        JOIN user_account ua 
+        ON ua.email = d.Email 
+        WHERE ua.user_id = ?', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
         throw $ex;
@@ -36,7 +41,10 @@ try {
     $doctor_id = (int)$rows[0]['Doctor_id'];
     
     // $conn is already opened above when resolving doctor id
-    $today = date('Y-m-d');
+    // subtract 6 hours from now before taking the date
+    $dt = new DateTime();
+    $dt->modify('-6 hours');
+    $today = $dt->format('Y-m-d');
     
     $sql = "SELECT 
                 a.Appointment_id,

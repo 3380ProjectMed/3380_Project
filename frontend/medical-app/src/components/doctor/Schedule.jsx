@@ -37,7 +37,7 @@ function Schedule({ onAppointmentClick }) {
    */
   const fetchWorkSchedule = async () => {
     try {
-  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : 'http://localhost:8080';
+  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : 'http://ec2-3-144-100-224.us-east-2.compute.amazonaws.com:8080';
       const response = await fetch(`${API_BASE}/doctor_api/schedule/get-doctor-schedule.php`, { credentials: 'include' });
       const data = await response.json();
       
@@ -59,7 +59,7 @@ function Schedule({ onAppointmentClick }) {
       setLoading(true);
       const month = currentDate.getMonth() + 1; // JS months are 0-indexed
       const year = currentDate.getFullYear();
-  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : 'http://localhost:8080';
+  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : 'http://ec2-3-144-100-224.us-east-2.compute.amazonaws.com:8080';
   const response = await fetch(`${API_BASE}/doctor_api/appointments/get-by-month.php?month=${month}&year=${year}`, { credentials: 'include' });
       const data = await response.json();
       

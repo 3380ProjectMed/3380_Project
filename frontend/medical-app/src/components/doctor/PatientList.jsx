@@ -60,7 +60,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`http://localhost:8080/doctor_api/patients/get-all.php?doctor_id=${did}`, { credentials: 'include' });
+        const res = await fetch(`http://ec2-3-144-100-224.us-east-2.compute.amazonaws.com:8080/doctor_api/patients/get-all.php?doctor_id=${did}`, { credentials: 'include' });
         const payload = await res.json();
         if (payload.success) {
           setPatients(payload.patients);
@@ -89,7 +89,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       setLoading(true);
       setError(null);
       try {
-  const res = await fetch(`http://localhost:8080/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(q)}`, { credentials: 'include' });
+  const res = await fetch(`http://ec2-3-144-100-224.us-east-2.compute.amazonaws.com:8080/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(q)}`, { credentials: 'include' });
         const payload = await res.json();
         if (payload.success) {
           setPatients([payload.patient]);
@@ -124,7 +124,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     setError(null);
     try {
       // patient.id is formatted like 'P001' — pass that as `id`
-  const res = await fetch(`http://localhost:8080/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`, { credentials: 'include' });
+  const res = await fetch(`http://ec2-3-144-100-224.us-east-2.compute.amazonaws.com:8080/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`, { credentials: 'include' });
       const payload = await res.json();
       if (payload.success && payload.patient) {
         setSelectedPatient(payload.patient);
