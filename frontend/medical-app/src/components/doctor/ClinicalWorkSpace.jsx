@@ -143,7 +143,7 @@ function ClinicalWorkSpace({ appointment, patient, onBack }) {
           treatment: clinicalNote
         };
 
-        const res = await fetch('http://ec2-3-144-100-224.us-east-2.compute.amazonaws.com:8080/doctor_api/clinical/save-note.php', {
+        const res = await fetch('http://localhost:8080/doctor_api/clinical/save-note.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -195,7 +195,7 @@ function ClinicalWorkSpace({ appointment, patient, onBack }) {
         return;
       }
 
-      const res = await fetch(`http://ec2-3-144-100-224.us-east-2.compute.amazonaws.com:8080/doctor_api/clinical/get-notes.php?${qs}`, { credentials: 'include' });
+      const res = await fetch(`http://localhost:8080/doctor_api/clinical/get-notes.php?${qs}`, { credentials: 'include' });
       const json = await res.json();
       if (json && json.success) setRecentNotes(json.notes || []);
       else setRecentNotes([]);
@@ -259,7 +259,7 @@ function ClinicalWorkSpace({ appointment, patient, onBack }) {
         return;
       }
 
-      const res = await fetch(`http://ec2-3-144-100-224.us-east-2.compute.amazonaws.com:8080/doctor_api/clinical/get-vitals.php?${qs}`, { credentials: 'include' });
+      const res = await fetch(`http://localhost:8080/doctor_api/clinical/get-vitals.php?${qs}`, { credentials: 'include' });
       const json = await res.json();
       if (json && json.success) setVitalsHistory(json.vitals || []);
       else setVitalsHistory([]);

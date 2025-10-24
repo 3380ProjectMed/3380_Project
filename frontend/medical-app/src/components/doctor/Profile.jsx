@@ -27,7 +27,7 @@ function Profile() {
           setLoading(false);
           return;
         }
-        const res = await fetch(`http://ec2-3-144-100-224.us-east-2.compute.amazonaws.com:8080/doctor_api/profile/get.php?doctor_id=${doctorId}`, { credentials: 'include' });
+        const res = await fetch(`http://localhost:8080/doctor_api/profile/get.php?doctor_id=${doctorId}`, { credentials: 'include' });
         const json = await res.json();
         if (json.success && json.profile) {
           setProfile(prev => ({ ...prev, ...json.profile }));
@@ -57,7 +57,7 @@ function Profile() {
         phone: profile.phone,
         licenseNumber: profile.licenseNumber
       };
-      const res = await fetch('http://ec2-3-144-100-224.us-east-2.compute.amazonaws.com:8080/doctor_api/profile/update.php', {
+      const res = await fetch('http://localhost:8080/doctor_api/profile/update.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
