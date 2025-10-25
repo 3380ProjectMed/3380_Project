@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
-header('Content-Type: application/json');
+// Allow cross-origin requests from the frontend dev server
+require_once __DIR__ . '/../../cors.php';
+// cors.php will set Content-Type and handle OPTIONS
 // Minimal debug info for local development only
 try {
   $info = [

@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Ensure CORS headers for cross-origin requests from the dev server
+require_once __DIR__ . '/../../cors.php';
 // Suppress HTML-formatted errors early to avoid leaking into JSON responses
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');

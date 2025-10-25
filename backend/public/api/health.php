@@ -1,6 +1,8 @@
 <?php
 // health.php
-header('Content-Type: application/json');
+// Allow cross-origin requests from dev server
+require_once __DIR__ . '/../../cors.php';
+// cors.php sets Content-Type for JSON responses
 echo json_encode([
   'ok' => true,
   'status' => 'healthy',

@@ -49,32 +49,74 @@ function ClinicalWorkSpace({ appointment, patient, onBack }) {
     height: ''
   });
   const [vitalsHistory, setVitalsHistory] = useState([]);
+  // localPatient holds patient data fetched as a fallback when parent doesn't pass a `patient` prop
+  const [localPatient, setLocalPatient] = useState(null);
 
-  // Mock patient data if not provided through appointment
-  const mockPatient = {
-    id: appointment?.patientId || 'P001',
-    name: appointment?.patientName || 'No Patient Selected',
-    dob: '1985-06-15',
-    age: 38,
-    gender: 'Male',
-    bloodType: 'O+',
-    allergies: appointment?.allergies || 'Penicillin',
-    chronicConditions: ['Hypertension', 'Type 2 Diabetes'],
-    currentMedications: [
-      'Metformin 500mg - Twice daily',
-      'Lisinopril 10mg - Once daily'
-    ],
-    lastVisit: '2023-09-15',
-    insuranceProvider: 'Blue Cross Blue Shield',
-    phone: '(555) 123-4567',
-    email: 'patient@email.com'
+  // Try to infer patient and appointment identifiers and names from multiple
+  // possible field names the API might return. This makes the component
+  // resilient to differences in backend naming (snake_case, camelCase,
+  // prefixed names like Patient_id, Appointment_id, etc.).
+  const inferredPatientId = (
+    patient?.id ||
+    appointment?.patientId ||
+    appointment?.Patient_id ||
+    appointment?.patient_id ||
+    appointment?.PatientID ||
+    appointment?.patientID ||
+    null
+  );
+
+  const inferredPatientName = (
+    patient?.name ||
+    appointment?.patientName ||
+    appointment?.patient_name ||
+    appointment?.PatientName ||
+    'No Patient Selected'
+  );
+
+  const inferredAppointmentId = (
+    appointment?.id ||
+    appointment?.Appointment_id ||
+    appointment?.appointment_id ||
+    appointment?.AppointmentID ||
+    appointment?.appointmentID ||
+    null
+  );
+
+  // Minimal defaults when `patient` or `appointment` props are not provided.
+  // Keep defaults small to avoid embedding large mock data in the component.
+  const defaultPatient = {
+    id: inferredPatientId,
+    name: inferredPatientName,
+    dob: patient?.dob || '',
+    age: patient?.age || null,
+    gender: patient?.gender || '',
+    bloodType: patient?.bloodType || '',
+    allergies: patient?.allergies || '',
+    chronicConditions: patient?.chronicConditions || [],
+    currentMedications: patient?.currentMedications || [],
+    lastVisit: patient?.lastVisit || '',
+    insuranceProvider: patient?.insuranceProvider || '',
+    phone: patient?.phone || '',
+    email: patient?.email || '',
+    labs: patient?.labs || []
   };
 
-  const currentPatient = patient || mockPatient;
-  const currentAppointment = appointment || {
-    time: 'No appointment data',
-    reason: 'Walk-in',
-    status: 'In Progress'
+  // Prefer the `patient` prop (provided by parent). If not provided but we
+  // fetched a `localPatient`, use that. Otherwise fall back to defaults.
+  const currentPatient = patient
+    ? { ...defaultPatient, ...patient }
+    : localPatient
+      ? { ...defaultPatient, ...localPatient }
+      : defaultPatient;
+
+  // Normalize appointment object so downstream code can rely on consistent keys
+  const currentAppointment = {
+    id: inferredAppointmentId,
+    time: appointment?.time || appointment?.Appointment_time || appointment?.Time || '',
+    reason: appointment?.reason || appointment?.Reason_for_visit || appointment?.Reason || '',
+    status: appointment?.status || appointment?.Status || '',
+    ...appointment
   };
 
   /**
@@ -95,7 +137,7 @@ function ClinicalWorkSpace({ appointment, patient, onBack }) {
     (async () => {
       try {
         const payload = {
-          appointment_id: appointment?.id ?? null,
+          appointment_id: currentAppointment.id ?? null,
           patient_id: currentPatient.id,
           note_text: clinicalNote,
           treatment: clinicalNote
@@ -133,12 +175,12 @@ function ClinicalWorkSpace({ appointment, patient, onBack }) {
 
   // Fetch recent notes for patient or appointment
   const fetchNotes = async () => {
-    try {
+      try {
       const pid = currentPatient.id;
       // backend expects numeric patient_id; prefer appointment_id when available
       let qs = '';
-      if (appointment?.id) {
-        qs = `appointment_id=${encodeURIComponent(appointment.id)}`;
+      if (currentAppointment.id) {
+        qs = `appointment_id=${encodeURIComponent(currentAppointment.id)}`;
       } else if (pid && /^\d+$/.test(String(pid))) {
         qs = `patient_id=${encodeURIComponent(String(pid))}`;
       } else if (pid) {
@@ -163,13 +205,47 @@ function ClinicalWorkSpace({ appointment, patient, onBack }) {
     }
   };
 
-  const fetchVitals = async () => {
+  /**
+   * Fetch patient details from backend when not provided via props.
+   * This is a fallback so the workspace can populate when only an
+   * appointment object is passed from the parent.
+   */
+  const fetchPatient = async () => {
     try {
+      // If we already have a patient id, skip fetching
+      if (currentPatient.id) return;
+
+      // Try to infer patient id from appointment fields
+      const raw = appointment?.patientId || appointment?.Patient_id || appointment?.patient_id || appointment?.PatientID || appointment?.patientID || appointment?.Patient || null;
+      if (!raw) return;
+
+      const numericMatch = String(raw).match(/(\d+)/);
+      const useIdParam = /\D/.test(String(raw));
+      const param = useIdParam ? `id=${encodeURIComponent(String(raw))}` : `patient_id=${encodeURIComponent(numericMatch ? numericMatch[0] : String(raw))}`;
+
+      const res = await fetch(`/api/doctor_api/patients/get-by-id.php?${param}`, { credentials: 'include' });
+      const json = await res.json();
+      if (json && json.success) {
+        // merge fetched patient into currentPatient state by mutating via setRecentNotes side-effect
+        // but ClinicalWorkSpace receives `patient` as prop; to keep simple, if parent didn't pass patient
+        // we can update local variables by copying values into stateful areas that rely on currentPatient.
+        // The simplest is to setRecentNotes/ vitals won't change; instead we rely on the parent to pass patient when available.
+        // However, to immediately reflect patient info in the header, we patch the DOM by updating a small local state.
+        // Add a lightweight localPatient state if not present.
+        setLocalPatient(prev => ({ ...(prev || {}), ...json.patient }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch patient details', err);
+    }
+  };
+
+  const fetchVitals = async () => {
+      try {
       const pid = currentPatient.id;
       // prefer numeric patient_id; fall back to appointment id if available
       let qs = '';
-      if (appointment?.id) {
-        qs = `appointment_id=${encodeURIComponent(appointment.id)}`;
+      if (currentAppointment.id) {
+        qs = `appointment_id=${encodeURIComponent(currentAppointment.id)}`;
       } else if (pid && /^\d+$/.test(String(pid))) {
         qs = `patient_id=${encodeURIComponent(String(pid))}`;
       } else if (pid) {
@@ -194,7 +270,8 @@ function ClinicalWorkSpace({ appointment, patient, onBack }) {
   };
 
   useEffect(() => {
-    // fetch notes and vitals when component mounts or patient changes
+    // fetch notes, vitals, and patient fallback when component mounts or patient changes
+    fetchPatient();
     fetchNotes();
     fetchVitals();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -427,7 +504,7 @@ Use templates above for structured documentation."
         </div>
       </div>
 
-      {/* Current Medications */}
+  {/* Current Medications */}
       <div className="history-section">
         <h4>
           <Pill size={20} />
@@ -437,7 +514,11 @@ Use templates above for structured documentation."
           {currentPatient.currentMedications.map((med, index) => (
             <div key={index} className="medication-item">
               <div className="med-icon">💊</div>
-              <span>{med}</span>
+              <div>
+                <strong>{typeof med === 'string' ? med : (med.name || med.medication_name || 'Medication')}</strong>
+                {typeof med !== 'string' && med.frequency && <div className="med-info">{med.frequency}</div>}
+                {typeof med !== 'string' && med.prescribed_by && <div className="med-info">Prescribed by: {med.prescribed_by}</div>}
+              </div>
             </div>
           ))}
         </div>
@@ -450,12 +531,12 @@ Use templates above for structured documentation."
           Visit History
         </h4>
         <div className="visit-timeline">
-          {recentNotes.length === 0 ? (
+          {((currentPatient.medicalHistory && currentPatient.medicalHistory.length > 0) ? currentPatient.medicalHistory : recentNotes).length === 0 ? (
             <div className="empty">No visit history found</div>
           ) : (
-            recentNotes.map((v, idx) => {
+            (currentPatient.medicalHistory && currentPatient.medicalHistory.length > 0 ? currentPatient.medicalHistory : recentNotes).map((v, idx) => {
               // Attempt to extract a date from common fields returned by PatientVisit
-              const rawDate = v.date || v.visit_date || v.created_at || v.timestamp || v.visitTimestamp || '';
+              const rawDate = v.date || v.visit_date || v.Date || v.created_at || v.timestamp || v.visitTimestamp || '';
               const date = rawDate ? new Date(rawDate).toLocaleDateString() : 'Unknown date';
               const title = v.diagnosis || v.reason || v.treatment || v.note_title || 'Visit';
               const noteText = v.note_text || v.notes || v.treatment || '';
@@ -511,28 +592,26 @@ Use templates above for structured documentation."
         </div>
       </div>
 
-      {/* Lab Results */}
+      {/* Lab Results (no static mock data) */}
       <div className="history-section">
         <h4>
           <TestTube size={20} />
           Recent Lab Results
         </h4>
         <div className="lab-results">
-          <div className="lab-item">
-            <span className="lab-name">HbA1c</span>
-            <span className="lab-value">6.8%</span>
-            <span className="lab-status normal">Normal</span>
-          </div>
-          <div className="lab-item">
-            <span className="lab-name">Cholesterol</span>
-            <span className="lab-value">185 mg/dL</span>
-            <span className="lab-status normal">Normal</span>
-          </div>
-          <div className="lab-item">
-            <span className="lab-name">Blood Glucose</span>
-            <span className="lab-value">102 mg/dL</span>
-            <span className="lab-status normal">Normal</span>
-          </div>
+          {currentPatient.labs && currentPatient.labs.length > 0 ? (
+            currentPatient.labs.map((lab, idx) => (
+              <div className="lab-item" key={idx}>
+                <span className="lab-name">{lab.name || lab.testName || 'Lab Test'}</span>
+                <span className="lab-value">{lab.value || lab.result || ''}</span>
+                <span className={`lab-status ${lab.status ? lab.status.toLowerCase() : 'unknown'}`}>
+                  {lab.status || ''}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="empty">No recent lab results</div>
+          )}
         </div>
       </div>
     </div>

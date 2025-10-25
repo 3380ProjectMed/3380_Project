@@ -21,12 +21,13 @@ services:
   php:
     build:
       context: ./backend
-      dockerfile: Dockerfile_backend
-    working_dir: /var/www/html
+      dockerfile: Dockerfile-httpd-php
+    # Use the apache-based image built by Dockerfile-httpd-php
+    working_dir: /var/www/backend
     volumes:
-      - ./backend:/var/www/html
-    command: sh -lc "php -S 0.0.0.0:8080 -t public"
-    ports: ["8080:8080"]        # HTTP endpoint for your API
+      - ./backend:/var/www/backend:cached
+    # Let the image's default CMD start Apache; don't override with php -S
+    ports: ["8080:80"]        # map host 8080 -> container 80 (Apache)
     environment:
       DB_HOST: db
       DB_PORT: 3306
