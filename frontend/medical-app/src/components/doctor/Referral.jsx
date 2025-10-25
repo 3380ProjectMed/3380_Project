@@ -3,7 +3,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import './Referral.css';
 
 function Referral() {
-  const [pending, setPending] = useState([]);
+  const [referrals, setReferrals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ patient_id: '', patient_name: '', referring_doctor_staff_id: '', specialist_doctor_staff_id: '', reason: '', notes: '' });
   const [status, setStatus] = useState(null);
@@ -23,28 +23,39 @@ function Referral() {
     }).slice(0, 50);
   }, [form.patient_name, patients]);
 
-  const apiBase = 'http://localhost:8080/doctor_api/referrals';
+  const apiBase = '/api/doctor_api/referrals';
   const auth = useAuth();
 
-  const loadPending = async () => {
+  // Load referrals that were received by the specialist (assigned to this doctor)
+  const loadReceived = async (doctorId = null) => {
     setLoading(true);
     try {
-      const res = await fetch(`${apiBase}/get-pending.php`);
-      const json = await res.json();
-      if (json.success && Array.isArray(json.referrals)) {
-        setPending(json.referrals);
+      // prefer passing doctor_id explicitly, otherwise backend will infer from session
+      const qs = doctorId ? `?doctor_id=${encodeURIComponent(doctorId)}` : '';
+      const res = await fetch(`${apiBase}/get-received.php${qs}`, { credentials: 'include' });
+      const text = await res.text();
+      let json = null;
+      try { json = JSON.parse(text); } catch (e) { json = null; }
+      if (json && json.success && Array.isArray(json.referrals)) {
+        setReferrals(json.referrals);
       } else {
-        setPending([]);
+        console.error('Unexpected response loading referrals', text);
+        setReferrals([]);
       }
     } catch (err) {
       console.error('Failed to load referrals', err);
-      setPending([]);
+      setReferrals([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadPending(); }, []);
+  // Load referrals for the current specialist once auth is ready
+  useEffect(() => {
+    if (auth.loading) return;
+    const doctorId = auth.user?.doctor_id ?? null;
+    loadReceived(doctorId);
+  }, [auth.loading, auth.user]);
 
   // Load patients and doctors for the form
   useEffect(() => {
@@ -53,17 +64,19 @@ function Referral() {
         if (auth.loading) return;
         const doctorId = auth.user?.doctor_id ?? null;
         if (!doctorId) return; // no doctor context available yet
-
         const [pRes, dRes] = await Promise.all([
-          fetch(`http://localhost:8080/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' }),
-          fetch('http://localhost:8080/doctor_api/doctors/get-all.php', { credentials: 'include' })
+          fetch(`/api/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' }),
+          fetch('/api/doctor_api/doctors/get-all.php', { credentials: 'include' })
         ]);
 
-        const pJson = await pRes.json();
-        const dJson = await dRes.json();
+        const pText = await pRes.text();
+        const dText = await dRes.text();
+        let pJson = null; let dJson = null;
+        try { pJson = JSON.parse(pText); } catch(e){ pJson = null; }
+        try { dJson = JSON.parse(dText); } catch(e){ dJson = null; }
 
-        if (pJson.success) setPatients(pJson.patients || []);
-        if (dJson.success) setDoctors(dJson.doctors || []);
+        if (pJson && pJson.success) setPatients(pJson.patients || []);
+        if (dJson && dJson.success) setDoctors(dJson.doctors || []);
       } catch (err) {
         console.error('Failed to load patients or doctors', err);
       }
@@ -71,25 +84,7 @@ function Referral() {
     loadLists();
   }, []);
 
-  const handleApprove = async (id, approve = true) => {
-    try {
-      const body = { referral_id: id, status: approve ? 'Approved' : 'Denied', doctor_id: auth.user?.doctor_id ?? null };
-      const res = await fetch(`${apiBase}/approve.php`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-      });
-      const json = await res.json();
-      if (json.success) {
-        setStatus({ type: 'success', text: json.message || 'Updated' });
-        loadPending();
-      } else {
-        setStatus({ type: 'error', text: json.error || 'Failed' });
-      }
-    } catch (err) {
-      console.error(err);
-      setStatus({ type: 'error', text: 'Network error' });
-    }
-    setTimeout(() => setStatus(null), 3000);
-  };
+  // Approval flow removed: referrals from PCP are delivered to specialists directly.
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -131,7 +126,8 @@ function Referral() {
       if (json && json.success) {
         setStatus({ type: 'success', text: 'Referral created' });
         setForm({ patient_id: '', referring_doctor_staff_id: '', specialist_doctor_staff_id: '', reason: '' });
-        loadPending();
+        // refresh the received referrals list for the specialist
+        loadReceived(auth.user?.doctor_id ?? null);
       } else {
         // Show server response (either JSON.error or raw text)
         const msg = (json && json.error) ? json.error : text || 'Failed to create referral';
@@ -146,46 +142,32 @@ function Referral() {
 
   return (
     <div className="referral-page">
-      <div className="referral-header">
-        <div>
-          <div className="referral-title">Referrals</div>
-          <div className="referral-count">{pending.length} pending</div>
-        </div>
-        <div>
-          <button className="btn ghost sm" onClick={loadPending}>Refresh</button>
-        </div>
-      </div>
-
+      <h2 className="page-title">Referrals</h2>
       <div className="referral-grid">
         <div className="referral-column">
-          <h3 style={{marginTop:0}}>Pending Referrals</h3>
+          <h3>Pending Referrals</h3>
           {loading ? <div>Loading...</div> : (
-            <div className="pending-list">
-              {pending.length === 0 && <div className="empty">No pending referrals</div>}
-              {pending.map(r => (
-                <div key={r.Referral_ID} className="referral-card">
-                  <div className="referral-info">
-                    <div className="referral-reason">#{r.Referral_ID} — {r.patient_name || `P${r.Patient_ID}`}</div>
-                    <div className="referral-meta-row">
-                      <div>Patient ID: {r.Patient_ID}</div>
-                      <div>Reason: {r.Reason}</div>
-                      {r.Date_of_approval && <div className="approved-date">Approved on: {r.Date_of_approval}</div>}
+            <ul className="referral-list">
+              {referrals.length === 0 && <li className="empty">No referrals received</li>}
+              {referrals.map(r => (
+                  <li key={r.Referral_ID} className="referral-item">
+                    <div className="referral-meta">
+                      <strong>#{r.Referral_ID}</strong>
+                      <span>Patient: {r.Patient_ID} - {r.patient_name}</span>
+                      <span>Specialist: {r.specialist_name}{r.specialty_name ? ` — ${r.specialty_name}` : ''}</span>
+                      <span>Reason: {r.Reason}</span>
+                      {r.notes && <span>Notes: {r.notes}</span>}
+                      {r.Date_of_approval && <span className="approved-date">Updated on: {r.Date_of_approval}</span>}
+                      <span>Status: {r.Status}</span>
                     </div>
-                    {r.notes && <div className="referral-notes">{r.notes}</div>}
-                  </div>
-
-                  <div className="referral-actions">
-                    <button className="btn btn-approve sm" onClick={() => handleApprove(r.Referral_ID, true)}>Approve</button>
-                    <button className="btn btn-deny sm" onClick={() => handleApprove(r.Referral_ID, false)}>Deny</button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  </li>
+                ))}
+            </ul>
           )}
         </div>
 
         <div className="referral-column">
-          <h3 style={{marginTop:0}}>Create Referral</h3>
+          <h3>Create Referral</h3>
           <form className="referral-form" onSubmit={handleCreate}>
             <label>Patient
               <div className="patient-select">
@@ -197,57 +179,46 @@ function Referral() {
                   onFocus={() => setShowPatientList(true)}
                   required
                 />
-                <div className={`patient-list-dropdown ${showPatientList ? 'open' : ''}`}>
-                  {filteredPatientResults.length === 0 ? (
-                    <div className="patient-list-empty">No matching patients</div>
-                  ) : (
-                    filteredPatientResults.map(p => (
-                      <div key={p.id} className="patient-list-item" onClick={() => {
-                        const numeric = parseInt((p.id || '').replace(/^P/i, ''), 10) || null;
-                        setForm({ ...form, patient_name: `${p.name} (${p.id})`, patient_id: numeric });
-                        setShowPatientList(false);
-                      }}>
-                        <div className="patient-list-item-name">{p.name}</div>
-                        <div className="patient-list-item-id">{p.id}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                {showPatientList && (form.patient_name || '').trim() !== '' && !form.patient_id && (
+                  <div className={`patient-list-dropdown open`}>
+                    {filteredPatientResults.length === 0 ? (
+                      <div className="patient-list-empty">No matching patients</div>
+                    ) : (
+                      filteredPatientResults.map(p => (
+                        <div key={p.id} className="patient-list-item" onClick={() => {
+                          // p.id is like 'P101' and p.name is 'First Last'
+                          const numeric = parseInt((p.id || '').replace(/^P/i, ''), 10) || null;
+                          setForm({ ...form, patient_name: `${p.name} (${p.id})`, patient_id: numeric });
+                          setShowPatientList(false);
+                        }}>
+                          <div className="patient-list-item-name">{p.name}</div>
+                          <div className="patient-list-item-id">{p.id}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </label>
-
-            <div className="form-row">
-              <div className="field">
-                <label>Referring Doctor Staff ID
-                  <input value={form.referring_doctor_staff_id} onChange={e => setForm({...form, referring_doctor_staff_id: e.target.value})} required />
-                </label>
-              </div>
-
-              <div className="field">
-                <label>Specialist
-                  <select value={form.specialist_doctor_staff_id} onChange={e => setForm({...form, specialist_doctor_staff_id: e.target.value})} required>
-                    <option value="">-- select specialist --</option>
-                    {doctors.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}{d.specialty_name ? ` — ${d.specialty_name}` : ''}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </div>
-
+            <label>Referring Doctor Staff ID
+              <input value={form.referring_doctor_staff_id} onChange={e => setForm({...form, referring_doctor_staff_id: e.target.value})} required />
+            </label>
+            <label>Specialist
+              <select value={form.specialist_doctor_staff_id} onChange={e => setForm({...form, specialist_doctor_staff_id: e.target.value})} required>
+                <option value="">-- select specialist --</option>
+                {doctors.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}{d.specialty_name ? ` — ${d.specialty_name}` : ''}</option>
+                ))}
+              </select>
+            </label>
             <label>Reason
               <textarea value={form.reason} onChange={e => setForm({...form, reason: e.target.value})} required />
             </label>
-
-            <label>Notes (optional)
-              <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} />
-            </label>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
-              <button className="btn" type="submit">Create Referral</button>
+            <div style={{ marginTop: 8 }}>
+              <button className="btn btn-primary" type="submit">Create Referral</button>
             </div>
           </form>
-          {status && <div className={`alert ${status.type}`}>{status.text}</div>}
+              {status && <div className={`alert ${status.type}`}>{status.text}</div>}
         </div>
       </div>
     </div>

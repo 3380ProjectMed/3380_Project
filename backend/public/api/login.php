@@ -2,7 +2,11 @@
 // public/api/login.php
 declare(strict_types=1);
 
+// Ensure CORS headers are sent for requests coming from the dev server
+require_once __DIR__ . '/../../cors.php';
+
 session_start();
+// Content-Type header is set by cors.php, but keep it here for clarity
 header('Content-Type: application/json');
 
 $host = getenv('DB_HOST') ?: 'db';

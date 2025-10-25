@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `Appointment` (
   `Appointment_date` datetime NOT NULL,
   `Date_created` datetime NOT NULL,
   `Reason_for_visit` varchar(300) DEFAULT NULL,
+  `Status` enum('Scheduled','Waiting','In Progress','Completed','Cancelled','No-Show') NOT NULL DEFAULT 'Scheduled',
   PRIMARY KEY (`Appointment_id`),
   KEY `ix_appt_patient` (`Patient_id`),
   KEY `ix_appt_doctor` (`Doctor_id`),
