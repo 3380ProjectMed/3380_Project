@@ -13,7 +13,7 @@ import {
   LogIn,
   X
 } from "lucide-react";
-import "./landingpage.css";
+import "./LandingPage.css";
 import { pingDb, pingPhp }  from "../api/api.js";
 
 export default function LandingPage() {
