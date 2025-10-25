@@ -872,6 +872,7 @@ CREATE TABLE `user_account` (
 
 LOCK TABLES `user_account` WRITE;
 /*!40000 ALTER TABLE `user_account` DISABLE KEYS */;
+
 INSERT INTO `user_account` VALUES (1,'p101','john.smith@email.com','MedApp123!','PATIENT',0,NULL,0,1,'2025-10-22 04:54:59'),(2,'d201','echen@medconnect.com','MedApp123!','DOCTOR',0,NULL,0,1,'2025-10-22 04:54:59'),(3,'n301','tnguyen@medconnect.com','MedApp123!','NURSE',0,NULL,0,1,'2025-10-23 14:54:01');
 /*!40000 ALTER TABLE `user_account` ENABLE KEYS */;
 UNLOCK TABLES;
