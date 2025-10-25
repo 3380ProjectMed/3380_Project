@@ -21,7 +21,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'   # or 20, whichever you used locally
+          node-version: '22'
 
       - name: Build React app
         working-directory: frontend/medical-app
@@ -42,11 +42,19 @@ jobs:
         id: check_files
         uses: andstor/file-existence-action@v1
         with:
-          files: 'composer.json'
+          files: 'backend/composer.json'  # Check in backend folder
 
       - name: Run composer install if composer.json exists
         if: steps.check_files.outputs.files_exists == 'true'
+        working-directory: backend
         run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
+
+      # --- Copy web.config for Azure nginx ---
+      - name: Copy web.config
+        run: |
+          if [ -f backend/web.config ]; then
+            cp backend/web.config backend/public/
+          fi
 
       # --- Upload built app (React + PHP) ---
       - name: Upload artifact for deployment job
@@ -72,5 +80,11 @@ jobs:
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_82C758B8091545CFB8269C41B30856D8 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4358F78E127A4B5A97B0559118392A2C}}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_904AB161F72245F0BD8DB8A2CDD5D2FB}}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4358F78E127A4B5A97B0559118392A2C }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_904AB161F72245F0BD8DB8A2CDD5D2FB }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'medconnect'
+          slot-name: 'Production'
