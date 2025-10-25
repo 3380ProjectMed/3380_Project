@@ -1,43 +1,21 @@
-// src/components/nurse/NursePortal.jsx
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-
-import NurseSidebar from "./NurseSidebar.jsx";
-import NurseDashboard from "./NurseDashboard.jsx";
-
-// Reuse visual components from doctor (no CSS import)
-import Schedule from "../doctor/Schedule.jsx";
-import PatientList from "../doctor/PatientList.jsx";
-import ClinicalWorkSpace from "../doctor/ClinicalWorkSpace.jsx";
-
+import NurseSidebar from "./NurseSidebar";
+import NurseDashboard from "./NurseDashboard";
+import NurseSchedule from "./NurseSchedule";
+import NursePatients from "./NursePatients";
+import NurseClinicalWorkSpace from "./NurseClinicalWorkSpace";
+import NurseProfile from "./NurseProfile";
+import NurseReport from "./NurseReport";
+import NurseReferral from "./NurseReferral";
 import "./NursePortal.css";
 
 export default function NursePortal() {
   const [currentPage, setCurrentPage] = useState("dashboard");
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Clear any auth your app uses (adjust as needed)
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    navigate("/login", { replace: true });
-  };
-
-  const handleAppointmentClick = (appointment) => {
-    setSelectedAppointment(appointment);
-    setCurrentPage("clinical");
-  };
-
-  const handlePatientClick = (patient) => {
-    setSelectedPatient(patient);
-  };
-
-  const handleBackToDashboard = () => {
-    setCurrentPage("dashboard");
-    setSelectedAppointment(null);
-    setSelectedPatient(null);
+    if (confirm("Log out of Nurse Portal?")) {
+      window.location.href = "/login";
+    }
   };
 
   return (
@@ -48,33 +26,14 @@ export default function NursePortal() {
         onLogout={handleLogout}
       />
 
-      <main className="nurse-main-content">
-        {currentPage === "dashboard" && (
-          <NurseDashboard
-            setCurrentPage={setCurrentPage}
-            onAppointmentClick={handleAppointmentClick}
-          />
-        )}
-
-        {currentPage === "schedule" && (
-          <Schedule onAppointmentClick={handleAppointmentClick} />
-        )}
-
-        {currentPage === "patients" && (
-          <PatientList
-            onPatientClick={handlePatientClick}
-            selectedPatient={selectedPatient}
-            setSelectedPatient={setSelectedPatient}
-          />
-        )}
-
-        {currentPage === "clinical" && (
-          <ClinicalWorkSpace
-            appointment={selectedAppointment}
-            patient={selectedPatient}
-            onBack={handleBackToDashboard}
-          />
-        )}
+      <main className="nurse-main">
+        {currentPage === "dashboard" && <NurseDashboard setCurrentPage={setCurrentPage} />}
+        {currentPage === "schedule" && <NurseSchedule />}
+        {currentPage === "patients" && <NursePatients />}
+        {currentPage === "clinical" && <NurseClinicalWorkSpace />}
+        {currentPage === "profile" && <NurseProfile />}
+        {currentPage === "reports" && <NurseReport />}
+        {currentPage === "referrals" && <NurseReferral />}
       </main>
     </div>
   );
