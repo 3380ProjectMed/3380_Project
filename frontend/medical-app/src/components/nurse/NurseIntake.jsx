@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from "react";
-import ClinicalWorkSpace from "../doctor/ClinicalWorkSpace";
+import NurseClinicalWorkSpace from "./NurseClinicalWorkSpace";
 
 /**
- * Wraps ClinicalWorkSpace and nudges it to "Vitals" after mount by
- * simulating a click on the Vitals tab. This avoids editing the original.
+ * Wraps NurseClinicalWorkSpace and nudges it to "Vitals" after mount by
+ * simulating a click on the Vitals tab.
  */
 export default function NurseIntake(props) {
   const hostRef = useRef(null);
@@ -13,15 +13,15 @@ export default function NurseIntake(props) {
     const id = setTimeout(() => {
       const root = hostRef.current;
       if (!root) return;
-      const vitalsBtn = root.querySelector(".tab-btn:nth-child(2)"); // notes, vitals, history
+      const vitalsBtn = root.querySelector(".tabs button:nth-child(2)"); // notes, vitals, history
       vitalsBtn?.click();
     }, 0);
     return () => clearTimeout(id);
   }, []);
 
   return (
-    <div ref={hostRef}>
-      <ClinicalWorkSpace role="nurse" mode="intake" {...props} />
+    <div ref={hostRef} className="nurse-page">
+      <NurseClinicalWorkSpace role="nurse" mode="intake" {...props} />
     </div>
   );
 }

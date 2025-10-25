@@ -1,151 +1,129 @@
-import React, { useState, useMemo } from "react";
-import { Calendar, Users, Clock, FileText, Search, Filter } from "lucide-react";
-import "./NurseDashboard.css";
+import React, { useState } from 'react';
+import { Calendar, Users, Clock, FileText, Search, Filter } from 'lucide-react';
+import './NurseDashboard.css';
 
 /**
- * NurseDashboard (standalone)
- * - Mirrors the Doctor dashboard layout/UX
- * - No health-check fetch, so it won’t error if backend is down
- * - Uses mock appointments; replace with API when ready
- *
- * Props:
- *  - setCurrentPage       : (pageId) => void
- *  - onAppointmentClick   : (appointment) => void
+ * NurseDashboard
+ * Mirrors the doctor dashboard layout/visuals (cards, grid, table)
+ * while keeping nurse-specific copy. Uses local mock data—wire to API later.
  */
 export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
-  // Local state for search and filtering
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
-  // Pretty date
-  const todayStr = useMemo(() => {
+  // Date label
+  const getCurrentDate = () => {
     const today = new Date();
-    return today.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    return today.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
     });
-  }, []);
-
-  // Mock appointment data (same shape as doctor’s)
-  const mockAppointments = useMemo(
-    () => [
-      {
-        id: "A001",
-        time: "10:00 AM",
-        patientName: "John Doe",
-        patientId: "P001",
-        reason: "Follow-up (Hypertension)",
-        status: "Scheduled",
-      },
-      {
-        id: "A002",
-        time: "10:30 AM",
-        patientName: "Jane Smith",
-        patientId: "P002",
-        reason: "New Patient Visit",
-        status: "In Waiting",
-      },
-      {
-        id: "A003",
-        time: "11:00 AM",
-        patientName: "Michael Lee",
-        patientId: "P003",
-        reason: "Annual Physical",
-        status: "In Consultation",
-      },
-      {
-        id: "A004",
-        time: "11:30 AM",
-        patientName: "Sarah Connor",
-        patientId: "P004",
-        reason: "Review Lab Results",
-        status: "Scheduled",
-      },
-      {
-        id: "A005",
-        time: "2:00 PM",
-        patientName: "David Wilson",
-        patientId: "P005",
-        reason: "Diabetes Management",
-        status: "Scheduled",
-      },
-      {
-        id: "A006",
-        time: "2:30 PM",
-        patientName: "Emma Johnson",
-        patientId: "P006",
-        reason: "Vaccination",
-        status: "Completed",
-      },
-    ],
-    []
-  );
-
-  // Stats summary
-  const stats = useMemo(() => {
-    return {
-      total: mockAppointments.length,
-      waiting: mockAppointments.filter((a) => a.status === "In Waiting").length,
-      pending: mockAppointments.filter((a) => a.status === "Scheduled").length,
-      completed: mockAppointments.filter((a) => a.status === "Completed").length,
-    };
-  }, [mockAppointments]);
-
-  // Filtered view
-  const filteredAppointments = useMemo(() => {
-    return mockAppointments.filter((app) => {
-      const matchesSearch =
-        app.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.reason.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter =
-        filterStatus === "all" ||
-        app.status.toLowerCase().replace(" ", "-") === filterStatus;
-      return matchesSearch && matchesFilter;
-    });
-  }, [mockAppointments, searchTerm, filterStatus]);
-
-  // Status → CSS class
-  const getStatusClass = (status) => {
-    const map = {
-      scheduled: "status-scheduled",
-      "in waiting": "status-waiting",
-      "in consultation": "status-consultation",
-      completed: "status-completed",
-    };
-    return map[status.toLowerCase()] || "";
   };
 
+  // Local mock appointments (same structure as doctor)
+  const mockAppointments = [
+    {
+      id: 'A001',
+      time: '10:00 AM',
+      patientName: 'John Doe',
+      patientId: 'P001',
+      reason: 'Follow-up (Hypertension)',
+      status: 'Scheduled'
+    },
+    {
+      id: 'A002',
+      time: '10:30 AM',
+      patientName: 'Jane Smith',
+      patientId: 'P002',
+      reason: 'New Patient Visit',
+      status: 'In Waiting'
+    },
+    {
+      id: 'A003',
+      time: '11:00 AM',
+      patientName: 'Michael Lee',
+      patientId: 'P003',
+      reason: 'Annual Physical',
+      status: 'In Consultation'
+    },
+    {
+      id: 'A004',
+      time: '11:30 AM',
+      patientName: 'Sarah Connor',
+      patientId: 'P004',
+      reason: 'Review Lab Results',
+      status: 'Scheduled'
+    },
+    {
+      id: 'A005',
+      time: '2:00 PM',
+      patientName: 'Emma Johnson',
+      patientId: 'P005',
+      reason: 'Vaccination',
+      status: 'Completed'
+    }
+  ];
+
+  // Stats identical to doctor cards
+  const stats = {
+    total: mockAppointments.length,
+    waiting: mockAppointments.filter(a => a.status === 'In Waiting').length,
+    pending: mockAppointments.filter(a => a.status === 'Scheduled').length,
+    completed: mockAppointments.filter(a => a.status === 'Completed').length
+  };
+
+  // Filtering (search + status)
+  const filteredAppointments = mockAppointments.filter(app => {
+    const matchesSearch =
+      app.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.reason.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesFilter =
+      filterStatus === 'all' ||
+      app.status.toLowerCase().replace(' ', '-') === filterStatus;
+
+    return matchesSearch && matchesFilter;
+  });
+
+  // Status badge color map (same as doctor)
+  const getStatusClass = (status) => {
+    const statusMap = {
+      'scheduled': 'status-scheduled',
+      'in waiting': 'status-waiting',
+      'in consultation': 'status-consultation',
+      'completed': 'status-completed'
+    };
+    return statusMap[status.toLowerCase()] || '';
+  };
+
+  // Row click -> Nurse intake / Clinical flow
   const handleAppointmentRowClick = (appointment) => {
-    onAppointmentClick?.(appointment);
+    if (onAppointmentClick) onAppointmentClick(appointment);
+    if (setCurrentPage) setCurrentPage('clinical'); // optional
   };
 
   return (
-    <div className="nurse-dashboard">
-      {/* ===== HEADER ===== */}
-      <div className="nurse-dashboard__header">
-        <div className="welcome-card">
+    <div className="dashboard">
+      {/* ===== WELCOME HEADER (Doctor look, Nurse copy) ===== */}
+      <div className="dashboard-header">
+        <div className="welcome-section">
           <h1>Welcome Back, Nurse Lastname</h1>
-          <p className="meta-line">
-            <Calendar size={18} style={{ display: "inline", marginRight: 8, verticalAlign: "middle" }} />
-            {todayStr} •{" "}
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                setCurrentPage?.("schedule");
-              }}
-            >
+          <p className="office-info">
+            <Calendar size={18} style={{display: 'inline', marginRight: '8px', verticalAlign: 'middle'}} />
+            {getCurrentDate()} • {' '}
+            <a href="#" onClick={(e) => e.preventDefault()}>
               Main Clinic, Suite 305
             </a>
           </p>
         </div>
       </div>
 
-      {/* ===== STATS ===== */}
-      <div className="nurse-stats">
-        <div className="stat-card primary">
+      {/* ===== STATS CARDS (same structure/colors as doctor) ===== */}
+      <div className="stats-grid">
+        <div className="stat-card stat-primary">
           <div className="stat-icon">
             <Calendar size={24} />
           </div>
@@ -155,7 +133,7 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
           </div>
         </div>
 
-        <div className="stat-card warning">
+        <div className="stat-card stat-warning">
           <div className="stat-icon">
             <Users size={24} />
           </div>
@@ -165,7 +143,7 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
           </div>
         </div>
 
-        <div className="stat-card info">
+        <div className="stat-card stat-info">
           <div className="stat-icon">
             <Clock size={24} />
           </div>
@@ -175,7 +153,7 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
           </div>
         </div>
 
-        <div className="stat-card success">
+        <div className="stat-card stat-success">
           <div className="stat-icon">
             <FileText size={24} />
           </div>
@@ -187,29 +165,38 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
       </div>
 
       {/* ===== QUICK ACTIONS ===== */}
-      <div className="nurse-actions">
-        <button className="action-btn" onClick={() => setCurrentPage?.("patients")}>
+      <div className="quick-actions">
+        <button 
+          className="action-btn" 
+          onClick={() => setCurrentPage && setCurrentPage('patients')}
+        >
           <Users size={18} />
           View All Patients
         </button>
-        <button className="action-btn" onClick={() => setCurrentPage?.("schedule")}>
+        <button 
+          className="action-btn" 
+          onClick={() => setCurrentPage && setCurrentPage('schedule')}
+        >
           <Calendar size={18} />
           Full Schedule
         </button>
-        <button className="action-btn" onClick={() => setCurrentPage?.("clinical")}>
+        <button 
+          className="action-btn" 
+          onClick={() => setCurrentPage && setCurrentPage('clinical')}
+        >
           <FileText size={18} />
           Clinical / Intake
         </button>
       </div>
 
-      {/* ===== TODAY'S SCHEDULE ===== */}
-      <div className="nurse-schedule">
+      {/* ===== TODAY'S SCHEDULE TABLE (fully matches doctor) ===== */}
+      <div className="schedule-section">
         <div className="section-header">
           <h2>Today's Schedule</h2>
           <div className="section-controls">
             <div className="search-box">
               <Search size={18} />
-              <input
+              <input 
                 type="text"
                 placeholder="Search patients..."
                 value={searchTerm}
@@ -217,10 +204,13 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
                 aria-label="Search appointments"
               />
             </div>
-
             <div className="filter-box">
               <Filter size={18} />
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} aria-label="Filter by status">
+              <select 
+                value={filterStatus} 
+                onChange={(e) => setFilterStatus(e.target.value)}
+                aria-label="Filter by status"
+              >
                 <option value="all">All Status</option>
                 <option value="scheduled">Scheduled</option>
                 <option value="in-waiting">In Waiting</option>
@@ -240,23 +230,25 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
           </div>
 
           <div className="table-body">
-            {filteredAppointments.length ? (
-              filteredAppointments.map((a) => (
-                <div
-                  key={a.id}
-                  className="table-row"
-                  onClick={() => handleAppointmentRowClick(a)}
+            {filteredAppointments.length > 0 ? (
+              filteredAppointments.map((appointment) => (
+                <div 
+                  key={appointment.id} 
+                  className="table-row" 
+                  onClick={() => handleAppointmentRowClick(appointment)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => e.key === "Enter" && handleAppointmentRowClick(a)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAppointmentRowClick(appointment)}
                 >
-                  <div className="col-time">{a.time}</div>
+                  <div className="col-time">{appointment.time}</div>
                   <div className="col-patient">
-                    <span className="patient-link">{a.patientName}</span>
+                    <span className="patient-link">{appointment.patientName}</span>
                   </div>
-                  <div className="col-reason">{a.reason}</div>
+                  <div className="col-reason">{appointment.reason}</div>
                   <div className="col-status">
-                    <span className={`status-badge ${getStatusClass(a.status)}`}>{a.status}</span>
+                    <span className={`status-badge ${getStatusClass(appointment.status)}`}>
+                      {appointment.status}
+                    </span>
                   </div>
                 </div>
               ))

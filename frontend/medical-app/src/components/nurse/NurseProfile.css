@@ -1,0 +1,116 @@
+/* Nurse profile: align with doctor profile styles (colors, spacing, radii, shadows) */
+.nurse-profile {
+	padding: 2rem;
+	max-width: 1200px;
+	margin: 0 auto;
+}
+
+.nurse-profile h1 {
+	font-size: 1.75rem;
+	font-weight: 700;
+	color: var(--primary-color);
+	margin: 0 0 0.5rem 0;
+}
+
+.nurse-profile .muted {
+	color: #6b7280;
+	margin-bottom: 1rem;
+}
+
+/* Profile card (photo + details) */
+.profile-card {
+	background: white;
+	border-radius: 1rem;
+	padding: 1.25rem;
+	box-shadow: 0 4px 12px rgba(0, 119, 182, 0.06);
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.profile-card .avatar {
+	width: 72px;
+	height: 72px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, var(--secondary-color), var(--third-color));
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-weight: 700;
+	font-size: 1.25rem;
+}
+
+.profile-card .details {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.profile-card .name {
+	font-size: 1.125rem;
+	font-weight: 700;
+	color: var(--primary-color);
+}
+
+.profile-card .role {
+	color: #64748b;
+	font-weight: 600;
+}
+
+.profile-card .contact {
+	color: #6b7280;
+	font-size: 0.95rem;
+}
+
+/* Settings / preferences area */
+.settings {
+	margin-top: 1.5rem;
+}
+
+.settings h2 {
+	font-size: 1.25rem;
+	color: var(--primary-color);
+	margin-bottom: 0.75rem;
+}
+
+.setting-row {
+	background: var(--fifth-color, #f8fafc);
+	border: 2px solid var(--forth-color, #e6eef8);
+	padding: 0.75rem 1rem;
+	border-radius: 0.75rem;
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.setting-row label {
+	font-weight: 600;
+	color: var(--primary-color);
+}
+
+/* Save button (re-usable) */
+.btn-save {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.75rem 1.5rem;
+	background: linear-gradient(135deg, var(--secondary-color), var(--third-color));
+	color: white;
+	border: none;
+	border-radius: 0.75rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+	.nurse-profile {
+		padding: 1rem;
+	}
+
+	.profile-card {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.75rem;
+	}
+}

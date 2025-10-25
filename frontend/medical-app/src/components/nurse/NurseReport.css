@@ -1,0 +1,9 @@
+.nurse-report{padding:24px;max-width:1000px;margin:0 auto;}
+.nurse-report h1{margin:0 0 12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px}
+.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,.06);text-align:center}
+.val{font-size:28px;font-weight:800;color:#0b1f44}
+.lbl{color:#64748b;font-weight:700}
+.table .thead,.table .row{display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:center}
+.table .thead{background:linear-gradient(135deg,#eaf6ff,#fff);padding:12px;border-radius:10px;font-weight:800}
+.table .row{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:8px}
