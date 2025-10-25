@@ -1,0 +1,451 @@
+/* ========== OFFICE SCHEDULE PAGE ========== */
+.office-schedule-page {
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* ===== HEADER ===== */
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-info {
+  flex: 1;
+}
+
+/* ===== CONTROLS ===== */
+.schedule-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.month-navigation {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-btn {
+  width: 40px;
+  height: 40px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6b7280;
+}
+
+.nav-btn:hover {
+  background: #f3f4f6;
+  border-color: #00b4d8;
+  color: #0077b6;
+}
+
+.month-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #03045e;
+  margin: 0;
+  min-width: 250px;
+  text-align: center;
+}
+
+.btn-today {
+  padding: 0.625rem 1.25rem;
+  background: white;
+  border: 2px solid #00b4d8;
+  border-radius: 0.5rem;
+  color: #0077b6;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-today:hover {
+  background: #00b4d8;
+  color: white;
+}
+
+/* Doctor Filter */
+.doctor-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  color: #6b7280;
+}
+
+.filter-select {
+  border: none;
+  background: transparent;
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  outline: none;
+  min-width: 150px;
+}
+
+/* ===== DOCTOR LEGEND ===== */
+.doctor-legend {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1.25rem;
+  background: white;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 2px solid #e5e7eb;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.legend-color {
+  width: 24px;
+  height: 24px;
+  border-radius: 0.375rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.legend-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.legend-name {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 0.95rem;
+}
+
+.legend-specialty {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* ===== CALENDAR ===== */
+.calendar-container {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  border: 2px solid #e5e7eb;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+}
+
+.weekday-header {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: #6b7280;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #f9fafb, #f3f4f6);
+  border-radius: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.calendar-day {
+  min-height: 140px;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+}
+
+.calendar-day:not(.empty-day):not(.weekend):hover {
+  border-color: #00b4d8;
+  box-shadow: 0 4px 12px rgba(0, 180, 216, 0.15);
+}
+
+.calendar-day.empty-day {
+  background: #fafafa;
+  border-color: #f3f4f6;
+}
+
+.calendar-day.weekend {
+  background: linear-gradient(135deg, #fafafa, #f5f5f5);
+  border-color: #e5e7eb;
+}
+
+.calendar-day.today {
+  border-color: #0077b6;
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
+  background: linear-gradient(135deg, #f0f9ff, #ffffff);
+}
+
+/* Day Header */
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.day-number {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.calendar-day.today .day-number {
+  color: #0077b6;
+  font-size: 1.25rem;
+}
+
+.appointment-count {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+/* Day Appointments */
+.day-appointments {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+
+.appointment-item {
+  background: white;
+  border-left: 4px solid #3b82f6;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.appointment-item:hover {
+  transform: translateX(2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.apt-time {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.apt-patient {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apt-doctor {
+  font-size: 0.75rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-appointments {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  font-style: italic;
+  margin: auto 0;
+  padding: 1rem 0;
+}
+
+/* ===== APPOINTMENT DETAILS MODAL ===== */
+.appointment-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-section-full {
+  grid-column: 1 / -1;
+}
+
+.detail-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-value {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 1400px) {
+  .calendar-grid {
+    gap: 0.5rem;
+  }
+
+  .calendar-day {
+    min-height: 120px;
+    padding: 0.625rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .weekday-header {
+    font-size: 0.75rem;
+    padding: 0.625rem;
+  }
+
+  .calendar-day {
+    min-height: 100px;
+  }
+
+  .apt-patient {
+    font-size: 0.8125rem;
+  }
+
+  .apt-time,
+  .apt-doctor {
+    font-size: 0.6875rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .office-schedule-page {
+    padding: 1.5rem;
+  }
+
+  .schedule-header,
+  .schedule-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .month-navigation {
+    justify-content: center;
+  }
+
+  .doctor-legend {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .calendar-container {
+    overflow-x: auto;
+  }
+
+  .calendar-grid {
+    min-width: 900px;
+  }
+}
+
+@media (max-width: 768px) {
+  .office-schedule-page {
+    padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.75rem;
+  }
+
+  .month-title {
+    font-size: 1.5rem;
+    min-width: auto;
+  }
+
+  .calendar-grid {
+    min-width: 700px;
+    gap: 0.375rem;
+  }
+
+  .calendar-day {
+    min-height: 80px;
+    padding: 0.5rem;
+  }
+
+  .weekday-header {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.6875rem;
+  }
+
+  .day-number {
+    font-size: 1rem;
+  }
+
+  .appointment-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .month-title {
+    font-size: 1.25rem;
+  }
+
+  .nav-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .calendar-grid {
+    min-width: 600px;
+  }
+}
