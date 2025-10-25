@@ -91,35 +91,35 @@ jobs:
           [ -d "$WEBROOT/api" ] && find "$WEBROOT/api" -maxdepth 2 -type f | sed 's/^/  /' || echo "  (no api dir)"
 
             # ---------- (Optional) Composer if you actually have it ----------
-            - name: Setup PHP
-              uses: shivammathur/setup-php@v2
-              with:
-                php-version: '8.4'
-            - name: Detect composer.json (backend/)
-              id: composer_check
-              run: |
-                if [ -f backend/composer.json ]; then
-                  echo "has_composer=true" >> $GITHUB_OUTPUT
-                else
-                  echo "has_composer=false" >> $GITHUB_OUTPUT
-                fi
-            - name: Composer install
-              if: steps.composer_check.outputs.has_composer == 'true'
-              working-directory: backend
-              run: |
-                set -e
-                composer validate --no-check-publish
-                composer install --prefer-dist --no-progress --no-dev
-                # copy vendor to webroot if your PHP requires it at runtime
-                mkdir -p ../release/wwwroot/vendor
-                cp -R vendor/. ../release/wwwroot/vendor/
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+      - name: Detect composer.json (backend/)
+        id: composer_check
+        run: |
+          if [ -f backend/composer.json ]; then
+            echo "has_composer=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_composer=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Composer install
+        if: steps.composer_check.outputs.has_composer == 'true'
+        working-directory: backend
+        run: |
+          set -e
+          composer validate --no-check-publish
+          composer install --prefer-dist --no-progress --no-dev
+          # copy vendor to webroot if your PHP requires it at runtime
+          mkdir -p ../release/wwwroot/vendor
+          cp -R vendor/. ../release/wwwroot/vendor/
 
-            # ---------- Upload artifact ----------
-            - name: Upload artifact for deployment job
-              uses: actions/upload-artifact@v4
-              with:
-                name: webroot
-                path: release/wwwroot
+        # ---------- Upload artifact ----------
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: webroot
+          path: release/wwwroot
 
   deploy:
     runs-on: ubuntu-latest
