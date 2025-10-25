@@ -5,7 +5,7 @@ import {
   Heart, Pill, AlertCircle, ChevronRight, Plus, X, Check, Shield, Stethoscope,
   LogOut, Home
 } from 'lucide-react';
-import './patientportal.css';
+import './PatientPortal.css';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useNavigate } from 'react-router-dom';
 
