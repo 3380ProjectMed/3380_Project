@@ -26,6 +26,7 @@ export default function LoginPage() {
         PATIENT: "/patientportal",
         DOCTOR: "/doctor",
         ADMIN: "/admin",
+        NURSE: "/nurse",
       };
       const fallback = "/patientportal";
       const roleDest = destByRole[u?.role] || fallback;

@@ -21,9 +21,10 @@
 
 .report-selector-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 2rem;
-  margin-top: 2rem;
+  /* more compact filter grid so controls fit the available width */
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
 }
 
 .report-selector-card {
@@ -144,6 +145,23 @@
   font-weight: 600;
   cursor: pointer;
   transition: border-color 0.2s;
+}
+
+.report-selector-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.report-selector-grid label {
+  font-weight: 700;
+  color: var(--primary-color);
+  font-size: 0.85rem;
+}
+
+.date-range-select {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .date-range-select:hover {
@@ -281,14 +299,16 @@
   background: white;
   border: 2px solid var(--fifth-color);
   border-radius: 0.75rem;
-  overflow: hidden;
+  /* allow horizontal scrolling when table is wider than container */
+  overflow-x: auto;
 }
 
-.table-header {
+.risk-table .table-header {
+  /* Responsive grid for table columns so the table fits the container width */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  grid-template-columns: 110px 70px minmax(140px, 2fr) minmax(120px, 1.5fr) 110px minmax(140px, 2fr) 120px;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   background: linear-gradient(135deg, var(--fifth-color), white);
   font-weight: 700;
   color: var(--primary-color);
@@ -297,16 +317,17 @@
   letter-spacing: 0.5px;
 }
 
-.table-row {
+.risk-table .table-row {
+  /* Match header grid so rows align with headers and the table fits the container */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  grid-template-columns: 110px 70px minmax(140px, 2fr) minmax(120px, 1.5fr) 110px minmax(140px, 2fr) 120px;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--fifth-color);
   align-items: center;
 }
 
-.table-row:last-child {
+.risk-table .table-row:last-child {
   border-bottom: none;
 }
 
@@ -316,6 +337,29 @@
   font-weight: 600;
   font-size: 0.813rem;
   text-align: center;
+}
+
+/* Table cell content should not wrap unexpectedly */
+.risk-table .table-row > div,
+.risk-table .table-header > div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Improve small-screen layout */
+@media (max-width: 900px) {
+  .report-selector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reports-page {
+    padding: 1rem;
+  }
+
+  .report-view {
+    padding: 1rem;
+  }
 }
 
 .risk-badge.high {

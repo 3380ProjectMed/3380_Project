@@ -145,7 +145,7 @@ function Referral() {
       <h2 className="page-title">Referrals</h2>
       <div className="referral-grid">
         <div className="referral-column">
-          <h3>Pending Referrals</h3>
+          <h3>Referrals</h3>
           {loading ? <div>Loading...</div> : (
             <ul className="referral-list">
               {referrals.length === 0 && <li className="empty">No referrals received</li>}

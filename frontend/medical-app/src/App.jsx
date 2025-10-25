@@ -11,7 +11,9 @@ import LoginPage from "./components/LoginPage.jsx";
 import NursePortal from "./components/nurse/NursePortal.jsx";
 import NurseDashboard from "./components/nurse/NurseDashboard.jsx";
 import NurseIntake from "./components/nurse/NurseIntake.jsx";
+// import AdminPortal from "./components/admin/AdminPortal.jsx";
 
+import AdminPortal from "./components/admin/AdminPortal.jsx";
 import "./App.css";
 
 export default function App() {
@@ -20,6 +22,11 @@ export default function App() {
       {/* Existing app routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/admin" element={
+        <RequireRole roles={["ADMIN"]}>
+          <AdminPortal />
+        </RequireRole>
+      } />
       <Route
         path="/patientportal"
         element={
