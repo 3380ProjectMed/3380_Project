@@ -30,6 +30,7 @@ CREATE TABLE `Appointment` (
   `Appointment_date` datetime NOT NULL,
   `Date_created` datetime NOT NULL,
   `Reason_for_visit` varchar(300) DEFAULT NULL,
+  `Status` enum('Scheduled','Waiting','In Progress','Completed','Cancelled','No-Show') NOT NULL DEFAULT 'Scheduled',
   PRIMARY KEY (`Appointment_id`),
   KEY `ix_appt_patient` (`Patient_id`),
   KEY `ix_appt_doctor` (`Doctor_id`),
@@ -46,7 +47,7 @@ CREATE TABLE `Appointment` (
 
 LOCK TABLES `Appointment` WRITE;
 /*!40000 ALTER TABLE `Appointment` DISABLE KEYS */;
-INSERT INTO `Appointment` VALUES (1001,1,1,1,'2025-10-23 09:00:00','2025-10-20 14:30:00','Annual physical examination'),(1002,3,1,1,'2025-10-23 14:00:00','2025-10-02 16:45:00','Follow-up consultation'),(1003,5,2,1,'2024-01-15 10:30:00','2023-12-22 09:15:00','Cardiology checkup'),(1004,7,2,4,'2024-01-17 11:00:00','2024-01-08 14:25:00','Heart condition monitoring'),(1005,2,3,2,'2024-01-15 13:30:00','2023-12-28 11:20:00','Pediatric wellness visit'),(1006,8,3,2,'2024-01-18 15:45:00','2024-01-11 12:15:00','Vaccination'),(1007,4,4,3,'2024-01-16 08:45:00','2023-12-28 11:20:00','Orthopedic consultation'),(1008,1,4,1,'2024-01-19 16:00:00','2024-01-09 17:40:00','Knee pain evaluation'),(1009,6,5,4,'2024-01-17 09:30:00','2024-01-05 08:30:00','OB/GYN appointment'),(1010,3,6,2,'2024-01-18 10:00:00','2024-01-12 09:50:00','Internal medicine consultation'),(1011,4,7,4,'2024-01-19 14:30:00','2024-01-15 16:20:00','Dermatology screening'),(1012,4,1,2,'2025-10-24 09:00:00','2025-10-20 09:00:00','Follow-up consultation');
+INSERT INTO `Appointment` VALUES (1001,1,1,1,'2025-10-23 09:00:00','2025-10-20 14:30:00','Annual physical examination','Scheduled'),(1002,3,1,1,'2025-10-23 14:00:00','2025-10-02 16:45:00','Follow-up consultation','Scheduled'),(1003,5,1,1,'2024-01-15 10:30:00','2023-12-22 09:15:00','Cardiology checkup','Scheduled'),(1004,7,2,4,'2024-01-17 11:00:00','2024-01-08 14:25:00','Heart condition monitoring','Scheduled'),(1005,2,3,2,'2024-01-15 13:30:00','2023-12-28 11:20:00','Pediatric wellness visit','Scheduled'),(1006,8,3,2,'2024-01-18 15:45:00','2024-01-11 12:15:00','Vaccination','Scheduled'),(1007,4,4,3,'2024-01-16 08:45:00','2023-12-28 11:20:00','Orthopedic consultation','Scheduled'),(1008,1,4,1,'2024-01-19 16:00:00','2024-01-09 17:40:00','Knee pain evaluation','Scheduled'),(1009,6,5,4,'2024-01-17 09:30:00','2024-01-05 08:30:00','OB/GYN appointment','Scheduled'),(1010,3,6,2,'2024-01-18 10:00:00','2024-01-12 09:50:00','Internal medicine consultation','Scheduled'),(1011,4,7,4,'2024-01-19 14:30:00','2024-01-15 16:20:00','Dermatology screening','Scheduled'),(1012,4,1,2,'2025-10-25 09:00:00','2025-10-20 09:00:00','Follow-up consultation','Scheduled'),(1013,5,1,1,'2025-10-25 13:00:00','2025-10-23 10:00:00','TEST','Scheduled');
 /*!40000 ALTER TABLE `Appointment` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -420,7 +421,7 @@ CREATE TABLE `Patient` (
 
 LOCK TABLES `Patient` WRITE;
 /*!40000 ALTER TABLE `Patient` DISABLE KEYS */;
-INSERT INTO `Patient` VALUES (1,'John','Smith','1985-03-15','123-45-6789','555-1001',1,1,2,1,'john.smith@email.com','Y',1,NULL,1,101,NULL,NULL,'O+','Private'),(2,'Maria','Garcia','1978-07-22','123-45-6790','555-1002',2,2,1,2,'maria.garcia@email.com','Y',3,NULL,2,102,NULL,NULL,'A+','Private'),(3,'David','Johnson','1992-11-30','123-45-6791','555-1003',1,1,2,1,'david.johnson@email.com','Y',1,NULL,3,105,NULL,NULL,'B+','Medicare'),(4,'Sarah','Williams','1980-05-14','123-45-6792','555-1004',2,2,2,1,'sarah.williams@email.com','Y',4,NULL,4,103,NULL,NULL,'AB-','Private'),(5,'Michael','Brown','1975-09-08','123-45-6793','555-1005',1,1,2,2,'michael.brown@email.com','Y',2,NULL,5,104,NULL,NULL,'O-','Private'),(6,'Jennifer','Davis','1988-12-25','123-45-6794','555-1006',2,2,2,1,'jennifer.davis@email.com','Y',5,NULL,6,101,NULL,NULL,'A-','Private'),(7,'Robert','Miller','1965-02-18','123-45-6795','555-1007',1,1,2,1,'robert.miller@email.com','Y',2,NULL,7,105,NULL,NULL,'B-','Medicare'),(8,'Lisa','Wilson','1990-08-11','123-45-6796','555-1008',2,2,1,3,'lisa.wilson@email.com','Y',3,NULL,8,102,NULL,NULL,'AB+','Private');
+INSERT INTO `Patient` VALUES (1,'John','Smith','1985-03-15','123-45-6789','555-1001',1,1,2,1,'john.smith@email.com','Y',1,NULL,1,101,NULL,NULL,'O+','Private'),(2,'Maria','Garcia','1978-07-22','123-45-6790','555-1002',2,2,1,2,'maria.garcia@email.com','Y',3,NULL,2,102,NULL,NULL,'A+','Private'),(3,'David','Johnson','1992-11-30','123-45-6791','555-1003',1,1,2,1,'david.johnson@email.com','Y',1,NULL,3,105,NULL,NULL,'B+','Medicare'),(4,'Sarah','Williams','1980-05-14','123-45-6792','555-1004',2,2,2,1,'sarah.williams@email.com','Y',4,NULL,4,103,NULL,NULL,'AB-','Private'),(5,'Michael','Brown','1975-09-08','123-45-6793','555-1005',1,1,2,2,'michael.brown@email.com','Y',2,NULL,5,104,NULL,NULL,'O-','Private'),(6,'Jennifer','Davis','1988-12-25','123-45-6794','555-1006',2,2,2,1,'jennifer.davis@email.com','Y',5,NULL,6,101,NULL,NULL,'A-','Private'),(7,'Robert','Miller','1965-02-18','123-45-6795','555-1007',1,1,2,1,'robert.miller@email.com','Y',1,NULL,7,105,NULL,NULL,'B-','Medicare'),(8,'Lisa','Wilson','1990-08-11','123-45-6796','555-1008',2,2,1,3,'lisa.wilson@email.com','Y',3,NULL,8,102,NULL,NULL,'AB+','Private');
 /*!40000 ALTER TABLE `Patient` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -481,7 +482,7 @@ CREATE TABLE `PatientVisit` (
   CONSTRAINT `PatientVisit_chk_4` CHECK (((`TotalDue` is null) or (`TotalDue` >= -(999999999999.99)))),
   CONSTRAINT `PatientVisit_chk_5` CHECK (((`CopayAmount_Due` is null) or (`CopayAmount_Due` >= 0))),
   CONSTRAINT `PatientVisit_chk_6` CHECK (((`TreatmentCost_Due` is null) or (`TreatmentCost_Due` >= 0)))
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -490,7 +491,7 @@ CREATE TABLE `PatientVisit` (
 
 LOCK TABLES `PatientVisit` WRITE;
 /*!40000 ALTER TABLE `PatientVisit` DISABLE KEYS */;
-INSERT INTO `PatientVisit` VALUES (1,1001,1,1,'2025-01-15 09:00:00','120/80',1,1,'Completed','[\"Hypertension\", \"Type 2 Diabetes\"]','Continue current medications, lifestyle modifications','Annual physical examination','Internal Medicine',150.00,25.00,125.00,25.00,125.00,1,'[\"Stable condition\"]',98.6,'2024-01-15 09:00:00','2024-01-15 09:45:00',1,'2025-10-23 04:41:08','Dr. Emily Chen','2025-10-23 04:41:08','Dr. Emily Chen'),(2,1002,3,3,'2025-01-16 14:00:00','118/76',1,2,'Completed','[\"Hyperlipidemia\"]','Start statin therapy, dietary changes','Follow-up consultation','Internal Medicine',120.00,15.00,105.00,15.00,105.00,1,'[\"Elevated cholesterol levels\"]',98.4,'2024-01-16 14:00:00','2024-01-16 14:30:00',3,'2025-10-23 04:41:08','Dr. Emily Chen','2025-10-23 04:41:08','Dr. Emily Chen'),(3,1003,5,1,'2025-01-15 10:30:00','130/85',2,5,'Completed','[\"Osteoarthritis\"]','Pain management, physical therapy referral','Cardiology checkup','Cardiology',200.00,25.00,175.00,25.00,175.00,1,'[\"Joint pain in knees\"]',98.2,'2024-01-15 10:30:00','2024-01-15 11:15:00',5,'2025-10-23 04:41:08','Dr. James Rodriguez','2025-10-23 04:41:08','Dr. James Rodriguez');
+INSERT INTO `PatientVisit` VALUES (1,1001,1,1,'2025-01-15 09:00:00','120/80',1,1,'Completed','[\"Hypertension\", \"Type 2 Diabetes\"]','Continue current medications, lifestyle modifications','Annual physical examination','Internal Medicine',150.00,25.00,125.00,25.00,125.00,1,'[\"Stable condition\"]',98.6,'2024-01-15 09:00:00','2024-01-15 09:45:00',1,'2025-10-23 04:41:08','Dr. Emily Chen','2025-10-23 04:41:08','Dr. Emily Chen'),(2,1002,3,3,'2025-01-16 14:00:00','118/76',1,2,'Completed','[\"Hyperlipidemia\"]','Start statin therapy, dietary changes','Follow-up consultation','Internal Medicine',120.00,15.00,105.00,15.00,105.00,1,'[\"Elevated cholesterol levels\"]',98.4,'2024-01-16 14:00:00','2024-01-16 14:30:00',3,'2025-10-23 04:41:08','Dr. Emily Chen','2025-10-23 04:41:08','Dr. Emily Chen'),(3,1003,5,1,'2025-01-15 10:30:00','130/85',2,5,'Completed','[\"Osteoarthritis\"]','Pain management, physical therapy referral','Cardiology checkup','Cardiology',200.00,25.00,175.00,25.00,175.00,1,'[\"Joint pain in knees\"]',98.2,'2024-01-15 10:30:00','2024-01-15 11:15:00',5,'2025-10-23 04:41:08','Dr. James Rodriguez','2025-10-23 04:41:08','Dr. James Rodriguez'),(4,NULL,1,1,'2023-07-25 09:00:00','128/82',1,1,'Completed','[\"Type 2 Diabetes - Well Controlled\", \"Hypertension - Well Controlled\"]','Annual physical examination. HbA1c 6.5% - at goal. Blood pressure 128/82 - well controlled. Complete metabolic panel normal. Cholesterol improved (LDL 110 mg/dL). Patient has lost 15 lbs through diet and exercise. Excellent compliance with medications. Continue current regimen.','Annual physical examination','Internal Medicine',175.00,25.00,150.00,25.00,150.00,1,'[\"Chronic conditions well managed\", \"Weight loss achieved\", \"Labs normal\"]',98.6,'2023-07-25 09:00:00','2023-07-25 10:00:00',1,'2023-07-25 10:00:00','Dr. Emily Chen','2023-07-25 10:00:00','Dr. Emily Chen'),(5,NULL,1,1,'2023-10-20 10:30:00','125/80',1,1,'Completed','[\"Type 2 Diabetes\", \"Hypertension\"]','Routine follow-up. Patient doing well. HbA1c 6.6%, BP 125/80 - both at goal. No new concerns. Renewed prescriptions for Metformin and Lisinopril. Encouraged to maintain current lifestyle modifications.','Quarterly check-up','Internal Medicine',125.00,25.00,100.00,25.00,100.00,1,'[\"Stable condition\", \"Medication adherence good\"]',98.5,'2023-10-20 10:30:00','2023-10-20 11:00:00',1,'2023-10-20 11:00:00','Dr. Emily Chen','2023-10-20 11:00:00','Dr. Emily Chen'),(6,NULL,1,1,'2024-02-14 15:30:00','130/84',1,1,'Completed','[\"Hypoglycemia - Medication Related\"]','Patient experienced hypoglycemic episode (blood glucose 58 mg/dL). Reports skipping lunch, took full Metformin dose. Educated on importance of regular meals with medication. Provided glucose tablets. Reviewed warning signs of hypoglycemia. Consider slight medication adjustment if episodes recur.','Low blood sugar episode','Internal Medicine',150.00,25.00,125.00,25.00,125.00,1,'[\"Hypoglycemia\", \"Medication timing issue\"]',98.7,'2024-02-14 15:30:00','2024-02-14 16:15:00',1,'2024-02-14 16:15:00','Dr. Emily Chen','2024-02-14 16:15:00','Dr. Emily Chen'),(7,NULL,1,1,'2024-03-10 13:00:00','148/94',1,1,'Completed','[\"Hypertension - Worsening\"]','Blood pressure elevated on multiple readings (148/94, 145/92). Patient reports increased work stress. HbA1c remains stable at 6.7%. Increased Lisinopril to 20mg daily. Discussed stress management techniques. Follow-up in 4 weeks to reassess BP.','Blood pressure check','Internal Medicine',125.00,25.00,100.00,25.00,100.00,1,'[\"Elevated blood pressure\", \"Work-related stress\", \"Diabetes stable\"]',98.6,'2024-03-10 13:00:00','2024-03-10 13:45:00',1,'2024-03-10 13:45:00','Dr. Emily Chen','2024-03-10 13:45:00','Dr. Emily Chen'),(8,NULL,1,1,'2024-04-12 11:00:00','132/86',1,1,'Completed','[\"Hypertension\", \"Type 2 Diabetes\"]','Follow-up for blood pressure. Improved to 132/86 with increased Lisinopril dose. Patient reports implementing stress reduction techniques. Continue current medications. Next routine visit in 3 months.','Blood pressure follow-up','Internal Medicine',100.00,25.00,75.00,25.00,75.00,1,'[\"Blood pressure improved\", \"Medication effective\"]',98.4,'2024-04-12 11:00:00','2024-04-12 11:30:00',1,'2024-04-12 11:30:00','Dr. Emily Chen','2024-04-12 11:30:00','Dr. Emily Chen'),(9,NULL,1,1,'2024-07-22 09:00:00','128/82',1,1,'Completed','[\"Type 2 Diabetes\", \"Hypertension\"]','Annual physical. Overall excellent health status. HbA1c 6.4%, BP 128/82 - both at goal. Complete blood count normal. Kidney function normal (important for diabetics). Cholesterol panel excellent (LDL 95 mg/dL). Patient has maintained 20 lb weight loss. Continue all medications.','Annual physical examination','Internal Medicine',175.00,25.00,150.00,25.00,150.00,1,'[\"Excellent disease management\", \"All labs normal\", \"Lifestyle modifications maintained\"]',98.6,'2024-07-22 09:00:00','2024-07-22 10:15:00',1,'2024-07-22 10:15:00','Dr. Emily Chen','2024-07-22 10:15:00','Dr. Emily Chen'),(10,NULL,1,1,'2024-10-18 14:00:00','126/80',1,1,'Completed','[\"Type 2 Diabetes\", \"Hypertension\"]','Quarterly check-up. Patient continues to do well. HbA1c 6.5%, BP 126/80. No new complaints. Renewed all prescriptions. Discussed flu vaccine - administered today. Next visit in 3 months.','Quarterly diabetes and hypertension check','Internal Medicine',125.00,25.00,100.00,25.00,100.00,1,'[\"Stable chronic conditions\", \"Flu vaccine given\"]',98.5,'2024-10-18 14:00:00','2024-10-18 14:40:00',1,'2024-10-18 14:40:00','Dr. Emily Chen','2024-10-18 14:40:00','Dr. Emily Chen'),(15,1013,5,1,'2025-10-24 10:30:00','120/80',1,2,'Scheduled','[\"Mild Severity\", \"Flu\"]','Prescribed rest and hydration; recommended follow-up in one week.','Fever and cough','Internal Medicine',200.00,50.00,150.00,20.00,180.00,1,'{\"Cough\": true, \"Fever\": true}',99.5,'2025-10-24 10:30:00','2025-10-24 11:00:00',5,'2025-10-25 04:21:57','nurse.jane','2025-10-25 04:49:03',NULL),(16,1013,5,1,'2025-10-25 01:15:00','130/80',1,1,'Scheduled',NULL,NULL,NULL,'Internal Medicine',NULL,NULL,NULL,NULL,NULL,NULL,NULL,99.0,'2025-10-24 01:30:00',NULL,5,'2025-10-24 01:10:00',NULL,'2025-10-25 18:16:49',NULL);
 /*!40000 ALTER TABLE `PatientVisit` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -560,7 +561,7 @@ CREATE TABLE `Referral` (
   CONSTRAINT `fk_ref__patient` FOREIGN KEY (`Patient_ID`) REFERENCES `Patient` (`Patient_ID`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_ref__referring_doctor` FOREIGN KEY (`referring_doctor_staff_id`) REFERENCES `Doctor` (`Doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_ref__specialist_doctor` FOREIGN KEY (`specialist_doctor_staff_id`) REFERENCES `Doctor` (`Doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -569,7 +570,7 @@ CREATE TABLE `Referral` (
 
 LOCK TABLES `Referral` WRITE;
 /*!40000 ALTER TABLE `Referral` DISABLE KEYS */;
-INSERT INTO `Referral` VALUES (1,5,NULL,2,4,'Orthopedic consultation for knee pain',1008,'Approved'),(2,1,'2025-10-25',1,7,'Dermatology screening for skin rash',NULL,'Pending'),(3,4,'2025-10-16',4,2,'Cardiology evaluation for chest pain',NULL,'Approved');
+INSERT INTO `Referral` VALUES (1,5,NULL,2,4,'Orthopedic consultation for knee pain',1008,'Approved'),(2,1,'2025-10-25',1,7,'Dermatology screening for skin rash',NULL,'Pending'),(3,4,'2025-10-16',4,2,'Cardiology evaluation for chest pain',NULL,'Approved'),(4,1,NULL,1,2,'Heart check ',NULL,'Pending'),(5,3,NULL,1,1,'test',NULL,'Pending');
 /*!40000 ALTER TABLE `Referral` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -851,7 +852,7 @@ CREATE TABLE `user_account` (
   `username` varchar(50) NOT NULL,
   `email` varchar(254) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
-  `role` enum('PATIENT','DOCTOR','ADMIN') NOT NULL DEFAULT 'PATIENT',
+  `role` enum('ADMIN','DOCTOR','NURSE','PATIENT','RECEPTIONIST') DEFAULT NULL,
   `mfa_enabled` tinyint(1) NOT NULL DEFAULT '0',
   `last_login_at` datetime DEFAULT NULL,
   `failed_login_count` smallint unsigned NOT NULL DEFAULT '0',
@@ -862,7 +863,7 @@ CREATE TABLE `user_account` (
   UNIQUE KEY `ux_user_email` (`email`),
   KEY `idx_user_last_login` (`last_login_at`),
   CONSTRAINT `user_account_chk_1` CHECK ((`failed_login_count` >= 0))
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -871,7 +872,7 @@ CREATE TABLE `user_account` (
 
 LOCK TABLES `user_account` WRITE;
 /*!40000 ALTER TABLE `user_account` DISABLE KEYS */;
-INSERT INTO `user_account` VALUES (1,'p101','john.smith@email.com','MedApp123!','PATIENT',0,NULL,0,1,'2025-10-22 04:54:59'),(2,'d201','echen@medconnect.com','MedApp123!','DOCTOR',0,NULL,0,1,'2025-10-22 04:54:59');
+INSERT INTO `user_account` VALUES (1,'p101','john.smith@email.com','MedApp123!','PATIENT',0,NULL,0,1,'2025-10-22 04:54:59'),(2,'d201','echen@medconnect.com','MedApp123!','DOCTOR',0,NULL,0,1,'2025-10-22 04:54:59'),(3,'n301','tnguyen@medconnect.com','MedApp123!','NURSE',0,NULL,0,1,'2025-10-23 14:54:01');
 /*!40000 ALTER TABLE `user_account` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -884,4 +885,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-23 17:53:48
+-- Dump completed on 2025-10-25 13:24:37
