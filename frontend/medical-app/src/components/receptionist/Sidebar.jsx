@@ -67,8 +67,8 @@ function Sidebar({ currentPage, setCurrentPage, onLogout, officeName, officeId }
         
         {/* Office Badge - Shows Staff.Work_Location */}
         <div className="office-badge">
-          <span className="office-badge-text">{officeName}</span>
-          <span className="office-badge-id">Office ID: {officeId}</span>
+          <p className="office-badge-text">{officeName}</p>
+          <p className="office-badge-id">Office ID: {officeId}</p>
         </div>
       </div>
 
