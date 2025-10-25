@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 // Ensure CORS headers are sent for requests coming from the dev server
-require_once __DIR__ . '/../../cors.php';
+require_once __DIR__ . '/../cors.php';
 
 session_start();
 // Content-Type header is set by cors.php, but keep it here for clarity
