@@ -6,6 +6,7 @@ import { useAuth } from "./auth/AuthProvider.jsx";
 import LandingPage from "./components/LandingPage.jsx";
 import PatientPortal from "./components/patient/PatientPortal.jsx";
 import DoctorPortal from "./components/doctor/DoctorPortal.jsx";
+import ReceptionistPortal from "./components/receptionist/ReceptionistPortal.jsx";
 import LoginPage from "./components/LoginPage.jsx"; // <-- adjust path if yours differs
 
 export default function App() {
