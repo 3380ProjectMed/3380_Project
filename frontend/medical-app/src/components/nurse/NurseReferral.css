@@ -1,0 +1,10 @@
+.nurse-referral{padding:24px;max-width:1000px;margin:0 auto;}
+.nurse-referral h1{margin:0 0 12px 0}
+.table .thead,.table .row{
+  display:grid;grid-template-columns:120px 2fr 2fr 1.2fr 1fr;gap:12px;align-items:center;
+}
+.table .thead{background:linear-gradient(135deg,#eaf6ff,#fff);padding:12px;border-radius:10px;font-weight:800}
+.table .row{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:8px}
+.tag{padding:6px 10px;border-radius:999px;font-weight:800}
+.tag.prepared{background:#fef3c7;color:#92400e}
+.tag.sent{background:#dcfce7;color:#065f46}
