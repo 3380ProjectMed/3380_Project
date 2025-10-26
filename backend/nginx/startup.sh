@@ -2,7 +2,19 @@
 set -e
 
 echo "=== Starting MedConnect Application ==="
+# Start PHP-FPM first
+echo "Starting PHP-FPM..."
+php-fpm -D
 
+# Wait a moment for PHP-FPM to start
+sleep 2
+
+# Verify PHP-FPM is running
+if ! pgrep -x php-fpm > /dev/null; then
+    echo "ERROR: PHP-FPM failed to start!"
+    exit 1
+fi
+echo "✅ PHP-FPM started successfully"
 # Copy NGINX configuration to system location
 echo "Configuring NGINX..."
 cp /home/site/wwwroot/nginx/nginx.conf /etc/nginx/sites-available/default
