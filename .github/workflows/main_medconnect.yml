@@ -5,8 +5,7 @@ name: Build and deploy PHP app to Azure Web App - medconnect
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -18,10 +17,61 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ---------- Build React ----------
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build React app
+        working-directory: frontend/medical-app
+        run: |
+          set -e
+          npm ci
+          npm run build
+          test -f dist/index.html
+
+      # ---------- Prepare webroot ----------
+      - name: Stage webroot
+        run: |
+          set -e
+          WEBROOT="release/wwwroot"
+          mkdir -p "$WEBROOT"
+
+          # 1) React build output -> webroot
+          cp -r frontend/medical-app/dist/* "$WEBROOT/"
+
+          # 2) Copy ALL backend files
+          if [ -d backend/public ]; then
+            [ -d backend/public/api ] && cp -R backend/public/api "$WEBROOT/" || true
+            [ -d backend/public/admin_api ] && cp -R backend/public/admin_api "$WEBROOT/" || true
+            [ -d backend/public/doctor_api ] && cp -R backend/public/doctor_api "$WEBROOT/" || true
+            find backend/public -maxdepth 1 -name "*.php" -exec cp {} "$WEBROOT/" \;
+            [ -f backend/public/helpers.php ] && cp backend/public/helpers.php "$WEBROOT/" || true
+            [ -d backend/public/assets ] && cp -R backend/public/assets "$WEBROOT/" || true
+          fi
+
+          [ -f backend/database.php ] && cp backend/database.php "$WEBROOT/" || true
+          [ -f backend/cors.php ] && cp backend/cors.php "$WEBROOT/" || true
+
+          # 3) NGINX config + startup script
+          mkdir -p "$WEBROOT/nginx"
+          cp backend/nginx/nginx.conf "$WEBROOT/nginx/nginx.conf"
+          cp backend/nginx/startup.sh "$WEBROOT/nginx/startup.sh"
+          chmod 644 "$WEBROOT/nginx/nginx.conf"
+          chmod 755 "$WEBROOT/nginx/startup.sh"
+
+          [ -d backend/errors ] && { mkdir -p "$WEBROOT/errors"; cp -R backend/errors/. "$WEBROOT/errors/"; } || true
+          rm -f "$WEBROOT/hostingstart.html" 2>/dev/null || true
+
+          echo "---- Staged webroot ----"
+          ls -la "$WEBROOT"
+
+      # ---------- (Optional) Composer ----------
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: "8.4"
 
       - name: Check if composer.json exists
         id: check_files
@@ -64,7 +114,34 @@ jobs:
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'medconnect'
-          slot-name: 'Production'
+          app-name: "medconnect"
+          slot-name: "Production"
           package: .
-          
+
+      # ---------- Post-deploy: Apply NGINX config & startup command ----------
+      - name: Configure NGINX on App Service
+        run: |
+          echo "=== Deploying NGINX configuration ==="
+
+          # Push NGINX configuration files
+          az webapp deploy \
+            -g 3380_Resources -n medconnect \
+            --type static \
+            --src-path nginx/nginx.conf \
+            --target-path nginx/nginx.conf
+
+          az webapp deploy \
+            -g 3380_Resources -n medconnect \
+            --type static \
+            --src-path nginx/startup.sh \
+            --target-path nginx/startup.sh
+
+          echo "=== Setting startup command ==="
+          az webapp config set \
+            -g 3380_Resources -n medconnect \
+            --startup-file "/bin/sh /home/site/wwwroot/nginx/startup.sh"
+
+          echo "=== Restarting app ==="
+          az webapp restart -g 3380_Resources -n medconnect
+
+          echo "✅ Deployment complete!"
