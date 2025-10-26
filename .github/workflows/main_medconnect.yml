@@ -1,19 +1,18 @@
-name: Build and deploy full-stack (React + PHP) app to Azure Web App - medconnect
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy PHP app to Azure Web App - medconnect
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-concurrency:
-  group: webapp-medconnect
-  cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -74,66 +73,46 @@ jobs:
         with:
           php-version: "8.4"
 
-      - name: Detect composer.json (backend/)
-        id: composer_check
-        run: |
-          if [ -f backend/composer.json ]; then
-            echo "has_composer=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_composer=false" >> $GITHUB_OUTPUT
-          fi
+      - name: Check if composer.json exists
+        id: check_files
+        uses: andstor/file-existence-action@v1
+        with:
+          files: 'composer.json'
 
-      - name: Composer install
-        if: steps.composer_check.outputs.has_composer == 'true'
-        working-directory: backend
-        run: |
-          set -e
-          composer validate --no-check-publish
-          composer install --prefer-dist --no-progress --no-dev
-          mkdir -p ../release/wwwroot/vendor
-          cp -R vendor/. ../release/wwwroot/vendor/
+      - name: Run composer install if composer.json exists
+        if: steps.check_files.outputs.files_exists == 'true'
+        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
 
-      # ---------- Upload artifact (FIXED) ----------
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: php-app
-          path: release/wwwroot
-          retention-days: 1
-          if-no-files-found: error
+          path: .
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write
-      contents: read
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
 
     steps:
-      # ---------- Download artifact (FIXED) ----------
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: php-app
-          path: .
-
-      - name: Verify downloaded files
-        run: |
-          echo "=== Downloaded files ==="
-          ls -la
-          echo ""
-          echo "=== Checking for nginx config ==="
-          ls -la nginx/ || echo "nginx directory not found!"
-
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_863533AA3E89421F833D1D65476770C8 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_DFF72AB643B14A0D92FBC1F7162341ED }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9D7A029083A240BFBB8C15F95635A8B0 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_6CC886C34E414BF3943753C0AFA54A22 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4BC2BA3CE10B4918955C3B76714BA6F9 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_0056C4E07D9E4BB59F4E449E1F3C8DDF }}
 
-      - name: Deploy app code to Azure Web App
+      - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
         with:
           app-name: "medconnect"
           slot-name: "Production"
