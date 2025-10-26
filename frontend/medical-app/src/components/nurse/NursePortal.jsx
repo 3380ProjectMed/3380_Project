@@ -1,47 +1,65 @@
-// src/components/nurse/NursePortal.jsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/AuthProvider.jsx";
 
-// Nurse-specific pieces
-import NurseSidebar from "./NurseSidebar";
-import NurseDashboard from "./NurseDashboard";
+import NurseSidebar from "./NurseSidebar.jsx";
+import NurseDashboard from "./NurseDashboard.jsx";
 
-import Schedule from "../doctor/Schedule";
-import PatientList from "../doctor/PatientList";
-import ClinicalWorkSpace from "../doctor/ClinicalWorkSpace";
+import Schedule from "../doctor/Schedule.jsx";
+import PatientList from "../doctor/PatientList.jsx";
+import ClinicalWorkSpace from "../doctor/ClinicalWorkSpace.jsx";
 
-// Import doctor css to reuse styles
 import "../doctor/DoctorPortal.css";
 
-/**
- * NursePortal
- * - Same high-level shell as the DoctorPortal (sidebar + main content)
- * - Uses NurseDashboard (with Task List + intake emphasis)
- * - Reuses Schedule, PatientList, ClinicalWorkSpace
- */
 export default function NursePortal() {
-  // Which page is showing
   const [currentPage, setCurrentPage] = useState("dashboard");
-
-  // Shared selections across pages
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
 
-  // ---- Handlers ----
-  const handleLogout = () => {
-    if (confirm("Log out of Nurse Portal?")) {
-      // TODO: clear auth/session here
-      // window.location.href = "/login";
-      console.log("Nurse logout (hook up to your auth)");
+  const navigate = useNavigate();
+  const auth = useAuth(); // { user, login, logout, ... } in your project
+
+  /**
+   * Fully log out:
+   * - Call backend /api/logout.php (optional but recommended to kill session)
+   * - Call AuthProvider.logout() if available
+   * - Clear localStorage fallback
+   * - Navigate to /login
+   */
+  const handleLogout = async () => {
+    const ok = window.confirm("Log out of Nurse Portal?");
+    if (!ok) return;
+
+    try {
+      // 1) Tell backend to destroy PHP session (ignore if you don't have this)
+      await fetch("/api/logout.php", {
+        method: "POST",
+        credentials: "include",
+      }).catch(() => { /* ignore network error for dev */ });
+
+      // 2) AuthProvider logout if provided
+      if (auth?.logout) {
+        await auth.logout();
+      }
+
+      // 3) Fallback: clear any local storage keys you use
+      localStorage.removeItem("auth");
+      localStorage.removeItem("user");
+
+      // 4) Redirect to login
+      navigate("/login", { replace: true });
+    } catch (err) {
+      console.error("Logout failed:", err);
+      // Even on failure, send the user to login to avoid a dead end
+      navigate("/login", { replace: true });
     }
   };
 
-  // From dashboard/schedule -> go to clinical workspace (or intake flow)
   const handleAppointmentClick = (appointment) => {
     setSelectedAppointment(appointment);
     setCurrentPage("clinical");
   };
 
-  // From patient list -> open details (or go to clinical)
   const handlePatientClick = (patient) => {
     setSelectedPatient(patient);
     // setCurrentPage("clinical");
@@ -54,17 +72,14 @@ export default function NursePortal() {
   };
 
   return (
-    <div className="doctor-portal">{/* reuse same shell styles */}
-      {/* Sidebar */}
+    <div className="doctor-portal">
       <NurseSidebar
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         onLogout={handleLogout}
       />
 
-      {/* Main content */}
       <main className="main-content">
-        {/* ✅ Nurse-specific dashboard (Task List, Intake CTA, etc.) */}
         {currentPage === "dashboard" && (
           <NurseDashboard
             setCurrentPage={setCurrentPage}
@@ -72,12 +87,10 @@ export default function NursePortal() {
           />
         )}
 
-        {/* 📅 Reuse schedule */}
         {currentPage === "schedule" && (
           <Schedule onAppointmentClick={handleAppointmentClick} />
         )}
 
-        {/* 👥 Reuse patient list */}
         {currentPage === "patients" && (
           <PatientList
             onPatientClick={handlePatientClick}
@@ -86,7 +99,6 @@ export default function NursePortal() {
           />
         )}
 
-        {/* 📝 Reuse clinical workspace (nurse will mostly use Vitals/Intake) */}
         {currentPage === "clinical" && (
           <ClinicalWorkSpace
             appointment={selectedAppointment}

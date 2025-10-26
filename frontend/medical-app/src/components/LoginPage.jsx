@@ -15,28 +15,40 @@ export default function LoginPage() {
   const [err, setErr] = useState("");
   const [submitting, setSubmitting] = useState(false);
   
-  async function onSubmit(e) {
-    e.preventDefault();
-    setErr("");
-    setSubmitting(true);
-    
-    try {
-      const u = await login(email, password);
-      const destByRole = {
-        PATIENT: "/patientportal",
-        DOCTOR: "/doctor",
-        ADMIN: "/admin",
-        NURSE: "/nurse",
-      };
-      const fallback = "/patientportal";
-      const roleDest = destByRole[u?.role] || fallback;
-      nav(from || roleDest, { replace: true });
-    } catch (ex) {
-      setErr(ex.message);
-    } finally {
-      setSubmitting(false);
-    }
+// inside LoginPage.jsx
+
+async function onSubmit(e) {
+  e.preventDefault();
+  setErr("");
+  setSubmitting(true);
+
+  try {
+    const u = await login(email, password);
+
+    // Normalize role (handles 'admin' vs 'ADMIN', etc.)
+    const role = String(u?.role || '').toUpperCase();
+
+    // Only include destinations you actually have routes for right now
+    const destByRole = {
+      PATIENT: "/patientportal",
+      DOCTOR:  "/doctor",
+      NURSE:   "/nurse",
+      // ADMIN: "/admin",           // disabled for now
+      // RECEPTIONIST: "/reception" // not enabled yet
+    };
+
+    const roleDest = destByRole[role] || "/patientportal";
+
+    // If you want to honor `from` when it's set, keep this line.
+    // If you want to ALWAYS go to the role home, replace `from || roleDest` with `roleDest`.
+    nav(from || roleDest, { replace: true });
+
+  } catch (ex) {
+    setErr(ex.message || "Login failed. Please try again.");
+  } finally {
+    setSubmitting(false);
   }
+}
   
   return (
     <div className="landing-root">
