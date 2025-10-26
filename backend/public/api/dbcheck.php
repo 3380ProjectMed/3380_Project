@@ -1,7 +1,6 @@
 <?php
 // dbcheck.php
 // Allow cross-origin requests from dev server
-require_once __DIR__ . '/../../cors.php';
 #getting env variables to establish database connection
 $host = getenv('DB_HOST') ?: 'db';
 $user = getenv('DB_USER') ?: 'app';
