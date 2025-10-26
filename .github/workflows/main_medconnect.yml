@@ -2,7 +2,7 @@ name: Build and deploy full-stack (React + PHP) app to Azure Web App - medconnec
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Build React app
         working-directory: frontend/medical-app
@@ -72,7 +72,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: "8.4"
 
       - name: Detect composer.json (backend/)
         id: composer_check
@@ -135,15 +135,15 @@ jobs:
       - name: Deploy app code to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'medconnect'
-          slot-name: 'Production'
+          app-name: "medconnect"
+          slot-name: "Production"
           package: .
 
       # ---------- Post-deploy: Apply NGINX config & startup command ----------
       - name: Configure NGINX on App Service
         run: |
           echo "=== Deploying NGINX configuration ==="
-          
+
           # Push NGINX configuration files
           az webapp deploy \
             -g 3380_Resources -n medconnect \
@@ -164,5 +164,5 @@ jobs:
 
           echo "=== Restarting app ==="
           az webapp restart -g 3380_Resources -n medconnect
-          
+
           echo "✅ Deployment complete!"
