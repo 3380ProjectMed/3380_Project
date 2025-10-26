@@ -1,161 +1,70 @@
-# .github/workflows/main_medconnect.yaml
-name: Build and deploy full-stack (React + PHP) app to Azure Web App - medconnect
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy PHP app to Azure Web App - medconnect
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
-
-concurrency:
-  group: webapp-medconnect
-  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
 
-      # ---------- Build React ----------
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Build React app
-        working-directory: frontend/medical-app
-        run: |
-          set -e
-          npm ci
-          npm run build
-          test -f dist/index.html
-
-      # ---------- Prepare webroot (becomes /home/site/wwwroot) ----------
-      - name: Stage webroot
-        run: |
-          set -e
-          WEBROOT="release/wwwroot"
-          mkdir -p "$WEBROOT"
-
-          # 1) React build output -> webroot
-          cp -r frontend/medical-app/dist/* "$WEBROOT/"
-
-          # 2) PHP API + helpers -> webroot
-          mkdir -p "$WEBROOT/api"
-          if [ -d backend/public/api ]; then
-            cp -R backend/public/api/. "$WEBROOT/api/"
-          fi
-          if [ -d backend/api ]; then
-            cp -R backend/api/. "$WEBROOT/api/"
-          fi
-          if [ -f backend/public/cors.php ]; then
-            cp backend/public/cors.php "$WEBROOT/"
-          elif [ -f backend/cors.php ]; then
-            cp backend/cors.php "$WEBROOT/"
-          fi
-          [ -d backend/public/doctor_api ] && cp -R backend/public/doctor_api "$WEBROOT/" || true
-          [ -d backend/public/patient_api ] && cp -R backend/public/patient_api "$WEBROOT/" || true
-
-          # 3) NGINX config + startup script
-          mkdir -p "$WEBROOT/nginx"
-          cp backend/nginx/nginx.conf "$WEBROOT/nginx/nginx.conf"
-          cp backend/nginx/startup.sh "$WEBROOT/nginx/startup.sh"
-          chmod 644 "$WEBROOT/nginx/nginx.conf"
-          chmod 755 "$WEBROOT/nginx/startup.sh"
-
-          # Optional: include your friendly 404 page if you have it
-          [ -d backend/errors ] && { mkdir -p "$WEBROOT/errors"; cp -R backend/errors/. "$WEBROOT/errors/"; } || true
-
-          # Remove Azure splash if present
-          rm -f "$WEBROOT/hostingstart.html" 2>/dev/null || true
-
-          echo "---- Staged webroot ----"
-          ls -la "$WEBROOT"
-
-      # ---------- (Optional) Composer ----------
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
 
-      - name: Detect composer.json (backend/)
-        id: composer_check
-        run: |
-          if [ -f backend/composer.json ]; then
-            echo "has_composer=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_composer=false" >> $GITHUB_OUTPUT
-          fi
+      - name: Check if composer.json exists
+        id: check_files
+        uses: andstor/file-existence-action@v1
+        with:
+          files: 'composer.json'
 
-      - name: Composer install
-        if: steps.composer_check.outputs.has_composer == 'true'
-        working-directory: backend
-        run: |
-          set -e
-          composer validate --no-check-publish
-          composer install --prefer-dist --no-progress --no-dev
-          mkdir -p ../release/wwwroot/vendor
-          cp -R vendor/. ../release/wwwroot/vendor/
+      - name: Run composer install if composer.json exists
+        if: steps.check_files.outputs.files_exists == 'true'
+        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
 
-      # ---------- Upload artifact ----------
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: webroot
-          path: release/wwwroot
+          name: php-app
+          path: .
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write
-      contents: read
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: webroot
-          path: webroot
-
+          name: php-app
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_82C758B8091545CFB8269C41B30856D8 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4358F78E127A4B5A97B0559118392A2C }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_904AB161F72245F0BD8DB8A2CDD5D2FB }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_FBA71E8FBBA240339A6392476043D991 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_C1A0E348C16B45F296AFAC1C51DBD2BE }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_452F3E3768B044C6B70F6A24C570DFA4 }}
 
-      - name: Deploy app code to Azure Web App
+      - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
         with:
           app-name: 'medconnect'
           slot-name: 'Production'
-          package: webroot
-
-      # ---------- Post-deploy: Apply NGINX config & startup command ----------
-      - name: Configure NGINX on App Service
-        working-directory: webroot
-        run: |
-          # push the files that are inside the downloaded artifact
-          az webapp deploy \
-            -g 3380_Resources -n medconnect \
-            --type static \
-            --src-path nginx/nginx.conf \
-            --target-path nginx/nginx.conf
-
-          az webapp deploy \
-            -g 3380_Resources -n medconnect \
-            --type static \
-            --src-path nginx/startup.sh \
-            --target-path nginx/startup.sh
-
-          # set startup command and restart
-          az webapp config set \
-            -g 3380_Resources -n medconnect \
-            --startup-file "/bin/sh /home/site/wwwroot/nginx/startup.sh"
-
-          az webapp restart -g 3380_Resources -n medconnect
-
+          package: .
+          
