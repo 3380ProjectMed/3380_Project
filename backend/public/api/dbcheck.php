@@ -8,7 +8,9 @@ $user = $_ENV['AZURE_MYSQL_USERNAME'] ?? getenv('AZURE_MYSQL_USERNAME') ?: '';
 $pass = $_ENV['AZURE_MYSQL_PASSWORD'] ?? getenv('AZURE_MYSQL_PASSWORD') ?: '';
 $name = $_ENV['AZURE_MYSQL_DBNAME'] ?? getenv('AZURE_MYSQL_DBNAME') ?: '';
 $port = (int)($_ENV['AZURE_MYSQL_PORT'] ?? getenv('AZURE_MYSQL_PORT') ?: 3306);
-
+echo $host;
+echo $user;
+echo $name;
 // Check if we have credentials
 if (empty($host) || empty($user) || empty($name)) {
     echo json_encode([
