@@ -1,6 +1,9 @@
 <?php
-// /home/site/wwwroot/cors.php
-declare(strict_types=1);
+header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Credentials: true"); // ⭐ Must be true
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Content-Type: application/json; charset=UTF-8");
 
 /**
  * Minimal CORS helper for PHP APIs.

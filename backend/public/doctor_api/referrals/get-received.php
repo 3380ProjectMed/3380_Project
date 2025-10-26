@@ -33,7 +33,6 @@ try {
                 CONCAT(d2.First_Name, ' ', d2.Last_Name) as specialist_name,
                 s.specialty_name,
                 r.Reason,
-                r.notes,
                 r.Status,
                 r.Date_of_approval
             FROM Referral r

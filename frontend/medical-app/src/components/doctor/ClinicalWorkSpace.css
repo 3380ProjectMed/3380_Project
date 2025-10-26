@@ -464,31 +464,63 @@
 
 /* Medication List */
 .medication-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
 }
 
 .medication-item {
-  background: linear-gradient(135deg, var(--fifth-color), white);
-  border: 2px solid var(--forth-color);
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  border: 1px solid rgba(15, 23, 42, 0.06);
   border-radius: 0.75rem;
-  padding: 1rem 1.25rem;
-  display: flex;
+  padding: 0.75rem;
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 0.75rem;
   align-items: center;
-  gap: 1rem;
-  font-weight: 500;
   color: var(--primary-color);
-  transition: all 0.2s ease;
+  transition: box-shadow 0.18s ease, transform 0.12s ease;
 }
 
 .medication-item:hover {
-  transform: translateX(4px);
-  border-color: var(--third-color);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(16,24,40,0.06);
 }
 
 .med-icon {
-  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--fifth-color), #fff);
+  color: var(--secondary-color);
+  flex-shrink: 0;
+  font-size: 1.2rem;
+}
+
+.medication-item strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.med-info {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.medication-item .med-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.prescribed-by {
+  font-size: 0.85rem;
+  color: #4b5563;
 }
 
 /* Visit Timeline */
@@ -699,5 +731,306 @@
     grid-template-columns: 1fr;
     gap: 0.5rem;
     text-align: center;
+  }
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  gap: 1rem;
+}
+
+.spinning {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Alert Banners */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+}
+
+.alert-info {
+  background-color: #d1ecf1;
+  border: 1px solid #17a2b8;
+  color: #0c5460;
+}
+
+/* Visit Info Banner */
+.visit-info-banner {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.visit-info-item {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.visit-info-item strong {
+  font-weight: 600;
+}
+
+/* Vitals Info Banner */
+.vitals-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: #e3f2fd;
+  border: 1px solid #2196f3;
+  color: #1565c0;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+/* Read-only Vitals */
+.vital-card.readonly {
+  opacity: 0.9;
+  cursor: not-allowed;
+}
+
+.vital-card.readonly input {
+  display: none;
+}
+
+.vital-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+  padding: 0.5rem 0;
+}
+
+.vitals-recorded-by {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  text-align: center;
+}
+
+/* Note Metadata */
+.note-metadata {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  text-align: center;
+  color: #6c757d;
+}
+
+/* Note Card Enhancements */
+.note-card-body {
+  margin-top: 0.5rem;
+}
+
+.note-diagnosis {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background-color: #fff3cd;
+  border-left: 3px solid #ffc107;
+  font-size: 0.9rem;
+}
+
+.note-diagnosis em {
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+/* Visit Diagnosis */
+.visit-diagnosis {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background-color: #e3f2fd;
+  border-left: 3px solid #2196f3;
+  font-size: 0.9rem;
+  border-radius: 4px;
+}
+
+/* Status Badge Enhancements */
+.status-badge.status-pending {
+  background-color: #ffc107;
+  color: #000;
+}
+
+.status-badge.status-not-checked-in {
+  background-color: #ff9800;
+  color: white;
+}
+
+/* Empty State */
+.empty {
+  padding: 2rem;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Visit Vitals in History */
+.visit-vitals {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: #f1f3f5;
+  border-radius: 4px;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.visit-vitals small {
+  color: #495057;
+  font-size: 0.85rem;
+}
+
+/* ----- Enhanced history & meds styles (appended) ----- */
+
+/* Medical history / medication history lists (cards) */
+.medical-history-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.medical-history-item {
+  background: linear-gradient(180deg, #ffffff, #fbfbff);
+  border: 1px solid rgba(15,23,42,0.05);
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.medical-history-item strong {
+  font-size: 1rem;
+  color: var(--primary-color);
+}
+
+.mh-date {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.medication-history-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.med-history-item {
+  background: linear-gradient(180deg, #ffffff, #fffafc);
+  border: 1px solid rgba(15,23,42,0.05);
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.med-history-item strong {
+  font-size: 1rem;
+  color: var(--primary-color);
+}
+
+.med-history-item .mh-notes {
+  color: #4b5563;
+  font-size: 0.92rem;
+}
+
+.visit-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.visit-item {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 2px solid rgba(15,23,42,0.04);
+  position: relative;
+  background: linear-gradient(180deg, #fff, #fcfeff);
+  border-radius: 0.5rem;
+  align-items: start;
+}
+
+.visit-item::before {
+  content: '';
+  position: absolute;
+  left: -11px;
+  top: 12px;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, var(--third-color), var(--secondary-color));
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(16,24,40,0.02);
+}
+
+.visit-date {
+  font-weight: 700;
+  color: var(--secondary-color);
+  min-width: 120px;
+  font-size: 0.95rem;
+}
+
+.visit-content strong {
+  display: block;
+  color: var(--primary-color);
+  margin-bottom: 0.35rem;
+}
+
+.visit-content p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.visit-vitals small {
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+/* ensure medication list gap and card sizing remain responsive */
+.medication-list {
+  grid-auto-rows: min-content;
+}
+
+.medication-item .prescribed-by {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+/* smaller screens: stack visit item columns */
+@media (max-width: 768px) {
+  .visit-item {
+    grid-template-columns: 1fr;
+  }
+  .visit-item::before {
+    left: 8px;
+    top: -6px;
   }
 }

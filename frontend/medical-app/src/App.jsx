@@ -13,7 +13,9 @@ import SignUp  from "./components/SignUp.jsx";
 import NursePortal from "./components/nurse/NursePortal.jsx";
 import NurseDashboard from "./components/nurse/NurseDashboard.jsx";
 import NurseIntake from "./components/nurse/NurseIntake.jsx";
+// import AdminPortal from "./components/admin/AdminPortal.jsx";
 
+import AdminPortal from "./components/admin/AdminPortal.jsx";
 // --- ADMIN module (disabled) ---
 // import AdminPortal from "./components/admin/AdminPortal.jsx";
 // import AdminDashboard from "./components/admin/AdminDashboard.jsx";
@@ -32,6 +34,11 @@ export default function App() {
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/admin" element={
+        <RequireRole roles={["ADMIN"]}>
+          <AdminPortal />
+        </RequireRole>
+      } />
       <Route path ="/signup" element={<SignUp />} />
 
       {/* Patient */}

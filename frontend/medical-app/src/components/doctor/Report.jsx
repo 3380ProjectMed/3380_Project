@@ -7,7 +7,7 @@ export default function AppointmentReport() {
   const [filters, setFilters] = useState({
     StartDate: new Date().toISOString().split('T')[0].slice(0, 8) + '01',
     EndDate: new Date().toISOString().split('T')[0],
-    DoctorID: 'all',
+    // Doctor filter removed per UX request
     OfficeID: 'all',
     Status: 'all',
     PatientID: 'all',
@@ -24,7 +24,6 @@ export default function AppointmentReport() {
   const [error, setError] = useState(null);
 
   // Dropdown options state
-  const [doctors, setDoctors] = useState([]);
   const [offices, setOffices] = useState([]);
   const [nurses, setNurses] = useState([]);
 
@@ -43,17 +42,7 @@ export default function AppointmentReport() {
 
   const fetchDropdownOptions = async () => {
     try {
-      const doctorsRes = await fetch('/api/doctor_api/doctors/get-all.php');
-      const doctorsData = await doctorsRes.json();
-      if (doctorsData.success) setDoctors(doctorsData.doctors || []);
-
-      const officesRes = await fetch('/api/doctor_api/offices/get-all.php');
-      const officesData = await officesRes.json();
-      if (officesData.success) setOffices(officesData.offices || []);
-
-      const nursesRes = await fetch('/api/doctor_api/nurses/get-all.php');
-      const nursesData = await nursesRes.json();
-      if (nursesData.success) setNurses(nursesData.nurses || []);
+      // offices and nurses endpoints are not available in this backend; they'll be derived from report results
     } catch (err) {
       console.error('Error fetching dropdown options:', err);
     }
@@ -86,8 +75,27 @@ export default function AppointmentReport() {
       if (contentType.includes('application/json')) {
         const data = await response.json();
         if (data.success) {
-          setAppointments(data.data.appointments || []);
+          const appts = data.data.appointments || [];
+          setAppointments(appts);
           setStatistics(data.data.statistics || null);
+
+          // derive offices and nurses from appointments for filter dropdowns
+          const officeMap = new Map();
+          const nurseMap = new Map();
+          appts.forEach(a => {
+            if (a.Office_ID || a.office_id || a.office_id === 0) {
+              const id = a.Office_ID ?? a.office_id ?? a.OfficeId ?? null;
+              const name = a.office_name || a.office || `${a.office_city || ''}`;
+              if (id) officeMap.set(id, { Office_ID: id, Name: name });
+            }
+            if (a.Nurse_id || a.Nurse_id === 0 || a.nurse_id) {
+              const nid = a.Nurse_id ?? a.nurse_id ?? a.NurseId ?? null;
+              const nname = a.nurse_name || (a.nurse || 'Unknown');
+              if (nid) nurseMap.set(nid, { Nurse_id: nid, name: nname });
+            }
+          });
+          setOffices(Array.from(officeMap.values()));
+          setNurses(Array.from(nurseMap.values()));
         } else {
           setError(data.error || 'Failed to fetch report');
         }
@@ -135,12 +143,11 @@ export default function AppointmentReport() {
   const exportToCSV = () => {
     if (appointments.length === 0) return;
 
-    const headers = ['Date', 'Time', 'Patient', 'Doctor', 'Office', 'Status', 'Reason', 'Insurance Type'];
+    const headers = ['Date', 'Time', 'Patient', 'Office', 'Status', 'Reason', 'Insurance Type'];
     const rows = appointments.map(apt => [
       apt.Appointment_date,
       apt.Appointment_time || 'N/A',
       apt.patient_name,
-      apt.doctor_name,
       apt.office_name,
       apt.Status || 'N/A',
       (apt.Reason || apt.Reason_for_visit) || 'N/A',
@@ -181,30 +188,10 @@ export default function AppointmentReport() {
           </div>
         </div>
 
-        {statistics && (
-          <div className="report-cards">
-            <div className="report-card primary">
-              <div className="card-icon"><Users /></div>
-              <div className="card-content">
-                <h3>{statistics.total_appointments}</h3>
-                <p>Total Appointments</p>
-              </div>
-            </div>
+        {/* Top summary cards removed — not required for current backend/UX */}
 
-            <div className="report-card success">
-              <div className="card-icon"><TrendingUp /></div>
-              <div className="card-content">
-                <h3>{statistics.completed_count}</h3>
-                <p>Completed</p>
-              </div>
-            </div>
-
-                  {/* Total revenue and booking channel metrics removed per request */}
-          </div>
-        )}
-
-        <div className="report-section" onClick={() => setShowFilters(!showFilters)}>
-          <div className="report-header" style={{justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer'}}>
+        <div className="report-section">
+          <div className="report-header" style={{justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer'}} onClick={() => setShowFilters(!showFilters)}>
             <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
               <Filter />
               <h3>Filters {activeFiltersCount > 0 && <span className="risk-badge">{activeFiltersCount} active</span>}</h3>
@@ -236,16 +223,6 @@ export default function AppointmentReport() {
                   <option value="Completed">Completed</option>
                   <option value="Canceled">Canceled</option>
                   <option value="No-Show">No-Show</option>
-                </select>
-              </div>
-
-              <div>
-                <label>Doctor</label>
-                <select value={filters.DoctorID} onChange={(e) => handleFilterChange('DoctorID', e.target.value)} className="date-range-select">
-                  <option value="all">All Doctors</option>
-                  {doctors.map(doctor => (
-                    <option key={doctor.Doctor_id} value={doctor.Doctor_id}>{doctor.name} - {doctor.Specialty}</option>
-                  ))}
                 </select>
               </div>
 
@@ -297,7 +274,6 @@ export default function AppointmentReport() {
                 <div>Date</div>
                 <div>Time</div>
                 <div>Patient</div>
-                <div>Doctor</div>
                 <div>Office</div>
                 <div>Status</div>
                 <div>Reason</div>
@@ -308,7 +284,6 @@ export default function AppointmentReport() {
                   <div>{apt.Appointment_date}</div>
                   <div>{apt.Appointment_time || 'N/A'}</div>
                   <div style={{fontWeight: 700}}>{apt.patient_name}</div>
-                  <div>{apt.doctor_name}</div>
                   <div>{apt.office_name}</div>
                   <div><span className="risk-badge">{apt.Status}</span></div>
                   <div>{apt.Reason || 'N/A'}</div>
