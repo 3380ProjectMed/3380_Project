@@ -10,8 +10,30 @@ require_once __DIR__ . '/../../../database.php';
 try {
     $conn = getDBConnection();
     
-    // Get doctor_id from query parameter
-    $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 201;
+    // Determine doctor_id: query param overrides, otherwise resolve from logged-in user
+    $doctor_id = null;
+    if (isset($_GET['doctor_id'])) {
+        $doctor_id = intval($_GET['doctor_id']);
+    } else {
+        // Require session and resolve
+        session_start();
+        if (!isset($_SESSION['uid'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+            closeDBConnection($conn);
+            exit;
+        }
+
+        $user_id = intval($_SESSION['uid']);
+        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        if (!is_array($rows) || count($rows) === 0) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
+            closeDBConnection($conn);
+            exit;
+        }
+        $doctor_id = (int)$rows[0]['Doctor_id'];
+    }
     
     // SQL query matching YOUR schema
     $sql = "SELECT 
@@ -56,9 +78,53 @@ try {
             'bloodType' => $patient['BloodType'] ?: 'Unknown',
             'lastVisit' => $patient['last_visit'] ? date('Y-m-d', strtotime($patient['last_visit'])) : 'No visits yet',
             'nextAppointment' => $patient['next_appointment'] ? date('Y-m-d', strtotime($patient['next_appointment'])) : 'None scheduled',
-            'chronicConditions' => [], // Can add JOIN to MedicalCondition table
-            'currentMedications' => []  // Can add JOIN to Prescription table
+            'chronicConditions' => [], // will be populated below
+            'currentMedications' => []  // will be populated below
         ];
+    }
+
+    // Enrich each patient with chronic conditions and current medications (non-fatal)
+    foreach ($formatted_patients as $idx => $fp) {
+        // extract numeric id
+        $rawId = isset($fp['id']) ? intval(preg_replace('/[^0-9]/', '', $fp['id'])) : 0;
+        if ($rawId <= 0) continue;
+
+        try {
+            $mc_sql = "SELECT Condition_name FROM MedicalCondition WHERE Patient_id = ? ORDER BY Diagnosis_date DESC";
+            $mcs = executeQuery($conn, $mc_sql, 'i', [$rawId]);
+            if (is_array($mcs)) {
+                $formatted_patients[$idx]['chronicConditions'] = array_values(array_map(function($r){
+                    return $r['Condition_name'] ?? '';
+                }, $mcs));
+            }
+        } catch (Exception $e) {
+            // non-fatal - leave empty
+        }
+
+        try {
+            $rx_sql = "SELECT p.prescription_id, p.medication_name as name, CONCAT(p.dosage, ' - ', p.frequency) as frequency, CONCAT(d.First_Name, ' ', d.Last_Name) as prescribed_by, p.start_date, p.end_date, p.notes
+                       FROM Prescription p
+                       LEFT JOIN Doctor d ON p.doctor_id = d.Doctor_id
+                       WHERE p.patient_id = ?
+                       AND (p.end_date IS NULL OR p.end_date >= CURDATE())
+                       ORDER BY p.start_date DESC";
+            $rxs = executeQuery($conn, $rx_sql, 'i', [$rawId]);
+            if (is_array($rxs)) {
+                $formatted_patients[$idx]['currentMedications'] = array_map(function($m){
+                    return [
+                        'id' => $m['prescription_id'] ?? null,
+                        'name' => $m['name'] ?? '',
+                        'frequency' => $m['frequency'] ?? '',
+                        'prescribed_by' => $m['prescribed_by'] ?? '',
+                        'start_date' => $m['start_date'] ?? null,
+                        'end_date' => $m['end_date'] ?? null,
+                        'instructions' => $m['notes'] ?? ''
+                    ];
+                }, $rxs);
+            }
+        } catch (Exception $e) {
+            // non-fatal - leave empty
+        }
     }
     
     closeDBConnection($conn);

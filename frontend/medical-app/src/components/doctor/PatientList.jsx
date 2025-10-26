@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useAuth } from '../../auth/AuthProvider';
 import { Search, X, Calendar, Mail, AlertCircle, FileText } from 'lucide-react';
 import './PatientList.css';
 /**
@@ -17,6 +18,7 @@ import './PatientList.css';
  * @param {Function} setSelectedPatient - Set selected patient (optional)
  */
 function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient, setSelectedPatient: externalSetSelectedPatient }) {
+  const auth = useAuth();
   // Local state for search and selected patient
   const [searchTerm, setSearchTerm] = useState('');
   const [localSelectedPatient, setLocalSelectedPatient] = useState(null);
@@ -45,15 +47,21 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     );
   }, [searchTerm, patients]);
 
-  // Load all patients for the doctor on mount
+  // Load all patients for the doctor when auth provides doctor_id
   useEffect(() => {
-    const loadPatients = async () => {
+    if (auth.loading) return;
+    const doctorId = auth.user?.doctor_id ?? null;
+    if (!doctorId) {
+      setError('No doctor account is associated with this user.');
+      return;
+    }
+
+    const loadPatients = async (did) => {
       setLoading(true);
       setError(null);
       try {
-        // TODO: derive doctor_id from auth; hardcoded for now
-        const doctorId = 201;
-        const res = await fetch(`http://localhost:8080/doctor_api/patients/get-all.php?doctor_id=${doctorId}`);
+        // Use proxy-relative path so dev server forwards to backend and avoids CORS/html errors
+        const res = await fetch(`/api/doctor_api/patients/get-all.php?doctor_id=${did}`, { credentials: 'include' });
         const payload = await res.json();
         if (payload.success) {
           setPatients(payload.patients);
@@ -67,8 +75,8 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
         setLoading(false);
       }
     };
-    loadPatients();
-  }, []);
+    loadPatients(doctorId);
+  }, [auth.user, auth.loading]);
 
   // Search by ID using the API (if the input looks like an ID)
   const handleSearchKeyPress = async (e) => {
@@ -82,7 +90,8 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`http://localhost:8080/api/patients/get-by-id.php?id=${encodeURIComponent(q)}`);
+  // query patient by id using proxy-relative URL
+  const res = await fetch(`/api/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(q)}`, { credentials: 'include' });
         const payload = await res.json();
         if (payload.success) {
           setPatients([payload.patient]);
@@ -116,14 +125,47 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     setLoading(true);
     setError(null);
     try {
-      // patient.id is formatted like 'P001' — pass that as `id`
-      const res = await fetch(`http://localhost:8080/api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`);
+      // Prefer the clinical detail endpoint which returns medicalHistory, medicationHistory, chronicConditions and currentMedications
+      // The clinical endpoint expects a numeric patient_id. Convert 'P001' -> 1
+      const numericId = parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
+      const res = await fetch(`/api/doctor_api/clinical/get-patient-details.php?patient_id=${numericId}`, { credentials: 'include' });
       const payload = await res.json();
       if (payload.success && payload.patient) {
-        setSelectedPatient(payload.patient);
-        if (onPatientClick) onPatientClick(payload.patient);
+        // Merge the lightweight row data we already have with the enriched details returned by the clinical endpoint
+        const p = payload.patient;
+        const visit = payload.visit || {};
+        const formattedId = 'P' + String(p.id || numericId).padStart(3, '0');
+        const merged = {
+          // keep existing values but prefer backend details
+          id: formattedId,
+          name: p.name || patient.name,
+          dob: p.dob || patient.dob,
+          age: p.age || patient.age,
+          bloodType: p.blood_type || patient.bloodType || patient.bloodType,
+          email: patient.email || '',
+          phone: patient.phone || '',
+          allergies: p.allergies || patient.allergies || 'No Known Allergies',
+          medicalHistory: p.medicalHistory || [],
+          medicationHistory: p.medicationHistory || [],
+          chronicConditions: p.chronicConditions || [],
+          currentMedications: p.currentMedications || [],
+          lastVisit: patient.lastVisit || (visit.date || ''),
+          nextAppointment: patient.nextAppointment || null,
+          notes: payload.visit?.present_illnesses || patient.notes || ''
+        };
+
+        setSelectedPatient(merged);
+        if (onPatientClick) onPatientClick(merged);
       } else {
-        setError(payload.error || 'Failed to load patient details');
+        // Fallback: try the patients get-by-id if clinical endpoint didn't return details
+        const fallback = await fetch(`/api/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`, { credentials: 'include' });
+        const fbPayload = await fallback.json();
+        if (fbPayload.success && fbPayload.patient) {
+          setSelectedPatient(fbPayload.patient);
+          if (onPatientClick) onPatientClick(fbPayload.patient);
+        } else {
+          setError(payload.error || fbPayload.error || 'Failed to load patient details');
+        }
       }
     } catch (err) {
       console.error('Error loading patient details', err);
@@ -157,7 +199,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
   return (
     <div className="patient-list">
       {/* ===== HEADER ===== */}
-      <h1 className="patient-list__title">My Patients</h1>
+      <h1 className="patient-list__title">My PCP Patients</h1>
 
       {/* ===== SEARCH BAR ===== */}
       <div className="patient-list__search">

@@ -15,7 +15,7 @@ function Sidebar({ currentPage, setCurrentPage, onLogout }) {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'schedule', label: 'My Schedule', icon: Calendar },
-    { id: 'patients', label: 'My Patients', icon: Users },
+    { id: 'patients', label: 'My PCP Patients', icon: Users },
     { id: 'clinical', label: 'Clinical Workspace', icon: FileText }
     , { id: 'reports', label: 'Reports', icon: FileText }
     , { id: 'referrals', label: 'Referrals', icon: Stethoscope }
