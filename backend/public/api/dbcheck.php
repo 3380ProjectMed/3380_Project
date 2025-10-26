@@ -2,93 +2,83 @@
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-// Read environment variables
-$host = $_ENV['AZURE_MYSQL_HOST'] ?? getenv('AZURE_MYSQL_HOST') ?: '';
-$user = $_ENV['AZURE_MYSQL_USERNAME'] ?? getenv('AZURE_MYSQL_USERNAME') ?: '';
-$pass = $_ENV['AZURE_MYSQL_PASSWORD'] ?? getenv('AZURE_MYSQL_PASSWORD') ?: '';
-$name = $_ENV['AZURE_MYSQL_DBNAME'] ?? getenv('AZURE_MYSQL_DBNAME') ?: '';
-$port = (int)($_ENV['AZURE_MYSQL_PORT'] ?? getenv('AZURE_MYSQL_PORT') ?: 3306);
-echo $host;
-echo $user;
-echo $name;
-// Check if we have credentials
-if (empty($host) || empty($user) || empty($name)) {
-    echo json_encode([
-        'ok' => false,
-        'status' => 'error',
-        'message' => 'Database credentials not configured',
-        'config' => [
-            'host_set' => !empty($host),
-            'user_set' => !empty($user),
-            'db_set' => !empty($name),
-            'port' => $port
-        ]
-    ], JSON_PRETTY_PRINT);
-    exit;
+function respond($payload, $code = 200) {
+  http_response_code($code);
+  echo json_encode($payload, JSON_PRETTY_PRINT);
+  exit;
 }
 
-// Attempt connection
-$mysqli = @new mysqli($host, $user, $pass, $name, $port);
+try {
+  // 1) Read config (env vars are the right way on App Service)
+  $host = getenv('AZURE_MYSQL_HOST') ?: '';
+  $user = getenv('AZURE_MYSQL_USERNAME') ?: '';
+  $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
+  $db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
+  $port = getenv('AZURE_MYSQL_PORT') ?: '3306';
 
-// Check for connection errors
-if ($mysqli->connect_errno) {
-    echo json_encode([
-        'ok' => false,
-        'status' => 'disconnected',
-        'database' => $name,
-        'host' => $host,
-        'port' => $port,
-        'error' => $mysqli->connect_error,
-        'error_code' => $mysqli->connect_errno
-    ], JSON_PRETTY_PRINT);
-    exit;
-}
+  if (!$host || !$user || !$db) {
+    respond([
+      'ok' => false,
+      'stage' => 'config',
+      'message' => 'Database credentials not configured',
+      'config' => [
+        'host_set' => (bool)$host,
+        'user_set' => (bool)$user,
+        'db_set'   => (bool)$db,
+        'port'     => (int)$port
+      ]
+    ], 500);
+  }
 
-// Connection successful - get info
-$version = $mysqli->get_server_info();
+  // 2) Make mysqli throw exceptions instead of fatals
+  mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-// Test query
-$testQuery = $mysqli->query('SELECT 1 as connection_test');
-$testResult = $testQuery ? $testQuery->fetch_assoc() : null;
+  // 3) Connect (TLS is required by Azure MySQL)
+  $conn = mysqli_init();
+  // Optional strict verification if you shipped the CA file:
+  // $ca = __DIR__ . '/certs/DigiCertGlobalRootCA.crt.pem';
+  // if (is_file($ca)) { mysqli_ssl_set($conn, null, null, $ca, null, null); }
 
-// Get table count
-$tableQuery = $mysqli->query(
-    "SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = ?"
-);
-if ($tableQuery) {
-    $stmt = $mysqli->prepare("SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = ?");
-    $stmt->bind_param('s', $name);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $tableRow = $result->fetch_assoc();
-    $tableCount = $tableRow['table_count'];
-    $stmt->close();
-} else {
-    $tableCount = 0;
-}
+  $conn->real_connect($host, $user, $pass, $db, (int)$port, null, MYSQLI_CLIENT_SSL);
 
-// List tables
-$tables = [];
-$stmt = $mysqli->prepare("SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ?");
-$stmt->bind_param('s', $name);
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $tables[] = $row['TABLE_NAME'];
-}
-$stmt->close();
+  // 4) Basic test
+  $res = $conn->query('SELECT 1 AS ok, @@version AS version, CURRENT_USER() AS user');
+  $row = $res->fetch_assoc();
 
-$mysqli->close();
+  // 5) Count tables (prepared to avoid fatals)
+  $stmt = $conn->prepare('SELECT COUNT(*) AS table_count FROM information_schema.tables WHERE table_schema = ?');
+  $stmt->bind_param('s', $db);
+  $stmt->execute();
+  $tcRes = $stmt->get_result();
+  $tableCount = (int)($tcRes->fetch_assoc()['table_count'] ?? 0);
+  $stmt->close();
 
-echo json_encode([
+  // 6) List up to 50 tables (safe)
+  $tables = [];
+  $stmt = $conn->prepare('SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ? LIMIT 50');
+  $stmt->bind_param('s', $db);
+  $stmt->execute();
+  $listRes = $stmt->get_result();
+  while ($r = $listRes->fetch_assoc()) { $tables[] = $r['TABLE_NAME']; }
+  $stmt->close();
+
+  $conn->close();
+
+  respond([
     'ok' => true,
     'status' => 'connected',
-    'database' => $name,
-    'host' => $host,
-    'port' => $port,
-    'mysql_version' => $version,
-    'connection_test' => 'successful',
+    'php' => PHP_VERSION,
+    'mysql' => $row,
     'table_count' => $tableCount,
     'tables' => $tables
-], JSON_PRETTY_PRINT);
-?>
+  ]);
+
+} catch (Throwable $e) {
+  // Never fatal; always JSON
+  respond([
+    'ok' => false,
+    'stage' => 'exception',
+    'message' => $e->getMessage(),
+    'code' => $e->getCode()
+  ], 500);
+}
