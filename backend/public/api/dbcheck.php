@@ -2,11 +2,10 @@
 // dbcheck.php
 // Allow cross-origin requests from dev server
 #getting env variables to establish database connection
-$host = getenv('DB_HOST') ?: 'db';
-$user = getenv('DB_USER') ?: 'app';
-$pass = getenv('DB_PASSWORD') ?: '';
-$name = getenv('DB_NAME') ?: 'med-app-db';
-$port = (int)(getenv('DB_PORT') ?: 3306);
+$host = $_ENV['AZURE_MYSQL_HOST']    ?? '';
+$user = $_ENV['AZURE_MYSQL_USERNAME']?? '';
+$db   = $_ENV['AZURE_MYSQL_DBNAME']  ?? '';
+$port = (int)($_ENV['AZURE_MYSQL_PORT'] ?? 3306);
 
 #attempt connection
 $mysqli = @new mysqli($host, $user, $pass, $name, $port);
