@@ -1,6 +1,6 @@
--- MySQL dump 10.13  Distrib 8.0.43, for macos15 (arm64)
+-- MySQL dump 10.13  Distrib 8.0.43, for macos15 (x86_64)
 --
--- Host: 127.0.0.1    Database: med-app-db
+-- Host: localhost    Database: med-app-db
 -- ------------------------------------------------------
 -- Server version	8.4.6
 
@@ -30,7 +30,7 @@ CREATE TABLE `Appointment` (
   `Appointment_date` datetime NOT NULL,
   `Date_created` datetime NOT NULL,
   `Reason_for_visit` varchar(300) DEFAULT NULL,
-  `Status` enum('Scheduled','Waiting','In Progress','Completed','Cancelled','No-Show') NOT NULL DEFAULT 'Scheduled',
+  `Status` enum('Scheduled','Pending','Waiting','In Progress','Completed','Cancelled','No-Show') DEFAULT NULL,
   PRIMARY KEY (`Appointment_id`),
   KEY `ix_appt_patient` (`Patient_id`),
   KEY `ix_appt_doctor` (`Doctor_id`),
@@ -50,6 +50,55 @@ LOCK TABLES `Appointment` WRITE;
 INSERT INTO `Appointment` VALUES (1001,1,1,1,'2025-10-23 09:00:00','2025-10-20 14:30:00','Annual physical examination','Scheduled'),(1002,3,1,1,'2025-10-23 14:00:00','2025-10-02 16:45:00','Follow-up consultation','Scheduled'),(1003,5,1,1,'2024-01-15 10:30:00','2023-12-22 09:15:00','Cardiology checkup','Scheduled'),(1004,7,2,4,'2024-01-17 11:00:00','2024-01-08 14:25:00','Heart condition monitoring','Scheduled'),(1005,2,3,2,'2024-01-15 13:30:00','2023-12-28 11:20:00','Pediatric wellness visit','Scheduled'),(1006,8,3,2,'2024-01-18 15:45:00','2024-01-11 12:15:00','Vaccination','Scheduled'),(1007,4,4,3,'2024-01-16 08:45:00','2023-12-28 11:20:00','Orthopedic consultation','Scheduled'),(1008,1,4,1,'2024-01-19 16:00:00','2024-01-09 17:40:00','Knee pain evaluation','Scheduled'),(1009,6,5,4,'2024-01-17 09:30:00','2024-01-05 08:30:00','OB/GYN appointment','Scheduled'),(1010,3,6,2,'2024-01-18 10:00:00','2024-01-12 09:50:00','Internal medicine consultation','Scheduled'),(1011,4,7,4,'2024-01-19 14:30:00','2024-01-15 16:20:00','Dermatology screening','Scheduled'),(1012,4,1,2,'2025-10-25 09:00:00','2025-10-20 09:00:00','Follow-up consultation','In Progress'),(1013,5,1,1,'2025-10-25 13:00:00','2025-10-23 10:00:00','TEST','In Progress');
 /*!40000 ALTER TABLE `Appointment` ENABLE KEYS */;
 UNLOCK TABLES;
+
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `trg_appointment_validate_date` BEFORE INSERT ON `Appointment` FOR EACH ROW BEGIN
+	-- Check if appointment date is in the past 
+	IF NEW.Appointment_date < NOW() THEN
+		SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cannot create appointment in the past';
+	END IF;
+    
+    -- Check if appointment is too far in the future
+    IF NEW.Appointment_date > DATE_ADD(NOW(), INTERVAL 1 YEAR) THEN
+		SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cannot schedule more than 1 year in advance';
+	END IF;
+    
+    -- Check if appointment is during business hours
+    IF HOUR(NEW.Appointment_date) < 8 OR HOUR(NEW.Appointment_date) >= 18 THEN
+		SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Appointments must be scheduled between 8am and 6pm';
+	END IF;
+    
+	-- Check if appointment is on a weekend (optional)
+    IF DAYOFWEEK(NEW.Appointment_date) IN (1, 7) THEN -- 1=Sunday, 7=Saturday
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Appointments cannot be scheduled on weekends';
+    END IF;
+END */;;
+DELIMITER ;
+
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `trg_appointment_check_referral` BEFORE INSERT ON `Appointment` FOR EACH ROW BEGIN
+	DECLARE patient_pcp_id INT;
+    -- Get patient's PCP
+    SELECT Primary_Doctor INTO patient_pcp_id
+    FROM Patient
+    WHERE Patient_ID = NEW.Patient_id;
+    IF patient_pcp_id IS NULL OR NEW.Doctor_id != patient_pcp_id THEN
+		SET NEW.Status = 'Pending';
+	ELSE 
+		SET NEW.Status = 'Scheduled';
+	END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `CodesAllergies`
@@ -885,4 +934,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-25 21:45:44
+-- Dump completed on 2025-10-26 14:19:58
