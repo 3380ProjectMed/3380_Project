@@ -1,4 +1,6 @@
-# .github/workflows/main_medconnect.yaml
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
 name: Build and deploy full-stack (React + PHP) app to Azure Web App - medconnect
 
 on:
@@ -43,21 +45,26 @@ jobs:
           # 1) React build output -> webroot
           cp -r frontend/medical-app/dist/* "$WEBROOT/"
 
-          # 2) PHP API + helpers -> webroot
-          mkdir -p "$WEBROOT/api"
-          if [ -d backend/public/api ]; then
-            cp -R backend/public/api/. "$WEBROOT/api/"
+          # 2) Copy ALL backend files
+          if [ -d backend/public ]; then
+            # Copy all API directories
+            [ -d backend/public/api ] && cp -R backend/public/api "$WEBROOT/" || true
+            [ -d backend/public/admin_api ] && cp -R backend/public/admin_api "$WEBROOT/" || true
+            [ -d backend/public/doctor_api ] && cp -R backend/public/doctor_api "$WEBROOT/" || true
+            
+            # Copy patient_api.php and other root PHP files
+            find backend/public -maxdepth 1 -name "*.php" -exec cp {} "$WEBROOT/" \;
+            
+            # Copy helpers
+            [ -f backend/public/helpers.php ] && cp backend/public/helpers.php "$WEBROOT/" || true
+            
+            # Copy assets if they exist
+            [ -d backend/public/assets ] && cp -R backend/public/assets "$WEBROOT/" || true
           fi
-          if [ -d backend/api ]; then
-            cp -R backend/api/. "$WEBROOT/api/"
-          fi
-          if [ -f backend/public/cors.php ]; then
-            cp backend/public/cors.php "$WEBROOT/"
-          elif [ -f backend/cors.php ]; then
-            cp backend/cors.php "$WEBROOT/"
-          fi
-          [ -d backend/public/doctor_api ] && cp -R backend/public/doctor_api "$WEBROOT/" || true
-          [ -d backend/public/patient_api ] && cp -R backend/public/patient_api "$WEBROOT/" || true
+
+          # Copy database.php and cors.php from backend root if they exist
+          [ -f backend/database.php ] && cp backend/database.php "$WEBROOT/" || true
+          [ -f backend/cors.php ] && cp backend/cors.php "$WEBROOT/" || true
 
           # 3) NGINX config + startup script
           mkdir -p "$WEBROOT/nginx"
@@ -74,6 +81,8 @@ jobs:
 
           echo "---- Staged webroot ----"
           ls -la "$WEBROOT"
+          echo "---- API directories ----"
+          ls -la "$WEBROOT/" | grep api || echo "No API directories found"
 
       # ---------- (Optional) Composer ----------
       - name: Setup PHP
@@ -124,9 +133,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_82C758B8091545CFB8269C41B30856D8 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4358F78E127A4B5A97B0559118392A2C }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_904AB161F72245F0BD8DB8A2CDD5D2FB }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_863533AA3E89421F833D1D65476770C8 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_DFF72AB643B14A0D92FBC1F7162341ED }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9D7A029083A240BFBB8C15F95635A8B0 }}
 
       - name: Deploy app code to Azure Web App
         uses: azure/webapps-deploy@v3
@@ -139,7 +148,7 @@ jobs:
       - name: Configure NGINX on App Service
         working-directory: webroot
         run: |
-          # push the files that are inside the downloaded artifact
+          # Push NGINX configuration files
           az webapp deploy \
             -g 3380_Resources -n medconnect \
             --type static \
@@ -152,10 +161,9 @@ jobs:
             --src-path nginx/startup.sh \
             --target-path nginx/startup.sh
 
-          # set startup command and restart
+          # Set startup command and restart
           az webapp config set \
             -g 3380_Resources -n medconnect \
             --startup-file "/bin/sh /home/site/wwwroot/nginx/startup.sh"
 
           az webapp restart -g 3380_Resources -n medconnect
-
