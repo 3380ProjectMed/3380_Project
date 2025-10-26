@@ -137,21 +137,25 @@ jobs:
 
       # ---------- Post-deploy: Apply NGINX config & startup command ----------
       - name: Configure NGINX on App Service
+        working-directory: webroot
         run: |
+          # push the files that are inside the downloaded artifact
           az webapp deploy \
             -g 3380_Resources -n medconnect \
             --type static \
-            --src-path backend/nginx/nginx.conf \
+            --src-path nginx/nginx.conf \
             --target-path nginx/nginx.conf
 
           az webapp deploy \
             -g 3380_Resources -n medconnect \
             --type static \
-            --src-path backend/nginx/startup.sh \
+            --src-path nginx/startup.sh \
             --target-path nginx/startup.sh
 
+          # set startup command and restart
           az webapp config set \
             -g 3380_Resources -n medconnect \
             --startup-file "/bin/sh /home/site/wwwroot/nginx/startup.sh"
 
           az webapp restart -g 3380_Resources -n medconnect
+
