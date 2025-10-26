@@ -120,7 +120,7 @@ try {
     $sql = "SELECT 
         a.Appointment_id,
         DATE(a.Appointment_date) as Appointment_date,
-        TIME(a.Appointment_date) as Appointment_time,
+        DATE_FORMAT(a.Appointment_date, '%H:%i') as Appointment_time,
         a.Date_created,
     a.Reason_for_visit as Reason,
         CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name,
@@ -152,7 +152,13 @@ try {
     LEFT JOIN Doctor d ON a.Doctor_id = d.Doctor_id
     LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
     LEFT JOIN Office o ON a.Office_id = o.Office_ID
-    LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
+    -- Join only the most recent PatientVisit per appointment to avoid duplicates when multiple visits exist
+    LEFT JOIN (
+        SELECT Appointment_id, MAX(Visit_id) as max_visit_id
+        FROM PatientVisit
+        GROUP BY Appointment_id
+    ) pvmax ON a.Appointment_id = pvmax.Appointment_id
+    LEFT JOIN PatientVisit pv ON pv.Visit_id = pvmax.max_visit_id
     LEFT JOIN Nurse n ON pv.Nurse_id = n.Nurse_id
     LEFT JOIN Staff staff ON n.Staff_id = staff.Staff_id
     LEFT JOIN patient_insurance ip ON pv.Insurance_policy_id_used = ip.id
@@ -174,7 +180,12 @@ try {
         COUNT(CASE WHEN a.Appointment_date < NOW() THEN 1 END) as past_appointments,
         COUNT(CASE WHEN a.Appointment_date >= NOW() THEN 1 END) as upcoming_appointments
     FROM Appointment a
-    LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
+    LEFT JOIN (
+        SELECT Appointment_id, MAX(Visit_id) as max_visit_id
+        FROM PatientVisit
+        GROUP BY Appointment_id
+    ) pvmax_stats ON a.Appointment_id = pvmax_stats.Appointment_id
+    LEFT JOIN PatientVisit pv ON pv.Visit_id = pvmax_stats.max_visit_id
     $whereClause";
     
     $stats = executeQuery($conn, $statsQuery, $types, $params);

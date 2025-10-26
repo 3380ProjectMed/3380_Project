@@ -1,33 +1,29 @@
 import React from 'react';
-import { 
-  Home, 
-  Calendar, 
-  Users, 
-  FileText, 
-  LogOut, 
-  Stethoscope,
-  BarChart3,  
-  User        
+import {
+  Home,
+  Users,
+  FileText,
+  User,
+  LogOut,
+  ShieldCheck
 } from 'lucide-react';
-import './Sidebar.css';
+import '../doctor/Sidebar.css';
 
-function Sidebar({ currentPage, setCurrentPage, onLogout }) {
+function AdminSidebar({ currentPage, setCurrentPage, onLogout }) {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'schedule', label: 'My Schedule', icon: Calendar },
-    { id: 'patients', label: 'My PCP Patients', icon: Users },
-    { id: 'clinical', label: 'Clinical Workspace', icon: FileText }
-    , { id: 'reports', label: 'Reports', icon: FileText }
-    , { id: 'referrals', label: 'Referrals', icon: Stethoscope }
-    , { id: 'profile', label: 'Profile', icon: User }
+    { id: 'users', label: 'User Management', icon: Users },
+    { id: 'reports', label: 'Reports', icon: FileText },
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'security', label: 'Security', icon: ShieldCheck }
   ];
 
   return (
     <div className="sidebar">
       <div className="sidebar-content">
         <div className="sidebar-brand">
-          <Stethoscope size={28} />
-          <span>MedConnect</span>
+          <ShieldCheck size={28} />
+          <span>MedConnect Admin</span>
         </div>
 
         <nav>
@@ -53,9 +49,9 @@ function Sidebar({ currentPage, setCurrentPage, onLogout }) {
 
       <div className="sidebar-footer">
         <button
-          type="button"            // ensure it never acts like a form submit
+          type="button"
           className="logout-btn"
-          onClick={onLogout}       // no confirm or redirect here
+          onClick={onLogout}
         >
           <LogOut size={20} />
           <span>Log Out</span>
@@ -65,4 +61,5 @@ function Sidebar({ currentPage, setCurrentPage, onLogout }) {
   );
 }
 
-export default Sidebar;
+export default AdminSidebar;
+

@@ -9,8 +9,6 @@ import {
   AlertCircle,
   Heart,
   Thermometer,
-  Wind,
-  Droplet,
   Save,
   X,
   ArrowLeft,
@@ -23,437 +21,346 @@ import {
  * ClinicalWorkSpace Component
  * 
  * Main workspace for doctors to:
- * - View patient details from appointment
+ * - View patient visit details (created when patient checks in)
+ * - View vitals recorded by nurses (read-only)
  * - Write clinical notes
- * - Record vitals
  * - View patient history
- * - Prescribe medications
- * - Order lab tests
  * 
  * Props:
  * @param {Object} appointment - Selected appointment with patient info
- * @param {Object} patient - Detailed patient information (optional)
  * @param {Function} onBack - Navigate back to previous page
  */
-function ClinicalWorkSpace({ appointment, patient, onBack }) {
+function ClinicalWorkSpace({ appointment, onBack }) {
   const [currentTab, setCurrentTab] = useState('notes');
   const [clinicalNote, setClinicalNote] = useState('');
-  const [recentNotes, setRecentNotes] = useState([]);
-  const [vitals, setVitals] = useState({
-    bloodPressure: '',
-    heartRate: '',
-    temperature: '',
-    respiratoryRate: '',
-    oxygenSaturation: '',
-    weight: '',
-    height: ''
-  });
-  const [vitalsHistory, setVitalsHistory] = useState([]);
-  // localPatient holds patient data fetched as a fallback when parent doesn't pass a `patient` prop
-  const [localPatient, setLocalPatient] = useState(null);
+  const [currentVisit, setCurrentVisit] = useState(null);
+  const [patientInfo, setPatientInfo] = useState(null);
+  const [visitHistory, setVisitHistory] = useState([]);
+  const [medications, setMedications] = useState([]);
+  const [conditions, setConditions] = useState([]);
+  const [medicalHistoryList, setMedicalHistoryList] = useState([]);
+  const [medicationHistoryList, setMedicationHistoryList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [hasCheckedIn, setHasCheckedIn] = useState(false);
+  const [currentVitals, setCurrentVitals] = useState({});
 
-  // Try to infer patient and appointment identifiers and names from multiple
-  // possible field names the API might return. This makes the component
-  // resilient to differences in backend naming (snake_case, camelCase,
-  // prefixed names like Patient_id, Appointment_id, etc.).
-  const inferredPatientId = (
-    patient?.id ||
-    appointment?.patientId ||
-    appointment?.Patient_id ||
-    appointment?.patient_id ||
-    appointment?.PatientID ||
-    appointment?.patientID ||
-    null
-  );
+  // Extract appointment ID from various possible formats
+  const appointmentId = appointment?.id || 
+                       appointment?.Appointment_id || 
+                       appointment?.appointment_id || 
+                       null;
 
-  const inferredPatientName = (
-    patient?.name ||
-    appointment?.patientName ||
-    appointment?.patient_name ||
-    appointment?.PatientName ||
-    'No Patient Selected'
-  );
-
-  const inferredAppointmentId = (
-    appointment?.id ||
-    appointment?.Appointment_id ||
-    appointment?.appointment_id ||
-    appointment?.AppointmentID ||
-    appointment?.appointmentID ||
-    null
-  );
-
-  // Minimal defaults when `patient` or `appointment` props are not provided.
-  // Keep defaults small to avoid embedding large mock data in the component.
-  const defaultPatient = {
-    id: inferredPatientId,
-    name: inferredPatientName,
-    dob: patient?.dob || '',
-    age: patient?.age || null,
-    gender: patient?.gender || '',
-    bloodType: patient?.bloodType || '',
-    allergies: patient?.allergies || '',
-    chronicConditions: patient?.chronicConditions || [],
-    currentMedications: patient?.currentMedications || [],
-    lastVisit: patient?.lastVisit || '',
-    insuranceProvider: patient?.insuranceProvider || '',
-    phone: patient?.phone || '',
-    email: patient?.email || '',
-    labs: patient?.labs || []
-  };
-
-  // Prefer the `patient` prop (provided by parent). If not provided but we
-  // fetched a `localPatient`, use that. Otherwise fall back to defaults.
-  const currentPatient = patient
-    ? { ...defaultPatient, ...patient }
-    : localPatient
-      ? { ...defaultPatient, ...localPatient }
-      : defaultPatient;
-
-  // Normalize appointment object so downstream code can rely on consistent keys
-  const currentAppointment = {
-    id: inferredAppointmentId,
-    time: appointment?.time || appointment?.Appointment_time || appointment?.Time || '',
-    reason: appointment?.reason || appointment?.Reason_for_visit || appointment?.Reason || '',
-    status: appointment?.status || appointment?.Status || '',
-    ...appointment
-  };
+  const patientId = appointment?.patientId || 
+                   appointment?.Patient_id || 
+                   appointment?.patient_id ||
+                   null;
 
   /**
-   * Handle vital sign input change
+   * Fetch current visit (if patient has checked in)
    */
-  const handleVitalChange = (field, value) => {
-    setVitals(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  /**
-   * Save clinical note
-   */
-  const handleSaveNote = () => {
-    // Send to backend API (save-note.php). Backend resolves doctor from session.
-    (async () => {
-      try {
-        const payload = {
-          appointment_id: currentAppointment.id ?? null,
-          patient_id: currentPatient.id,
-          note_text: clinicalNote,
-          treatment: clinicalNote
-        };
-
-        const res = await fetch('http://localhost:8080/doctor_api/clinical/save-note.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload)
-        });
-        const json = await res.json();
-        if (json && json.success) {
-          alert('Clinical note saved successfully!');
-          // refresh notes
-          fetchNotes();
-          setClinicalNote('');
-        } else {
-          alert('Failed to save note: ' + (json?.error || 'Unknown error'));
-        }
-      } catch (err) {
-        console.error('Save note failed', err);
-        alert('Network error while saving note');
-      }
-    })();
-  };
-
-  /**
-   * Save vitals
-   */
-  const handleSaveVitals = () => {
-    // Doctors should not save vitals here. Vitals are recorded by nursing staff.
-    alert('Only nursing staff can record vitals. Vitals are read-only for doctors.');
-  };
-
-  // Fetch recent notes for patient or appointment
-  const fetchNotes = async () => {
-      try {
-      const pid = currentPatient.id;
-      // backend expects numeric patient_id; prefer appointment_id when available
-      let qs = '';
-      if (currentAppointment.id) {
-        qs = `appointment_id=${encodeURIComponent(currentAppointment.id)}`;
-      } else if (pid && /^\d+$/.test(String(pid))) {
-        qs = `patient_id=${encodeURIComponent(String(pid))}`;
-      } else if (pid) {
-        // try to extract numeric portion from IDs like 'P001'
-        const m = String(pid).match(/(\d+)/);
-        if (m) qs = `patient_id=${encodeURIComponent(m[1])}`;
-      }
-
-      if (!qs) {
-        console.warn('ClinicalWorkSpace: no numeric patient_id or appointment_id available to fetch notes');
-        setRecentNotes([]);
-        return;
-      }
-
-      const res = await fetch(`http://localhost:8080/doctor_api/clinical/get-notes.php?${qs}`, { credentials: 'include' });
-      const json = await res.json();
-      if (json && json.success) setRecentNotes(json.notes || []);
-      else setRecentNotes([]);
-    } catch (err) {
-      console.error('Failed to fetch notes', err);
-      setRecentNotes([]);
-    }
-  };
-
-  /**
-   * Fetch patient details from backend when not provided via props.
-   * This is a fallback so the workspace can populate when only an
-   * appointment object is passed from the parent.
-   */
-  const fetchPatient = async () => {
+  const fetchCurrentVisit = async () => {
     try {
-      // If we already have a patient id, skip fetching
-      if (currentPatient.id) return;
+      setLoading(true);
+      setError(null);
 
-      // Try to infer patient id from appointment fields
-      const raw = appointment?.patientId || appointment?.Patient_id || appointment?.patient_id || appointment?.PatientID || appointment?.patientID || appointment?.Patient || null;
-      if (!raw) return;
+      if (!appointmentId) {
+        throw new Error('No appointment ID available');
+      }
 
-      const numericMatch = String(raw).match(/(\d+)/);
-      const useIdParam = /\D/.test(String(raw));
-      const param = useIdParam ? `id=${encodeURIComponent(String(raw))}` : `patient_id=${encodeURIComponent(numericMatch ? numericMatch[0] : String(raw))}`;
-
-      const res = await fetch(`/api/doctor_api/patients/get-by-id.php?${param}`, { credentials: 'include' });
+      const res = await fetch(
+        `/api/doctor_api/clinical/get-patient-details.php?appointment_id=${appointmentId}`,
+        { credentials: 'include' }
+      );
+      
       const json = await res.json();
-      if (json && json.success) {
-        // merge fetched patient into currentPatient state by mutating via setRecentNotes side-effect
-        // but ClinicalWorkSpace receives `patient` as prop; to keep simple, if parent didn't pass patient
-        // we can update local variables by copying values into stateful areas that rely on currentPatient.
-        // The simplest is to setRecentNotes/ vitals won't change; instead we rely on the parent to pass patient when available.
-        // However, to immediately reflect patient info in the header, we patch the DOM by updating a small local state.
-        // Add a lightweight localPatient state if not present.
-        setLocalPatient(prev => ({ ...(prev || {}), ...json.patient }));
+      
+      if (json.success && json.has_visit) {
+        setCurrentVisit(json.visit);
+        setCurrentVitals(json.vitals || {});
+        setPatientInfo(json.patient);
+        setHasCheckedIn(true);
+        
+        // Pre-fill note if there's existing treatment text
+        if (json.visit.treatment) {
+          setClinicalNote(json.visit.treatment);
+        }
+      } else if (json.has_visit === false) {
+        // Patient hasn't checked in yet
+        setHasCheckedIn(false);
+        setError('Patient has not checked in yet. Vitals and visit details will appear after check-in.');
+      } else {
+        throw new Error(json.error || 'Failed to load visit');
       }
     } catch (err) {
-      console.error('Failed to fetch patient details', err);
+      console.error('Failed to fetch visit', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fetchVitals = async () => {
-      try {
-      const pid = currentPatient.id;
-      // prefer numeric patient_id; fall back to appointment id if available
-      let qs = '';
-      if (currentAppointment.id) {
-        qs = `appointment_id=${encodeURIComponent(currentAppointment.id)}`;
-      } else if (pid && /^\d+$/.test(String(pid))) {
-        qs = `patient_id=${encodeURIComponent(String(pid))}`;
-      } else if (pid) {
-        const m = String(pid).match(/(\d+)/);
-        if (m) qs = `patient_id=${encodeURIComponent(m[1])}`;
-      }
-
-      if (!qs) {
-        console.warn('ClinicalWorkSpace: no numeric patient_id or appointment_id available to fetch vitals');
-        setVitalsHistory([]);
-        return;
-      }
-
-      const res = await fetch(`http://localhost:8080/doctor_api/clinical/get-vitals.php?${qs}`, { credentials: 'include' });
+  /**
+   * Fetch patient history (all previous visits)
+   */
+  const fetchPatientHistory = async () => {
+    if (!patientId) return;
+    
+    try {
+      const res = await fetch(
+        `/api/doctor_api/clinical/get-notes.php?patient_id=${patientId}`,
+        { credentials: 'include' }
+      );
       const json = await res.json();
-      if (json && json.success) setVitalsHistory(json.vitals || []);
-      else setVitalsHistory([]);
+      
+      if (json.success) {
+        setVisitHistory(json.notes || []);
+      }
     } catch (err) {
-      console.error('Failed to fetch vitals', err);
-      setVitalsHistory([]);
+      console.error('Failed to fetch history', err);
     }
   };
 
+  /**
+   * Fetch patient medications
+   */
+  const fetchMedications = async () => {
+    if (!patientId) return;
+    
+    try {
+      // Use the clinical patient-details endpoint (proxied) so we get
+      // medical/medication history and current medications in one call.
+      const res = await fetch(
+        `/api/doctor_api/clinical/get-patient-details.php?patient_id=${patientId}`,
+        { credentials: 'include' }
+      );
+      const json = await res.json();
+      
+      if (json.success) {
+        setMedications(json.patient.currentMedications || []);
+        setConditions(json.patient.chronicConditions || []);
+        // optional: medical history (past diagnoses / procedures)
+        setMedicalHistoryList(json.patient.medicalHistory || []);
+        // optional: medication history (past meds and durations)
+        setMedicationHistoryList(json.patient.medicationHistory || []);
+        // If the clinical endpoint included vitals and a most recent visit, use them
+        if (json.vitals) {
+          setCurrentVitals(json.vitals || {});
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch medications', err);
+    }
+  };
+
+  /**
+   * Save clinical note to PatientVisit.Treatment
+   */
+  const handleSaveNote = async () => {
+    if (!currentVisit) {
+      alert('Cannot save note: No visit record found. Patient must check in first.');
+      return;
+    }
+
+    if (!clinicalNote.trim()) {
+      alert('Please enter a note before saving.');
+      return;
+    }
+
+    try {
+      const payload = {
+        visit_id: currentVisit.visit_id,
+        appointment_id: currentVisit.appointment_id,
+        note_text: clinicalNote
+      };
+
+      const res = await fetch('/api/doctor_api/clinical/save-note.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      
+      const json = await res.json();
+      
+      if (json.success) {
+        alert('Clinical note saved successfully!');
+        // Refresh the visit to show updated info
+        fetchCurrentVisit();
+        fetchPatientHistory(); // Refresh history
+      } else {
+        alert('Failed to save note: ' + (json.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Save note failed', err);
+      alert('Network error while saving note');
+    }
+  };
+
+  // Load data on mount
   useEffect(() => {
-    // fetch notes, vitals, and patient fallback when component mounts or patient changes
-    fetchPatient();
-    fetchNotes();
-    fetchVitals();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPatient.id]);
+    if (appointmentId) {
+      fetchCurrentVisit();
+    }
+    if (patientId) {
+      fetchPatientHistory();
+      fetchMedications();
+    }
+  }, [appointmentId, patientId]);
 
   /**
    * NOTES TAB - Clinical documentation
    */
   const NotesTab = () => (
     <div className="notes-tab">
-      <div className="note-templates">
-        <h4>Quick Templates</h4>
-        <div className="template-buttons">
-          <button 
-            className="template-btn"
-            onClick={() => setClinicalNote('Chief Complaint:\n\nHistory of Present Illness:\n\nPhysical Examination:\n\nAssessment:\n\nPlan:\n')}
-          >
-            SOAP Note
-          </button>
-          <button 
-            className="template-btn"
-            onClick={() => setClinicalNote('Patient presents for follow-up visit.\n\nCurrent status:\n\nMedication review:\n\nRecommendations:\n')}
-          >
-            Follow-up
-          </button>
-          <button 
-            className="template-btn"
-            onClick={() => setClinicalNote('Annual physical examination\n\nReview of Systems:\n- Constitutional:\n- Cardiovascular:\n- Respiratory:\n- GI:\n\nScreenings performed:\n')}
-          >
-            Annual Physical
-          </button>
+      {!hasCheckedIn ? (
+        <div className="alert alert-warning">
+          <AlertCircle size={20} />
+          <p>Patient has not checked in yet. Clinical notes can be added after check-in.</p>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="note-templates">
+            <h4>Quick Templates</h4>
+            <div className="template-buttons">
+              <button 
+                className="template-btn"
+                onClick={() => setClinicalNote('Chief Complaint:\n\nHistory of Present Illness:\n\nPhysical Examination:\n\nAssessment:\n\nPlan:\n')}
+              >
+                SOAP Note
+              </button>
+              <button 
+                className="template-btn"
+                onClick={() => setClinicalNote('Patient presents for follow-up visit.\n\nCurrent status:\n\nMedication review:\n\nRecommendations:\n')}
+              >
+                Follow-up
+              </button>
+              <button 
+                className="template-btn"
+                onClick={() => setClinicalNote('Annual physical examination\n\nReview of Systems:\n- Constitutional:\n- Cardiovascular:\n- Respiratory:\n- GI:\n\nScreenings performed:\n')}
+              >
+                Annual Physical
+              </button>
+            </div>
+          </div>
 
-      <div className="note-editor">
-        <div className="editor-header">
-          <h4>Clinical Note</h4>
-          <span className="note-date">{new Date().toLocaleDateString()}</span>
-        </div>
-        <textarea
-          className="note-textarea"
-          value={clinicalNote}
-          onChange={(e) => setClinicalNote(e.target.value)}
-          placeholder="Begin typing your clinical note here...
+          <div className="note-editor">
+            <div className="editor-header">
+              <h4>Clinical Note</h4>
+              <span className="note-date">{new Date().toLocaleDateString()}</span>
+            </div>
+            <textarea
+              className="note-textarea"
+              value={clinicalNote}
+              onChange={(e) => setClinicalNote(e.target.value)}
+              placeholder="Begin typing your clinical note here...
 
 Use templates above for structured documentation."
-        />
-      </div>
+            />
+          </div>
 
-      <div className="note-actions">
-        <button className="btn-save" onClick={handleSaveNote}>
-          <Save size={18} />
-          Save Note
-        </button>
-        <button className="btn-cancel" onClick={() => setClinicalNote('')}>
-          <X size={18} />
-          Clear
-        </button>
-      </div>
+          <div className="note-actions">
+            <button className="btn-save" onClick={handleSaveNote}>
+              <Save size={18} />
+              Save Note
+            </button>
+            <button className="btn-cancel" onClick={() => setClinicalNote('')}>
+              <X size={18} />
+              Clear
+            </button>
+          </div>
+
+          {currentVisit && currentVisit.last_updated && (
+            <div className="note-metadata">
+              <small>
+                Last updated: {new Date(currentVisit.last_updated).toLocaleString()} 
+                {currentVisit.updated_by && ` by ${currentVisit.updated_by}`}
+              </small>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Previous Notes Section */}
       <div className="previous-notes">
         <h4>Recent Visit Notes</h4>
-        {recentNotes.length === 0 ? (
+        {visitHistory.length === 0 ? (
           <div className="empty">No previous notes found</div>
         ) : (
-          recentNotes.map((n, idx) => (
+          visitHistory.map((v, idx) => (
             <div key={idx} className="note-card">
               <div className="note-card-header">
-                <span className="note-date">{n.date || ''}</span>
-                <span className="note-provider">{n.doctor_name || ''}</span>
+                <span className="note-date">
+                  {v.date ? new Date(v.date).toLocaleDateString() : 'Unknown date'}
+                </span>
+                <span className="note-provider">{v.doctor_name || 'Unknown doctor'}</span>
               </div>
-              <p className="note-preview">{n.note_text || n.diagnosis || ''}</p>
+              <div className="note-card-body">
+                <strong>{v.reason || 'Visit'}</strong>
+                {v.diagnosis && (
+                  <div className="note-diagnosis">
+                    <em>Diagnosis:</em> {typeof v.diagnosis === 'string' ? v.diagnosis : JSON.stringify(v.diagnosis)}
+                  </div>
+                )}
+                <p className="note-preview">{v.note_text || v.treatment || 'No notes recorded'}</p>
+              </div>
             </div>
           ))
         )}
       </div>
-    </div>
+          </div>
   );
 
   /**
-   * VITALS TAB - Record patient vital signs
+   * VITALS TAB - View vitals recorded by nurses (read-only)
    */
   const VitalsTab = () => (
     <div className="vitals-tab">
-      <div className="vitals-grid">
-        {/* Blood Pressure */}
-        <div className="vital-card">
-          <div className="vital-icon">
-            <Heart size={24} />
-          </div>
-          <label>Blood Pressure</label>
-          <input
-            type="text"
-            placeholder="120/80"
-            value={vitals.bloodPressure}
-            onChange={(e) => handleVitalChange('bloodPressure', e.target.value)}
-          />
-          <span className="vital-unit">mmHg</span>
+      {!hasCheckedIn ? (
+        <div className="alert alert-warning">
+          <AlertCircle size={20} />
+          <p>Patient has not checked in yet. Vitals will appear after nursing staff records them.</p>
         </div>
-
-        {/* Heart Rate */}
-        <div className="vital-card">
-          <div className="vital-icon">
-            <Activity size={24} />
+      ) : (
+        <>
+          <div className="vitals-info-banner">
+            <AlertCircle size={18} />
+            <span>Vitals are recorded by nursing staff and are read-only for doctors</span>
           </div>
-          <label>Heart Rate</label>
-          <input
-            type="number"
-            placeholder="72"
-            value={vitals.heartRate}
-            onChange={(e) => handleVitalChange('heartRate', e.target.value)}
-          />
-          <span className="vital-unit">bpm</span>
-        </div>
 
-        {/* Temperature */}
-        <div className="vital-card">
-          <div className="vital-icon">
-            <Thermometer size={24} />
+          <div className="vitals-grid">
+            {/* Blood Pressure */}
+            <div className="vital-card readonly">
+              <div className="vital-icon">
+                <Heart size={24} />
+              </div>
+              <label>Blood Pressure</label>
+              <div className="vital-value">
+                {currentVitals.blood_pressure || currentVisit?.vitals?.blood_pressure || 'Not recorded'}
+              </div>
+              <span className="vital-unit">mmHg</span>
+            </div>
+
+            {/* Temperature */}
+            <div className="vital-card readonly">
+              <div className="vital-icon">
+                <Thermometer size={24} />
+              </div>
+              <label>Temperature</label>
+              <div className="vital-value">
+                {currentVitals.temperature ? `${currentVitals.temperature}°F` : (currentVisit?.vitals?.temperature ? `${currentVisit.vitals.temperature}°F` : 'Not recorded')}
+              </div>
+              <span className="vital-unit">°F</span>
+            </div>
           </div>
-          <label>Temperature</label>
-          <input
-            type="number"
-            step="0.1"
-            placeholder="98.6"
-            value={vitals.temperature}
-            onChange={(e) => handleVitalChange('temperature', e.target.value)}
-          />
-          <span className="vital-unit">°F</span>
-        </div>
 
-        {/* Respiratory Rate */}
-        <div className="vital-card">
-          <div className="vital-icon">
-            <Wind size={24} />
-          </div>
-          <label>Respiratory Rate</label>
-          <input
-            type="number"
-            placeholder="16"
-            value={vitals.respiratoryRate}
-            onChange={(e) => handleVitalChange('respiratoryRate', e.target.value)}
-          />
-          <span className="vital-unit">breaths/min</span>
-        </div>
-
-        {/* Oxygen Saturation */}
-        <div className="vital-card">
-          <div className="vital-icon">
-            <Droplet size={24} />
-          </div>
-          <label>O₂ Saturation</label>
-          <input
-            type="number"
-            placeholder="98"
-            value={vitals.oxygenSaturation}
-            onChange={(e) => handleVitalChange('oxygenSaturation', e.target.value)}
-          />
-          <span className="vital-unit">%</span>
-        </div>
-
-        {/* Weight */}
-        <div className="vital-card">
-          <div className="vital-icon">
-            <User size={24} />
-          </div>
-          <label>Weight</label>
-          <input
-            type="number"
-            placeholder="170"
-            value={vitals.weight}
-            onChange={(e) => handleVitalChange('weight', e.target.value)}
-          />
-          <span className="vital-unit">lbs</span>
-        </div>
-      </div>
-
-      <button className="btn-save-vitals" disabled title="Only nursing staff can record vitals">
-        <Save size={18} />
-        Vitals (nurses only)
-      </button>
+          {(currentVitals.recorded_by || currentVisit?.vitals?.recorded_by) && (
+            <div className="vitals-recorded-by">
+              <small>Recorded by: {currentVitals.recorded_by || currentVisit.vitals.recorded_by}</small>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Vital Signs History */}
       <div className="vitals-history">
@@ -462,20 +369,18 @@ Use templates above for structured documentation."
           <div className="history-row header">
             <span>Date</span>
             <span>BP</span>
-            <span>HR</span>
             <span>Temp</span>
-            <span>SpO₂</span>
+            <span>Recorded By</span>
           </div>
-          {vitalsHistory.length === 0 ? (
+          {visitHistory.length === 0 ? (
             <div className="history-row"><span className="empty">No vitals recorded</span></div>
           ) : (
-            vitalsHistory.map((v, i) => (
+            visitHistory.map((v, i) => (
               <div key={i} className="history-row">
-                <span>{v.date || ''}</span>
+                <span>{v.date ? new Date(v.date).toLocaleDateString() : '-'}</span>
                 <span>{v.blood_pressure || '-'}</span>
-                <span>{v.heart_rate || '-'}</span>
                 <span>{v.temperature ? `${v.temperature}°F` : '-'}</span>
-                <span>{v.oxygen_saturation ? `${v.oxygen_saturation}%` : '-'}</span>
+                <span>{v.recorded_by || '-'}</span>
               </div>
             ))
           )}
@@ -485,7 +390,7 @@ Use templates above for structured documentation."
   );
 
   /**
-   * HISTORY TAB - Patient medical history and past visits
+   * HISTORY TAB - Patient medical history
    */
   const HistoryTab = () => (
     <div className="history-tab">
@@ -496,92 +401,120 @@ Use templates above for structured documentation."
           Chronic Conditions
         </h4>
         <div className="condition-list">
-          {currentPatient.chronicConditions.map((condition, index) => (
-            <div key={index} className="condition-tag">
-              {condition}
-            </div>
-          ))}
+          {conditions.length === 0 ? (
+            <div className="empty">No chronic conditions recorded</div>
+          ) : (
+            conditions.map((condition, index) => (
+              <div key={index} className="condition-tag">
+                {condition}
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-  {/* Current Medications */}
+      {/* Current Medications */}
       <div className="history-section">
         <h4>
           <Pill size={20} />
           Current Medications
         </h4>
         <div className="medication-list">
-          {currentPatient.currentMedications.map((med, index) => (
-            <div key={index} className="medication-item">
-              <div className="med-icon">💊</div>
-              <div>
-                <strong>{typeof med === 'string' ? med : (med.name || med.medication_name || 'Medication')}</strong>
-                {typeof med !== 'string' && med.frequency && <div className="med-info">{med.frequency}</div>}
-                {typeof med !== 'string' && med.prescribed_by && <div className="med-info">Prescribed by: {med.prescribed_by}</div>}
+          {medications.length === 0 ? (
+            <div className="empty">No current medications</div>
+          ) : (
+            medications.map((med, index) => (
+              <div key={index} className="medication-item">
+                <div className="med-icon">💊</div>
+                <div>
+                  <strong>
+                    {typeof med === 'string' ? med : (med.medication_name || 'Medication')}
+                  </strong>
+                  {typeof med !== 'string' && med.dosage && (
+                    <div className="med-info">{med.dosage}</div>
+                  )}
+                  {typeof med !== 'string' && med.frequency && (
+                    <div className="med-info">{med.frequency}</div>
+                  )}
+                  {typeof med !== 'string' && med.prescribed_by && (
+                    <div className="med-info">Prescribed by: {med.prescribed_by}</div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
-      {/* Visit History (driven from PatientVisit via backend) */}
+      {/* Medical History (past diagnoses / procedures) */}
+      <div className="history-section">
+        <h4>
+          <Clipboard size={20} />
+          Medical History
+        </h4>
+        <div className="medical-history-list">
+          {medicalHistoryList.length === 0 ? (
+            <div className="empty">No past medical history recorded</div>
+          ) : (
+            medicalHistoryList.map((h, i) => (
+              <div key={i} className="medical-history-item">
+                <strong>{h.condition || h.Condition_Name || ''}</strong>
+                {h.diagnosis_date && (
+                  <div className="mh-date">Diagnosed: {new Date(h.diagnosis_date).toLocaleDateString()}</div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Medication History (previous/long-term drugs) */}
+      <div className="history-section">
+        <h4>
+          <TestTube size={20} />
+          Medication History
+        </h4>
+        <div className="medication-history-list">
+          {medicationHistoryList.length === 0 ? (
+            <div className="empty">No medication history recorded</div>
+          ) : (
+            medicationHistoryList.map((m, idx) => (
+              <div key={idx} className="med-history-item">
+                <strong>{m.drug || m.Drug_name || ''}</strong>
+                {m.notes && <div className="mh-notes">{m.notes}</div>}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Visit History */}
       <div className="history-section">
         <h4>
           <Clock size={20} />
           Visit History
         </h4>
         <div className="visit-timeline">
-          {((currentPatient.medicalHistory && currentPatient.medicalHistory.length > 0) ? currentPatient.medicalHistory : recentNotes).length === 0 ? (
+          {visitHistory.length === 0 ? (
             <div className="empty">No visit history found</div>
           ) : (
-            (currentPatient.medicalHistory && currentPatient.medicalHistory.length > 0 ? currentPatient.medicalHistory : recentNotes).map((v, idx) => {
-              // Attempt to extract a date from common fields returned by PatientVisit
-              const rawDate = v.date || v.visit_date || v.Date || v.created_at || v.timestamp || v.visitTimestamp || '';
-              const date = rawDate ? new Date(rawDate).toLocaleDateString() : 'Unknown date';
-              const title = v.diagnosis || v.reason || v.treatment || v.note_title || 'Visit';
-              const noteText = v.note_text || v.notes || v.treatment || '';
-
-              // Try to find vitals for this visit by matching appointment_id or date
-              const relatedVitals = vitalsHistory.filter(h => {
-                if (!h) return false;
-                // match by explicit visit id if provided
-                if (v.id && (h.patient_visit_id === v.id || h.visit_id === v.id || h.patientVisitId === v.id)) return true;
-                // match by appointment id
-                if (v.appointment_id && (h.appointment_id === v.appointment_id || h.appointmentId === v.appointment_id)) return true;
-                // match by date (loose)
-                const hv = h.date || h.visit_date || h.created_at || h.timestamp || '';
-                if (hv && rawDate) {
-                  try {
-                    const d1 = new Date(hv).toDateString();
-                    const d2 = new Date(rawDate).toDateString();
-                    if (d1 === d2) return true;
-                  } catch (e) {
-                    // ignore parse errors
-                  }
-                }
-                return false;
-              });
+            visitHistory.map((v, idx) => {
+              const date = v.date ? new Date(v.date).toLocaleDateString() : 'Unknown date';
+              const title = v.reason || 'Visit';
+              const diagnosis = typeof v.diagnosis === 'string' ? v.diagnosis : (v.diagnosis ? JSON.stringify(v.diagnosis) : '');
+              const noteText = v.note_text || v.treatment || '';
 
               return (
                 <div className="visit-item" key={idx}>
                   <div className="visit-date">{date}</div>
                   <div className="visit-content">
                     <strong>{title}</strong>
+                    {diagnosis && <div className="visit-diagnosis">Diagnosis: {diagnosis}</div>}
                     {noteText && <p>{noteText}</p>}
-
-                    {relatedVitals.length > 0 && (
+                    {v.blood_pressure && (
                       <div className="visit-vitals">
-                        <small>Recorded Vitals:</small>
-                        <div className="vitals-inline">
-                          {relatedVitals.map((rv, j) => (
-                            <div className="vitals-set" key={j}>
-                              <span>BP: {rv.blood_pressure || rv.bloodPressure || '-'}</span>
-                              <span>HR: {rv.heart_rate || rv.heartRate || '-'}</span>
-                              <span>Temp: {rv.temperature ? `${rv.temperature}°F` : '-'}</span>
-                              <span>SpO₂: {rv.oxygen_saturation || rv.spO2 || '-'}</span>
-                            </div>
-                          ))}
-                        </div>
+                        <small>Vitals: BP {v.blood_pressure}</small>
+                        {v.temperature && <small>, Temp {v.temperature}°F</small>}
                       </div>
                     )}
                   </div>
@@ -592,26 +525,14 @@ Use templates above for structured documentation."
         </div>
       </div>
 
-      {/* Lab Results (no static mock data) */}
+      {/* Lab Results */}
       <div className="history-section">
         <h4>
           <TestTube size={20} />
           Recent Lab Results
         </h4>
         <div className="lab-results">
-          {currentPatient.labs && currentPatient.labs.length > 0 ? (
-            currentPatient.labs.map((lab, idx) => (
-              <div className="lab-item" key={idx}>
-                <span className="lab-name">{lab.name || lab.testName || 'Lab Test'}</span>
-                <span className="lab-value">{lab.value || lab.result || ''}</span>
-                <span className={`lab-status ${lab.status ? lab.status.toLowerCase() : 'unknown'}`}>
-                  {lab.status || ''}
-                </span>
-              </div>
-            ))
-          ) : (
-            <div className="empty">No recent lab results</div>
-          )}
+          <div className="empty">No recent lab results</div>
         </div>
       </div>
     </div>
@@ -633,6 +554,28 @@ Use templates above for structured documentation."
     }
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="clinical-workspace">
+        <div className="loading-state">
+          <Activity size={48} className="spinning" />
+          <p>Loading patient visit...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Use patient info from current visit or appointment
+  const displayPatient = patientInfo || {
+    name: appointment?.patientName || 'Unknown Patient',
+    age: null,
+    gender: '',
+    dob: '',
+    blood_type: '',
+    allergies: ''
+  };
+
   return (
     <div className="clinical-workspace">
       {/* Back Button */}
@@ -643,6 +586,14 @@ Use templates above for structured documentation."
         </button>
       )}
 
+      {/* Error Banner */}
+      {error && !hasCheckedIn && (
+        <div className="alert alert-warning">
+          <AlertCircle size={20} />
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* Patient Header Card */}
       <div className="patient-header">
         <div className="patient-header-left">
@@ -650,11 +601,20 @@ Use templates above for structured documentation."
             <User size={32} />
           </div>
           <div className="patient-info">
-            <h2>{currentPatient.name}</h2>
+            <h2>{displayPatient.name}</h2>
             <div className="patient-meta">
-              <span><User size={14} /> {currentPatient.age} yrs, {currentPatient.gender}</span>
-              <span><Calendar size={14} /> DOB: {currentPatient.dob}</span>
-              <span>🩸 {currentPatient.bloodType}</span>
+              {displayPatient.age && (
+                <span><User size={14} /> {displayPatient.age} yrs</span>
+              )}
+              {displayPatient.gender && (
+                <span>{displayPatient.gender}</span>
+              )}
+              {displayPatient.dob && (
+                <span><Calendar size={14} /> DOB: {displayPatient.dob}</span>
+              )}
+              {displayPatient.blood_type && (
+                <span>🩸 {displayPatient.blood_type}</span>
+              )}
             </div>
           </div>
         </div>
@@ -663,26 +623,53 @@ Use templates above for structured documentation."
           <div className="appointment-info">
             <div className="info-item">
               <Clock size={16} />
-              <span>{currentAppointment.time}</span>
+              <span>{appointment?.time || 'No time'}</span>
             </div>
             <div className="info-item">
               <FileText size={16} />
-              <span>{currentAppointment.reason}</span>
+              <span>{appointment?.reason || currentVisit?.reason || 'No reason'}</span>
             </div>
-            <div className="info-item">
-              <span className={`status-badge status-${currentAppointment.status?.toLowerCase().replace(' ', '-')}`}>
-                {currentAppointment.status}
-              </span>
-            </div>
+            {currentVisit && (
+              <div className="info-item">
+                <span className={`status-badge status-${currentVisit.status?.toLowerCase().replace(' ', '-')}`}>
+                  {currentVisit.status}
+                </span>
+              </div>
+            )}
+            {!hasCheckedIn && (
+              <div className="info-item">
+                <span className="status-badge status-pending">
+                  Not Checked In
+                </span>
+              </div>
+            )}
           </div>
+          
         </div>
       </div>
 
       {/* Allergies Alert */}
-      {currentPatient.allergies && currentPatient.allergies !== 'None' && (
+      {displayPatient.allergies && displayPatient.allergies !== 'None' && displayPatient.allergies !== 'No Known Allergies' && (
         <div className="allergies-alert">
           <AlertCircle size={20} />
-          <span><strong>ALLERGIES:</strong> {currentPatient.allergies}</span>
+          <span><strong>ALLERGIES:</strong> {displayPatient.allergies}</span>
+        </div>
+      )}
+
+      {/* Visit Info Banner (when checked in) */}
+      {hasCheckedIn && currentVisit && (
+        <div className="visit-info-banner">
+          <div className="visit-info-item">
+            <strong>Department:</strong> {currentVisit.department || 'N/A'}
+          </div>
+          <div className="visit-info-item">
+            <strong>Visit Date:</strong> {currentVisit.date ? new Date(currentVisit.date).toLocaleString() : 'N/A'}
+          </div>
+          {currentVisit.nurse_name && (
+            <div className="visit-info-item">
+              <strong>Nurse:</strong> {currentVisit.nurse_name}
+            </div>
+          )}
         </div>
       )}
 
