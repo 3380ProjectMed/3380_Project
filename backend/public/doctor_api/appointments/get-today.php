@@ -13,7 +13,13 @@ try {
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
+    if ($_SESSION['role'] === 'ADMIN' || isset($_GET['doctor_id'])) {
+  $doctor_id = intval($_GET['doctor_id']);
+} else {
+  // Resolve from logged-in user
+  $doctor_id = get_doctor_id_from_session();
+}
     $user_id = (int)$_SESSION['uid'];
     
     // Resolve the doctor's id for this logged-in user

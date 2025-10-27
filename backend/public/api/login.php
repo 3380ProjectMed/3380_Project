@@ -5,7 +5,12 @@ declare(strict_types=1);
 // Ensure CORS headers are sent for requests coming from the dev server
 require_once __DIR__ . '/../cors.php';
 
-session_start();
+// Start session with explicit cookie options to match other endpoints (me.php)
+session_start([
+  'cookie_httponly' => true,
+  'cookie_secure'   => !empty($_SERVER['HTTPS']),
+  'cookie_samesite' => 'Lax',
+]);
 // Content-Type header is set by cors.php, but keep it here for clarity
 header('Content-Type: application/json');
 
@@ -76,12 +81,12 @@ if (!$ok) {
 }
 
 $_SESSION['uid']      = (int)$row['user_id'];
-$_SESSION['role']     = $row['role'];
+$_SESSION['role']     = strtoupper($row['role']); // Force uppercase
 $_SESSION['username'] = $row['username'];
 
 echo json_encode([
   'user_id'  => (int)$row['user_id'],
   'username' => $row['username'],
   'email'    => $row['email'],
-  'role'     => $row['role'],
+  'role'     => strtoupper($row['role']), // Force uppercase
 ]);

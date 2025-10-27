@@ -60,7 +60,7 @@ export default function AppointmentReport() {
         }
       });
 
-      const response = await fetch(`/api/doctor_api/reports/get-appointment-report.php?${queryParams}`);
+  const response = await fetch(`/api/doctor_api/reports/get-appointment-report.php?${queryParams}`, { credentials: 'include' });
 
       const contentType = response.headers.get('content-type') || '';
 

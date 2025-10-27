@@ -64,7 +64,7 @@ $mysqli->set_charset('utf8mb4');
 // Prepare statement and handle prepare errors gracefully
 $sql = 'SELECT ua.user_id, ua.username, ua.email, ua.role, d.Doctor_id AS doctor_id
   FROM user_account ua
-  LEFT JOIN Doctor d ON ua.email = d.Email
+  LEFT JOIN Doctor d ON ua.email = d.Email AND ua.role = "DOCTOR"
   WHERE ua.user_id = ?';
 
 $stmt = $mysqli->prepare($sql);
@@ -83,6 +83,7 @@ if (!$stmt->execute()) {
   $mysqli->close();
   exit;
 }
+
 
 // Attempt to get results via get_result(); if it's not available (e.g. no mysqlnd),
 // fall back to bind_result() to build the row manually.

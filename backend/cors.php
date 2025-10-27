@@ -1,44 +1,31 @@
 <?php
-header("Access-Control-Allow-Origin: http://localhost:5173");
-header("Access-Control-Allow-Credentials: true"); // ⭐ Must be true
+// Flexible CORS helper that allows dev servers on localhost using different ports
+// If a request comes from a localhost origin (including 127.0.0.1) we echo that
+// origin back in Access-Control-Allow-Origin so browsers will accept cookies.
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$allowOrigin = 'http://localhost:5173'; // default fallback
+
+// Allow any localhost origin (http) or 127.0.0.1. Adjust as needed for your dev ports.
+if ($origin) {
+    if (preg_match('#^https?://localhost(?::[0-9]+)?$#', $origin) || preg_match('#^https?://127\\.0\\.0\\.1(?::[0-9]+)?$#', $origin)) {
+        $allowOrigin = $origin;
+    }
+}
+
+header("Access-Control-Allow-Origin: $allowOrigin");
+header("Access-Control-Allow-Credentials: true"); // must be true for cookies
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: application/json; charset=UTF-8");
 
-/**
- * Minimal CORS helper for PHP APIs.
- * - Whitelists allowed origins (dev + prod).
- * - Supports credentials.
- * - Handles OPTIONS preflight.
- */
-
-$allowedOrigins = [
-    'http://localhost:5173',                     // Vite dev
-    'https://medconnect.azurewebsites.net',      // App Service
-    // 'https://your-custom-domain.tld',         // add if/when you map a custom domain
-];
-
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if ($origin && in_array($origin, $allowedOrigins, true)) {
-    header("Access-Control-Allow-Origin: {$origin}");
-    header('Vary: Origin'); // caching correctness when multiple origins
-    header('Access-Control-Allow-Credentials: true'); // if you use cookies/sessions
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    // Preflight request — reply with allowed headers/methods and exit
+    http_response_code(200);
+    if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']))
+        header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+    if (isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']))
+        header("Access-Control-Allow-Headers: {$_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']}");
+    exit(0);
 }
-
-// Reflect headers the browser asked for, but keep a safe default
-$reqHeaders = $_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'] ?? 'Content-Type, Authorization';
-
-// Methods you actually support; keep this tight if possible
-$allowMethods = 'GET, POST, PUT, DELETE, OPTIONS';
-
-// Preflight
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
-    header("Access-Control-Allow-Methods: {$allowMethods}");
-    header("Access-Control-Allow-Headers: {$reqHeaders}");
-    header('Access-Control-Max-Age: 600'); // cache preflight for 10 minutes
-    http_response_code(204);
-    exit;
-}
-
-// For JSON APIs, let the endpoint set Content-Type. If you want a default:
-// header('Content-Type: application/json; charset=utf-8');
+?>

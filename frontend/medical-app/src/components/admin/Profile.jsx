@@ -3,13 +3,12 @@ import { useAuth } from '../../auth/AuthProvider';
 import { User, Mail, Phone, Save } from 'lucide-react';
 import '../doctor/Profile.css';
 
-function AdminProfile() {
+function Profile() {
   const auth = useAuth();
   const [profile, setProfile] = useState({
     firstName: '',
     lastName: '',
-    email: '',
-    phone: ''
+    email: ''
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -20,16 +19,20 @@ function AdminProfile() {
       setLoading(true);
       try {
         if (auth.loading) return;
-        // Admin profile endpoint may be same as doctor profile; fetch user details via auth
-        const user = auth.user || {};
-        setProfile({
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          email: user.email || '',
-          phone: user.phone || ''
-        });
+        // Always use the admin API; backend will resolve the profile by session
+        const url = `/api/admin_api/profile/get.php`;
+
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) {
+          console.error('Profile GET failed', res.status, await res.text());
+          return;
+        }
+        const json = await res.json();
+        if (json.success && json.profile) {
+          setProfile(prev => ({ ...prev, ...json.profile }));
+        }
       } catch (err) {
-        console.error('Failed to load admin profile', err);
+        console.error('Failed to load profile', err);
       } finally {
         setLoading(false);
       }
@@ -45,8 +48,23 @@ function AdminProfile() {
     setSaving(true);
     setStatus(null);
     try {
-      // Admin profile save - backend not yet implemented for admins; mimic success
-      setStatus('saved');
+      const body = {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+      };
+          const res = await fetch('/api/admin_api/profile/update.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      if (json.success) {
+        setStatus('saved');
+      } else {
+        setStatus('error');
+      }
     } catch (err) {
       console.error('Save failed', err);
       setStatus('error');
@@ -59,8 +77,8 @@ function AdminProfile() {
   return (
     <div className="profile-page">
       <div className="profile-header">
-        <h1>Admin Profile</h1>
-        <p>Manage your administrator account</p>
+        <h1>My Profile</h1>
+        <p>Manage your personal information</p>
       </div>
 
       {loading ? (
@@ -99,4 +117,4 @@ function AdminProfile() {
   );
 }
 
-export default AdminProfile;
+export default Profile;
