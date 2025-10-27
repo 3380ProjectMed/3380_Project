@@ -1,249 +1,194 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Search, Calendar, Clock, User, FileText, CreditCard, Phone, Globe, UserPlus, Save, AlertCircle } from 'lucide-react';
+import { ArrowLeft, User, Calendar, Clock, Phone, Globe, Search, Check, AlertCircle } from 'lucide-react';
+import * as API from '../../api/receptionistApi';
 import './AppointmentBooking.css';
 
 /**
- * AppointmentBooking Component
+ * AppointmentBooking Component (Backend Integrated)
  * 
- * Create appointments with REQUIRED booking_channel field
- * 
- * Database Tables:
- * - Appointment (Appointment_id, Patient_id, Doctor_id, Office_id, Appointment_date, 
- *               Date_created, Reason_for_visit, booking_channel)
- * - Patient (Patient_ID, First_Name, Last_Name, EmergencyContact, Email)
- * - Doctor (Doctor_id, First_Name, Last_Name, Specialty)
- * - Specialty (specialty_id, specialty_name)
- * - Office (Office_ID, Name, City, State, address)
- * - patient_insurance (copay, member_id)
- * - insurance_payer (NAME)
- * 
- * INSERT INTO Appointment:
- * (Patient_id, Doctor_id, Office_id, Appointment_date, Date_created, 
- *  Reason_for_visit, booking_channel)
- * VALUES (?, ?, ?, ?, NOW(), ?, ?)
- * 
- * Props:
- * @param {Object} preSelectedPatient - Patient from search page
- * @param {Function} onBack - Return to previous page
- * @param {Function} onSuccess - Navigate after successful booking
- * @param {Number} officeId - Receptionist's Office_ID (RBAC)
- * @param {String} officeName - Office name for display
+ * Multi-step appointment booking process
+ * Integrated with backend APIs for patients, doctors, and appointments
  */
 function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, officeName }) {
-  const [step, setStep] = useState(1);
-  const [patientSearch, setPatientSearch] = useState('');
-  const [errors, setErrors] = useState({});
-
-  // Form state matching Appointment table
-  const [formData, setFormData] = useState({
-    // Appointment table fields
-    Patient_id: null,
-    Doctor_id: null,
-    Office_id: officeId, // From Staff.Work_Location
-    Appointment_date: '', // Combined date + time
-    Reason_for_visit: '',
-    booking_channel: 'phone', // ENUM('phone', 'online', 'walk-in') - REQUIRED
-    
-    // Display fields (not saved directly)
-    appointmentDate: '',
-    appointmentTime: '',
-    
-    // Patient display info
-    patientName: '',
-    patientPhone: '',
-    patientEmail: '',
-    insurancePayer: '',
-    insurancePlan: '',
-    memberID: '',
-    copay: ''
-  });
+  const [currentStep, setCurrentStep] = useState(preSelectedPatient ? 2 : 1);
+  const [selectedPatient, setSelectedPatient] = useState(preSelectedPatient);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [appointmentDate, setAppointmentDate] = useState('');
+  const [appointmentTime, setAppointmentTime] = useState('');
+  const [reasonForVisit, setReasonForVisit] = useState('');
+  const [bookingChannel, setBookingChannel] = useState('walk-in');
+  
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  
+  // Doctors state
+  const [doctors, setDoctors] = useState([]);
+  const [doctorsLoading, setDoctorsLoading] = useState(false);
+  
+  // Submission state
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState(null);
 
   /**
-   * Mock patient database (Patient table)
-   */
-  const mockPatients = [
-    { 
-      Patient_ID: 1, 
-      First_Name: 'John', 
-      Last_Name: 'Smith', 
-      EmergencyContact: '555-1001', 
-      Email: 'john.smith@email.com', 
-      dob: '1985-03-15',
-      payer_name: 'Blue Cross Blue Shield',
-      plan_name: 'BCBS Gold',
-      member_id: 'M123456789',
-      copay: 25.00
-    },
-    { 
-      Patient_ID: 2, 
-      First_Name: 'Maria', 
-      Last_Name: 'Garcia', 
-      EmergencyContact: '555-1002', 
-      Email: 'maria.garcia@email.com', 
-      dob: '1978-07-22',
-      payer_name: 'Blue Cross Blue Shield',
-      plan_name: 'BCBS Silver',
-      member_id: 'M123456790',
-      copay: 20.00
-    },
-    { 
-      Patient_ID: 3, 
-      First_Name: 'David', 
-      Last_Name: 'Johnson', 
-      EmergencyContact: '555-1003', 
-      Email: 'david.johnson@email.com', 
-      dob: '1992-11-30',
-      payer_name: 'Medicare',
-      plan_name: 'Medicare Part B',
-      member_id: 'M123456791',
-      copay: 15.00
-    },
-  ];
-
-  /**
-   * Doctors from Doctor table with Specialty join
-   * SELECT d.Doctor_id, d.First_Name, d.Last_Name, s.specialty_name
-   * FROM Doctor d
-   * JOIN Specialty s ON d.Specialty = s.specialty_id
-   * WHERE d.Work_Location = ?
-   */
-  const doctors = [
-    { Doctor_id: 1, First_Name: 'Emily', Last_Name: 'Chen', specialty_name: 'Internal Medicine' },
-    { Doctor_id: 2, First_Name: 'James', Last_Name: 'Rodriguez', specialty_name: 'Cardiology' },
-    { Doctor_id: 3, First_Name: 'Susan', Last_Name: 'Lee', specialty_name: 'Pediatrics' },
-    { Doctor_id: 4, First_Name: 'Richard', Last_Name: 'Patel', specialty_name: 'Orthopedics' },
-  ];
-
-  /**
-   * Available time slots
-   */
-  const timeSlots = [
-    '08:00 AM', '08:30 AM', '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
-    '11:00 AM', '11:30 AM', '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM',
-    '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM'
-  ];
-
-  /**
-   * Set pre-selected patient if provided
+   * Load doctors when component mounts
    */
   useEffect(() => {
-    if (preSelectedPatient) {
-      handlePatientSelect(preSelectedPatient);
-    }
-  }, [preSelectedPatient]);
+    loadDoctors();
+  }, [officeId]);
 
   /**
-   * Search patients by name, phone (EmergencyContact), or DOB
+   * Debounced patient search
    */
-  const searchPatients = () => {
-    if (!patientSearch.trim()) return [];
-    
-    const searchLower = patientSearch.toLowerCase().replace(/[^\w\s-]/g, '');
-    return mockPatients.filter(p =>
-      `${p.First_Name} ${p.Last_Name}`.toLowerCase().includes(searchLower) ||
-      p.EmergencyContact.replace(/[^\d]/g, '').includes(searchLower) ||
-      p.dob.includes(patientSearch)
-    );
-  };
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm.length >= 2 && currentStep === 1) {
+        handlePatientSearch();
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   /**
-   * Handle patient selection
+   * Load doctors for this office
    */
-  const handlePatientSelect = (patient) => {
-    setFormData(prev => ({
-      ...prev,
-      Patient_id: patient.Patient_ID,
-      patientName: `${patient.First_Name} ${patient.Last_Name}`,
-      patientPhone: patient.EmergencyContact,
-      patientEmail: patient.Email,
-      insurancePayer: patient.payer_name,
-      insurancePlan: patient.plan_name,
-      memberID: patient.member_id,
-      copay: patient.copay
-    }));
-    setPatientSearch('');
-    setStep(2);
-  };
-
-  /**
-   * Handle form input change
-   */
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+  const loadDoctors = async () => {
+    try {
+      setDoctorsLoading(true);
+      const result = await API.getDoctorsByOffice(officeId);
+      
+      if (result.success) {
+        setDoctors(result.doctors || []);
+      }
+    } catch (err) {
+      console.error('Failed to load doctors:', err);
+    } finally {
+      setDoctorsLoading(false);
     }
   };
 
   /**
-   * Validate form
+   * Search for patients
+   */
+  const handlePatientSearch = async () => {
+    try {
+      setSearchLoading(true);
+      const result = await API.searchPatients(searchTerm);
+      
+      if (result.success) {
+        setSearchResults(result.patients || []);
+      }
+    } catch (err) {
+      console.error('Patient search failed:', err);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  /**
+   * Select patient and move to step 2
+   */
+  const handleSelectPatient = (patient) => {
+    setSelectedPatient(patient);
+    setCurrentStep(2);
+  };
+
+  /**
+   * Change selected patient
+   */
+  const handleChangePatient = () => {
+    setCurrentStep(1);
+    setSelectedPatient(null);
+    setSearchTerm('');
+    setSearchResults([]);
+  };
+
+  /**
+   * Validate form before proceeding to confirmation
    */
   const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.Patient_id) newErrors.Patient_id = 'Please select a patient';
-    if (!formData.Doctor_id) newErrors.Doctor_id = 'Please select a doctor';
-    if (!formData.appointmentDate) newErrors.appointmentDate = 'Please select a date';
-    if (!formData.appointmentTime) newErrors.appointmentTime = 'Please select a time';
-    if (!formData.Reason_for_visit) newErrors.Reason_for_visit = 'Please enter reason for visit';
-    if (!formData.booking_channel) newErrors.booking_channel = 'Booking channel is required';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (!selectedDoctor) {
+      setError('Please select a doctor');
+      return false;
+    }
+    
+    if (!appointmentDate) {
+      setError('Please select an appointment date');
+      return false;
+    }
+    
+    if (!appointmentTime) {
+      setError('Please select an appointment time');
+      return false;
+    }
+    
+    if (!reasonForVisit.trim()) {
+      setError('Please enter a reason for visit');
+      return false;
+    }
+    
+    return true;
   };
 
   /**
-   * Handle form submission
+   * Move to confirmation step
    */
-  const handleSubmit = () => {
-    if (!validateForm()) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    // Combine date and time for Appointment_date
-    const appointmentDateTime = `${formData.appointmentDate} ${convertTo24Hour(formData.appointmentTime)}:00`;
-
-    // TODO: Submit to API
-    // POST /api/appointments
-    const appointmentData = {
-      Patient_id: formData.Patient_id,
-      Doctor_id: formData.Doctor_id,
-      Office_id: formData.Office_id,
-      Appointment_date: appointmentDateTime,
-      Date_created: new Date().toISOString(),
-      Reason_for_visit: formData.Reason_for_visit,
-      booking_channel: formData.booking_channel // REQUIRED FIELD
-    };
-    
-    console.log('Creating appointment:', appointmentData);
-    
-    alert('Appointment booked successfully!');
-    if (onSuccess) {
-      onSuccess();
+  const handleProceedToConfirmation = () => {
+    if (validateForm()) {
+      setError(null);
+      setCurrentStep(3);
     }
   };
 
   /**
-   * Convert 12-hour time to 24-hour format
+   * Submit appointment to backend
    */
-  const convertTo24Hour = (time12h) => {
-    const [time, modifier] = time12h.split(' ');
-    let [hours, minutes] = time.split(':');
-    
-    if (hours === '12') {
-      hours = '00';
+  const handleSubmitAppointment = async () => {
+    try {
+      setCreating(true);
+      setError(null);
+
+      // Parse time
+      const [hours, minutes] = appointmentTime.split(':');
+      
+      // Format datetime for API
+      const appointmentDateTime = API.formatDateTimeForAPI(
+        new Date(appointmentDate),
+        parseInt(hours),
+        parseInt(minutes)
+      );
+
+      const appointmentData = {
+        Patient_id: selectedPatient.Patient_ID,
+        Doctor_id: selectedDoctor.Doctor_id,
+        Office_id: officeId,
+        Appointment_date: appointmentDateTime,
+        Reason_for_visit: reasonForVisit,
+        booking_channel: bookingChannel
+      };
+
+      const result = await API.createAppointment(appointmentData);
+      
+      if (result.success) {
+        // Success! Navigate back
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        setError(result.error || 'Failed to create appointment');
+      }
+    } catch (err) {
+      console.error('Failed to create appointment:', err);
+      setError('Failed to create appointment. Please try again.');
+    } finally {
+      setCreating(false);
     }
-    
-    if (modifier === 'PM') {
-      hours = parseInt(hours, 10) + 12;
-    }
-    
-    return `${hours}:${minutes}`;
   };
 
   /**
-   * Get minimum date (today)
+   * Get minimum date for appointment (today)
    */
   const getMinDate = () => {
     return new Date().toISOString().split('T')[0];
@@ -258,316 +203,320 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
           Back
         </button>
         <div className="header-info">
-          <h1 className="page-title">
-            {formData.Patient_id ? 'Schedule Appointment' : 'New Appointment'}
-          </h1>
-          <p className="page-subtitle">
-            {step === 1 && 'Step 1: Select Patient'}
-            {step === 2 && 'Step 2: Appointment Details'}
-            {step === 3 && 'Step 3: Review & Confirm'}
-          </p>
+          <h1 className="page-title">Book Appointment</h1>
+          <p className="page-subtitle">{officeName}</p>
         </div>
       </div>
 
       {/* ===== STEP INDICATOR ===== */}
       <div className="step-indicator">
-        <div className={`step ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
-          <div className="step-number">1</div>
+        <div className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>
+          <div className="step-number">{currentStep > 1 ? <Check size={20} /> : '1'}</div>
           <span className="step-label">Patient</span>
         </div>
         <div className="step-line"></div>
-        <div className={`step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
-          <div className="step-number">2</div>
+        <div className={`step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>
+          <div className="step-number">{currentStep > 2 ? <Check size={20} /> : '2'}</div>
           <span className="step-label">Details</span>
         </div>
         <div className="step-line"></div>
-        <div className={`step ${step >= 3 ? 'active' : ''}`}>
+        <div className={`step ${currentStep >= 3 ? 'active' : ''}`}>
           <div className="step-number">3</div>
           <span className="step-label">Confirm</span>
         </div>
       </div>
 
-      {/* ===== STEP 1: PATIENT SELECTION ===== */}
-      {step === 1 && (
-        <div className="booking-content">
+      {/* ===== BOOKING CONTENT ===== */}
+      <div className="booking-content">
+        {/* STEP 1: PATIENT SEARCH */}
+        {currentStep === 1 && (
           <div className="search-patient-section">
             <h2 className="section-title">Find Patient</h2>
-            <p className="section-description">Search by name, phone (EmergencyContact), or date of birth</p>
-            
+            <p className="section-description">
+              Search for an existing patient or create a new patient record
+            </p>
+
             <div className="search-box-large">
-              <Search className="search-icon" size={20} />
+              <Search className="search-icon" size={24} />
               <input
                 type="text"
-                placeholder="Search: Name, Phone (555-1001), or DOB (YYYY-MM-DD)..."
-                value={patientSearch}
-                onChange={(e) => setPatientSearch(e.target.value)}
                 className="search-input-large"
+                placeholder="Search by name, phone, or date of birth..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                autoFocus
               />
             </div>
 
-            {/* Search Results */}
-            {patientSearch && (
-              <div className="patient-results">
-                {searchPatients().length > 0 ? (
-                  searchPatients().map(patient => (
-                    <div
-                      key={patient.Patient_ID}
-                      className="patient-result-item"
-                      onClick={() => handlePatientSelect(patient)}
-                    >
-                      <div className="patient-avatar">
-                        <User size={24} />
-                      </div>
-                      <div className="patient-info">
-                        <h3 className="patient-name">
-                          {patient.First_Name} {patient.Last_Name}
-                        </h3>
-                        <p className="patient-details">
-                          {patient.EmergencyContact} • DOB: {patient.dob}
-                        </p>
-                      </div>
-                      <div className="patient-insurance">
-                        <CreditCard size={16} />
-                        <span>{patient.payer_name}</span>
-                      </div>
+            <div className="patient-results">
+              {searchLoading ? (
+                <div className="no-results">
+                  <Clock size={48} />
+                  <p>Searching...</p>
+                </div>
+              ) : searchResults.length > 0 ? (
+                searchResults.map(patient => (
+                  <div
+                    key={patient.Patient_ID}
+                    className="patient-result-item"
+                    onClick={() => handleSelectPatient(patient)}
+                  >
+                    <div className="patient-avatar">
+                      <User size={24} />
                     </div>
-                  ))
-                ) : (
-                  <div className="no-results">
-                    <AlertCircle size={48} />
-                    <p>No patients found matching "{patientSearch}"</p>
+                    <div className="patient-info">
+                      <h3 className="patient-name">
+                        {patient.First_Name} {patient.Last_Name}
+                      </h3>
+                      <p className="patient-details">
+                        ID: {patient.Patient_ID} • {patient.dob} • {patient.EmergencyContact}
+                      </p>
+                    </div>
+                    {patient.plan_name && (
+                      <div className="patient-insurance">
+                        <User size={16} />
+                        <span>{patient.plan_name}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
+                ))
+              ) : searchTerm.length >= 2 ? (
+                <div className="no-results">
+                  <AlertCircle size={48} />
+                  <p>No patients found matching "{searchTerm}"</p>
+                </div>
+              ) : null}
+            </div>
 
-            {/* New Patient Button */}
             <div className="new-patient-option">
               <p className="or-divider">OR</p>
               <button className="btn btn-secondary btn-large">
-                <UserPlus size={20} />
-                Register New Patient
+                <User size={20} />
+                Create New Patient
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ===== STEP 2: APPOINTMENT DETAILS ===== */}
-      {step === 2 && (
-        <div className="booking-content">
+        {/* STEP 2: APPOINTMENT DETAILS */}
+        {currentStep === 2 && (
           <div className="booking-form">
             {/* Selected Patient Card */}
             <div className="selected-patient-card">
               <div className="card-header">
                 <h3>Selected Patient</h3>
-                <button className="btn-change" onClick={() => setStep(1)}>Change</button>
+                <button className="btn-change" onClick={handleChangePatient}>
+                  Change Patient
+                </button>
               </div>
               <div className="patient-info-display">
                 <div className="info-item">
-                  <User size={16} />
-                  <span>{formData.patientName}</span>
+                  <User size={18} />
+                  <span>{selectedPatient?.First_Name} {selectedPatient?.Last_Name}</span>
                 </div>
                 <div className="info-item">
-                  <Phone size={16} />
-                  <span>{formData.patientPhone}</span>
+                  <Phone size={18} />
+                  <span>{selectedPatient?.EmergencyContact}</span>
                 </div>
-                <div className="info-item">
-                  <CreditCard size={16} />
-                  <span>{formData.insurancePayer}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Office Display (Read-only - from Staff.Work_Location) */}
-            <div className="form-section">
-              <h3 className="form-section-title">Office Location</h3>
-              <div className="office-display">
-                <p className="office-name">{officeName}</p>
-                <p className="office-note">Assigned office location (Office_ID: {officeId})</p>
+                {selectedPatient?.Email && (
+                  <div className="info-item">
+                    <Globe size={18} />
+                    <span>{selectedPatient.Email}</span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Doctor Selection */}
             <div className="form-section">
-              <h3 className="form-section-title">
+              <div className="form-section-title">
                 <User size={20} />
                 Select Doctor
-              </h3>
-              <div className="doctor-grid">
-                {doctors.map(doc => (
-                  <div
-                    key={doc.Doctor_id}
-                    className={`doctor-card ${formData.Doctor_id === doc.Doctor_id ? 'selected' : ''}`}
-                    onClick={() => handleInputChange('Doctor_id', doc.Doctor_id)}
-                  >
-                    <div className="doctor-avatar">
-                      <User size={24} />
-                    </div>
-                    <div>
-                      <p className="doctor-name">Dr. {doc.First_Name} {doc.Last_Name}</p>
-                      <p className="doctor-specialty">{doc.specialty_name}</p>
-                    </div>
-                  </div>
-                ))}
+                <span className="required-badge">Required</span>
               </div>
-              {errors.Doctor_id && <p className="error-message">{errors.Doctor_id}</p>}
+              <div className="doctor-grid">
+                {doctorsLoading ? (
+                  <p>Loading doctors...</p>
+                ) : doctors.length === 0 ? (
+                  <p>No doctors available</p>
+                ) : (
+                  doctors.map(doctor => (
+                    <div
+                      key={doctor.Doctor_id}
+                      className={`doctor-card ${
+                        selectedDoctor?.Doctor_id === doctor.Doctor_id ? 'selected' : ''
+                      }`}
+                      onClick={() => setSelectedDoctor(doctor)}
+                    >
+                      <div className="doctor-avatar">
+                        <User size={24} />
+                      </div>
+                      <div>
+                        <p className="doctor-name">
+                          Dr. {doctor.First_Name} {doctor.Last_Name}
+                        </p>
+                        <p className="doctor-specialty">{doctor.specialty_name}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
-            {/* Date & Time */}
+            {/* Date and Time */}
             <div className="form-section">
-              <h3 className="form-section-title">
+              <div className="form-section-title">
                 <Calendar size={20} />
                 Date & Time
-              </h3>
+                <span className="required-badge">Required</span>
+              </div>
               <div className="date-time-grid">
                 <div className="form-group">
-                  <label className="form-label">Date</label>
+                  <label className="form-label">Appointment Date</label>
                   <input
                     type="date"
-                    className={`form-input ${errors.appointmentDate ? 'error' : ''}`}
-                    value={formData.appointmentDate}
-                    onChange={(e) => handleInputChange('appointmentDate', e.target.value)}
+                    className="form-input"
+                    value={appointmentDate}
+                    onChange={(e) => setAppointmentDate(e.target.value)}
                     min={getMinDate()}
                   />
-                  {errors.appointmentDate && <p className="error-message">{errors.appointmentDate}</p>}
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Time Slot</label>
-                  <select
-                    className={`form-select ${errors.appointmentTime ? 'error' : ''}`}
-                    value={formData.appointmentTime}
-                    onChange={(e) => handleInputChange('appointmentTime', e.target.value)}
-                  >
-                    <option value="">Select time</option>
-                    {timeSlots.map(time => (
-                      <option key={time} value={time}>{time}</option>
-                    ))}
-                  </select>
-                  {errors.appointmentTime && <p className="error-message">{errors.appointmentTime}</p>}
+                  <label className="form-label">Appointment Time</label>
+                  <input
+                    type="time"
+                    className="form-input"
+                    value={appointmentTime}
+                    onChange={(e) => setAppointmentTime(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
 
             {/* Reason for Visit */}
             <div className="form-section">
-              <h3 className="form-section-title">
-                <FileText size={20} />
-                Visit Information
-              </h3>
+              <div className="form-section-title">
+                Reason for Visit
+                <span className="required-badge">Required</span>
+              </div>
               <div className="form-group">
-                <label className="form-label">Reason for Visit</label>
-                <input
-                  type="text"
-                  className={`form-input ${errors.Reason_for_visit ? 'error' : ''}`}
-                  placeholder="e.g., Annual Physical, Follow-up, New Patient"
-                  value={formData.Reason_for_visit}
-                  onChange={(e) => handleInputChange('Reason_for_visit', e.target.value)}
+                <textarea
+                  className="form-textarea"
+                  value={reasonForVisit}
+                  onChange={(e) => setReasonForVisit(e.target.value)}
+                  placeholder="e.g., Annual checkup, Follow-up visit, New symptoms..."
+                  rows="4"
                 />
-                {errors.Reason_for_visit && <p className="error-message">{errors.Reason_for_visit}</p>}
               </div>
             </div>
 
-            {/* Booking Channel - CRITICAL REQUIRED FIELD */}
-            <div className="form-section booking-channel-section">
-              <h3 className="form-section-title">
-                <Phone size={20} />
-                Booking Channel
-                <span className="required-badge">REQUIRED</span>
-              </h3>
-              <p className="section-description">How was this appointment scheduled?</p>
+            {/* Booking Channel */}
+            <div className="booking-channel-section">
+              <h3 className="form-section-title">Booking Method</h3>
               <div className="booking-channel-options">
                 <div
-                  className={`channel-option ${formData.booking_channel === 'phone' ? 'selected' : ''}`}
-                  onClick={() => handleInputChange('booking_channel', 'phone')}
+                  className={`channel-option ${bookingChannel === 'walk-in' ? 'selected' : ''}`}
+                  onClick={() => setBookingChannel('walk-in')}
                 >
-                  <Phone size={24} />
-                  <span>Phone Call</span>
-                </div>
-                <div
-                  className={`channel-option ${formData.booking_channel === 'online' ? 'selected' : ''}`}
-                  onClick={() => handleInputChange('booking_channel', 'online')}
-                >
-                  <Globe size={24} />
-                  <span>Online Portal</span>
-                </div>
-                <div
-                  className={`channel-option ${formData.booking_channel === 'walk-in' ? 'selected' : ''}`}
-                  onClick={() => handleInputChange('booking_channel', 'walk-in')}
-                >
-                  <UserPlus size={24} />
+                  <User size={24} />
                   <span>Walk-in</span>
                 </div>
+                <div
+                  className={`channel-option ${bookingChannel === 'phone' ? 'selected' : ''}`}
+                  onClick={() => setBookingChannel('phone')}
+                >
+                  <Phone size={24} />
+                  <span>Phone</span>
+                </div>
+                <div
+                  className={`channel-option ${bookingChannel === 'online' ? 'selected' : ''}`}
+                  onClick={() => setBookingChannel('online')}
+                >
+                  <Globe size={24} />
+                  <span>Online</span>
+                </div>
               </div>
-              {errors.booking_channel && <p className="error-message">{errors.booking_channel}</p>}
             </div>
 
-            {/* Form Actions */}
+            {/* Error Message */}
+            {error && (
+              <div className="alert alert-danger">
+                <AlertCircle size={20} />
+                {error}
+              </div>
+            )}
+
+            {/* Action Buttons */}
             <div className="form-actions">
-              <button className="btn btn-ghost" onClick={() => setStep(1)}>
-                Back to Patient Selection
+              <button className="btn btn-ghost" onClick={handleChangePatient}>
+                Back to Patient Search
               </button>
-              <button className="btn btn-primary" onClick={() => setStep(3)}>
-                Review Appointment
-                <ArrowLeft size={18} style={{ transform: 'rotate(180deg)' }} />
+              <button 
+                className="btn btn-primary btn-large"
+                onClick={handleProceedToConfirmation}
+              >
+                Review & Confirm
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ===== STEP 3: CONFIRMATION ===== */}
-      {step === 3 && (
-        <div className="booking-content">
+        {/* STEP 3: CONFIRMATION */}
+        {currentStep === 3 && (
           <div className="confirmation-card">
             <div className="confirmation-header">
-              <h2>Review Appointment Details</h2>
-              <p>Please verify all information before confirming</p>
+              <h2>Review Appointment</h2>
+              <p>Please review the appointment details before confirming</p>
             </div>
 
             <div className="confirmation-sections">
-              {/* Patient Info */}
+              {/* Patient Information */}
               <div className="confirm-section">
                 <h3 className="confirm-title">Patient Information</h3>
                 <div className="confirm-grid">
                   <div className="confirm-item">
-                    <span className="confirm-label">Name</span>
-                    <span className="confirm-value">{formData.patientName}</span>
+                    <span className="confirm-label">Patient Name</span>
+                    <span className="confirm-value">
+                      {selectedPatient?.First_Name} {selectedPatient?.Last_Name}
+                    </span>
                   </div>
                   <div className="confirm-item">
-                    <span className="confirm-label">Phone</span>
-                    <span className="confirm-value">{formData.patientPhone}</span>
+                    <span className="confirm-label">Patient ID</span>
+                    <span className="confirm-value">{selectedPatient?.Patient_ID}</span>
                   </div>
-                  <div className="confirm-item">
-                    <span className="confirm-label">Insurance</span>
-                    <span className="confirm-value">{formData.insurancePayer}</span>
-                  </div>
-                  <div className="confirm-item">
-                    <span className="confirm-label">Copay</span>
-                    <span className="confirm-value">${formData.copay}</span>
-                  </div>
+                  {selectedPatient?.EmergencyContact && (
+                    <div className="confirm-item">
+                      <span className="confirm-label">Phone</span>
+                      <span className="confirm-value">{selectedPatient.EmergencyContact}</span>
+                    </div>
+                  )}
+                  {selectedPatient?.Email && (
+                    <div className="confirm-item">
+                      <span className="confirm-label">Email</span>
+                      <span className="confirm-value">{selectedPatient.Email}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Appointment Details */}
-              <div className="confirm-section">
+              <div className="confirm-section highlight-section">
                 <h3 className="confirm-title">Appointment Details</h3>
                 <div className="confirm-grid">
                   <div className="confirm-item">
                     <span className="confirm-label">Doctor</span>
                     <span className="confirm-value">
-                      Dr. {doctors.find(d => d.Doctor_id === formData.Doctor_id)?.First_Name}{' '}
-                      {doctors.find(d => d.Doctor_id === formData.Doctor_id)?.Last_Name}
+                      Dr. {selectedDoctor?.First_Name} {selectedDoctor?.Last_Name}
                     </span>
                   </div>
                   <div className="confirm-item">
-                    <span className="confirm-label">Location</span>
-                    <span className="confirm-value">{officeName}</span>
+                    <span className="confirm-label">Specialty</span>
+                    <span className="confirm-value">{selectedDoctor?.specialty_name}</span>
                   </div>
                   <div className="confirm-item">
                     <span className="confirm-label">Date</span>
-                    <span className="confirm-value">
-                      {new Date(formData.appointmentDate + 'T00:00:00').toLocaleDateString('en-US', {
+                    <span className="confirm-value-highlight">
+                      {new Date(appointmentDate).toLocaleDateString('en-US', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',
@@ -577,45 +526,71 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
                   </div>
                   <div className="confirm-item">
                     <span className="confirm-label">Time</span>
-                    <span className="confirm-value">{formData.appointmentTime}</span>
+                    <span className="confirm-value-highlight">
+                      {new Date(`2000-01-01T${appointmentTime}`).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
                   </div>
                   <div className="confirm-item confirm-item-full">
-                    <span className="confirm-label">Reason</span>
-                    <span className="confirm-value">{formData.Reason_for_visit}</span>
+                    <span className="confirm-label">Reason for Visit</span>
+                    <span className="confirm-value">{reasonForVisit}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Booking Channel - Highlighted */}
-              <div className="confirm-section highlight-section">
-                <h3 className="confirm-title">Booking Channel</h3>
+              {/* Booking Information */}
+              <div className="confirm-section">
+                <h3 className="confirm-title">Booking Information</h3>
                 <div className="booking-channel-display">
-                  {formData.booking_channel === 'phone' && <Phone size={20} />}
-                  {formData.booking_channel === 'online' && <Globe size={20} />}
-                  {formData.booking_channel === 'walk-in' && <UserPlus size={20} />}
-                  <span className="channel-name">
-                    {formData.booking_channel === 'phone' && 'Phone Call'}
-                    {formData.booking_channel === 'online' && 'Online Portal'}
-                    {formData.booking_channel === 'walk-in' && 'Walk-in'}
-                  </span>
+                  {bookingChannel === 'walk-in' && <User size={20} />}
+                  {bookingChannel === 'phone' && <Phone size={20} />}
+                  {bookingChannel === 'online' && <Globe size={20} />}
+                  <div>
+                    <p className="channel-name">
+                      {bookingChannel === 'walk-in' && 'Walk-in'}
+                      {bookingChannel === 'phone' && 'Phone'}
+                      {bookingChannel === 'online' && 'Online'}
+                    </p>
+                  </div>
+                </div>
+                <div className="confirm-item">
+                  <span className="confirm-label">Office</span>
+                  <span className="confirm-value">{officeName}</span>
                 </div>
               </div>
             </div>
 
-            {/* Final Actions */}
+            {/* Error Message */}
+            {error && (
+              <div className="alert alert-danger">
+                <AlertCircle size={20} />
+                {error}
+              </div>
+            )}
+
+            {/* Confirmation Actions */}
             <div className="confirmation-actions">
-              <button className="btn btn-ghost" onClick={() => setStep(2)}>
-                <ArrowLeft size={18} />
-                Edit Details
+              <button 
+                className="btn btn-ghost"
+                onClick={() => setCurrentStep(2)}
+                disabled={creating}
+              >
+                Back to Edit
               </button>
-              <button className="btn btn-success btn-large" onClick={handleSubmit}>
-                <Save size={20} />
-                Confirm & Book Appointment
+              <button 
+                className="btn btn-success btn-large"
+                onClick={handleSubmitAppointment}
+                disabled={creating}
+              >
+                <Check size={20} />
+                {creating ? 'Creating Appointment...' : 'Confirm & Create Appointment'}
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

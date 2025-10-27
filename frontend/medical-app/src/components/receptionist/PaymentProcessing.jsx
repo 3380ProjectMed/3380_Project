@@ -1,89 +1,221 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, DollarSign, User, Calendar, Clock, Check, Printer, CreditCard, FileText } from 'lucide-react';
+import { ArrowLeft, DollarSign, User, Calendar, Clock, Check, Printer, CreditCard, FileText, Search, X, AlertCircle, Phone, Mail } from 'lucide-react';
+import * as API from '../../api/receptionistApi';
 import './PaymentProcessing.css';
 
 /**
- * PaymentProcessing Component (Simplified)
+ * PaymentProcessing Component (Enhanced)
  * 
- * Record copayment at front desk
- * SIMPLIFIED: No card/check forms - just confirm amount and record payment
- * 
- * Amount is auto-loaded from patient_insurance.copay in database
- * 
- * Props:
- * @param {Object} preSelectedAppointment - Appointment with patient & insurance info
- * @param {Function} onBack - Return to previous page
- * @param {Function} onSuccess - Navigate after successful payment
+ * Search for any patient and record payments
+ * Can record copayment or any custom amount
+ * Shows patient's financial information and appointment history
  */
 function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
-  const [showReceipt, setShowReceipt] = useState(false);
-  const [transactionId, setTransactionId] = useState('');
+  // Step management: 1 = patient search, 2 = payment details, 3 = receipt
+  const [currentStep, setCurrentStep] = useState(preSelectedAppointment ? 2 : 1);
+  
+  // Patient search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  
+  // Selected patient and their data
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientDetails, setPatientDetails] = useState(null);
+  const [patientAppointments, setPatientAppointments] = useState([]);
+  const [selectedAppointment, setSelectedAppointment] = useState(preSelectedAppointment);
+  
+  // Payment state
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [suggestedAmount, setSuggestedAmount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentNote, setPaymentNote] = useState('');
+  const [transactionId, setTransactionId] = useState('');
+  
+  // UI state
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   /**
-   * Payment data from appointment/patient insurance
-   * In real implementation, this comes from:
-   * SELECT pi.copay, pi.coinsurance_rate_pct, pi.deductible_individ,
-   *        pl.plan_name, py.NAME as payer_name
-   * FROM patient_insurance pi
-   * JOIN insurance_plan pl ON pi.plan_id = pl.plan_id
-   * JOIN insurance_payer py ON pl.payer_id = py.payer_id
-   * WHERE pi.patient_id = ? AND pi.is_primary = 1
-   */
-  const [paymentData] = useState({
-    patientId: preSelectedAppointment?.patientId || 1,
-    patientName: preSelectedAppointment?.patientName || 'Walk-in Patient',
-    appointmentId: preSelectedAppointment?.id || null,
-    appointmentTime: preSelectedAppointment?.time || '',
-    appointmentDate: new Date().toLocaleDateString(),
-    reason: preSelectedAppointment?.reason || 'Office Visit',
-    
-    // Insurance info (from database joins)
-    insurancePayer: preSelectedAppointment?.insurancePayer || 'Blue Cross Blue Shield',
-    insurancePlan: preSelectedAppointment?.insurancePlan || 'BCBS Gold PPO',
-    memberNumber: preSelectedAppointment?.memberNumber || 'M123456789',
-    
-    // Payment amounts (from patient_insurance table)
-    copayAmount: preSelectedAppointment?.copay || 25.00,
-    coinsuranceRate: preSelectedAppointment?.coinsuranceRate || 20,
-    deductible: preSelectedAppointment?.deductible || 1500.00,
-    
-    // Office info
-    officeId: 1,
-    officeName: 'Downtown Medical Center'
-  });
-
-  /**
-   * Generate transaction ID
+   * Generate transaction ID on mount
    */
   useEffect(() => {
-    setTransactionId('PAY' + Date.now().toString().slice(-8));
+    setTransactionId(API.generateTransactionId());
   }, []);
 
   /**
-   * Process payment - simplified to just recording
+   * Debounced patient search
    */
-  const handleConfirmPayment = () => {
-    // TODO: Submit to API
-    // POST /api/payments
-    // Body: {
-    //   appointment_id, patient_id, 
-    //   copay_amount, payment_received: copay_amount,
-    //   transaction_id, notes
-    // }
-    
-    console.log('Recording payment:', {
-      transactionId,
-      appointmentId: paymentData.appointmentId,
-      patientId: paymentData.patientId,
-      copayAmount: paymentData.copayAmount,
-      paymentReceived: paymentData.copayAmount,
-      notes: paymentNote,
-      timestamp: new Date().toISOString()
-    });
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm.length >= 2 && currentStep === 1) {
+        handlePatientSearch();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-    // Show receipt
-    setShowReceipt(true);
+  /**
+   * Load patient details when selected
+   */
+  useEffect(() => {
+    if (selectedPatient) {
+      loadPatientFinancialInfo();
+    }
+  }, [selectedPatient]);
+
+  /**
+   * Search for patients
+   */
+  const handlePatientSearch = async () => {
+    try {
+      setSearchLoading(true);
+      const result = await API.searchPatients(searchTerm);
+      
+      if (result.success) {
+        setSearchResults(result.patients || []);
+      }
+    } catch (err) {
+      console.error('Patient search failed:', err);
+      setError('Failed to search patients');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  /**
+   * Load patient financial information and recent appointments
+   */
+  const loadPatientFinancialInfo = async () => {
+    try {
+      setLoading(true);
+      
+      // Get full patient details with insurance
+      const detailsResult = await API.getPatientById(selectedPatient.Patient_ID);
+      
+      if (detailsResult.success) {
+        setPatientDetails(detailsResult);
+        
+        // Set suggested payment amount from insurance copay
+        if (detailsResult.insurance?.copay) {
+          setSuggestedAmount(detailsResult.insurance.copay);
+          setPaymentAmount(detailsResult.insurance.copay.toFixed(2));
+        }
+        
+        // Get recent appointments
+        if (detailsResult.recent_appointments) {
+          // Filter for today's or recent completed appointments that need payment
+          const appointmentsNeedingPayment = detailsResult.recent_appointments.filter(apt => {
+            const aptDate = new Date(apt.Appointment_date);
+            const today = new Date();
+            const isRecent = aptDate <= today;
+            return isRecent && (apt.Status === 'Completed' || apt.Status === 'Checked In');
+          });
+          setPatientAppointments(appointmentsNeedingPayment);
+        }
+      }
+      
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load patient info:', err);
+      setError('Failed to load patient information');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Select patient and move to payment step
+   */
+  const handleSelectPatient = async (patient) => {
+    setSelectedPatient(patient);
+    setCurrentStep(2);
+  };
+
+  /**
+   * Change selected patient
+   */
+  const handleChangePatient = () => {
+    setCurrentStep(1);
+    setSelectedPatient(null);
+    setPatientDetails(null);
+    setSearchTerm('');
+    setSearchResults([]);
+    setPaymentAmount('');
+    setSelectedAppointment(null);
+  };
+
+  /**
+   * Calculate change if overpaid
+   */
+  const calculateChange = () => {
+    const amount = parseFloat(paymentAmount) || 0;
+    const suggested = suggestedAmount || 0;
+    return amount > suggested ? amount - suggested : 0;
+  };
+
+  /**
+   * Quick amount buttons
+   */
+  const handleQuickAmount = (amount) => {
+    setPaymentAmount(amount.toFixed(2));
+  };
+
+  /**
+   * Validate payment form
+   */
+  const validatePayment = () => {
+    const amount = parseFloat(paymentAmount);
+    
+    if (!amount || amount <= 0) {
+      setError('Please enter a valid payment amount');
+      return false;
+    }
+    
+    if (!selectedPatient) {
+      setError('No patient selected');
+      return false;
+    }
+    
+    return true;
+  };
+
+  /**
+   * Process payment - submit to backend
+   */
+  const handleConfirmPayment = async () => {
+    if (!validatePayment()) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+
+      const amount = parseFloat(paymentAmount);
+
+      const paymentPayload = {
+        appointment_id: selectedAppointment?.Appointment_id || null,
+        patient_id: selectedPatient.Patient_ID,
+        copay_amount: suggestedAmount || amount,
+        payment_received: amount,
+        payment_method: paymentMethod,
+        transaction_id: transactionId,
+        notes: paymentNote
+      };
+
+      const result = await API.recordPayment(paymentPayload);
+
+      if (result.success) {
+        setShowReceipt(true);
+      } else {
+        setError(result.error || 'Failed to record payment');
+      }
+    } catch (err) {
+      console.error('Payment error:', err);
+      setError('Failed to record payment. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   /**
@@ -128,98 +260,356 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
             </button>
             <div className="header-info">
               <h1 className="page-title">Record Payment</h1>
-              <p className="page-subtitle">Confirm copayment at front desk</p>
+              <p className="page-subtitle">Search patient and record copayment or any amount</p>
             </div>
           </div>
 
-          <div className="payment-content-simplified">
-            {/* ===== PAYMENT SUMMARY CARD ===== */}
-            <div className="payment-summary-card">
-              <h2 className="summary-title">Payment Information</h2>
-              
-              <div className="summary-grid">
-                {/* Patient Info */}
-                <div className="summary-section">
-                  <h3 className="section-header">Patient</h3>
-                  <div className="info-row">
-                    <User size={18} />
-                    <span className="info-label">Name:</span>
-                    <span className="info-value">{paymentData.patientName}</span>
-                  </div>
-                  {paymentData.appointmentTime && (
-                    <div className="info-row">
-                      <Clock size={18} />
-                      <span className="info-label">Appointment:</span>
-                      <span className="info-value">{paymentData.appointmentTime}</span>
+          {/* ===== STEP INDICATOR ===== */}
+          <div className="step-indicator">
+            <div className={`step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>
+              <div className="step-number">{currentStep > 1 ? <Check size={20} /> : '1'}</div>
+              <span className="step-label">Find Patient</span>
+            </div>
+            <div className="step-line"></div>
+            <div className={`step ${currentStep >= 2 ? 'active' : ''}`}>
+              <div className="step-number">2</div>
+              <span className="step-label">Payment</span>
+            </div>
+          </div>
+
+          {/* ===== STEP 1: PATIENT SEARCH ===== */}
+          {currentStep === 1 && (
+            <div className="payment-content">
+              <div className="search-patient-section">
+                <h2 className="section-title">Find Patient</h2>
+                <p className="section-description">
+                  Search for a patient to record payment
+                </p>
+
+                <div className="search-box-large">
+                  <Search className="search-icon" size={24} />
+                  <input
+                    type="text"
+                    className="search-input-large"
+                    placeholder="Search by name, phone, or date of birth..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    autoFocus
+                  />
+                  {searchTerm && (
+                    <button 
+                      className="search-clear-btn" 
+                      onClick={() => setSearchTerm('')}
+                      style={{ position: 'absolute', right: '1rem' }}
+                    >
+                      <X size={20} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="patient-results">
+                  {searchLoading ? (
+                    <div className="no-results">
+                      <Clock size={48} />
+                      <p>Searching...</p>
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    searchResults.map(patient => (
+                      <div
+                        key={patient.Patient_ID}
+                        className="patient-result-item"
+                        onClick={() => handleSelectPatient(patient)}
+                      >
+                        <div className="patient-avatar">
+                          <User size={24} />
+                        </div>
+                        <div className="patient-info">
+                          <h3 className="patient-name">
+                            {patient.First_Name} {patient.Last_Name}
+                          </h3>
+                          <p className="patient-details">
+                            ID: {patient.Patient_ID} • {patient.dob} • {patient.EmergencyContact}
+                          </p>
+                        </div>
+                        {patient.copay && (
+                          <div className="patient-insurance">
+                            <DollarSign size={16} />
+                            <span>Copay: ${patient.copay.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : searchTerm.length >= 2 ? (
+                    <div className="no-results">
+                      <AlertCircle size={48} />
+                      <p>No patients found matching "{searchTerm}"</p>
+                    </div>
+                  ) : (
+                    <div className="no-results">
+                      <Search size={48} />
+                      <p>Start typing to search for patients</p>
                     </div>
                   )}
-                  <div className="info-row">
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== STEP 2: PAYMENT DETAILS ===== */}
+          {currentStep === 2 && (
+            <div className="payment-content">
+              {/* Selected Patient Card */}
+              <div className="selected-patient-card">
+                <div className="card-header">
+                  <h3>Selected Patient</h3>
+                  <button className="btn-change" onClick={handleChangePatient}>
+                    Change Patient
+                  </button>
+                </div>
+                <div className="patient-info-display">
+                  <div className="info-item">
+                    <User size={18} />
+                    <span>{selectedPatient?.First_Name} {selectedPatient?.Last_Name}</span>
+                  </div>
+                  <div className="info-item">
                     <FileText size={18} />
-                    <span className="info-label">Reason:</span>
-                    <span className="info-value">{paymentData.reason}</span>
+                    <span>ID: {selectedPatient?.Patient_ID}</span>
                   </div>
-                </div>
-
-                {/* Insurance Info */}
-                <div className="summary-section">
-                  <h3 className="section-header">Insurance</h3>
-                  <div className="insurance-card-mini">
-                    <CreditCard size={20} />
-                    <div>
-                      <p className="insurance-payer">{paymentData.insurancePayer}</p>
-                      <p className="insurance-plan">{paymentData.insurancePlan}</p>
-                      <p className="insurance-member">Member: {paymentData.memberNumber}</p>
+                  {selectedPatient?.EmergencyContact && (
+                    <div className="info-item">
+                      <Phone size={18} />
+                      <span>{selectedPatient.EmergencyContact}</span>
                     </div>
-                  </div>
-                  
-                  <div className="insurance-details-mini">
-                    <div className="detail-item">
-                      <span className="detail-label">Copay:</span>
-                      <span className="detail-value">${paymentData.copayAmount.toFixed(2)}</span>
+                  )}
+                  {selectedPatient?.Email && (
+                    <div className="info-item">
+                      <Mail size={18} />
+                      <span>{selectedPatient.Email}</span>
                     </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Coinsurance:</span>
-                      <span className="detail-value">{paymentData.coinsuranceRate}%</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Deductible:</span>
-                      <span className="detail-value">${paymentData.deductible.toFixed(2)}</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
-              {/* Amount Due - Large Display */}
-              <div className="amount-due-card">
-                <p className="amount-label">Copayment Amount Due</p>
-                <p className="amount-value">${paymentData.copayAmount.toFixed(2)}</p>
-                <p className="amount-note">Amount collected at front desk</p>
-              </div>
-            </div>
+              {/* Financial Information */}
+              {loading ? (
+                <div className="payment-summary-card">
+                  <p>Loading patient information...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Insurance & Financial Info */}
+                  {patientDetails?.insurance && (
+                    <div className="payment-summary-card">
+                      <h2 className="summary-title">Insurance Information</h2>
+                      
+                      <div className="insurance-card-mini" style={{ marginBottom: '1.5rem' }}>
+                        <CreditCard size={24} />
+                        <div>
+                          <p className="insurance-payer">{patientDetails.insurance.payer_name}</p>
+                          <p className="insurance-plan">{patientDetails.insurance.plan_name}</p>
+                          <p className="insurance-plan">{patientDetails.insurance.plan_type}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="insurance-details-mini">
+                        {patientDetails.insurance.copay && (
+                          <div className="detail-item">
+                            <span className="detail-label">Standard Copay:</span>
+                            <span className="detail-value">${patientDetails.insurance.copay.toFixed(2)}</span>
+                          </div>
+                        )}
+                        {patientDetails.insurance.coinsurance_rate_pct && (
+                          <div className="detail-item">
+                            <span className="detail-label">Coinsurance:</span>
+                            <span className="detail-value">{patientDetails.insurance.coinsurance_rate_pct}%</span>
+                          </div>
+                        )}
+                        {patientDetails.insurance.deductible_individ && (
+                          <div className="detail-item">
+                            <span className="detail-label">Deductible:</span>
+                            <span className="detail-value">${patientDetails.insurance.deductible_individ.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-            {/* ===== PAYMENT NOTE ===== */}
-            <div className="payment-note-section">
-              <label className="form-label">Payment Note (Optional)</label>
-              <textarea
-                className="form-textarea"
-                placeholder="Add any notes about this payment..."
-                value={paymentNote}
-                onChange={(e) => setPaymentNote(e.target.value)}
-                rows="3"
-              />
-            </div>
+                  {/* Recent Appointments */}
+                  {patientAppointments.length > 0 && (
+                    <div className="payment-summary-card">
+                      <h2 className="summary-title">Recent Appointments Needing Payment</h2>
+                      <div className="appointments-payment-list">
+                        {patientAppointments.map(apt => (
+                          <div 
+                            key={apt.Appointment_id}
+                            className={`appointment-payment-item ${
+                              selectedAppointment?.Appointment_id === apt.Appointment_id ? 'selected' : ''
+                            }`}
+                            onClick={() => setSelectedAppointment(apt)}
+                          >
+                            <div className="apt-payment-date">
+                              <Calendar size={16} />
+                              {new Date(apt.Appointment_date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </div>
+                            <div className="apt-payment-details">
+                              <p className="apt-payment-reason">{apt.Reason_for_visit}</p>
+                              <p className="apt-payment-doctor">
+                                Dr. {apt.Doctor_First} {apt.Doctor_Last}
+                              </p>
+                            </div>
+                            <div className="apt-payment-status">
+                              <span className={`status-badge status-${apt.Status?.toLowerCase()}`}>
+                                {apt.Status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-            {/* ===== ACTION BUTTONS ===== */}
-            <div className="payment-actions">
-              <button className="btn btn-ghost" onClick={onBack}>
-                Cancel
-              </button>
-              <button className="btn btn-success btn-large" onClick={handleConfirmPayment}>
-                <Check size={20} />
-                Confirm Payment Received - ${paymentData.copayAmount.toFixed(2)}
-              </button>
+                  {/* Payment Amount Section */}
+                  <div className="payment-method-section">
+                    <h2 className="section-title">Payment Amount</h2>
+                    
+                    {suggestedAmount > 0 && (
+                      <div className="suggested-amount-display">
+                        <DollarSign size={20} />
+                        <div>
+                          <p className="suggested-label">Suggested Copay Amount</p>
+                          <p className="suggested-value">${suggestedAmount.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="form-group">
+                      <label className="form-label">Amount Received</label>
+                      <div className="input-with-prefix">
+                        <span className="input-prefix">$</span>
+                        <input
+                          type="number"
+                          className="form-input"
+                          placeholder="0.00"
+                          value={paymentAmount}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quick Amount Buttons */}
+                    {suggestedAmount > 0 && (
+                      <div className="quick-amounts">
+                        <p className="quick-label">Quick Amounts</p>
+                        <div className="quick-buttons">
+                          <button 
+                            className="quick-btn"
+                            onClick={() => handleQuickAmount(suggestedAmount)}
+                          >
+                            ${suggestedAmount.toFixed(2)}
+                          </button>
+                          <button 
+                            className="quick-btn"
+                            onClick={() => handleQuickAmount(suggestedAmount + 10)}
+                          >
+                            ${(suggestedAmount + 10).toFixed(2)}
+                          </button>
+                          <button 
+                            className="quick-btn"
+                            onClick={() => handleQuickAmount(suggestedAmount + 20)}
+                          >
+                            ${(suggestedAmount + 20).toFixed(2)}
+                          </button>
+                          <button 
+                            className="quick-btn"
+                            onClick={() => handleQuickAmount(suggestedAmount + 50)}
+                          >
+                            ${(suggestedAmount + 50).toFixed(2)}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Change Calculator */}
+                    {calculateChange() > 0 && (
+                      <div className="change-display">
+                        <p className="change-label">Change Due</p>
+                        <p className="change-value">${calculateChange().toFixed(2)}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Payment Method */}
+                  <div className="payment-method-section">
+                    <h2 className="section-title">Payment Method</h2>
+                    <div className="method-options">
+                      <div
+                        className={`method-option ${paymentMethod === 'cash' ? 'selected' : ''}`}
+                        onClick={() => setPaymentMethod('cash')}
+                      >
+                        <DollarSign size={24} />
+                        <span>Cash</span>
+                      </div>
+                      <div
+                        className={`method-option ${paymentMethod === 'card' ? 'selected' : ''}`}
+                        onClick={() => setPaymentMethod('card')}
+                      >
+                        <CreditCard size={24} />
+                        <span>Card</span>
+                      </div>
+                      <div
+                        className={`method-option ${paymentMethod === 'check' ? 'selected' : ''}`}
+                        onClick={() => setPaymentMethod('check')}
+                      >
+                        <FileText size={24} />
+                        <span>Check</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Payment Note */}
+                  <div className="payment-note-section">
+                    <label className="form-label">Payment Note (Optional)</label>
+                    <textarea
+                      className="form-textarea"
+                      placeholder="Add any notes about this payment..."
+                      value={paymentNote}
+                      onChange={(e) => setPaymentNote(e.target.value)}
+                      rows="3"
+                    />
+                  </div>
+
+                  {/* Error Message */}
+                  {error && (
+                    <div className="alert alert-danger">
+                      <AlertCircle size={20} />
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="payment-actions">
+                    <button className="btn btn-ghost" onClick={handleChangePatient} disabled={loading}>
+                      Change Patient
+                    </button>
+                    <button 
+                      className="btn btn-success btn-large" 
+                      onClick={handleConfirmPayment}
+                      disabled={loading || !paymentAmount}
+                    >
+                      <Check size={20} />
+                      {loading ? 'Processing...' : `Record Payment - $${parseFloat(paymentAmount || 0).toFixed(2)}`}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
-          </div>
+          )}
         </>
       ) : (
         /* ===== RECEIPT VIEW ===== */
@@ -234,7 +624,7 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
 
           <div className="receipt-card">
             <div className="receipt-header-info">
-              <h2 className="clinic-name">{paymentData.officeName}</h2>
+              <h2 className="clinic-name">Downtown Medical Center</h2>
               <p className="clinic-address">425 Main Street, Suite 100</p>
               <p className="clinic-address">Houston, TX 77002</p>
               <p className="clinic-phone">(737) 492-8165</p>
@@ -257,44 +647,67 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
 
               <div className="receipt-row">
                 <span className="receipt-label">Patient:</span>
-                <span className="receipt-value">{paymentData.patientName}</span>
+                <span className="receipt-value">
+                  {selectedPatient?.First_Name} {selectedPatient?.Last_Name}
+                </span>
               </div>
 
-              {paymentData.appointmentId && (
-                <div className="receipt-row">
-                  <span className="receipt-label">Appointment ID:</span>
-                  <span className="receipt-value">{paymentData.appointmentId}</span>
-                </div>
+              <div className="receipt-row">
+                <span className="receipt-label">Patient ID:</span>
+                <span className="receipt-value">{selectedPatient?.Patient_ID}</span>
+              </div>
+
+              {selectedAppointment && (
+                <>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Appointment ID:</span>
+                    <span className="receipt-value">{selectedAppointment.Appointment_id}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Reason for Visit:</span>
+                    <span className="receipt-value">{selectedAppointment.Reason_for_visit}</span>
+                  </div>
+                </>
+              )}
+
+              <div className="receipt-divider"></div>
+
+              {patientDetails?.insurance && (
+                <>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Insurance Provider:</span>
+                    <span className="receipt-value">{patientDetails.insurance.payer_name}</span>
+                  </div>
+                  <div className="receipt-row">
+                    <span className="receipt-label">Plan:</span>
+                    <span className="receipt-value">{patientDetails.insurance.plan_name}</span>
+                  </div>
+                  {suggestedAmount > 0 && (
+                    <div className="receipt-row">
+                      <span className="receipt-label">Expected Copay:</span>
+                      <span className="receipt-value">${suggestedAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="receipt-divider"></div>
+                </>
               )}
 
               <div className="receipt-row">
-                <span className="receipt-label">Reason for Visit:</span>
-                <span className="receipt-value">{paymentData.reason}</span>
+                <span className="receipt-label">Payment Method:</span>
+                <span className="receipt-value">{paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)}</span>
               </div>
-
-              <div className="receipt-divider"></div>
-
-              <div className="receipt-row">
-                <span className="receipt-label">Insurance Provider:</span>
-                <span className="receipt-value">{paymentData.insurancePayer}</span>
-              </div>
-
-              <div className="receipt-row">
-                <span className="receipt-label">Plan:</span>
-                <span className="receipt-value">{paymentData.insurancePlan}</span>
-              </div>
-
-              <div className="receipt-row">
-                <span className="receipt-label">Member Number:</span>
-                <span className="receipt-value">{paymentData.memberNumber}</span>
-              </div>
-
-              <div className="receipt-divider"></div>
 
               <div className="receipt-row total-row">
-                <span className="receipt-label">Copayment Received:</span>
-                <span className="receipt-value">${paymentData.copayAmount.toFixed(2)}</span>
+                <span className="receipt-label">Amount Received:</span>
+                <span className="receipt-value">${parseFloat(paymentAmount).toFixed(2)}</span>
               </div>
+
+              {calculateChange() > 0 && (
+                <div className="receipt-row">
+                  <span className="receipt-label">Change Given:</span>
+                  <span className="receipt-value">${calculateChange().toFixed(2)}</span>
+                </div>
+              )}
 
               {paymentNote && (
                 <>
@@ -310,7 +723,6 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
             <div className="receipt-footer">
               <p className="thank-you-message">Thank you for your payment!</p>
               <p className="footer-note">Please retain this receipt for your records</p>
-              <p className="footer-note">This receipt confirms payment collected at front desk</p>
             </div>
           </div>
 

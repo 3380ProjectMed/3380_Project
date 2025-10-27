@@ -24,10 +24,13 @@ export default function LoginPage() {
       const destByRole = {
         PATIENT: "/patientportal",
         DOCTOR:  "/doctor",
+        RECEPTIONIST: "/receptionist",
         ADMIN:   "/admin",  // or wherever you want admins to land
       };
       const fallback = "/patientportal";
-      const roleDest = destByRole[u?.role] || fallback;
+      // Normalize role string from backend if present
+      const role = u?.role ? String(u.role).toUpperCase() : null;
+      const roleDest = destByRole[role] || fallback;
       nav(from || roleDest, { replace: true });
     } catch (ex) {
         setErr(ex.message);

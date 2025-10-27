@@ -1,209 +1,238 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Clock, User, Plus, Filter, Edit, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, User, Check } from 'lucide-react';
+import * as API from '../../api/receptionistApi';
 import './OfficeSchedule.css';
 
 /**
- * OfficeSchedule Component - Receptionist Master Calendar
+ * OfficeSchedule Component (Backend Integrated)
  * 
- * Displays monthly calendar view with ALL doctors' appointments for assigned office
- * RBAC: Limited to receptionist's Work_Location (Office_ID)
- * 
- * Database Tables:
- * - Appointment (Appointment_id, Patient_id, Doctor_id, Office_id, Appointment_date, Reason_for_visit)
- * - Patient (Patient_ID, First_Name, Last_Name)
- * - Doctor (Doctor_id, First_Name, Last_Name, Specialty)
- * - Specialty (specialty_id, specialty_name)
- * - Office (Office_ID - for RBAC)
- * 
- * Real Query:
- * SELECT a.*, p.First_Name, p.Last_Name, d.First_Name as Doc_First, d.Last_Name as Doc_Last,
- *        s.specialty_name
- * FROM Appointment a
- * JOIN Patient p ON a.Patient_id = p.Patient_ID
- * JOIN Doctor d ON a.Doctor_id = d.Doctor_id
- * JOIN Specialty s ON d.Specialty = s.specialty_id
- * WHERE a.Office_id = ? AND MONTH(a.Appointment_date) = ? AND YEAR(a.Appointment_date) = ?
- * 
- * Props:
- * @param {Function} onAppointmentClick - Handle appointment selection
- * @param {Function} onBookAppointment - Navigate to booking page
- * @param {Number} officeId - Office_ID for RBAC filtering
- * @param {String} officeName - Office name for display
+ * Displays doctor availability grid for appointment booking
+ * Shows available time slots per doctor for selected date
+ * Integrated with backend APIs for real-time availability
  */
-function OfficeSchedule({ onAppointmentClick, onBookAppointment, officeId, officeName }) {
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 0, 1)); // January 2024
-  const [selectedDoctor, setSelectedDoctor] = useState('all');
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
+function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [doctors, setDoctors] = useState([]);
+  const [bookedSlots, setBookedSlots] = useState({});
+  const [loading, setLoading] = useState(true);
 
   /**
-   * Doctors from database (Doctor table with Specialty join)
-   * SELECT d.Doctor_id, d.First_Name, d.Last_Name, s.specialty_name
-   * FROM Doctor d
-   * JOIN Specialty s ON d.Specialty = s.specialty_id
-   * WHERE d.Work_Location = ?
+   * Load doctors and appointments when component mounts or date changes
    */
-  const doctors = [
-    { Doctor_id: 1, First_Name: 'Emily', Last_Name: 'Chen', specialty_name: 'Internal Medicine', color: '#3b82f6' },
-    { Doctor_id: 2, First_Name: 'James', Last_Name: 'Rodriguez', specialty_name: 'Cardiology', color: '#10b981' },
-    { Doctor_id: 3, First_Name: 'Susan', Last_Name: 'Lee', specialty_name: 'Pediatrics', color: '#f59e0b' },
-    { Doctor_id: 4, First_Name: 'Richard', Last_Name: 'Patel', specialty_name: 'Orthopedics', color: '#8b5cf6' },
-  ];
+  useEffect(() => {
+    loadScheduleData();
+  }, [selectedDate, officeId]);
+
+  const loadScheduleData = async () => {
+    try {
+      setLoading(true);
+      
+      // Get doctors for this office
+      const doctorsResult = await API.getDoctorsByOffice(officeId);
+      
+      if (doctorsResult.success) {
+        // Add colors and working hours to doctors
+        const doctorsWithDetails = (doctorsResult.doctors || []).map((doc, index) => {
+          const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
+          return {
+            ...doc,
+            color: colors[index % colors.length],
+            workDays: [1, 2, 3, 4, 5], // Monday-Friday (will be fetched from API in production)
+            startTime: 9,
+            endTime: 17
+          };
+        });
+        setDoctors(doctorsWithDetails);
+      }
+      
+      // Get appointments for selected date
+      const dateStr = API.formatDateForAPI(selectedDate);
+      const appointmentsResult = await API.getAppointmentsByDate(dateStr, officeId);
+      
+      if (appointmentsResult.success) {
+        // Convert appointments to booked slots lookup
+        const slots = {};
+        (appointmentsResult.appointments || []).forEach(apt => {
+          const key = `${apt.Doctor_id}-${apt.Appointment_date}`;
+          slots[key] = true;
+        });
+        setBookedSlots(slots);
+      }
+      
+    } catch (err) {
+      console.error('Failed to load schedule:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /**
-   * Mock appointments from Appointment table
+   * Date navigation functions
    */
-  const mockAppointments = [
-    {
-      Appointment_id: 1001,
-      Appointment_date: '2024-01-15 09:00:00',
-      Patient_id: 1,
-      Patient_First: 'John',
-      Patient_Last: 'Smith',
-      Doctor_id: 1,
-      Reason_for_visit: 'Annual physical examination',
-      Office_id: officeId
-    },
-    {
-      Appointment_id: 1002,
-      Appointment_date: '2024-01-15 14:00:00',
-      Patient_id: 3,
-      Patient_First: 'David',
-      Patient_Last: 'Johnson',
-      Doctor_id: 1,
-      Reason_for_visit: 'Follow-up consultation',
-      Office_id: officeId
-    },
-    {
-      Appointment_id: 1003,
-      Appointment_date: '2024-01-15 10:30:00',
-      Patient_id: 5,
-      Patient_First: 'Michael',
-      Patient_Last: 'Brown',
-      Doctor_id: 2,
-      Reason_for_visit: 'Cardiology checkup',
-      Office_id: officeId
-    },
-    {
-      Appointment_id: 1007,
-      Appointment_date: '2024-01-16 08:45:00',
-      Patient_id: 4,
-      Patient_First: 'Sarah',
-      Patient_Last: 'Williams',
-      Doctor_id: 4,
-      Reason_for_visit: 'Orthopedic consultation',
-      Office_id: officeId
-    },
-    {
-      Appointment_id: 1005,
-      Appointment_date: '2024-01-15 13:30:00',
-      Patient_id: 2,
-      Patient_First: 'Maria',
-      Patient_Last: 'Garcia',
-      Doctor_id: 3,
-      Reason_for_visit: 'Pediatric wellness visit',
-      Office_id: officeId
-    },
-  ];
-
-  /**
-   * Calendar helper functions
-   */
-  const getDaysInMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    setSelectedDate(newDate);
+    setSelectedSlot(null);
   };
 
-  const getStartingDay = (date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  };
-
-  const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    setSelectedDate(newDate);
+    setSelectedSlot(null);
   };
 
   const goToToday = () => {
-    setCurrentDate(new Date());
+    setSelectedDate(new Date());
+    setSelectedSlot(null);
   };
 
   /**
-   * Get appointments for a specific day
-   * Filters by Office_id (RBAC) and date
+   * Check if selected date is today
    */
-  const getAppointmentsForDay = (day) => {
-    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    
-    let dayAppointments = mockAppointments.filter(apt => {
-      const aptDate = apt.Appointment_date.split(' ')[0];
-      return aptDate === dateStr && apt.Office_id === officeId;
-    });
-
-    // Apply doctor filter
-    if (selectedDoctor !== 'all') {
-      dayAppointments = dayAppointments.filter(apt => apt.Doctor_id === parseInt(selectedDoctor));
-    }
-
-    return dayAppointments;
-  };
-
-  /**
-   * Get doctor info by Doctor_id
-   */
-  const getDoctorById = (doctorId) => {
-    return doctors.find(doc => doc.Doctor_id === doctorId);
-  };
-
-  /**
-   * Format time from Appointment_date
-   */
-  const formatTime = (datetime) => {
-    const time = datetime.split(' ')[1];
-    const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${minutes} ${ampm}`;
-  };
-
-  /**
-   * Handle appointment click
-   */
-  const handleAppointmentClick = (appointment, event) => {
-    event.stopPropagation();
-    setSelectedAppointment(appointment);
-    if (onAppointmentClick) {
-      onAppointmentClick(appointment);
-    }
-  };
-
-  /**
-   * Close appointment modal
-   */
-  const handleCloseModal = () => {
-    setSelectedAppointment(null);
-  };
-
-  // Generate calendar days
-  const currentMonthName = currentDate.toLocaleString('default', { month: 'long' });
-  const currentYear = currentDate.getFullYear();
-  const daysInMonth = getDaysInMonth(currentDate);
-  const startingDay = getStartingDay(currentDate);
-  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-  // Check if today
-  const isToday = (day) => {
+  const isToday = () => {
     const today = new Date();
-    return day === today.getDate() && 
-           currentDate.getMonth() === today.getMonth() && 
-           currentDate.getFullYear() === today.getFullYear();
+    return selectedDate.getDate() === today.getDate() &&
+           selectedDate.getMonth() === today.getMonth() &&
+           selectedDate.getFullYear() === today.getFullYear();
   };
 
-  // Check if weekend
-  const isWeekend = (day) => {
-    const dayOfWeek = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).getDay();
-    return dayOfWeek === 0 || dayOfWeek === 6;
+  /**
+   * Check if selected date is a weekend
+   */
+  const isWeekend = () => {
+    const day = selectedDate.getDay();
+    return day === 0 || day === 6;
+  };
+
+  /**
+   * Check if date is in the past
+   */
+  const isPastDate = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selected = new Date(selectedDate);
+    selected.setHours(0, 0, 0, 0);
+    return selected < today;
+  };
+
+  /**
+   * Format date for display
+   */
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  /**
+   * Generate time slots (30-minute intervals)
+   */
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 8; hour <= 18; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        slots.push({ hour, minute });
+      }
+    }
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots();
+
+  /**
+   * Format time slot for display
+   */
+  const formatTimeSlot = (hour, minute) => {
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    const displayMinute = minute.toString().padStart(2, '0');
+    return `${displayHour}:${displayMinute} ${period}`;
+  };
+
+  /**
+   * Check if doctor works on selected day
+   */
+  const isDoctorWorking = (doctor) => {
+    const dayOfWeek = selectedDate.getDay();
+    return doctor.workDays.includes(dayOfWeek);
+  };
+
+  /**
+   * Check if time slot is within doctor's working hours
+   */
+  const isWithinWorkingHours = (doctor, hour, minute) => {
+    const timeInMinutes = hour * 60 + minute;
+    const startInMinutes = doctor.startTime * 60;
+    const endInMinutes = doctor.endTime * 60;
+    return timeInMinutes >= startInMinutes && timeInMinutes < endInMinutes;
+  };
+
+  /**
+   * Check if time slot is booked (from backend data)
+   */
+  const isSlotBooked = (doctorId, hour, minute) => {
+    const dateStr = API.formatDateForAPI(selectedDate);
+    const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+    const key = `${doctorId}-${dateStr} ${timeStr}`;
+    return bookedSlots[key] === true;
+  };
+
+  /**
+   * Check if time slot is in the past
+   */
+  const isSlotInPast = (hour, minute) => {
+    if (!isToday()) return false;
+    
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    return (hour < currentHour) || (hour === currentHour && minute <= currentMinute);
+  };
+
+  /**
+   * Get slot availability status
+   */
+  const getSlotStatus = (doctor, hour, minute) => {
+    if (isPastDate()) return 'past';
+    if (isSlotInPast(hour, minute)) return 'past';
+    if (!isDoctorWorking(doctor)) return 'unavailable';
+    if (!isWithinWorkingHours(doctor, hour, minute)) return 'unavailable';
+    if (isSlotBooked(doctor.Doctor_id, hour, minute)) return 'booked';
+    return 'available';
+  };
+
+  /**
+   * Handle slot selection
+   */
+  const handleSlotClick = (doctor, hour, minute, status) => {
+    if (status !== 'available') return;
+    
+    const slotKey = `${doctor.Doctor_id}-${hour}-${minute}`;
+    setSelectedSlot(slotKey);
+    
+    if (onSelectTimeSlot) {
+      onSelectTimeSlot({
+        doctor: doctor,
+        date: selectedDate,
+        time: formatTimeSlot(hour, minute),
+        hour: hour,
+        minute: minute
+      });
+    }
+  };
+
+  /**
+   * Check if slot is selected
+   */
+  const isSlotSelected = (doctorId, hour, minute) => {
+    return selectedSlot === `${doctorId}-${hour}-${minute}`;
   };
 
   return (
@@ -211,209 +240,173 @@ function OfficeSchedule({ onAppointmentClick, onBookAppointment, officeId, offic
       {/* ===== HEADER ===== */}
       <div className="schedule-header">
         <div className="header-info">
-          <h1 className="page-title">Office Master Schedule</h1>
+          <h1 className="page-title">Doctor Availability</h1>
           <p className="page-subtitle">
             <Calendar size={18} />
-            {officeName} - All Doctors
+            {officeName} • Select an available time slot
           </p>
         </div>
-        <button className="btn btn-primary" onClick={onBookAppointment}>
-          <Plus size={18} />
-          New Appointment
-        </button>
       </div>
 
-      {/* ===== CONTROLS ===== */}
-      <div className="schedule-controls">
-        {/* Month Navigation */}
-        <div className="month-navigation">
-          <button className="nav-btn" onClick={goToPreviousMonth} aria-label="Previous month">
+      {/* ===== DATE NAVIGATION ===== */}
+      <div className="date-navigation-section">
+        <div className="date-controls">
+          <button className="nav-btn" onClick={goToPreviousDay} title="Previous Day">
             <ChevronLeft size={20} />
           </button>
-          <h2 className="month-title">{currentMonthName} {currentYear}</h2>
-          <button className="nav-btn" onClick={goToNextMonth} aria-label="Next month">
+          
+          <div className="current-date-display">
+            <h2 className="selected-date">{formatDate(selectedDate)}</h2>
+            <div className="date-badges">
+              {isToday() && <span className="today-badge">Today</span>}
+              {isWeekend() && <span className="weekend-badge">Weekend - Closed</span>}
+              {isPastDate() && <span className="past-badge">Past Date</span>}
+            </div>
+          </div>
+          
+          <button className="nav-btn" onClick={goToNextDay} title="Next Day">
             <ChevronRight size={20} />
           </button>
-          <button className="btn-today" onClick={goToToday}>Today</button>
-        </div>
-
-        {/* Doctor Filter */}
-        <div className="doctor-filter">
-          <Filter size={18} />
-          <select 
-            value={selectedDoctor}
-            onChange={(e) => setSelectedDoctor(e.target.value)}
-            className="filter-select"
-          >
-            <option value="all">All Doctors</option>
-            {doctors.map(doc => (
-              <option key={doc.Doctor_id} value={doc.Doctor_id}>
-                Dr. {doc.First_Name} {doc.Last_Name}
-              </option>
-            ))}
-          </select>
+          
+          <button className="btn-today" onClick={goToToday}>
+            Jump to Today
+          </button>
         </div>
       </div>
 
-      {/* ===== DOCTOR LEGEND ===== */}
-      <div className="doctor-legend">
-        {doctors.map(doc => (
-          <div key={doc.Doctor_id} className="legend-item">
-            <div className="legend-color" style={{ backgroundColor: doc.color }}></div>
-            <div className="legend-info">
-              <span className="legend-name">Dr. {doc.First_Name} {doc.Last_Name}</span>
-              <span className="legend-specialty">{doc.specialty_name}</span>
+      {/* ===== LEGEND ===== */}
+      <div className="availability-legend">
+        <div className="legend-item">
+          <div className="legend-box available"></div>
+          <span>Available</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-box booked"></div>
+          <span>Booked</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-box unavailable"></div>
+          <span>Unavailable</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-box selected"></div>
+          <span>Selected</span>
+        </div>
+      </div>
+
+      {/* ===== AVAILABILITY GRID ===== */}
+      <div className="availability-grid-container">
+        {loading ? (
+          <div className="empty-state">
+            <Clock size={64} />
+            <h3>Loading schedule...</h3>
+          </div>
+        ) : isWeekend() || isPastDate() ? (
+          <div className="empty-state">
+            <Calendar size={64} />
+            <h3>{isWeekend() ? 'Office Closed on Weekends' : 'Cannot Book Past Dates'}</h3>
+            <p>{isWeekend() ? 'Please select a weekday to view available appointments.' : 'Please select a current or future date.'}</p>
+            <button className="btn-primary" onClick={goToToday}>
+              Go to Today
+            </button>
+          </div>
+        ) : doctors.length === 0 ? (
+          <div className="empty-state">
+            <User size={64} />
+            <h3>No Doctors Available</h3>
+            <p>No doctors are assigned to this office.</p>
+          </div>
+        ) : (
+          <div className="availability-grid">
+            {/* Header Row - Doctor Names */}
+            <div className="grid-header">
+              <div className="time-column-header">
+                <Clock size={18} />
+                <span>Time</span>
+              </div>
+              {doctors.map(doctor => (
+                <div 
+                  key={doctor.Doctor_id} 
+                  className="doctor-column-header"
+                  style={{ borderTopColor: doctor.color }}
+                >
+                  <div className="doctor-avatar" style={{ backgroundColor: doctor.color }}>
+                    <User size={20} />
+                  </div>
+                  <div className="doctor-info">
+                    <h3 className="doctor-name">Dr. {doctor.First_Name} {doctor.Last_Name}</h3>
+                    <p className="doctor-specialty">{doctor.specialty_name}</p>
+                    {isDoctorWorking(doctor) ? (
+                      <p className="doctor-hours">
+                        {formatTimeSlot(doctor.startTime, 0)} - {formatTimeSlot(doctor.endTime, 0)}
+                      </p>
+                    ) : (
+                      <p className="doctor-hours off-day">Off Today</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Time Slots Grid */}
+            <div className="grid-body">
+              {timeSlots.map(({ hour, minute }) => (
+                <div key={`${hour}-${minute}`} className="grid-row">
+                  {/* Time Label */}
+                  <div className="time-cell">
+                    <span className="time-label">{formatTimeSlot(hour, minute)}</span>
+                  </div>
+
+                  {/* Doctor Slots */}
+                  {doctors.map(doctor => {
+                    const status = getSlotStatus(doctor, hour, minute);
+                    const isSelected = isSlotSelected(doctor.Doctor_id, hour, minute);
+                    
+                    return (
+                      <div
+                        key={`${doctor.Doctor_id}-${hour}-${minute}`}
+                        className={`slot-cell ${status} ${isSelected ? 'selected' : ''}`}
+                        onClick={() => handleSlotClick(doctor, hour, minute, status)}
+                        title={
+                          status === 'available' ? 'Click to select this time slot' :
+                          status === 'booked' ? 'This time slot is already booked' :
+                          status === 'past' ? 'This time has passed' :
+                          'Doctor not available at this time'
+                        }
+                      >
+                        {isSelected && (
+                          <div className="selected-indicator">
+                            <Check size={20} />
+                          </div>
+                        )}
+                        {status === 'available' && !isSelected && (
+                          <div className="hover-indicator">
+                            Click to select
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
-        ))}
+        )}
       </div>
 
-      {/* ===== CALENDAR GRID ===== */}
-      <div className="calendar-container">
-        <div className="calendar-grid">
-          {/* Weekday Headers */}
-          {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
-            <div key={day} className="weekday-header">{day}</div>
-          ))}
-
-          {/* Empty cells before first day */}
-          {Array.from({ length: startingDay }).map((_, i) => (
-            <div key={`empty-${i}`} className="calendar-day empty-day"></div>
-          ))}
-
-          {/* Calendar Days */}
-          {days.map(day => {
-            const appointments = getAppointmentsForDay(day);
-            const weekend = isWeekend(day);
-            const today = isToday(day);
-
-            return (
-              <div 
-                key={day}
-                className={`calendar-day ${weekend ? 'weekend' : ''} ${today ? 'today' : ''}`}
-              >
-                {/* Day Header */}
-                <div className="day-header">
-                  <span className="day-number">{day}</span>
-                  {appointments.length > 0 && (
-                    <span className="appointment-count">{appointments.length}</span>
-                  )}
-                </div>
-
-                {/* Day Content */}
-                <div className="day-appointments">
-                  {weekend ? (
-                    <p className="no-appointments">Closed</p>
-                  ) : appointments.length > 0 ? (
-                    appointments.map(apt => {
-                      const doctor = getDoctorById(apt.Doctor_id);
-                      return (
-                        <div
-                          key={apt.Appointment_id}
-                          className="appointment-item"
-                          style={{ borderLeftColor: doctor?.color }}
-                          onClick={(e) => handleAppointmentClick(apt, e)}
-                        >
-                          <div className="apt-time">{formatTime(apt.Appointment_date)}</div>
-                          <div className="apt-patient">
-                            {apt.Patient_First} {apt.Patient_Last}
-                          </div>
-                          <div className="apt-doctor" style={{ color: doctor?.color }}>
-                            Dr. {doctor?.Last_Name}
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className="no-appointments">No appointments</p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ===== APPOINTMENT DETAILS MODAL ===== */}
-      {selectedAppointment && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2 className="modal-title">Appointment Details</h2>
-                <p className="modal-subtitle">ID: {selectedAppointment.Appointment_id}</p>
-              </div>
-              <button className="modal-close" onClick={handleCloseModal}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="modal-body">
-              <div className="appointment-details-grid">
-                <div className="detail-section">
-                  <label className="detail-label">
-                    <User size={16} />
-                    Patient
-                  </label>
-                  <p className="detail-value">
-                    {selectedAppointment.Patient_First} {selectedAppointment.Patient_Last}
-                  </p>
-                  <p className="detail-value-sub">Patient ID: {selectedAppointment.Patient_id}</p>
-                </div>
-
-                <div className="detail-section">
-                  <label className="detail-label">
-                    <User size={16} />
-                    Doctor
-                  </label>
-                  <p className="detail-value">
-                    Dr. {getDoctorById(selectedAppointment.Doctor_id)?.First_Name}{' '}
-                    {getDoctorById(selectedAppointment.Doctor_id)?.Last_Name}
-                  </p>
-                  <p className="detail-value-sub">
-                    {getDoctorById(selectedAppointment.Doctor_id)?.specialty_name}
-                  </p>
-                </div>
-
-                <div className="detail-section">
-                  <label className="detail-label">
-                    <Calendar size={16} />
-                    Date & Time
-                  </label>
-                  <p className="detail-value">
-                    {new Date(selectedAppointment.Appointment_date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                  <p className="detail-value-sub">
-                    {formatTime(selectedAppointment.Appointment_date)}
-                  </p>
-                </div>
-
-                <div className="detail-section detail-section-full">
-                  <label className="detail-label">Reason for Visit</label>
-                  <p className="detail-value">{selectedAppointment.Reason_for_visit}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn btn-primary">
-                <Edit size={18} />
-                Edit Appointment
-              </button>
-              <button className="btn btn-danger">
-                <X size={18} />
-                Cancel Appointment
-              </button>
-              <button className="btn btn-ghost" onClick={handleCloseModal}>
-                Close
-              </button>
+      {/* ===== SELECTED SLOT INFO ===== */}
+      {selectedSlot && (
+        <div className="selected-slot-info">
+          <div className="info-content">
+            <Check size={24} />
+            <div className="info-text">
+              <h3>Time Slot Selected</h3>
+              <p>Click "Continue" to proceed with booking this appointment</p>
             </div>
           </div>
+          <button className="btn-continue">
+            Continue to Booking
+          </button>
         </div>
       )}
     </div>

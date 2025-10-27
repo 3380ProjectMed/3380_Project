@@ -1,170 +1,187 @@
-import React, { useState } from 'react';
-import { Calendar, Users, Clock, FileText, Check, AlertCircle, DollarSign, Plus, Phone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Users, Clock, Check, AlertCircle, DollarSign, Plus, Phone, ChevronLeft, ChevronRight, Filter, User, Edit, X } from 'lucide-react';
+import * as API from '../../api/receptionistApi';
 import './ReceptionistDashboard.css';
 
 /**
- * ReceptionistDashboard Component
+ * ReceptionistDashboard Component (Backend Integrated)
  * 
- * Main dashboard for receptionist showing:
- * - Today's statistics (appointments, check-ins, payments)
- * - Quick action buttons
- * - Today's appointment list with status
- * 
- * Database Tables:
- * - Appointment (Appointment_id, Patient_id, Doctor_id, Office_id, Appointment_date)
- * - Patient (Patient_ID, First_Name, Last_Name, Email, Phone via EmergencyContact)
- * - Doctor (Doctor_id, First_Name, Last_Name)
- * - PatientVisit (Status: 'Scheduled', 'Completed', 'Canceled', 'No-Show')
- * - patient_insurance (copay)
- * 
- * Props:
- * @param {Function} setCurrentPage - Navigate to different pages
- * @param {Function} onProcessPayment - Handle payment processing
- * @param {Number} officeId - Office_ID for RBAC filtering
- * @param {String} officeName - Office name for display
+ * Main dashboard with monthly calendar and today's appointments
+ * Pulls real data from backend APIs
  */
 function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, officeName }) {
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDoctor, setSelectedDoctor] = useState('all');
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  
+  // State for API data
+  const [stats, setStats] = useState(null);
+  const [todayAppointments, setTodayAppointments] = useState([]);
+  const [calendarAppointments, setCalendarAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  /**
-   * Mock appointment data from database
-   * Real query:
-   * SELECT a.Appointment_id, a.Appointment_date, a.Reason_for_visit,
-   *        p.Patient_ID, p.First_Name, p.Last_Name, p.EmergencyContact,
-   *        d.First_Name as Doctor_First, d.Last_Name as Doctor_Last,
-   *        pi.copay,
-   *        pv.Status
-   * FROM Appointment a
-   * JOIN Patient p ON a.Patient_id = p.Patient_ID
-   * JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-   * LEFT JOIN patient_insurance pi ON p.InsuranceID = pi.id AND pi.is_primary = 1
-   * LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
-   * WHERE a.Office_id = ? AND DATE(a.Appointment_date) = CURDATE()
-   * ORDER BY a.Appointment_date
-   */
-  const mockAppointments = [
-    {
-      Appointment_id: 1001,
-      Appointment_date: '2024-01-15 09:00:00',
-      time: '09:00 AM',
-      Patient_ID: 1,
-      Patient_First: 'John',
-      Patient_Last: 'Smith',
-      EmergencyContact: '555-1001',
-      Doctor_First: 'Emily',
-      Doctor_Last: 'Chen',
-      Reason_for_visit: 'Annual physical examination',
-      Status: 'Scheduled',
-      copay: 25.00,
-      Office_id: officeId
-    },
-    {
-      Appointment_id: 1002,
-      Appointment_date: '2024-01-15 09:30:00',
-      time: '09:30 AM',
-      Patient_ID: 3,
-      Patient_First: 'David',
-      Patient_Last: 'Johnson',
-      EmergencyContact: '555-1003',
-      Doctor_First: 'Emily',
-      Doctor_Last: 'Chen',
-      Reason_for_visit: 'Follow-up consultation',
-      Status: 'Completed', // Checked In status
-      copay: 15.00,
-      Office_id: officeId
-    },
-    {
-      Appointment_id: 1003,
-      Appointment_date: '2024-01-15 10:30:00',
-      time: '10:30 AM',
-      Patient_ID: 5,
-      Patient_First: 'Michael',
-      Patient_Last: 'Brown',
-      EmergencyContact: '555-1005',
-      Doctor_First: 'James',
-      Doctor_Last: 'Rodriguez',
-      Reason_for_visit: 'Cardiology checkup',
-      Status: 'Scheduled', // In Progress
-      copay: 25.00,
-      Office_id: officeId
-    },
-    {
-      Appointment_id: 1004,
-      Appointment_date: '2024-01-15 11:00:00',
-      time: '11:00 AM',
-      Patient_ID: 4,
-      Patient_First: 'Sarah',
-      Patient_Last: 'Williams',
-      EmergencyContact: '555-1004',
-      Doctor_First: 'Emily',
-      Doctor_Last: 'Chen',
-      Reason_for_visit: 'Lab results review',
-      Status: 'Completed',
-      copay: 30.00,
-      Office_id: officeId
-    },
-    {
-      Appointment_id: 1005,
-      Appointment_date: '2024-01-15 02:00:00',
-      time: '02:00 PM',
-      Patient_ID: 6,
-      Patient_First: 'Jennifer',
-      Patient_Last: 'Davis',
-      EmergencyContact: '555-1006',
-      Doctor_First: 'James',
-      Doctor_Last: 'Rodriguez',
-      Reason_for_visit: 'Routine checkup',
-      Status: 'Scheduled',
-      copay: 25.00,
-      Office_id: officeId
-    },
+  // Doctors list
+  const doctors = [
+    { Doctor_id: 1, First_Name: 'Emily', Last_Name: 'Chen', specialty_name: 'Internal Medicine', color: '#3b82f6' },
+    { Doctor_id: 2, First_Name: 'James', Last_Name: 'Rodriguez', specialty_name: 'Cardiology', color: '#10b981' },
+    { Doctor_id: 3, First_Name: 'Susan', Last_Name: 'Lee', specialty_name: 'Pediatrics', color: '#f59e0b' },
+    { Doctor_id: 4, First_Name: 'Richard', Last_Name: 'Patel', specialty_name: 'Orthopedics', color: '#8b5cf6' },
   ];
 
   /**
-   * Calculate dashboard statistics from PatientVisit.Status
+   * Load dashboard data on mount
    */
-  const calculateStats = () => {
-    const total = mockAppointments.length;
-    const checkedIn = mockAppointments.filter(a => a.Status === 'Completed' && !a.paymentRecorded).length;
-    const pending = mockAppointments.filter(a => a.Status === 'Scheduled').length;
-    const completed = mockAppointments.filter(a => a.Status === 'Completed').length;
-    const totalRevenue = mockAppointments
-      .filter(a => a.Status === 'Completed')
-      .reduce((sum, a) => sum + (a.copay || 0), 0);
-
-    return { total, checkedIn, pending, completed, totalRevenue };
-  };
-
-  const stats = calculateStats();
+  useEffect(() => {
+    loadDashboardData();
+  }, [officeId]);
 
   /**
-   * Filter appointments by status
+   * Load calendar when month changes
    */
+  useEffect(() => {
+    loadCalendarData();
+  }, [currentDate, officeId]);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const today = API.formatDateForAPI(new Date());
+      
+      const [statsResult, appointmentsResult] = await Promise.all([
+        API.getDashboardStats(officeId, today),
+        API.getTodayAppointments(officeId)
+      ]);
+
+      if (statsResult.success) {
+        setStats(statsResult.stats);
+      }
+      
+      if (appointmentsResult.success) {
+        setTodayAppointments(appointmentsResult.appointments || []);
+      }
+      
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load dashboard:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCalendarData = async () => {
+    try {
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      
+      const startDate = API.formatDateForAPI(startOfMonth);
+      const endDate = API.formatDateForAPI(endOfMonth);
+      
+      const result = await API.getAppointmentsByOffice(officeId, startDate, endDate);
+      
+      if (result.success) {
+        setCalendarAppointments(result.appointments || []);
+      }
+    } catch (err) {
+      console.error('Failed to load calendar:', err);
+    }
+  };
+
+  const dashStats = stats || {
+    total_appointments: 0,
+    scheduled: 0,
+    checked_in: 0,
+    completed: 0,
+    revenue_collected: 0
+  };
+
+  /**
+   * Calendar helper functions
+   */
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getStartingDay = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const isToday = (day) => {
+    const today = new Date();
+    return day === today.getDate() && 
+           currentDate.getMonth() === today.getMonth() && 
+           currentDate.getFullYear() === today.getFullYear();
+  };
+
+  const isWeekend = (day) => {
+    const dayOfWeek = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6;
+  };
+
+  const getAppointmentsForDay = (day) => {
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
+    let dayAppointments = calendarAppointments.filter(apt => {
+      const aptDate = apt.Appointment_date.split(' ')[0];
+      return aptDate === dateStr;
+    });
+
+    if (selectedDoctor !== 'all') {
+      dayAppointments = dayAppointments.filter(apt => apt.Doctor_id === parseInt(selectedDoctor));
+    }
+
+    return dayAppointments;
+  };
+
+  const getDoctorById = (doctorId) => {
+    return doctors.find(doc => doc.Doctor_id === doctorId);
+  };
+
+  const formatTime = (datetime) => {
+    return API.parseTime(datetime);
+  };
+
   const getFilteredAppointments = () => {
-    if (selectedFilter === 'all') return mockAppointments;
-    return mockAppointments.filter(apt => 
-      apt.Status.toLowerCase().replace(' ', '-') === selectedFilter
+    if (selectedFilter === 'all') return todayAppointments;
+    
+    const statusMap = {
+      'scheduled': 'Scheduled',
+      'completed': 'Completed',
+      'canceled': 'Canceled'
+    };
+    
+    return todayAppointments.filter(apt => 
+      (apt.Status || 'Scheduled') === statusMap[selectedFilter]
     );
   };
 
   const filteredAppointments = getFilteredAppointments();
 
-  /**
-   * Get status badge class (maps to PatientVisit.Status enum)
-   */
   const getStatusClass = (status) => {
     const statusMap = {
       'scheduled': 'status-scheduled',
       'completed': 'status-completed',
       'canceled': 'status-cancelled',
+      'checked in': 'status-checked-in',
       'no-show': 'status-noshow'
     };
-    return statusMap[status.toLowerCase()] || '';
+    return statusMap[status?.toLowerCase()] || 'status-scheduled';
   };
 
-  /**
-   * Get current date formatted
-   */
   const getCurrentDate = () => {
     const today = new Date();
     return today.toLocaleDateString('en-US', { 
@@ -174,6 +191,12 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       day: 'numeric' 
     });
   };
+
+  const currentMonthName = currentDate.toLocaleString('default', { month: 'long' });
+  const currentYear = currentDate.getFullYear();
+  const daysInMonth = getDaysInMonth(currentDate);
+  const startingDay = getStartingDay(currentDate);
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
   return (
     <div className="receptionist-dashboard">
@@ -195,7 +218,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             <Calendar size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">{stats.total}</div>
+            <div className="stat-value">
+              {loading ? '...' : dashStats.total_appointments}
+            </div>
             <div className="stat-label">Total Appointments</div>
           </div>
         </div>
@@ -205,7 +230,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             <Check size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">{stats.checkedIn}</div>
+            <div className="stat-value">
+              {loading ? '...' : dashStats.checked_in}
+            </div>
             <div className="stat-label">Awaiting Payment</div>
           </div>
         </div>
@@ -215,7 +242,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             <Clock size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">{stats.pending}</div>
+            <div className="stat-value">
+              {loading ? '...' : dashStats.scheduled}
+            </div>
             <div className="stat-label">Pending Check-in</div>
           </div>
         </div>
@@ -225,7 +254,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             <DollarSign size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">${stats.totalRevenue.toFixed(2)}</div>
+            <div className="stat-value">
+              {loading ? '...' : `$${dashStats.revenue_collected.toFixed(2)}`}
+            </div>
             <div className="stat-label">Collected Today</div>
           </div>
         </div>
@@ -279,135 +310,308 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             onClick={() => setCurrentPage('schedule')}
           >
             <div className="action-icon">
-              <Calendar size={24} />
+              <Clock size={24} />
             </div>
             <div className="action-content">
-              <h3 className="action-title">Full Schedule</h3>
-              <p className="action-description">View office calendar</p>
+              <h3 className="action-title">Doctor Availability</h3>
+              <p className="action-description">View daily schedule</p>
             </div>
           </button>
         </div>
       </div>
 
-      {/* ===== TODAY'S APPOINTMENTS ===== */}
-      <div className="appointments-section">
-        <div className="section-header">
-          <h2 className="section-title">Today's Appointments</h2>
-          
-          {/* Status Filter - Maps to PatientVisit.Status */}
-          <div className="filter-buttons">
-            <button 
-              className={`filter-btn ${selectedFilter === 'all' ? 'filter-active' : ''}`}
-              onClick={() => setSelectedFilter('all')}
-            >
-              All ({mockAppointments.length})
-            </button>
-            <button 
-              className={`filter-btn ${selectedFilter === 'scheduled' ? 'filter-active' : ''}`}
-              onClick={() => setSelectedFilter('scheduled')}
-            >
-              Scheduled
-            </button>
-            <button 
-              className={`filter-btn ${selectedFilter === 'completed' ? 'filter-active' : ''}`}
-              onClick={() => setSelectedFilter('completed')}
-            >
-              Completed
-            </button>
-            <button 
-              className={`filter-btn ${selectedFilter === 'canceled' ? 'filter-active' : ''}`}
-              onClick={() => setSelectedFilter('canceled')}
-            >
-              Canceled
-            </button>
-            <button 
-              className={`filter-btn ${selectedFilter === 'no-show' ? 'filter-active' : ''}`}
-              onClick={() => setSelectedFilter('no-show')}
-            >
-              No-Show
-            </button>
+      {/* ===== COMBINED VIEW ===== */}
+      <div className="combined-view-section">
+        {/* TODAY'S APPOINTMENTS */}
+        <div className="appointments-section">
+          <div className="section-header">
+            <h2 className="section-title">Today's Appointments</h2>
+            
+            <div className="filter-buttons">
+              <button 
+                className={`filter-btn ${selectedFilter === 'all' ? 'filter-active' : ''}`}
+                onClick={() => setSelectedFilter('all')}
+              >
+                All ({todayAppointments.length})
+              </button>
+              <button 
+                className={`filter-btn ${selectedFilter === 'scheduled' ? 'filter-active' : ''}`}
+                onClick={() => setSelectedFilter('scheduled')}
+              >
+                Scheduled
+              </button>
+              <button 
+                className={`filter-btn ${selectedFilter === 'completed' ? 'filter-active' : ''}`}
+                onClick={() => setSelectedFilter('completed')}
+              >
+                Completed
+              </button>
+            </div>
+          </div>
+
+          <div className="appointments-list">
+            {loading ? (
+              <div className="empty-state">
+                <Clock size={48} />
+                <p>Loading appointments...</p>
+              </div>
+            ) : error ? (
+              <div className="empty-state">
+                <AlertCircle size={48} />
+                <p>{error}</p>
+              </div>
+            ) : filteredAppointments.length > 0 ? (
+              filteredAppointments.map((appointment) => (
+                <div 
+                  key={appointment.Appointment_id} 
+                  className="appointment-card"
+                >
+                  <div className="appointment-time">
+                    <Clock size={20} />
+                    <span>{formatTime(appointment.Appointment_date)}</span>
+                  </div>
+
+                  <div className="appointment-patient">
+                    <h3 className="patient-name">
+                      {appointment.Patient_First} {appointment.Patient_Last}
+                    </h3>
+                    <div className="patient-meta">
+                      <span className="patient-id">ID: {appointment.Patient_id}</span>
+                      {appointment.EmergencyContact && (
+                        <span className="patient-phone">
+                          <Phone size={14} />
+                          {appointment.EmergencyContact}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="appointment-details">
+                    <p className="appointment-reason">{appointment.Reason_for_visit}</p>
+                    <p className="appointment-doctor">
+                      Dr. {appointment.Doctor_First} {appointment.Doctor_Last}
+                    </p>
+                  </div>
+
+                  <div className="appointment-status">
+                    <span className={`status-badge ${getStatusClass(appointment.Status)}`}>
+                      {appointment.Status || 'Scheduled'}
+                    </span>
+                  </div>
+
+                  <div className="appointment-actions">
+                    {appointment.Status === 'Scheduled' && (
+                      <button className="btn-check-in">
+                        <Check size={16} />
+                        Check In
+                      </button>
+                    )}
+                    {appointment.Status === 'Completed' && appointment.copay && (
+                      <button 
+                        className="btn-payment"
+                        onClick={() => onProcessPayment({
+                          id: appointment.Appointment_id,
+                          patientId: appointment.Patient_id,
+                          patientName: `${appointment.Patient_First} ${appointment.Patient_Last}`,
+                          doctor: `Dr. ${appointment.Doctor_First} ${appointment.Doctor_Last}`,
+                          copay: appointment.copay,
+                          reason: appointment.Reason_for_visit,
+                          time: formatTime(appointment.Appointment_date)
+                        })}
+                      >
+                        <DollarSign size={16} />
+                        ${appointment.copay.toFixed(2)}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-state">
+                <AlertCircle size={48} />
+                <p>No appointments match this filter</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Appointments List */}
-        <div className="appointments-list">
-          {filteredAppointments.length > 0 ? (
-            filteredAppointments.map((appointment) => (
-              <div 
-                key={appointment.Appointment_id} 
-                className="appointment-card"
+        {/* CALENDAR VIEW */}
+        <div className="calendar-view-section">
+          <h2 className="section-title">Monthly Calendar</h2>
+          
+          <div className="calendar-controls">
+            <div className="month-navigation">
+              <button className="nav-btn" onClick={goToPreviousMonth}>
+                <ChevronLeft size={20} />
+              </button>
+              <h2 className="month-title">{currentMonthName} {currentYear}</h2>
+              <button className="nav-btn" onClick={goToNextMonth}>
+                <ChevronRight size={20} />
+              </button>
+              <button className="btn-today" onClick={goToToday}>Today</button>
+            </div>
+
+            <div className="doctor-filter">
+              <Filter size={18} />
+              <select 
+                value={selectedDoctor}
+                onChange={(e) => setSelectedDoctor(e.target.value)}
+                className="filter-select"
               >
-                <div className="appointment-time">
-                  <Clock size={20} />
-                  <span>{appointment.time}</span>
-                </div>
+                <option value="all">All Doctors</option>
+                {doctors.map(doc => (
+                  <option key={doc.Doctor_id} value={doc.Doctor_id}>
+                    Dr. {doc.First_Name} {doc.Last_Name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-                <div className="appointment-patient">
-                  <h3 className="patient-name">
-                    {appointment.Patient_First} {appointment.Patient_Last}
-                  </h3>
-                  <div className="patient-meta">
-                    <span className="patient-id">ID: {appointment.Patient_ID}</span>
-                    <span className="patient-phone">
-                      <Phone size={14} />
-                      {appointment.EmergencyContact}
-                    </span>
+          <div className="doctor-legend">
+            {doctors.map(doc => (
+              <div key={doc.Doctor_id} className="legend-item">
+                <div className="legend-color" style={{ backgroundColor: doc.color }}></div>
+                <div className="legend-info">
+                  <span className="legend-name">Dr. {doc.First_Name} {doc.Last_Name}</span>
+                  <span className="legend-specialty">{doc.specialty_name}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="calendar-container">
+            <div className="calendar-grid">
+              {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
+                <div key={day} className="weekday-header">{day}</div>
+              ))}
+
+              {Array.from({ length: startingDay }).map((_, i) => (
+                <div key={`empty-${i}`} className="calendar-day empty-day"></div>
+              ))}
+
+              {days.map(day => {
+                const appointments = getAppointmentsForDay(day);
+                const weekend = isWeekend(day);
+                const today = isToday(day);
+
+                return (
+                  <div 
+                    key={day}
+                    className={`calendar-day ${weekend ? 'weekend' : ''} ${today ? 'today' : ''}`}
+                  >
+                    <div className="day-header">
+                      <span className="day-number">{day}</span>
+                      {appointments.length > 0 && (
+                        <span className="appointment-count">{appointments.length}</span>
+                      )}
+                    </div>
+
+                    <div className="day-appointments">
+                      {weekend ? (
+                        <p className="no-appointments">Closed</p>
+                      ) : appointments.length > 0 ? (
+                        appointments.map(apt => {
+                          const doctor = getDoctorById(apt.Doctor_id);
+                          return (
+                            <div
+                              key={apt.Appointment_id}
+                              className="appointment-item"
+                              style={{ borderLeftColor: doctor?.color }}
+                              onClick={() => setSelectedAppointment(apt)}
+                            >
+                              <div className="apt-time">{formatTime(apt.Appointment_date)}</div>
+                              <div className="apt-patient">
+                                {apt.Patient_First} {apt.Patient_Last}
+                              </div>
+                              <div className="apt-doctor" style={{ color: doctor?.color }}>
+                                Dr. {doctor?.Last_Name}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="no-appointments">No appointments</p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
 
-                <div className="appointment-details">
-                  <p className="appointment-reason">{appointment.Reason_for_visit}</p>
-                  <p className="appointment-doctor">
-                    Dr. {appointment.Doctor_First} {appointment.Doctor_Last}
+      {/* ===== APPOINTMENT DETAILS MODAL ===== */}
+      {selectedAppointment && (
+        <div className="modal-overlay" onClick={() => setSelectedAppointment(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Appointment Details</h2>
+                <p className="modal-subtitle">ID: {selectedAppointment.Appointment_id}</p>
+              </div>
+              <button className="modal-close" onClick={() => setSelectedAppointment(null)}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="appointment-details-grid">
+                <div className="detail-section">
+                  <label className="detail-label">
+                    <User size={16} />
+                    Patient
+                  </label>
+                  <p className="detail-value">
+                    {selectedAppointment.Patient_First} {selectedAppointment.Patient_Last}
                   </p>
                 </div>
 
-                <div className="appointment-status">
-                  <span className={`status-badge ${getStatusClass(appointment.Status)}`}>
-                    {appointment.Status}
-                  </span>
+                <div className="detail-section">
+                  <label className="detail-label">
+                    <User size={16} />
+                    Doctor
+                  </label>
+                  <p className="detail-value">
+                    Dr. {getDoctorById(selectedAppointment.Doctor_id)?.First_Name}{' '}
+                    {getDoctorById(selectedAppointment.Doctor_id)?.Last_Name}
+                  </p>
                 </div>
 
-                <div className="appointment-actions">
-                  {appointment.Status === 'Scheduled' && (
-                    <button className="btn-check-in">
-                      <Check size={16} />
-                      Check In
-                    </button>
-                  )}
-                  {appointment.Status === 'Completed' && !appointment.paymentRecorded && (
-                    <button 
-                      className="btn-payment"
-                      onClick={() => onProcessPayment({
-                        ...appointment,
-                        patientName: `${appointment.Patient_First} ${appointment.Patient_Last}`,
-                        doctor: `Dr. ${appointment.Doctor_First} ${appointment.Doctor_Last}`,
-                        id: appointment.Appointment_id,
-                        patientId: appointment.Patient_ID,
-                        reason: appointment.Reason_for_visit
-                      })}
-                    >
-                      <DollarSign size={16} />
-                      ${appointment.copay.toFixed(2)}
-                    </button>
-                  )}
-                  {appointment.paymentRecorded && (
-                    <span className="payment-complete">
-                      <Check size={16} />
-                      Paid
-                    </span>
-                  )}
+                <div className="detail-section">
+                  <label className="detail-label">
+                    <Calendar size={16} />
+                    Date & Time
+                  </label>
+                  <p className="detail-value">
+                    {formatTime(selectedAppointment.Appointment_date)}
+                  </p>
+                </div>
+
+                <div className="detail-section detail-section-full">
+                  <label className="detail-label">Reason for Visit</label>
+                  <p className="detail-value">{selectedAppointment.Reason_for_visit}</p>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="empty-state">
-              <AlertCircle size={48} />
-              <p>No appointments match this filter</p>
             </div>
-          )}
+
+            <div className="modal-footer">
+              <button className="btn btn-primary">
+                <Edit size={18} />
+                Edit Appointment
+              </button>
+              <button className="btn btn-danger">
+                <X size={18} />
+                Cancel Appointment
+              </button>
+              <button className="btn btn-ghost" onClick={() => setSelectedAppointment(null)}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
