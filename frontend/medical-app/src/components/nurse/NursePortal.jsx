@@ -6,7 +6,6 @@ import NursePatients from "./NursePatients";
 import NurseClinicalWorkSpace from "./NurseClinicalWorkSpace";
 import NurseProfile from "./NurseProfile";
 import NurseReport from "./NurseReport";
-import NurseReferral from "./NurseReferral";
 import "./NursePortal.css";
 
 export default function NursePortal() {
@@ -32,8 +31,7 @@ export default function NursePortal() {
         {currentPage === "patients" && <NursePatients />}
         {currentPage === "clinical" && <NurseClinicalWorkSpace />}
         {currentPage === "profile" && <NurseProfile />}
-        {currentPage === "reports" && <NurseReport />}
-        {currentPage === "referrals" && <NurseReferral />}
+  {currentPage === "reports" && <NurseReport />}
       </main>
     </div>
   );

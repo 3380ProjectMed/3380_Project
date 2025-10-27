@@ -1,13 +1,25 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./NurseProfile.css";
+import { getNurseProfile } from '../../api/nurse';
 
 export default function NurseProfile() {
-  const user = {
-    name: "Nurse Amelia",
-    title: "Registered Nurse",
-    email: "amelia@nurseshift.local",
-    phone: "(555) 983-2211",
-  };
+  const [user, setUser] = useState({ name: 'Nurse', title: '', email: '', phone: '' });
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      try {
+        const p = await getNurseProfile().catch(() => null);
+        if (p && mounted) {
+          setUser({ name: (p.firstName || '') + ' ' + (p.lastName || ''), title: '', email: p.email || '', phone: p.phone || '' });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="nurse-page">
