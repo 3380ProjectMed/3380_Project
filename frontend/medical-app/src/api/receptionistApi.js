@@ -1,79 +1,147 @@
 // src/api/receptionistApi.js
-import { apiRequest } from './http.js';
-
 /**
- * Receptionist API Module
- * All backend endpoints for receptionist portal functionality
+ * Receptionist API Module - Updated to follow Doctor API pattern
+ * Uses session-based authentication (credentials: 'include')
+ * All endpoints automatically use the logged-in receptionist's office
  */
 
+const API_BASE = '/api/receptionist_api';
+
+/**
+ * Helper function to make API requests with session credentials
+ */
+async function apiRequest(endpoint, options = {}) {
+  const {
+    method = 'GET',
+    body = null,
+    params = {}
+  } = options;
+
+  // Build URL with query parameters
+  let url = `${API_BASE}/${endpoint}`;
+  if (params && Object.keys(params).length > 0) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        searchParams.append(key, value);
+      }
+    });
+    url += '?' + searchParams.toString();
+  }
+
+  // Build request config with session credentials
+  const config = {
+    method,
+    credentials: 'include', // Critical for session-based auth
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+
+  // Add body for POST/PUT requests
+  if (body && (method === 'POST' || method === 'PUT')) {
+    config.body = JSON.stringify(body);
+  }
+
+  try {
+    const response = await fetch(url, config);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Receptionist API Error:', error);
+    throw error;
+  }
+}
+
 // ==========================================
-// PATIENT APIs
+// DASHBOARD APIs
 // ==========================================
 
-export const searchPatients = (searchQuery = '') =>
-  apiRequest('receptionist_api/patients/get-all.php', { 
-    params: searchQuery ? { q: searchQuery } : {} 
-  });
+/**
+ * Get dashboard statistics for receptionist's office
+ * Automatically uses logged-in receptionist's office
+ */
+export const getDashboardStats = (date = null) => {
+  const params = {};
+  if (date) params.date = date;
+  return apiRequest('dashboard/stats.php', { params });
+};
 
-export const getPatientById = (patientId) =>
-  apiRequest('receptionist_api/patients/get-by-id.php', { 
-    params: { id: patientId } 
-  });
-
-export const createPatient = (patientData) =>
-  apiRequest('receptionist_api/patients/create.php', { 
-    method: 'POST', 
-    body: patientData 
-  });
-
-export const updatePatient = (patientId, patientData) =>
-  apiRequest('receptionist_api/patients/update.php', { 
-    method: 'PUT', 
-    body: { Patient_ID: patientId, ...patientData } 
-  });
+/**
+ * Get today's appointments for receptionist's office
+ * Automatically uses logged-in receptionist's office
+ */
+export const getTodayAppointments = () =>
+  apiRequest('dashboard/today.php');
 
 // ==========================================
 // APPOINTMENT APIs
 // ==========================================
 
-export const getAppointmentsByOffice = (officeId, startDate = null, endDate = null) => {
-  const params = { office_id: officeId };
+/**
+ * Get appointments for receptionist's office within date range
+ * Automatically uses logged-in receptionist's office
+ */
+export const getAppointmentsByOffice = (startDate = null, endDate = null) => {
+  const params = {};
   if (startDate) params.start_date = startDate;
   if (endDate) params.end_date = endDate;
-  
-  return apiRequest('receptionist_api/appointments/get-by-office.php', { params });
+  return apiRequest('appointments/get-by-office.php', { params });
 };
 
-export const getAppointmentsByDate = (date, officeId) =>
-  apiRequest('receptionist_api/appointments/get-by-date.php', { 
-    params: { date, office_id: officeId } 
-  });
+/**
+ * Get appointments for a specific date at receptionist's office
+ */
+export const getAppointmentsByDate = (date) =>
+  apiRequest('appointments/get-by-date.php', { params: { date } });
 
+/**
+ * Get doctor availability for booking
+ */
 export const getDoctorAvailability = (doctorId, date) =>
-  apiRequest('receptionist_api/appointments/get-availability.php', { 
+  apiRequest('appointments/get-availability.php', { 
     params: { doctor_id: doctorId, date } 
   });
 
+/**
+ * Create a new appointment
+ * Office_id is validated against receptionist's assigned office
+ */
 export const createAppointment = (appointmentData) =>
-  apiRequest('receptionist_api/appointments/create.php', { 
+  apiRequest('appointments/create.php', { 
     method: 'POST', 
     body: appointmentData 
   });
 
+/**
+ * Update an existing appointment
+ * Access is validated against receptionist's office
+ */
 export const updateAppointment = (appointmentId, appointmentData) =>
-  apiRequest('receptionist_api/appointments/update.php', { 
+  apiRequest('appointments/update.php', { 
     method: 'PUT', 
     body: { Appointment_id: appointmentId, ...appointmentData } 
   });
 
+/**
+ * Cancel an appointment
+ */
 export const cancelAppointment = (appointmentId, reason = '') =>
-  apiRequest('receptionist_api/appointments/cancel.php', { 
+  apiRequest('appointments/cancel.php', { 
     method: 'PUT', 
     body: { Appointment_id: appointmentId, cancellation_reason: reason } 
   });
 
+/**
+ * Check in a patient for their appointment
+ */
 export const checkInAppointment = (appointmentId) =>
-  apiRequest('receptionist_api/appointments/check-in.php', { 
+  apiRequest('appointments/check-in.php', { 
     method: 'PUT', 
     body: { Appointment_id: appointmentId } 
   });
@@ -82,66 +150,85 @@ export const checkInAppointment = (appointmentId) =>
 // PAYMENT APIs
 // ==========================================
 
+/**
+ * Record a payment for an appointment
+ */
 export const recordPayment = (paymentData) =>
-  apiRequest('receptionist_api/payments/create.php', { 
+  apiRequest('payments/create.php', { 
     method: 'POST', 
     body: paymentData 
   });
 
+/**
+ * Get payment history for a specific patient
+ */
 export const getPaymentsByPatient = (patientId) =>
-  apiRequest('receptionist_api/payments/get-by-patient.php', { 
+  apiRequest('payments/get-by-patient.php', { 
     params: { patient_id: patientId } 
   });
 
-export const getPaymentsByDate = (date, officeId) =>
-  apiRequest('receptionist_api/payments/get-by-date.php', { 
-    params: { date, office_id: officeId } 
+/**
+ * Get payments for a specific date at receptionist's office
+ */
+export const getPaymentsByDate = (date) =>
+  apiRequest('payments/get-by-date.php', { 
+    params: { date } 
   });
 
 // ==========================================
-// DOCTOR APIs
+// PATIENT APIs (Keep existing if they're already working)
+// ==========================================
+
+export const searchPatients = (searchQuery = '') =>
+  apiRequest('patients/get-all.php', { 
+    params: searchQuery ? { q: searchQuery } : {} 
+  });
+
+export const getPatientById = (patientId) =>
+  apiRequest('patients/get-by-id.php', { 
+    params: { id: patientId } 
+  });
+
+export const createPatient = (patientData) =>
+  apiRequest('patients/create.php', { 
+    method: 'POST', 
+    body: patientData 
+  });
+
+export const updatePatient = (patientId, patientData) =>
+  apiRequest('patients/update.php', { 
+    method: 'PUT', 
+    body: { Patient_ID: patientId, ...patientData } 
+  });
+
+// ==========================================
+// DOCTOR APIs (Keep existing if they're already working)
 // ==========================================
 
 export const getDoctorsByOffice = (officeId) =>
-  apiRequest('receptionist_api/doctors/get-by-office.php', { 
+  apiRequest('doctors/get-by-office.php', { 
     params: { office_id: officeId } 
   });
 
 export const getDoctorSchedule = (doctorId, date) =>
-  apiRequest('receptionist_api/doctors/get-schedule.php', { 
+  apiRequest('doctors/get-schedule.php', { 
     params: { doctor_id: doctorId, date } 
   });
 
 export const getAllDoctors = () =>
-  apiRequest('receptionist_api/doctors/get-all.php');
+  apiRequest('doctors/get-all.php');
 
 // ==========================================
-// DASHBOARD APIs
-// ==========================================
-
-export const getDashboardStats = (officeId, date = null) => {
-  const params = { office_id: officeId };
-  if (date) params.date = date;
-  
-  return apiRequest('receptionist_api/dashboard/stats.php', { params });
-};
-
-export const getTodayAppointments = (officeId) =>
-  apiRequest('receptionist_api/dashboard/today.php', { 
-    params: { office_id: officeId } 
-  });
-
-// ==========================================
-// OFFICE APIs
+// OFFICE APIs (Keep existing if they're already working)
 // ==========================================
 
 export const getOfficeById = (officeId) =>
-  apiRequest('receptionist_api/offices/get-by-id.php', { 
+  apiRequest('offices/get-by-id.php', { 
     params: { office_id: officeId } 
   });
 
 export const getAllOffices = () =>
-  apiRequest('receptionist_api/offices/get-all.php');
+  apiRequest('offices/get-all.php');
 
 // ==========================================
 // UTILITY FUNCTIONS
@@ -191,11 +278,9 @@ export const parseTime = (datetime) => {
 
 // Default export with all functions
 export default {
-  // Patients
-  searchPatients,
-  getPatientById,
-  createPatient,
-  updatePatient,
+  // Dashboard
+  getDashboardStats,
+  getTodayAppointments,
   
   // Appointments
   getAppointmentsByOffice,
@@ -211,14 +296,16 @@ export default {
   getPaymentsByPatient,
   getPaymentsByDate,
   
+  // Patients
+  searchPatients,
+  getPatientById,
+  createPatient,
+  updatePatient,
+  
   // Doctors
   getDoctorsByOffice,
   getDoctorSchedule,
   getAllDoctors,
-  
-  // Dashboard
-  getDashboardStats,
-  getTodayAppointments,
   
   // Office
   getOfficeById,
