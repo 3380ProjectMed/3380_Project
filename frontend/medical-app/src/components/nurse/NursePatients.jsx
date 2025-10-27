@@ -1,23 +1,38 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "./NursePatients.css";
+import { searchNursePatients } from '../../api/nurse';
 
 export default function NursePatients() {
-  const patients = useMemo(
-    () => [
-      { id: "P001", name: "James Patterson", dob: "1975-04-12", allergies: "Penicillin" },
-      { id: "P002", name: "Sarah Connor", dob: "1990-08-23", allergies: "None" },
-      { id: "P003", name: "Robert Miller", dob: "2001-11-05", allergies: "Latex, Aspirin" },
-      { id: "P004", name: "Emily Chen", dob: "1988-03-17", allergies: "Sulfa drugs" },
-      { id: "P005", name: "Michael Johnson", dob: "1965-12-30", allergies: "None" },
-    ],
-    []
-  );
-
   const [q, setQ] = useState("");
+  const [patients, setPatients] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(25);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const debounceRef = useRef(null);
 
-  const filtered = patients.filter(
-    (p) => p.name.toLowerCase().includes(q.toLowerCase()) || p.id.toLowerCase().includes(q.toLowerCase())
-  );
+  useEffect(() => {
+    // debounce search
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      load(q, page);
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [q, page]);
+
+  async function load(query, pg) {
+    setLoading(true);
+    try {
+      const r = await searchNursePatients(query || undefined, pg, pageSize);
+      setPatients(r.items || []);
+      setTotal(r.total || 0);
+    } catch (e) {
+      setError(e.message || 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="nurse-page">
@@ -28,7 +43,7 @@ export default function NursePatients() {
           <input
             placeholder="Search patients by name or ID…"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => { setQ(e.target.value); setPage(1); }}
           />
           {q && <button onClick={() => setQ("")}>Clear</button>}
         </div>
@@ -38,7 +53,8 @@ export default function NursePatients() {
             <div>ID</div><div>Name</div><div>Date of Birth</div><div>Allergies</div>
           </div>
           <div className="tbody">
-            {filtered.map((p) => (
+            {loading && <div className="empty">Loading…</div>}
+            {!loading && patients.map((p) => (
               <div key={p.id} className="row">
                 <div className="mono">{p.id}</div>
                 <div>{p.name}</div>
@@ -46,8 +62,14 @@ export default function NursePatients() {
                 <div className={p.allergies === "None" ? "allergy-none" : "allergy-has"}>{p.allergies}</div>
               </div>
             ))}
-            {filtered.length === 0 && <div className="empty">No patients found</div>}
+            {!loading && patients.length === 0 && <div className="empty">No patients found</div>}
           </div>
+        </div>
+
+        <div className="pagination">
+          <button disabled={page <= 1} onClick={() => setPage((s) => Math.max(1, s - 1))}>Prev</button>
+          <span>Page {page} — {total} results</span>
+          <button disabled={page * pageSize >= total} onClick={() => setPage((s) => s + 1)}>Next</button>
         </div>
       </div>
     </div>

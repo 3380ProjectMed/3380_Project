@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Users, Clock, FileText, Search, Filter } from 'lucide-react';
 import './NurseDashboard.css';
+import { getNurseDashboardStats, getNurseSchedule } from '../../api/nurse';
 
 /**
  * NurseDashboard
@@ -23,60 +24,38 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
     });
   };
 
-  // Local mock appointments (same structure as doctor)
-  const mockAppointments = [
-    {
-      id: 'A001',
-      time: '10:00 AM',
-      patientName: 'John Doe',
-      patientId: 'P001',
-      reason: 'Follow-up (Hypertension)',
-      status: 'Scheduled'
-    },
-    {
-      id: 'A002',
-      time: '10:30 AM',
-      patientName: 'Jane Smith',
-      patientId: 'P002',
-      reason: 'New Patient Visit',
-      status: 'In Waiting'
-    },
-    {
-      id: 'A003',
-      time: '11:00 AM',
-      patientName: 'Michael Lee',
-      patientId: 'P003',
-      reason: 'Annual Physical',
-      status: 'In Consultation'
-    },
-    {
-      id: 'A004',
-      time: '11:30 AM',
-      patientName: 'Sarah Connor',
-      patientId: 'P004',
-      reason: 'Review Lab Results',
-      status: 'Scheduled'
-    },
-    {
-      id: 'A005',
-      time: '2:00 PM',
-      patientName: 'Emma Johnson',
-      patientId: 'P005',
-      reason: 'Vaccination',
-      status: 'Completed'
-    }
-  ];
+  const [appointments, setAppointments] = useState([]);
+  const [stats, setStats] = useState({ total: 0, waiting: 0, pending: 0, completed: 0 });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Stats identical to doctor cards
-  const stats = {
-    total: mockAppointments.length,
-    waiting: mockAppointments.filter(a => a.status === 'In Waiting').length,
-    pending: mockAppointments.filter(a => a.status === 'Scheduled').length,
-    completed: mockAppointments.filter(a => a.status === 'Completed').length
-  };
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      setLoading(true);
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const s = await getNurseDashboardStats(today).catch(() => null);
+        if (s && mounted) {
+          setStats({ total: s.totalAppointments ?? 0, waiting: s.waitingCount ?? 0, pending: s.upcomingCount ?? 0, completed: s.completedCount ?? 0 });
+        }
+
+        const appts = await getNurseSchedule({ date: new Date().toISOString().slice(0,10) }).catch(() => null);
+        if (appts && mounted) {
+          setAppointments(appts);
+        }
+      } catch (err) {
+        setError(err?.message || 'Failed to load');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, []);
 
   // Filtering (search + status)
-  const filteredAppointments = mockAppointments.filter(app => {
+  const filteredAppointments = (appointments || []).filter(app => {
     const matchesSearch =
       app.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.reason.toLowerCase().includes(searchTerm.toLowerCase());
