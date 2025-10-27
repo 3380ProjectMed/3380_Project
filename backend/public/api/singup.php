@@ -3,11 +3,11 @@
 header('Content-Type: application/json');
 
 // Database configuration
-$db_host = 'localhost';
-$db_user = 'your_username';
-$db_pass = 'your_password';
-$db_name = 'your_database';
-
+  $host = getenv('AZURE_MYSQL_HOST') ?: '';
+  $user = getenv('AZURE_MYSQL_USERNAME') ?: '';
+  $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
+  $db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
+  $port = getenv('AZURE_MYSQL_PORT') ?: '3306';
 // Initialize response array
 $response = [
     'success' => false,
