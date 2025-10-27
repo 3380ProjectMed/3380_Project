@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 // Allow cross-origin requests from the frontend dev server
-require_once __DIR__ . '/../../cors.php';
 // cors.php will set Content-Type and handle OPTIONS
 // Minimal debug info for local development only
 try {
@@ -19,11 +18,11 @@ try {
     $info['mysqli_loaded'] = true;
     // Try to create a mysqli instance (use env or defaults)
     $mh = @new mysqli(
-      getenv('DB_HOST') ?: 'localhost',
-      getenv('DB_USER') ?: 'app',
-      getenv('DB_PASSWORD') ?: '',
-      getenv('DB_NAME') ?: 'med-app-db',
-      (int)(getenv('DB_PORT') ?: 3306)
+   getenv('AZURE_MYSQL_HOST') ?: '',
+   getenv('AZURE_MYSQL_USERNAME') ?: '',
+   getenv('AZURE_MYSQL_PASSWORD') ?: '',
+   getenv('AZURE_MYSQL_DBNAME') ?: '',
+   getenv('AZURE_MYSQL_PORT') ?: '3306'
     );
     if ($mh && !$mh->connect_errno) {
       $info['mysqli_client_info'] = mysqli_get_client_info();

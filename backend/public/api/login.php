@@ -9,11 +9,11 @@ session_start();
 // Content-Type header is set by cors.php, but keep it here for clarity
 header('Content-Type: application/json');
 
-$host = getenv('DB_HOST') ?: 'db';
-$user = getenv('DB_USER') ?: 'app';
-$pass = getenv('DB_PASSWORD') ?: '';
-$name = getenv('DB_NAME') ?: 'med-app-db';
-$port = (int)(getenv('DB_PORT') ?: 3306);
+  $host = getenv('AZURE_MYSQL_HOST') ?: '';
+  $user = getenv('AZURE_MYSQL_USERNAME') ?: '';
+  $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
+  $db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
+  $port = getenv('AZURE_MYSQL_PORT') ?: '3306';
 
 $mysqli = @new mysqli($host, $user, $pass, $name, $port);
 if ($mysqli->connect_errno) {
