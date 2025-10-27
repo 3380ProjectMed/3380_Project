@@ -38,7 +38,7 @@ try {
     $verifySql = "SELECT a.Appointment_id, a.Office_id, s.Work_Location
                   FROM Appointment a
                   JOIN Staff s ON s.Work_Location = a.Office_id
-                  JOIN user_account ua ON ua.email = s.Email
+                  JOIN user_account ua ON ua.email = s.Staff_Email
                   WHERE a.Appointment_id = ? AND ua.user_id = ?";
     
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$appointment_id, $user_id]);

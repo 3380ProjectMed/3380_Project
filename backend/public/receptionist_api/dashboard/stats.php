@@ -24,7 +24,7 @@ try {
         $rows = executeQuery($conn, '
             SELECT s.Work_Location as office_id, o.Name as office_name
             FROM Staff s
-            JOIN user_account ua ON ua.email = s.Email
+            JOIN user_account ua ON ua.email = s.Staff_Email
             JOIN Office o ON s.Work_Location = o.Office_ID
             WHERE ua.user_id = ?', 'i', [$user_id]);
     } catch (Exception $ex) {

@@ -40,7 +40,7 @@ try {
     // Verify receptionist works at the specified office
     $verifySql = "SELECT s.Work_Location
                   FROM Staff s
-                  JOIN user_account ua ON ua.email = s.Email
+                  JOIN user_account ua ON ua.email = s.Staff_Email
                   WHERE ua.user_id = ? AND s.Work_Location = ?";
     
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$user_id, $input['Office_id']]);
