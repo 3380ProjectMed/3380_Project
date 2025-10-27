@@ -47,11 +47,11 @@ if (empty($_SESSION['uid'])) {
 
 // Connect to the database and return JSON on failure
 $mysqli = new mysqli(
-  getenv('AZURE_MYSQL_HOST') ?: '',
-  getenv('AZURE_MYSQL_USERNAME') ?: '',
-  getenv('AZURE_MYSQL_PASSWORD') ?: '',
-  getenv('AZURE_MYSQL_DBNAME') ?: '',
-  getenv('AZURE_MYSQL_PORT') ?: '3306'
+  $host = getenv('AZURE_MYSQL_HOST') ?: '',
+  $user = getenv('AZURE_MYSQL_USERNAME') ?: '',
+  $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '',
+  $db   = getenv('AZURE_MYSQL_DBNAME') ?: '',
+  $port = (int)(getenv('AZURE_MYSQL_PORT') ?: '3306')
 );
 if ($mysqli->connect_errno) {
   http_response_code(500);
