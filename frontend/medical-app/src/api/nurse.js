@@ -67,6 +67,7 @@ export async function request(method, path, body, init = {}) {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
+    credentials: 'include',
     ...init,
   });
 
@@ -164,7 +165,9 @@ export async function getNurseSchedule(params = {}) {
  * @returns {Promise<{ok:true}>}
  */
 export async function updateAppointmentStatus(apptId, status) {
-  return request('PATCH', `/nurse/schedule/${encodeURIComponent(apptId)}/status`, { status });
+  // Call public update-status proxy which accepts apptId and status
+  const qs = new URLSearchParams({ apptId: String(apptId) }).toString();
+  return request('POST', `/nurse/schedule/update-status.php?${qs}`, { status });
 }
 
 /**
@@ -264,7 +267,9 @@ export async function getNurseVitals(apptId) {
  * @returns {Promise<{ appt: NurseAppt; patient: NursePatient; vitals?: VitalsPayload; intake?: IntakePayload }>}
  */
 export async function getNurseVisitSummary(apptId) {
-  return request('GET', `/nurse/clinical/${encodeURIComponent(apptId)}/summary`);
+  // Use get-summary.php with apptId query param
+  const qs = new URLSearchParams({ apptId: String(apptId) }).toString();
+  return request('GET', `/nurse/clinical/get-summary.php?${qs}`);
 }
 
 /**
