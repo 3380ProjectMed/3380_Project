@@ -8,6 +8,7 @@ import {
 import './PatientPortal.css';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useNavigate } from 'react-router-dom';
+import Profile from './Profile.jsx';
 
 // If you use an api client, import it. For now this avoids ReferenceErrors.
 // import api from '../../lib/api';
@@ -45,6 +46,83 @@ export default function PatientPortal({ onLogout }) {
   const [billingBalance, setBillingBalance] = useState(0);
   const [billingStatements, setBillingStatements] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Profile-related state
+  const [profile, setProfile] = useState(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    dob: '',
+    email: '',
+    gender: '',
+    genderAtBirth: '',
+    ethnicity: '',
+    race: ''
+  });
+  const [profileErrors, setProfileErrors] = useState({});
+  const [genderOptions] = useState(['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say']);
+  const [genderAtBirthOptions] = useState(['Male', 'Female']);
+  const [ethnicityOptions] = useState(['Hispanic or Latino', 'Not Hispanic or Latino', 'Prefer not to say']);
+  const [raceOptions] = useState(['White', 'Black or African American', 'Asian', 'American Indian or Alaska Native', 'Native Hawaiian or Other Pacific Islander', 'Other', 'Prefer not to say']);
+
+  // Profile functions
+  const startEditProfile = () => {
+    setFormData({
+      first_name: profile?.First_Name || '',
+      last_name: profile?.Last_Name || '',
+      dob: profile?.dob || '',
+      email: profile?.Email || '',
+      gender: profile?.Gender || '',
+      genderAtBirth: profile?.AssignedAtBirth_Gender || '',
+      ethnicity: profile?.Ethnicity || '',
+      race: profile?.Race || ''
+    });
+    setEditingProfile(true);
+  };
+
+  const cancelEditProfile = () => {
+    setEditingProfile(false);
+    setProfileErrors({});
+  };
+
+  const saveProfile = async () => {
+    // Basic validation
+    const errors = {};
+    if (!formData.first_name) errors.first_name = 'First name is required';
+    if (!formData.last_name) errors.last_name = 'Last name is required';
+    if (!formData.email) errors.email = 'Email is required';
+    
+    if (Object.keys(errors).length > 0) {
+      setProfileErrors(errors);
+      return;
+    }
+
+    try {
+      // Here you would call your API to save the profile
+      // const result = await api.profile.updateProfile(formData);
+      console.log('Saving profile:', formData);
+      
+      // For now, just update local state
+      setProfile(prev => ({
+        ...prev,
+        First_Name: formData.first_name,
+        Last_Name: formData.last_name,
+        dob: formData.dob,
+        Email: formData.email,
+        Gender: formData.gender,
+        AssignedAtBirth_Gender: formData.genderAtBirth,
+        Ethnicity: formData.ethnicity,
+        Race: formData.race
+      }));
+      
+      setEditingProfile(false);
+      setProfileErrors({});
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setProfileErrors({ general: 'Failed to save profile' });
+    }
+  };
 
   // TODO: wire to your real API client; placeholders below avoid runtime errors.
   const api = {
@@ -285,57 +363,23 @@ export default function PatientPortal({ onLogout }) {
     </div>
   );
 
-  const [profile, setProfile] = useState(null);
   const renderProfile = () => (
-    <div className="portal-content">
-      <h1 className="page-title">Profile & Primary Care Physician</h1>
-      {loading ? (
-        <div className="loading-spinner">Loading...</div>
-      ) : (
-        <div className="profile-grid">
-          <div className="profile-section">
-            <h2>Personal Information</h2>
-            <div className="form-group">
-              <label>Full Name</label>
-              <input type="text" className="form-input"
-                value={profile ? `${profile.First_Name} ${profile.Last_Name}` : ''} readOnly />
-            </div>
-            <div className="form-group">
-              <label>Date of Birth</label>
-              <input type="date" className="form-input" value={profile?.dob || ''} readOnly />
-            </div>
-            <div className="form-group">
-              <label>Email</label>
-              <input type="email" className="form-input" value={profile?.Email || ''} readOnly />
-            </div>
-            <div className="form-group">
-              <label>Emergency Contact</label>
-              <input type="tel" className="form-input" value={profile?.EmergencyContact || ''} readOnly />
-            </div>
-            <div className="form-group">
-              <label>Blood Type</label>
-              <input type="text" className="form-input" value={profile?.BloodType || 'Not specified'} readOnly />
-            </div>
-          </div>
-
-          {pcp && (
-            <div className="profile-section full-width">
-              <h2>Primary Care Physician</h2>
-              <div className="pcp-card">
-                <div className="pcp-avatar large"><Stethoscope /></div>
-                <div className="pcp-details">
-                  <h3>{pcp.pcp_name || pcp.name}</h3>
-                  <p><strong>Specialty:</strong> {pcp.pcp_specialty || pcp.specialty_name}</p>
-                  <p><MapPin className="small-icon" /> {pcp.pcp_office || pcp.office_name}</p>
-                  <p><Phone className="small-icon" /> {pcp.pcp_phone || pcp.Phone}</p>
-                  <p><Mail className="small-icon" /> {pcp.pcp_email || pcp.Email}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <Profile
+      loading={loading}
+      profile={profile}
+      formData={formData}
+      setFormData={setFormData}
+      genderOptions={genderOptions}
+      genderAtBirthOptions={genderAtBirthOptions}
+      ethnicityOptions={ethnicityOptions}
+      raceOptions={raceOptions}
+      pcp={pcp}
+      profileErrors={profileErrors}
+      editingProfile={editingProfile}
+      startEditProfile={startEditProfile}
+      cancelEditProfile={cancelEditProfile}
+      saveProfile={saveProfile}
+    />
   );
 
   const renderAppointments = () => (
