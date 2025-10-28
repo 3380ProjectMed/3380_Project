@@ -98,7 +98,7 @@ $user = $result->fetch_assoc();
 $stmt->close();
 
 // Verify password - FIXED: use password_hash instead of password
-if (!password_verify($password, $user['password_hash'])) {
+if (!hash_equals($password, $user['password_hash'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Invalid credentials']);
     $mysqli->close();
