@@ -37,7 +37,7 @@ function Schedule({ onAppointmentClick }) {
    */
   const fetchWorkSchedule = async () => {
     try {
-  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : 'http://localhost:8080';
+  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
       const response = await fetch(`${API_BASE}/doctor_api/schedule/get-doctor-schedule.php`, { credentials: 'include' });
       const data = await response.json();
       

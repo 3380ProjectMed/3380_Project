@@ -2,7 +2,7 @@ import { j } from './api/api.js';
 
 // Use direct backend host during development to avoid dev-proxy mismatch or origin issues.
 // Vite provides import.meta.env.DEV which is true in dev server.
-const PATIENT_API_BASE = import.meta.env.DEV ? 'http://localhost:8080' : '';
+const PATIENT_API_BASE = '';
 
 // ==================== DASHBOARD ====================
 export const dashboardAPI = {
