@@ -45,7 +45,7 @@ $email = $mysqli->real_escape_string($input['email']);
 $password = $input['password'];
 
 // Query user
-$sql = "SELECT id, email, password, role FROM users WHERE email = '$email' LIMIT 1";
+$sql = "SELECT id, email, password, role FROM user_account WHERE email = '$email' LIMIT 1";
 $result = $mysqli->query($sql);
 
 if (!$result || $result->num_rows === 0) {
