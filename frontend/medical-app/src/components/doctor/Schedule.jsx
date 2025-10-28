@@ -103,46 +103,49 @@ function Schedule({ onAppointmentClick }) {
   /**
    * Get assigned location for a specific day based on work schedule
    */
-  const getDailyLocation = (year, month, day) => {
-    const date = new Date(year, month, day);
-    const dayOfWeekName = getDayOfWeekName(date);
-    
-    // Find work schedule entry for this day of week
-    const scheduleEntry = workSchedule.find(
-      s => s.Day_of_week === dayOfWeekName
-    );
-    
-    if (!scheduleEntry) {
-      return null; // Not working this day
-    }
-    
-    return {
-      office_id: scheduleEntry.Office_ID,
-      office_name: scheduleEntry.office_name,
-      address: scheduleEntry.address,
-      city: scheduleEntry.City,
-      state: scheduleEntry.State,
-      start_time: scheduleEntry.Start_time,
-      end_time: scheduleEntry.End_time
-    };
+// Around line 118 - Fix getDailyLocation function
+const getDailyLocation = (year, month, day) => {
+  const date = new Date(year, month, day);
+  const dayOfWeekName = getDayOfWeekName(date);
+  
+  // Find work schedule entry for this day of week
+  const scheduleEntry = workSchedule.find(
+    s => (s.day_of_week || s.Day_of_week) === dayOfWeekName  // ← Handle both cases
+  );
+  
+  if (!scheduleEntry) {
+    return null; // Not working this day
+  }
+  
+  return {
+    office_id: scheduleEntry.office_id || scheduleEntry.Office_ID,
+    office_name: scheduleEntry.office_name,
+    address: scheduleEntry.address,
+    city: scheduleEntry.city || scheduleEntry.City,
+    state: scheduleEntry.state || scheduleEntry.State,
+    start_time: scheduleEntry.start_time || scheduleEntry.Start_time,
+    end_time: scheduleEntry.end_time || scheduleEntry.End_time
   };
+};
 
-  /**
-   * Get unique office locations from work schedule for filter
-   */
-  const getUniqueLocations = () => {
-    const locations = new Map();
-    workSchedule.forEach(schedule => {
-      if (!locations.has(schedule.Office_ID)) {
-        locations.set(schedule.Office_ID, {
-          id: schedule.Office_ID,
-          name: schedule.office_name,
-          city: schedule.City
-        });
-      }
-    });
-    return Array.from(locations.values());
-  };
+// Around line 145 - Fix getUniqueLocations function
+const getUniqueLocations = () => {
+  const locations = new Map();
+  workSchedule.forEach(schedule => {
+    const officeId = schedule.office_id || schedule.Office_ID;
+    const officeName = schedule.office_name;
+    const city = schedule.city || schedule.City;
+    
+    if (!locations.has(officeId)) {
+      locations.set(officeId, {
+        id: officeId,
+        name: officeName,
+        city: city
+      });
+    }
+  });
+  return Array.from(locations.values());
+};
 
   /**
    * Get appointments for a specific day
