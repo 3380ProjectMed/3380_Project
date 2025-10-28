@@ -8,9 +8,7 @@ export function AuthProvider({ children }) {
 
   async function refreshUser() {
     try {
-  // Use proxy-relative path so Vite forwards the request to the backend and
-  // avoid cross-origin cookie/CORS issues in dev.
-  const r = await fetch('/api/me.php', { credentials: 'include' });
+     const r = await fetch('/api/me.php', { credentials: 'include' });
      if (r.ok) {
        setUser(await r.json());
      } else if (r.status === 401) {
@@ -54,7 +52,7 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    await fetch('http://localhost:8080/api/logout.php', { method: 'POST', credentials: 'include' });
+    await fetch('/api/logout.php', { method: 'POST', credentials: 'include' });
     setUser(null);
   }
 

@@ -1,0 +1,5 @@
+/* Billing styles */
+.billing-summary { margin-bottom: 2rem; }
+.balance-card { background: linear-gradient(135deg,#03045e,#0077b6); color: white; padding:2.5rem; border-radius:1rem; box-shadow:0 8px 16px rgba(3,4,94,0.15); text-align:center; max-width:500px; margin:0 auto; }
+.balance-card h3 { margin:0 0 0.5rem 0; font-size:1.1rem; opacity:0.9; font-weight:600; }
+.balance-amount { font-size:3.5rem; font-weight:800; margin:1rem 0; color:white; }
