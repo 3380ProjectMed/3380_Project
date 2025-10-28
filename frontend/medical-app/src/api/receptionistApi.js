@@ -5,19 +5,66 @@
  * All endpoints automatically use the logged-in receptionist's office
  */
 
-const API_BASE = '/api/receptionist_api';
+// Generic HTTP helpers (fused from src/api/http.js)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 /**
- * Helper function to make API requests with session credentials
+ * Generic API request helper that honors credentials and a base URL when provided.
+ * If API_BASE_URL is empty, the endpoint is treated as a full/relative path.
  */
-async function apiRequest(endpoint, options = {}) {
+export async function apiRequestGlobal(endpoint, options = {}) {
   const {
     method = 'GET',
+    params = {},
     body = null,
-    params = {}
+    headers = {}
   } = options;
 
   // Build URL with query parameters
+  let base = API_BASE_URL ? API_BASE_URL : '';
+  // Allow caller to pass a leading slash endpoint like '/api/health.php'
+  const raw = base ? `${base}/${endpoint}` : endpoint;
+  const url = new URL(raw, window.location.origin);
+
+  if (params && Object.keys(params).length > 0) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) url.searchParams.append(key, value);
+    });
+  }
+
+  const config = {
+    method,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...headers
+    }
+  };
+
+  if (body && (method === 'POST' || method === 'PUT')) {
+    config.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(url.toString(), config);
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error((data && data.error) || `HTTP ${response.status}`);
+  return data;
+}
+
+export function getGlobal(endpoint, params = {}) { return apiRequestGlobal(endpoint, { method: 'GET', params }); }
+export function postGlobal(endpoint, body = {}) { return apiRequestGlobal(endpoint, { method: 'POST', body }); }
+export function putGlobal(endpoint, body = {}) { return apiRequestGlobal(endpoint, { method: 'PUT', body }); }
+export function delGlobal(endpoint, params = {}) { return apiRequestGlobal(endpoint, { method: 'DELETE', params }); }
+
+// Receptionist-specific base and compatibility wrappers
+const API_BASE = '/api/receptionist_api';
+
+/**
+ * Helper function to make API requests with session credentials scoped to receptionist API
+ */
+export async function apiRequest(endpoint, options = {}) {
+  const { method = 'GET', body = null, params = {} } = options;
+
   let url = `${API_BASE}/${endpoint}`;
   if (params && Object.keys(params).length > 0) {
     const searchParams = new URLSearchParams();
@@ -29,33 +76,18 @@ async function apiRequest(endpoint, options = {}) {
     url += '?' + searchParams.toString();
   }
 
-  // Build request config with session credentials
   const config = {
     method,
-    credentials: 'include', // Critical for session-based auth
-    headers: {
-      'Content-Type': 'application/json'
-    }
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
   };
 
-  // Add body for POST/PUT requests
-  if (body && (method === 'POST' || method === 'PUT')) {
-    config.body = JSON.stringify(body);
-  }
+  if (body && (method === 'POST' || method === 'PUT')) config.body = JSON.stringify(body);
 
-  try {
-    const response = await fetch(url, config);
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || `HTTP error! status: ${response.status}`);
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Receptionist API Error:', error);
-    throw error;
-  }
+  const response = await fetch(url, config);
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error((data && data.error) || `HTTP ${response.status}`);
+  return data;
 }
 
 // ==========================================
