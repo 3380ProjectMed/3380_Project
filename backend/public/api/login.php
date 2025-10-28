@@ -1,6 +1,10 @@
 <?php
 // public/api/login.php
 declare(strict_types=1);
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/../../error.log');
 
 // Ensure CORS headers are sent for requests coming from the dev server
 require_once __DIR__ . '/../cors.php';
@@ -19,7 +23,14 @@ $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
 $db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
 $port = (int)(getenv('AZURE_MYSQL_PORT') ?: '3306');
 
-// Initialize mysqli with SSL for Azure MySQL
+// Test environment variables
+if (!$host || !$user || !$db) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Missing environment variables']);
+    exit;
+}
+
+// Initialize mysqli
 $mysqli = mysqli_init();
 if (!$mysqli) {
     http_response_code(500);
@@ -27,11 +38,22 @@ if (!$mysqli) {
     exit;
 }
 
-// Set SSL options for Azure MySQL - use 0 instead of false
-$mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 0);
+// Set SSL options BEFORE connecting
+// Path to the certificate file (we'll create this below)
+$sslCertPath = __DIR__ . '/../../../certs/DigiCertGlobalRootCA.crt.pem';
 
-// Connect with SSL
-if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, null, MYSQLI_CLIENT_SSL)) {
+if (file_exists($sslCertPath)) {
+    // Use certificate verification (more secure)
+    $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, true);
+} else {
+    // Fallback: Don't verify (less secure, but works if cert is missing)
+    $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+}
+
+// NOW connect (only once!)
+if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, NULL, MYSQLI_CLIENT_SSL)) {
     http_response_code(500);
     echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
     exit;
@@ -56,7 +78,7 @@ $stmt = $mysqli->prepare($sql);
 
 if (!$stmt) {
     http_response_code(500);
-    echo json_encode(['error' => 'Failed to prepare statement']);
+    echo json_encode(['error' => 'Failed to prepare statement: ' . $mysqli->error]);
     exit;
 }
 
