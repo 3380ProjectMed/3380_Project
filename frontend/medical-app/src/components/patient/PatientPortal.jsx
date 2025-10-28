@@ -43,12 +43,10 @@ export default function PatientPortal({ onLogout }) {
   const [insurancePolicies, setInsurancePolicies] = useState([]);
   const [billingBalance, setBillingBalance] = useState(0);
   const [billingStatements, setBillingStatements] = useState([]);
-  const [loading, setLoading] = useState(false);
 
   // Load page data on tab switch
   useEffect(() => {
     (async () => {
-      setLoading(true);
       try {
         switch (currentPage) {
           case 'dashboard': await loadDashboard(); break;
@@ -60,8 +58,6 @@ export default function PatientPortal({ onLogout }) {
         }
       } catch (e) {
         console.error('Error loading data:', e);
-      } finally {
-        setLoading(false);
       }
     })();
   }, [currentPage]);
@@ -175,10 +171,7 @@ export default function PatientPortal({ onLogout }) {
   const renderDashboard = () => (
     <div className="portal-content">
       <h1 className="page-title">Welcome Back, {displayName}</h1>
-      {loading ? (
-        <div className="loading-spinner">Loading...</div>
-      ) : (
-        <div className="dashboard-grid">
+      <div className="dashboard-grid">
           <div className="dashboard-card large">
             <div className="card-header">
               <h2><Calendar className="icon" /> Upcoming Appointments</h2>
@@ -257,7 +250,6 @@ export default function PatientPortal({ onLogout }) {
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 
@@ -265,10 +257,7 @@ export default function PatientPortal({ onLogout }) {
   const renderProfile = () => (
     <div className="portal-content">
       <h1 className="page-title">Profile & Primary Care Physician</h1>
-      {loading ? (
-        <div className="loading-spinner">Loading...</div>
-      ) : (
-        <div className="profile-grid">
+      <div className="profile-grid">
           <div className="profile-section">
             <h2>Personal Information</h2>
             <div className="form-group">
@@ -310,7 +299,6 @@ export default function PatientPortal({ onLogout }) {
             </div>
           )}
         </div>
-      )}
     </div>
   );
 
@@ -322,10 +310,7 @@ export default function PatientPortal({ onLogout }) {
         <Plus className="icon" /> Book New Appointment
       </button>
 
-      {loading ? (
-        <div className="loading-spinner">Loading...</div>
-      ) : (
-        <>
+      <>
           <div className="appointments-section">
             <h2>Upcoming Appointments</h2>
             {upcomingAppointments.length === 0 ? (
@@ -381,30 +366,23 @@ export default function PatientPortal({ onLogout }) {
             )}
           </div>
         </>
-      )}
     </div>
   );
 
   const renderMedicalRecords = () => (
     <div className="portal-content">
       <h1 className="page-title">Medical Records</h1>
-      {loading ? (
-        <div className="loading-spinner">Loading...</div>
-      ) : (
-        <div className="records-grid">
+      <div className="records-grid">
           {/* vitals, meds, allergies, conditions sections (unchanged) */}
           {/* ... keep your existing sections here ... */}
         </div>
-      )}
     </div>
   );
 
   const renderInsurance = () => (
     <div className="portal-content">
       <h1 className="page-title">Insurance Details</h1>
-      {loading ? (
-        <div className="loading-spinner">Loading...</div>
-      ) : insurancePolicies.length === 0 ? (
+      {insurancePolicies.length === 0 ? (
         <p className="text-gray">No insurance policies on file</p>
       ) : (
         <div className="insurance-list">
@@ -430,10 +408,7 @@ export default function PatientPortal({ onLogout }) {
   const renderBilling = () => (
     <div className="portal-content">
       <h1 className="page-title">Billing & Payments</h1>
-      {loading ? (
-        <div className="loading-spinner">Loading...</div>
-      ) : (
-        <>
+      <>
           <div className="billing-summary">
             <div className="balance-card">
               <h3>Outstanding Balance</h3>
@@ -445,7 +420,6 @@ export default function PatientPortal({ onLogout }) {
           </div>
           {/* statements table unchanged */}
         </>
-      )}
     </div>
   );
 
