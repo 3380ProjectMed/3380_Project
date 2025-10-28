@@ -7,6 +7,12 @@
  * Supports both doctor-specific and admin-level reporting
  */
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', '/home/site/wwwroot/logs/php_errors.log');
+
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
@@ -15,6 +21,9 @@ try {
     header('Content-Type: application/json; charset=utf-8');
 
     session_start();
+    if (!function_exists('getDBConnection')) {
+        throw new Exception('Database helper functions not loaded');
+    }
     
     // Authentication check
     if (!isset($_SESSION['uid'])) {
@@ -24,6 +33,9 @@ try {
     }
     
     $conn = getDBConnection();
+    if (!$conn) {
+        throw new Exception('Database connection failed');
+    }
     $user_id = intval($_SESSION['uid']);
     
     // Get user role and associated doctor/admin info
@@ -133,54 +145,53 @@ try {
     
     // Main query - matching your actual schema
     $sql = "SELECT 
-        a.Appointment_id,
-        DATE(a.Appointment_date) as Appointment_date,
-        DATE_FORMAT(a.Appointment_date, '%H:%i') as Appointment_time,
-        a.Date_created,
+    a.Appointment_id,
+    DATE(a.Appointment_date) as Appointment_date,
+    DATE_FORMAT(a.Appointment_date, '%H:%i') as Appointment_time,
+    a.Date_created,
     a.Reason_for_visit as Reason,
-        CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name,
-        p.Patient_ID as patient_id,
-        p.dob as patient_dob,
-        p.EmergencyContact as patient_phone,
-        CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
-        d.Doctor_id,
-        s.specialty_name as doctor_specialty,
-        o.Name as office_name,
-        o.Office_ID,
-        o.City as office_city,
-        o.State as office_state,
-        ipayer.NAME as insurance_type,
+    CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name,
+    p.Patient_ID as patient_id,
+    p.dob as patient_dob,
+    p.EmergencyContact as patient_phone,
+    CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
+    d.Doctor_id,
+    s.specialty_name as doctor_specialty,
+    o.Name as office_name,
+    o.Office_ID,
+    o.City as office_city,
+    o.State as office_state,
     CONCAT(staff.First_Name, ' ', staff.Last_Name) as nurse_name,
     n.Nurse_id,
-        pv.Visit_id,
-        pv.Status,
-        pv.Diagnosis,
-        pv.Treatment,
-        pv.AmountDue as Total_bill,
-        pv.TotalDue,
-        pv.Payment,
-        ip.id as insurance_policy_id,
-        iplan.plan_name as insurance_plan_name,
-        ipayer.NAME as insurance_company
-    FROM Appointment a
-    LEFT JOIN Patient p ON a.Patient_id = p.Patient_ID
-    LEFT JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-    LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
-    LEFT JOIN Office o ON a.Office_id = o.Office_ID
-    -- Join only the most recent PatientVisit per appointment to avoid duplicates when multiple visits exist
-    LEFT JOIN (
-        SELECT Appointment_id, MAX(Visit_id) as max_visit_id
-        FROM PatientVisit
-        GROUP BY Appointment_id
-    ) pvmax ON a.Appointment_id = pvmax.Appointment_id
-    LEFT JOIN PatientVisit pv ON pv.Visit_id = pvmax.max_visit_id
-    LEFT JOIN Nurse n ON pv.Nurse_id = n.Nurse_id
-    LEFT JOIN Staff staff ON n.Staff_id = staff.Staff_id
-    LEFT JOIN patient_insurance ip ON pv.Insurance_policy_id_used = ip.id
-    LEFT JOIN insurance_plan iplan ON ip.plan_id = iplan.plan_id
-    LEFT JOIN insurance_payer ipayer ON iplan.payer_id = ipayer.payer_id
-    $whereClause
-    ORDER BY a.Appointment_date DESC";
+    pv.Visit_id,
+    pv.Status,
+    pv.Diagnosis,
+    pv.Treatment,
+    pv.AmountDue as Total_bill,
+    pv.TotalDue,
+    pv.Payment,
+    ip.id as insurance_policy_id,
+    iplan.plan_name as insurance_plan_name,
+    ipayer.NAME as insurance_company
+FROM Appointment a
+LEFT JOIN Patient p ON a.Patient_id = p.Patient_ID
+LEFT JOIN Doctor d ON a.Doctor_id = d.Doctor_id
+LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
+LEFT JOIN Office o ON a.Office_id = o.Office_ID
+-- Join only the most recent PatientVisit per appointment
+LEFT JOIN (
+    SELECT Appointment_id, MAX(Visit_id) as max_visit_id
+    FROM PatientVisit
+    GROUP BY Appointment_id
+) pvmax ON a.Appointment_id = pvmax.Appointment_id
+LEFT JOIN PatientVisit pv ON pv.Visit_id = pvmax.max_visit_id
+LEFT JOIN Nurse n ON pv.Nurse_id = n.Nurse_id
+LEFT JOIN Staff staff ON n.Staff_id = staff.Staff_id
+LEFT JOIN patient_insurance ip ON pv.insurance_policy_id_used = ip.id  -- ✅ FIXED: lowercase 'insurance_policy_id_used'
+LEFT JOIN insurance_plan iplan ON ip.plan_id = iplan.plan_id
+LEFT JOIN insurance_payer ipayer ON iplan.payer_id = ipayer.payer_id
+$whereClause
+ORDER BY a.Appointment_date DESC";
     
     // Execute query
     $appointments = executeQuery($conn, $sql, $types, $params);

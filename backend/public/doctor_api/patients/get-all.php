@@ -8,12 +8,17 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
 try {
+    // Add error logging
+    error_reporting(E_ALL);
+    error_log("=== Get All Patients API Called ===");
+    
     $conn = getDBConnection();
     
     // Determine doctor_id: query param overrides, otherwise resolve from logged-in user
     $doctor_id = null;
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
+        error_log("Using doctor_id from query param: " . $doctor_id);
     } else {
         // Require session and resolve
         session_start();
@@ -35,6 +40,8 @@ try {
         $doctor_id = (int)$rows[0]['Doctor_id'];
     }
     
+    error_log("Querying patients for doctor_id: " . $doctor_id);
+    
     // SQL query matching YOUR schema
     $sql = "SELECT 
                 p.Patient_ID,
@@ -53,18 +60,28 @@ try {
             LEFT JOIN CodesGender cg ON p.Gender = cg.GenderCode
             LEFT JOIN Appointment a ON p.Patient_ID = a.Patient_id
             WHERE p.Primary_Doctor = ?
-            GROUP BY p.Patient_ID
+            GROUP BY p.Patient_ID, p.First_Name, p.Last_Name, p.dob, p.Email, 
+                     p.EmergencyContact, p.BloodType, ca.Allergies_Text, cg.Gender_Text
             ORDER BY p.Last_Name, p.First_Name";
     
     $patients = executeQuery($conn, $sql, 'i', [$doctor_id]);
+    
+    error_log("Found " . count($patients) . " patients");
     
     // Format response
     $formatted_patients = [];
     foreach ($patients as $patient) {
         // Calculate age
-        $dob = new DateTime($patient['dob']);
-        $now = new DateTime();
-        $age = $now->diff($dob)->y;
+        $age = 0;
+        if ($patient['dob']) {
+            try {
+                $dob = new DateTime($patient['dob']);
+                $now = new DateTime();
+                $age = $now->diff($dob)->y;
+            } catch (Exception $e) {
+                error_log("Error calculating age: " . $e->getMessage());
+            }
+        }
         
         $formatted_patients[] = [
             'id' => 'P' . str_pad($patient['Patient_ID'], 3, '0', STR_PAD_LEFT),
@@ -98,11 +115,18 @@ try {
                 }, $mcs));
             }
         } catch (Exception $e) {
-            // non-fatal - leave empty
+            error_log("Error fetching conditions for patient $rawId: " . $e->getMessage());
         }
 
         try {
-            $rx_sql = "SELECT p.prescription_id, p.medication_name as name, CONCAT(p.dosage, ' - ', p.frequency) as frequency, CONCAT(d.First_Name, ' ', d.Last_Name) as prescribed_by, p.start_date, p.end_date, p.notes
+            $rx_sql = "SELECT 
+                       p.prescription_id, 
+                       p.medication_name as name, 
+                       CONCAT(p.dosage, ' - ', p.frequency) as frequency, 
+                       CONCAT(d.First_Name, ' ', d.Last_Name) as prescribed_by, 
+                       p.start_date, 
+                       p.end_date, 
+                       p.notes
                        FROM Prescription p
                        LEFT JOIN Doctor d ON p.doctor_id = d.Doctor_id
                        WHERE p.patient_id = ?
@@ -123,7 +147,7 @@ try {
                 }, $rxs);
             }
         } catch (Exception $e) {
-            // non-fatal - leave empty
+            error_log("Error fetching prescriptions for patient $rawId: " . $e->getMessage());
         }
     }
     
@@ -136,10 +160,13 @@ try {
     ]);
     
 } catch (Exception $e) {
+    error_log("Fatal error in get-all.php: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'error' => $e->getMessage(),
+        'trace' => $e->getTraceAsString() // Remove in production
     ]);
 }
 ?>
