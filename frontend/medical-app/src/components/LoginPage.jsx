@@ -1,22 +1,40 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, ArrowRight, AlertCircle, Info, User, Stethoscope } from "lucide-react";
+import { Mail, Lock, AlertCircle, Info, Stethoscope } from "lucide-react";
 import "./LoginPage.css";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const nav = useNavigate();
-  const loc = useLocation();
-  // Don't default to the patient portal here — if the user navigated to the
-  // login page directly (from undefined state) we should redirect by role
-  // after a successful login. Only use `from` when it was explicitly set.
-  const from = loc.state?.from?.pathname;
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loginAttempted, setLoginAttempted] = useState(false);
+  
+  // Redirect after user state is populated
+  useEffect(() => {
+    if (loginAttempted && user?.role) {
+      const destByRole = {
+        PATIENT: "/patientportal",
+        DOCTOR: "/doctor",
+        ADMIN: "/admin",
+        NURSE: "/nurse",
+      };
+      const normalizedRole = (user.role || '').toUpperCase();
+      const destination = destByRole[normalizedRole] || "/patientportal";
+      
+      console.log('✅ Login successful:', { 
+        role: normalizedRole, 
+        destination,
+        user 
+      });
+      
+      nav(destination, { replace: true });
+    }
+  }, [user, loginAttempted, nav]);
   
   async function onSubmit(e) {
     e.preventDefault();
@@ -24,20 +42,11 @@ export default function LoginPage() {
     setSubmitting(true);
     
     try {
-      const u = await login(email, password);
-      const destByRole = {
-        PATIENT: "/patientportal",
-        DOCTOR: "/doctor",
-        ADMIN: "/admin",
-        NURSE: "/nurse",
-      };
-    const normalizedRole = (u?.role || '').toUpperCase();
-    const destination = destByRole[normalizedRole] || "/patientportal";
-
-    console.log('✅ Login successful:', { role: normalizedRole, destination });
-      nav(destination, { replace: true });
+      await login(email, password);
+      setLoginAttempted(true);
     } catch (ex) {
-      setErr(ex.message);
+      setErr(ex.message || "Login failed");
+      setLoginAttempted(false);
     } finally {
       setSubmitting(false);
     }
@@ -45,7 +54,6 @@ export default function LoginPage() {
   
   return (
     <div className="landing-root">
-      {/* Header */}
       <header className="landing-header">
         <div className="landing-container">
           <div className="logo">
@@ -62,21 +70,15 @@ export default function LoginPage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="landing-container login-container">
         <div className="login-wrapper">
-          
-          {/* Welcome Header */}
           <div className="login-welcome">
             <h1 className="login-title">Welcome Back</h1>
             <p className="login-subtitle">Sign in to access your account</p>
           </div>
 
-          {/* Login Card */}
           <div className="login-card">
             <div className="login-card-content">
-              
-              {/* Error Alert */}
               {err && (
                 <div className="login-error">
                   <AlertCircle className="login-error-icon" />
@@ -84,10 +86,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Login Form */}
               <form onSubmit={onSubmit}>
-                
-                {/* Email Field */}
                 <div className="login-field">
                   <label htmlFor="email" className="login-label">
                     Email Address
@@ -106,7 +105,6 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Password Field */}
                 <div className="login-field">
                   <div className="login-label-row">
                     <label htmlFor="password" className="login-label">
@@ -130,7 +128,6 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Submit Button */}
                 <button 
                   type="submit"
                   disabled={submitting}
@@ -142,21 +139,17 @@ export default function LoginPage() {
                       Signing in...
                     </>
                   ) : (
-                    <>
-                      Sign In
-                    </>
+                    "Sign In"
                   )}
                 </button>
               </form>
 
-              {/* Divider */}
               <div className="login-divider">
                 <div className="login-divider-line" />
                 <span className="login-divider-text">New to MedConnect?</span>
                 <div className="login-divider-line" />
               </div>
 
-              {/* Sign Up Link */}
               <div className="login-signup">
                 <p className="login-signup-text">
                   Don't have an account?{" "}
@@ -166,7 +159,6 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              {/* Info Note */}
               <div className="login-note">
                 <Info className="login-note-icon" />
                 <p className="login-note-text">
