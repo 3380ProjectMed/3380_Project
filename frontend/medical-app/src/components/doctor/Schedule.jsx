@@ -59,7 +59,7 @@ function Schedule({ onAppointmentClick }) {
       setLoading(true);
       const month = currentDate.getMonth() + 1; // JS months are 0-indexed
       const year = currentDate.getFullYear();
-  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : 'http://localhost:8080';
+  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '/api';
   const response = await fetch(`${API_BASE}/doctor_api/appointments/get-by-month.php?month=${month}&year=${year}`, { credentials: 'include' });
       const data = await response.json();
       

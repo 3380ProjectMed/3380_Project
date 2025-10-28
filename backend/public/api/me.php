@@ -108,7 +108,7 @@ $mysqli->set_charset('utf8mb4');
 // Prepare query
 $sql = 'SELECT ua.user_id, ua.username, ua.email, ua.role, d.Doctor_id AS doctor_id
   FROM user_account ua
-  LEFT JOIN Doctor d ON ua.email = d.Email
+  LEFT JOIN Doctor d ON ua.email = d.Email AND ua.role = "DOCTOR"
   WHERE ua.user_id = ?';
 
 debug_log('Preparing statement');

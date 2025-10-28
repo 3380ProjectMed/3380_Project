@@ -3,6 +3,10 @@
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+  /* keep font consistent with other pages */
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .profile-header {

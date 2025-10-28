@@ -43,6 +43,13 @@ try {
     $userRole = $userInfo[0]['role'];
     $loggedInDoctorId = $userInfo[0]['Doctor_id'];
     
+        // Verify user has permission to access reports
+    if (!in_array($userRole, ['DOCTOR', 'ADMIN'])) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Access denied. Only doctors and admins can access reports.']);
+        closeDBConnection($conn);
+        exit;
+    }
     // Build dynamic WHERE clause based on parameters
     $whereConditions = [];
     $params = [];
@@ -58,11 +65,19 @@ try {
     $types .= 'ss';
     
     // 2. Doctor Filter
-    if ($userRole === 'DOCTOR') {
+        if ($userRole === 'DOCTOR') {
+        // Doctors can only see their own appointments
+        if ($loggedInDoctorId === null) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'No doctor profile found for this user']);
+            closeDBConnection($conn);
+            exit;
+        }
         $whereConditions[] = "a.Doctor_id = ?";
         $params[] = $loggedInDoctorId;
         $types .= 'i';
-    } elseif (isset($_GET['DoctorID']) && $_GET['DoctorID'] !== '' && $_GET['DoctorID'] !== 'all') {
+    } elseif ($userRole === 'ADMIN' && isset($_GET['DoctorID']) && $_GET['DoctorID'] !== '' && $_GET['DoctorID'] !== 'all') {
+        // Admins can filter by specific doctor or see all
         $whereConditions[] = "a.Doctor_id = ?";
         $params[] = intval($_GET['DoctorID']);
         $types .= 'i';
