@@ -6,7 +6,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/../cors.php';
 
 session_start();
-// Content-Type header is set by cors.php, but keep it here for clarity
 header('Content-Type: application/json');
 
 $host = getenv('AZURE_MYSQL_HOST') ?: '';
@@ -15,10 +14,22 @@ $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
 $db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
 $port = (int)(getenv('AZURE_MYSQL_PORT') ?: '3306');
 
-$mysqli = @new mysqli($host, $user, $pass, $db, $port);
-if ($mysqli->connect_errno) {
+// Initialize mysqli with SSL for Azure MySQL
+$mysqli = mysqli_init();
+if (!$mysqli) {
     http_response_code(500);
-    echo json_encode(['error' => 'Database connection failed']);
+    echo json_encode(['error' => 'mysqli_init failed']);
+    exit;
+}
+
+// Set SSL options for Azure MySQL
+$mysqli->ssl_set(null, null, null, null, null);
+$mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+
+// Connect with SSL
+if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, null, MYSQLI_CLIENT_SSL)) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
     exit;
 }
 
