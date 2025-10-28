@@ -69,7 +69,7 @@ function ClinicalWorkSpace({ appointment, onBack }) {
       }
 
       const res = await fetch(
-        `/api/doctor_api/clinical/get-patient-details.php?appointment_id=${appointmentId}`,
+        `/doctor_api/clinical/get-patient-details.php?appointment_id=${appointmentId}`,
         { credentials: 'include' }
       );
       
@@ -108,7 +108,7 @@ function ClinicalWorkSpace({ appointment, onBack }) {
     
     try {
       const res = await fetch(
-        `/api/doctor_api/clinical/get-notes.php?patient_id=${patientId}`,
+        `/doctor_api/clinical/get-notes.php?patient_id=${patientId}`,
         { credentials: 'include' }
       );
       const json = await res.json();
@@ -131,7 +131,7 @@ function ClinicalWorkSpace({ appointment, onBack }) {
       // Use the clinical patient-details endpoint (proxied) so we get
       // medical/medication history and current medications in one call.
       const res = await fetch(
-        `/api/doctor_api/clinical/get-patient-details.php?patient_id=${patientId}`,
+        `/doctor_api/clinical/get-patient-details.php?patient_id=${patientId}`,
         { credentials: 'include' }
       );
       const json = await res.json();
@@ -174,7 +174,7 @@ function ClinicalWorkSpace({ appointment, onBack }) {
         note_text: clinicalNote
       };
 
-      const res = await fetch('/api/doctor_api/clinical/save-note.php', {
+      const res = await fetch('/doctor_api/clinical/save-note.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

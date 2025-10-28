@@ -38,7 +38,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
 
     const loadForDoctor = async (did) => {
       try {
-  const pr = await fetch(`/api/doctor_api/profile/get.php?doctor_id=${did}`, { credentials: 'include' });
+  const pr = await fetch(`/doctor_api/profile/get.php?doctor_id=${did}`, { credentials: 'include' });
         const pj = await pr.json();
         if (pj.success) setDoctorProfile(pj.profile);
       } catch (e) {
@@ -73,7 +73,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       const doctorId = doctorIdParam ?? auth.user?.doctor_id;
       if (!doctorId) throw new Error('doctor_id missing');
 
-  const response = await fetch(`/api/doctor_api/appointments/get-today.php?doctor_id=${doctorId}`, { credentials: 'include' });
+  const response = await fetch(`/doctor_api/appointments/get-today.php?doctor_id=${doctorId}`, { credentials: 'include' });
       
       const data = await response.json();
       
@@ -96,7 +96,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
    */
   const updateAppointmentStatus = async (appointmentId, newStatus) => {
     try {
-  const response = await fetch('/api/doctor_api/appointments/update-status.php', {
+  const response = await fetch('/doctor_api/appointments/update-status.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

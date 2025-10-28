@@ -23,7 +23,7 @@ function Referral() {
     }).slice(0, 50);
   }, [form.patient_name, patients]);
 
-  const apiBase = '/api/doctor_api/referrals';
+  const apiBase = '/doctor_api/referrals';
   const auth = useAuth();
 
   // Load referrals that were received by the specialist (assigned to this doctor)
@@ -65,8 +65,8 @@ function Referral() {
         const doctorId = auth.user?.doctor_id ?? null;
         if (!doctorId) return; // no doctor context available yet
         const [pRes, dRes] = await Promise.all([
-          fetch(`/api/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' }),
-          fetch('/api/doctor_api/doctors/get-all.php', { credentials: 'include' })
+          fetch(`/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' }),
+          fetch('/doctor_api/doctors/get-all.php', { credentials: 'include' })
         ]);
 
         const pText = await pRes.text();
