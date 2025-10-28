@@ -73,7 +73,7 @@ $email = $mysqli->real_escape_string($input['email']);
 $password = $input['password'];
 
 // Query user - using your actual table name 'user_account'
-$sql = "SELECT user_id, username, email, password, role FROM user_account WHERE email = ? LIMIT 1";
+$sql = "SELECT user_id, username, email, password_hash, role FROM user_account WHERE email = ? LIMIT 1";
 $stmt = $mysqli->prepare($sql);
 
 if (!$stmt) {
@@ -97,8 +97,8 @@ if (!$result || $result->num_rows === 0) {
 $user = $result->fetch_assoc();
 $stmt->close();
 
-// Verify password
-if (!password_verify($password, $user['password'])) {
+// Verify password - FIXED: use password_hash instead of password
+if (!password_verify($password, $user['password_hash'])) {
     http_response_code(401);
     echo json_encode(['error' => 'Invalid credentials']);
     $mysqli->close();
