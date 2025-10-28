@@ -1,0 +1,8 @@
+/* Insurance styles */
+.insurance-list { display:grid; gap:1.5rem; }
+.insurance-card { background:white; border-radius:1rem; padding:2rem; box-shadow:0 4px 12px rgba(0,119,182,0.08); border:2px solid rgba(0,180,216,0.2); }
+.insurance-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; padding-bottom:1.5rem; border-bottom:2px solid #e5e7eb; }
+.insurance-header h3 { margin:0 0 0.5rem 0; font-size:0.875rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; }
+.insurance-header h2 { margin:0; font-size:1.75rem; font-weight:700; color:#03045e; }
+.insurance-icon { width:48px; height:48px; color:#0077b6; }
+.insurance-body { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:1.5rem; }

@@ -1,0 +1,5 @@
+/* Medical Records styles */
+.records-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:1.25rem; }
+.record-card { background:white; border-radius:1rem; padding:1.25rem; box-shadow:0 4px 12px rgba(0,119,182,0.06); border:1px solid rgba(0,180,216,0.08); }
+.record-card h3 { margin:0 0 0.75rem 0; color:#03045e; font-weight:700; }
+.text-gray { color:#9ca3af; font-style:italic; }
