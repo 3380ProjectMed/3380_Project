@@ -548,7 +548,7 @@ CREATE TABLE `PatientVisit` (
   CONSTRAINT `fk_pv__nurse` FOREIGN KEY (`Nurse_id`) REFERENCES `Nurse` (`Nurse_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_pv__office` FOREIGN KEY (`Office_id`) REFERENCES `Office` (`Office_ID`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_pv__patient` FOREIGN KEY (`Patient_id`) REFERENCES `Patient` (`Patient_ID`) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT `PatientVisit_chk_1` CHECK (((`End_at` is null) or (`Start_at` is null) or (`Start_at` <= `End_at`))),
+  CONSTRAINT `it_chk_1` CHECK (((`End_at` is null) or (`Start_at` is null) or (`Start_at` <= `End_at`))),
   CONSTRAINT `PatientVisit_chk_2` CHECK (((`AmountDue` is null) or (`AmountDue` >= 0))),
   CONSTRAINT `PatientVisit_chk_3` CHECK (((`Payment` is null) or (`Payment` >= 0))),
   CONSTRAINT `PatientVisit_chk_4` CHECK (((`TotalDue` is null) or (`TotalDue` >= -(999999999999.99)))),
