@@ -20,14 +20,17 @@ function getDBConnection() {
     }
 
     // Set SSL options BEFORE connecting
-    $sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
+    $sslCertPath = '/home/site/wwwroot/DigiCertGlobalRootG2.crt';
     
     if (file_exists($sslCertPath)) {
         $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);
         $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, true);
+        error_log("Using SSL certificate: $sslCertPath");
     } else {
+        // Fallback: try to connect with SSL but without certificate verification
         $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
         $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+        error_log("SSL certificate not found at $sslCertPath, using SSL without verification");
     }
 
     // Connect with SSL
