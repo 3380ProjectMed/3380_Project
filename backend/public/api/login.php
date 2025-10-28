@@ -78,6 +78,7 @@ if (!$ok) {
 $_SESSION['uid']      = (int)$row['user_id'];
 $_SESSION['role']     = $row['role'];
 $_SESSION['username'] = $row['username'];
+$_SESSION['email']    = $row['email'];
 
 echo json_encode([
   'user_id'  => (int)$row['user_id'],

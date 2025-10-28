@@ -6,16 +6,13 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // Proxy API calls. We need two entries:
-      // 1) /api/doctor_api/* -> strip the /api prefix so it becomes /doctor_api/* on the backend
-      //    (those files live under /doctor_api in backend/public)
-      '/api/doctor_api': {
+      '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        // Do not rewrite - keep /api prefix so frontend /api/* calls map to backend /api/*
       },
-      // 2) all other /api/* endpoints (for example /api/login.php) should be forwarded unchanged
-      '/api': {
+      // Proxy patient_api.php requests (backend file sits at /patient_api.php)
+      '/patient_api.php': {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },

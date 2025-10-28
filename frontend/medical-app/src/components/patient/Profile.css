@@ -1,0 +1,35 @@
+/* Profile styles */
+.profile-grid { display:grid; gap:2rem; max-width:900px; }
+.profile-section { background:white; border-radius:1rem; padding:2rem; box-shadow:0 4px 12px rgba(0,119,182,0.08); border:1px solid rgba(0,180,216,0.1); }
+.profile-section.full-width { grid-column: 1 / -1; }
+.profile-section h2 { margin:0 0 1.5rem 0; font-size:1.5rem; font-weight:700; color:#03045e; }
+.form-group { margin-bottom:1.5rem; }
+.form-group label { display:block; margin-bottom:0.5rem; font-weight:600; color:#374151; font-size:0.95rem; }
+.form-input { width:100%; padding:0.875rem; border:2px solid #e5e7eb; border-radius:0.5rem; background:#f8f9fa; }
+.form-input:focus { outline:none; border-color:#00b4d8; }
+.pcp-card { display:flex; gap:1.5rem; padding:2rem; background: linear-gradient(135deg,#f8f9fa,#caf0f8); border-radius:1rem; align-items:flex-start; }
+.pcp-avatar { width:60px; height:60px; background: linear-gradient(135deg,#caf0f8,#90e0ef); border-radius:12px; display:flex; align-items:center; justify-content:center; color:#0077b6; }
+.pcp-avatar.large { width:80px; height:80px; }
+.pcp-details h3 { margin:0 0 1rem 0; font-size:1.5rem; font-weight:700; color:#03045e; }
+.pcp-details p { margin:0.5rem 0; color:#374151; }
+
+/* Header for the profile page: sticky controls */
+.profile-header {
+	position: sticky;
+	top: 0;
+	z-index: 40;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 0;
+	background: white; /* ensure it sits above content */
+	margin-bottom: 1rem;
+	border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+
+.profile-header .btn { min-width: 110px; }
+
+@media (max-width: 640px) {
+	.profile-header { padding: 0.75rem 0; }
+	.profile-header .btn { min-width: 80px; font-size: 0.9rem; }
+}

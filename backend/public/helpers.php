@@ -2,7 +2,14 @@
 // helpers.php - Helper functions for patient_api.php
 
 // Enable CORS for frontend
-header('Access-Control-Allow-Origin: http://localhost:5173'); // Change to your Vite port
+// Allow the dev server origin dynamically (supports different localhost ports like 5173/5174)
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin && (str_starts_with($origin, 'http://localhost') || str_starts_with($origin, 'http://127.0.0.1'))) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+    // Fallback for non-local development; adjust for production
+    header('Access-Control-Allow-Origin: http://localhost:5173');
+}
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');

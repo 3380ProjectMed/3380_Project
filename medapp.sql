@@ -53,46 +53,69 @@ UNLOCK TABLES;
 
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `trg_appointment_validate_date` BEFORE INSERT ON `Appointment` FOR EACH ROW BEGIN
-	-- Check if appointment date is in the past 
-	IF NEW.Appointment_date < NOW() THEN
-		SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Cannot create appointment in the past';
-	END IF;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `trg_appointment_check_referral` BEFORE INSERT ON `Appointment` FOR EACH ROW BEGIN
+    DECLARE patient_pcp_id INT;
     
-    -- Check if appointment is too far in the future
-    IF NEW.Appointment_date > DATE_ADD(NOW(), INTERVAL 1 YEAR) THEN
-		SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Cannot schedule more than 1 year in advance';
-	END IF;
+    -- Get the patient's Primary Care Physician
+    SELECT Primary_Doctor INTO patient_pcp_id
+    FROM Patient
+    WHERE Patient_ID = NEW.Patient_id;
     
-    -- Check if appointment is during business hours
-    IF HOUR(NEW.Appointment_date) < 8 OR HOUR(NEW.Appointment_date) >= 18 THEN
-		SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Appointments must be scheduled between 8am and 6pm';
-	END IF;
-    
-	-- Check if appointment is on a weekend (optional)
-    IF DAYOFWEEK(NEW.Appointment_date) IN (1, 7) THEN -- 1=Sunday, 7=Saturday
+    -- If trying to book with a doctor who is NOT their PCP, block it
+    IF patient_pcp_id IS NOT NULL AND NEW.Doctor_id != patient_pcp_id THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Appointments cannot be scheduled on weekends';
+        SET MESSAGE_TEXT = 'You must have a referral to book an appointment with a specialist. Please contact your primary care physician.';
+    END IF;
+    
+    -- If booking with their PCP, set status to Scheduled
+    IF patient_pcp_id IS NOT NULL AND NEW.Doctor_id = patient_pcp_id THEN
+        SET NEW.Status = 'Scheduled';
+    ELSE
+        SET NEW.Status = 'Scheduled';  -- Default for patients without PCP
     END IF;
 END */;;
 DELIMITER ;
 
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `trg_appointment_check_referral` BEFORE INSERT ON `Appointment` FOR EACH ROW BEGIN
-	DECLARE patient_pcp_id INT;
-    -- Get patient's PCP
-    SELECT Primary_Doctor INTO patient_pcp_id
-    FROM Patient
-    WHERE Patient_ID = NEW.Patient_id;
-    IF patient_pcp_id IS NULL OR NEW.Doctor_id != patient_pcp_id THEN
-		SET NEW.Status = 'Pending';
-	ELSE 
-		SET NEW.Status = 'Scheduled';
-	END IF;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `trg_appointment_validate_date` BEFORE INSERT ON `Appointment` FOR EACH ROW BEGIN
+    DECLARE conflicting_appointments INT;
+    
+    -- Check if appointment is in the past
+    IF NEW.Appointment_date < NOW() THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cannot create appointment in the past';
+    END IF;
+    
+    -- Check if appointment is too far in the future (e.g., max 1 year out)
+    IF NEW.Appointment_date > DATE_ADD(NOW(), INTERVAL 1 YEAR) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cannot schedule appointment more than 1 year in advance';
+    END IF;
+    
+    -- Check if appointment is during business hours (8 AM - 6 PM)
+    IF HOUR(NEW.Appointment_date) < 8 OR HOUR(NEW.Appointment_date) >= 18 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Appointments must be scheduled between 8 AM and 6 PM';
+    END IF;
+    
+    -- Check if appointment is on a weekend
+    IF DAYOFWEEK(NEW.Appointment_date) IN (1, 7) THEN -- 1=Sunday, 7=Saturday
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Appointments cannot be scheduled on weekends';
+    END IF;
+    
+    -- Check for double-booking: same doctor, same time
+    SELECT COUNT(*) INTO conflicting_appointments
+    FROM Appointment
+    WHERE Doctor_id = NEW.Doctor_id
+    AND Appointment_date = NEW.Appointment_date
+    AND Status != 'Cancelled';
+    
+    IF conflicting_appointments > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'This time slot is already booked. Please select a different time.';
+    END IF;
 END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -470,7 +493,7 @@ CREATE TABLE `Patient` (
 
 LOCK TABLES `Patient` WRITE;
 /*!40000 ALTER TABLE `Patient` DISABLE KEYS */;
-INSERT INTO `Patient` VALUES (1,'John','Smith','1985-03-15','123-45-6789','555-1001',1,1,2,1,'john.smith@email.com','Y',1,NULL,1,101,NULL,1,'O+','Private'),(2,'Maria','Garcia','1978-07-22','123-45-6790','555-1002',2,2,1,2,'maria.garcia@email.com','Y',3,NULL,2,102,NULL,NULL,'A+','Private'),(3,'David','Johnson','1992-11-30','123-45-6791','555-1003',1,1,2,1,'david.johnson@email.com','Y',1,NULL,3,105,NULL,NULL,'B+','Medicare'),(4,'Sarah','Williams','1980-05-14','123-45-6792','555-1004',2,2,2,1,'sarah.williams@email.com','Y',4,NULL,4,103,NULL,NULL,'AB-','Private'),(5,'Michael','Brown','1975-09-08','123-45-6793','555-1005',1,1,2,2,'michael.brown@email.com','Y',2,NULL,5,104,NULL,NULL,'O-','Private'),(6,'Jennifer','Davis','1988-12-25','123-45-6794','555-1006',2,2,2,1,'jennifer.davis@email.com','Y',5,NULL,6,101,NULL,NULL,'A-','Private'),(7,'Robert','Miller','1965-02-18','123-45-6795','555-1007',1,1,2,1,'robert.miller@email.com','Y',1,NULL,7,105,NULL,NULL,'B-','Medicare'),(8,'Lisa','Wilson','1990-08-11','123-45-6796','555-1008',2,2,1,3,'lisa.wilson@email.com','Y',3,NULL,8,102,NULL,NULL,'AB+','Private');
+INSERT INTO `Patient` VALUES (1,'John','Smith','2020-03-12','123-45-6789','555-1001',1,1,2,1,'john.smith@email.com','Y',1,NULL,1,101,NULL,1,'O+','Private'),(2,'Maria','Garcia','1978-07-22','123-45-6790','555-1002',2,2,1,2,'maria.garcia@email.com','Y',3,NULL,2,102,NULL,NULL,'A+','Private'),(3,'David','Johnson','1992-11-30','123-45-6791','555-1003',1,1,2,1,'david.johnson@email.com','Y',1,NULL,3,105,NULL,NULL,'B+','Medicare'),(4,'Sarah','Williams','1980-05-14','123-45-6792','555-1004',2,2,2,1,'sarah.williams@email.com','Y',4,NULL,4,103,NULL,NULL,'AB-','Private'),(5,'Michael','Brown','1975-09-08','123-45-6793','555-1005',1,1,2,2,'michael.brown@email.com','Y',2,NULL,5,104,NULL,NULL,'O-','Private'),(6,'Jennifer','Davis','1988-12-25','123-45-6794','555-1006',2,2,2,1,'jennifer.davis@email.com','Y',5,NULL,6,101,NULL,NULL,'A-','Private'),(7,'Robert','Miller','1965-02-18','123-45-6795','555-1007',1,1,2,1,'robert.miller@email.com','Y',1,NULL,7,105,NULL,NULL,'B-','Medicare'),(8,'Lisa','Wilson','1990-08-11','123-45-6796','555-1008',2,2,1,3,'lisa.wilson@email.com','Y',3,NULL,8,102,NULL,NULL,'AB+','Private');
 /*!40000 ALTER TABLE `Patient` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -610,7 +633,7 @@ CREATE TABLE `Referral` (
   CONSTRAINT `fk_ref__patient` FOREIGN KEY (`Patient_ID`) REFERENCES `Patient` (`Patient_ID`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `fk_ref__referring_doctor` FOREIGN KEY (`referring_doctor_staff_id`) REFERENCES `Doctor` (`Doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_ref__specialist_doctor` FOREIGN KEY (`specialist_doctor_staff_id`) REFERENCES `Doctor` (`Doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -619,7 +642,7 @@ CREATE TABLE `Referral` (
 
 LOCK TABLES `Referral` WRITE;
 /*!40000 ALTER TABLE `Referral` DISABLE KEYS */;
-INSERT INTO `Referral` VALUES (1,5,NULL,2,4,'Orthopedic consultation for knee pain',1008,'Approved'),(2,1,'2025-10-25',1,7,'Dermatology screening for skin rash',NULL,'Pending'),(3,4,'2025-10-16',4,2,'Cardiology evaluation for chest pain',NULL,'Approved'),(4,1,NULL,1,2,'Heart check ',NULL,'Pending'),(5,3,NULL,1,1,'test',NULL,'Pending');
+INSERT INTO `Referral` VALUES (1,5,NULL,2,4,'Orthopedic consultation for knee pain',1008,'Approved'),(2,1,'2025-10-25',1,7,'Dermatology screening for skin rash',NULL,'Pending'),(3,4,'2025-10-16',4,2,'Cardiology evaluation for chest pain',NULL,'Approved'),(4,1,NULL,1,2,'Heart check ',NULL,'Pending'),(5,3,NULL,1,1,'test',NULL,'Pending'),(6,1,NULL,1,5,'Sick',NULL,'Pending'),(7,1,NULL,1,6,'Sick',NULL,'Pending'),(8,1,NULL,1,5,'sick',NULL,'Pending'),(9,1,NULL,1,7,'Too much acne',NULL,'Pending'),(10,1,NULL,1,7,'Too much acne',NULL,'Pending'),(11,1,NULL,1,5,'Pap exam',NULL,'Pending'),(12,1,NULL,1,3,'Sick kid',NULL,'Pending');
 /*!40000 ALTER TABLE `Referral` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -934,4 +957,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-26 14:19:58
+-- Dump completed on 2025-10-27 19:45:06
