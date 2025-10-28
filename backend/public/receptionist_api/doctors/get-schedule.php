@@ -20,13 +20,13 @@ try {
 
     $conn = getDBConnection();
     
-    $dayOfWeek = date('w', strtotime($date));
+    $dayOfWeek = date('l', strtotime($date)); // Returns day name (Monday, Tuesday, etc.)
     
     $sql = "SELECT Schedule_id, Day_of_week, Start_time, End_time
-            FROM DoctorSchedule
+            FROM WorkSchedule
             WHERE Doctor_id = ? AND Day_of_week = ?";
     
-    $rows = executeQuery($conn, $sql, 'ii', [$doctorId, $dayOfWeek]);
+    $rows = executeQuery($conn, $sql, 'is', [$doctorId, $dayOfWeek]);
     closeDBConnection($conn);
 
     if (empty($rows)) {

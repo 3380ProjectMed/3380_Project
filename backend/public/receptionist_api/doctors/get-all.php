@@ -12,9 +12,9 @@ try {
     $conn = getDBConnection();
     
     $sql = "SELECT d.Doctor_id, d.First_Name, d.Last_Name,
-                   s.specialty_name, s.Specialty_id
+                   s.specialty_name, s.specialty_id
             FROM Doctor d
-            JOIN Specialty s ON d.Specialty_id = s.Specialty_id
+            JOIN Specialty s ON d.Specialty = s.specialty_id
             ORDER BY d.Last_Name, d.First_Name";
     
     $rows = executeQuery($conn, $sql);

@@ -20,11 +20,10 @@ try {
     $conn = getDBConnection();
     
     $sql = "SELECT DISTINCT d.Doctor_id, d.First_Name, d.Last_Name,
-                   s.specialty_name, s.Specialty_id
+                   s.specialty_name, s.specialty_id
             FROM Doctor d
-            JOIN Specialty s ON d.Specialty_id = s.Specialty_id
-            JOIN Works_At wa ON d.Doctor_id = wa.Doctor_id
-            WHERE wa.Office_id = ?
+            JOIN Specialty s ON d.Specialty = s.specialty_id
+            WHERE d.Work_Location = ?
             ORDER BY d.Last_Name, d.First_Name";
     
     $rows = executeQuery($conn, $sql, 'i', [$officeId]);
@@ -36,7 +35,7 @@ try {
             'First_Name' => $r['First_Name'],
             'Last_Name' => $r['Last_Name'],
             'specialty_name' => $r['specialty_name'],
-            'Specialty_id' => (int)$r['Specialty_id']
+            'specialty_id' => (int)$r['specialty_id']
         ];
     }, $rows);
 
