@@ -5,11 +5,11 @@ require_once 'helpers.php';
 
 header('Content-Type: application/json');
 
-// Database connection
-$host = getenv('AZURE_MYSQL_HOST') ?: 'localhost';
-$user = getenv('AZURE_MYSQL_USER') ?: 'root';
-$pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
-$name = getenv('AZURE_MYSQL_DB') ?: 'med-app-db';
+// Database connection - try Azure first, fall back to local
+$host = getenv('AZURE_MYSQL_HOST') ?: (getenv('DB_HOST') ?: 'db');
+$user = getenv('AZURE_MYSQL_USER') ?: (getenv('DB_USER') ?: 'user');
+$pass = getenv('AZURE_MYSQL_PASSWORD') ?: (getenv('DB_PASSWORD') ?: 'asd196a4wd1');
+$name = getenv('AZURE_MYSQL_DB') ?: (getenv('DB_NAME') ?: 'med-app-db');
 $port = (int)(getenv('AZURE_MYSQL_PORT') ?: 3306);
 $mysqli = new mysqli($host, $user, $pass, $name, $port);
 

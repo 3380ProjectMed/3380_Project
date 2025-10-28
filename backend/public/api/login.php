@@ -17,10 +17,11 @@ session_start([
 
 header('Content-Type: application/json');
 
-$host = getenv('AZURE_MYSQL_HOST') ?: '';
-$user = getenv('AZURE_MYSQL_USERNAME') ?: '';
-$pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
-$db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
+// Try Azure MySQL first, fall back to local
+$host = getenv('AZURE_MYSQL_HOST') ?: (getenv('DB_HOST') ?: 'db');
+$user = getenv('AZURE_MYSQL_USERNAME') ?: (getenv('DB_USER') ?: 'user');
+$pass = getenv('AZURE_MYSQL_PASSWORD') ?: (getenv('DB_PASSWORD') ?: 'asd196a4wd1');
+$db   = getenv('AZURE_MYSQL_DBNAME') ?: (getenv('DB_NAME') ?: 'med-app-db');
 $port = (int)(getenv('AZURE_MYSQL_PORT') ?: '3306');
 
 // Test environment variables
@@ -38,22 +39,24 @@ if (!$mysqli) {
     exit;
 }
 
-// Set SSL options BEFORE connecting
-// Use absolute path for Azure App Service
-$sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
+// Set SSL options BEFORE connecting (only for Azure)
+$isAzure = getenv('AZURE_MYSQL_HOST') !== false;
+$connectFlags = 0;
 
-if (file_exists($sslCertPath)) {
-    // Use certificate verification (more secure)
-    $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);
-    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, true);
-} else {
-    // Fallback: Don't verify (less secure, but works if cert is missing)
-    $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
-    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+if ($isAzure) {
+    $sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
+    if (file_exists($sslCertPath)) {
+        $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);
+        $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, true);
+    } else {
+        $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
+        $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+    }
+    $connectFlags = MYSQLI_CLIENT_SSL;
 }
 
 // NOW connect (only once!)
-if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, NULL, MYSQLI_CLIENT_SSL)) {
+if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, NULL, $connectFlags)) {
     http_response_code(500);
     echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
     exit;

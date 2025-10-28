@@ -24,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 session_start();
 
 // ==================== TEMPORARY MOCK AUTH ====================
-// TODO: Replace this with real auth when teammate finishes
 function requireAuth($allowed_roles = ['PATIENT']) {
     // MOCK: For testing, always set a fake patient_id
     if (!isset($_SESSION['patient_id'])) {
