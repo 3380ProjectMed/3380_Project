@@ -485,10 +485,10 @@ export default function PatientPortal({ onLogout }) {
 
   // --- Main render ---
   return (
-    <div className="landing-root">
+    <div className="patient-portal-root">
       {/* Header */}
-      <header className="landing-header">
-        <div className="landing-container">
+      <header className="patient-portal-header">
+        <div className="patient-portal-container">
           <div className="logo">
             <div className="logo-icon"><Stethoscope className="icon" /></div>
             <span>MedConnect</span>
