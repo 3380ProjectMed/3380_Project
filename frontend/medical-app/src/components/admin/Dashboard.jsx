@@ -14,7 +14,7 @@ function AdminDashboard() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin_api/dashboard/get-stats.php', {
+      const res = await fetch('/admin_api/dashboard/get-stats.php', {
         credentials: 'include'
       });
       

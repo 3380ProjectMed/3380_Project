@@ -20,7 +20,7 @@ function Profile() {
       try {
         if (auth.loading) return;
         // Always use the admin API; backend will resolve the profile by session
-        const url = `/api/admin_api/profile/get.php`;
+        const url = `/admin_api/profile/get.php`;
 
         const res = await fetch(url, { credentials: 'include' });
         if (!res.ok) {
@@ -53,7 +53,7 @@ function Profile() {
         lastName: profile.lastName,
         email: profile.email,
       };
-          const res = await fetch('/api/admin_api/profile/update.php', {
+          const res = await fetch('/admin_api/profile/update.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
