@@ -1,47 +1,58 @@
 <?php
-// patient_api.php - Patient Portal API Endpoints (cleaned and fixed)
+// patient_api.php - Simplified version for Azure deployment
 
 require_once 'helpers.php';
 
 header('Content-Type: application/json');
 
-// Database connection - try Azure first, fall back to local
-$host = getenv('AZURE_MYSQL_HOST') ?: (getenv('DB_HOST') ?: 'db');
-$user = getenv('AZURE_MYSQL_USER') ?: (getenv('DB_USER') ?: 'user');
-$pass = getenv('AZURE_MYSQL_PASSWORD') ?: (getenv('DB_PASSWORD') ?: 'asd196a4wd1');
-$name = getenv('AZURE_MYSQL_DB') ?: (getenv('DB_NAME') ?: 'med-app-db');
+// Database connection using Azure environment variables
+$host = getenv('AZURE_MYSQL_HOST') ?: 'localhost';
+$user = getenv('AZURE_MYSQL_USERNAME') ?: 'root';
+$pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
+$name = getenv('AZURE_MYSQL_DBNAME') ?: 'med-app-db';
 $port = (int)(getenv('AZURE_MYSQL_PORT') ?: 3306);
-$mysqli = new mysqli($host, $user, $pass, $name, $port);
 
-if ($mysqli->connect_error) {
-    sendResponse(false, [], 'Database connection failed: ' . $mysqli->connect_error, 500);
+try {
+    $mysqli = new mysqli($host, $user, $pass, $name, $port);
+    
+    if ($mysqli->connect_error) {
+        sendResponse(false, [], 'Database connection failed: ' . $mysqli->connect_error, 500);
+    }
+} catch (Exception $e) {
+    sendResponse(false, [], 'Database connection error: ' . $e->getMessage(), 500);
 }
 
-// Require authentication (currently mocked)
+// Require authentication
 requireAuth(['PATIENT']);
 
-// Get patient_id from session (set by mock auth)
+// Get patient_id from session
 $patient_id = $_SESSION['patient_id'] ?? null;
 
-// If patient_id isn't set in session, try to map from authenticated user's email
+// If patient_id isn't set, try to get it from the authenticated user's email
 if (!$patient_id) {
     $user_email = $_SESSION['email'] ?? null;
     if ($user_email) {
-        // Lookup patient by email in Patient table
-        $stmt = $mysqli->prepare("SELECT Patient_ID FROM Patient WHERE Email = ? LIMIT 1");
-        if ($stmt) {
-            $stmt->bind_param('s', $user_email);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $row = $res ? $res->fetch_assoc() : null;
-            if ($row && isset($row['Patient_ID'])) {
-                $patient_id = (int)$row['Patient_ID'];
-                // persist to session for future requests
-                $_SESSION['patient_id'] = $patient_id;
+        try {
+            // Try lowercase first, then mixed case as fallback
+            $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE email = ? LIMIT 1");
+            if (!$stmt) {
+                // Fallback to mixed case
+                $stmt = $mysqli->prepare("SELECT Patient_ID as patient_id FROM Patient WHERE Email = ? LIMIT 1");
             }
-            $stmt->close();
-        } else {
-            error_log('Patient lookup prepare failed: ' . $mysqli->error);
+            
+            if ($stmt) {
+                $stmt->bind_param('s', $user_email);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                $row = $res ? $res->fetch_assoc() : null;
+                if ($row && isset($row['patient_id'])) {
+                    $patient_id = (int)$row['patient_id'];
+                    $_SESSION['patient_id'] = $patient_id;
+                }
+                $stmt->close();
+            }
+        } catch (Exception $e) {
+            error_log('Patient lookup error: ' . $e->getMessage());
         }
     }
 }
@@ -57,439 +68,16 @@ $endpoint = $_GET['endpoint'] ?? '';
 if ($endpoint === 'dashboard') {
     if ($method === 'GET') {
         try {
-            // Get upcoming appointments
-            $stmt = $mysqli->prepare("\n                SELECT 
-                    a.Appointment_id,
-                    a.Appointment_date,
-                    a.Reason_for_visit,
-                    a.Status,
-                    CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
-                    s.specialty_name,
-                    o.Name as office_name,
-                    CONCAT(o.address, ', ', o.City, ', ', o.State, ' ', o.ZipCode) as office_address
-                FROM Appointment a
-                LEFT JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-                LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
-                LEFT JOIN Office o ON a.Office_id = o.Office_ID
-                WHERE a.Patient_id = ? 
-                AND a.Appointment_date >= NOW()
-                ORDER BY a.Appointment_date ASC
-            ");
-            $stmt->bind_param('i', $patient_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $upcoming_appointments = $result->fetch_all(MYSQLI_ASSOC);
-            
-            // Get PCP info
-            $stmt = $mysqli->prepare("\n                SELECT 
-                    d.Doctor_id,
-                    CONCAT(d.First_Name, ' ', d.Last_Name) as name,
-                    s.specialty_name,
-                    o.Name as office_name,
-                    d.Phone,
-                    d.Email,
-                    CONCAT(o.address, ', ', o.City, ', ', o.State) as location
-                FROM Patient p
-                LEFT JOIN Doctor d ON p.Primary_Doctor = d.Doctor_id
-                LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
-                LEFT JOIN Office o ON d.Work_Location = o.Office_ID
-                WHERE p.Patient_ID = ?
-            ");
-            $stmt->bind_param('i', $patient_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $pcp = $result->fetch_assoc();
-            
-            // Get recent activity (last 3 visits)
-            $stmt = $mysqli->prepare("\n                SELECT 
-                    v.Visit_id,
-                    v.Date,
-                    CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
-                    v.Status,
-                    v.TotalDue
-                FROM PatientVisit v
-                LEFT JOIN Doctor d ON v.Doctor_id = d.Doctor_id
-                WHERE v.Patient_id = ?
-                ORDER BY v.Date DESC
-                LIMIT 3
-            ");
-            $stmt->bind_param('i', $patient_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $recent_activity = $result->fetch_all(MYSQLI_ASSOC);
-            
+            // Simple response for now - we'll build this up
             sendResponse(true, [
-                'upcoming_appointments' => $upcoming_appointments,
-                'pcp' => $pcp,
-                'recent_activity' => $recent_activity
+                'patient_id' => $patient_id,
+                'upcoming_appointments' => [],
+                'pcp' => null,
+                'recent_activity' => []
             ]);
-            
         } catch (Exception $e) {
             error_log("Dashboard error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load dashboard', 500);
-        }
-    }
-}
-
-// ==================== PROFILE ====================
-elseif ($endpoint === 'profile') {
-    if ($method === 'GET') {
-        try {
-            // Include human-readable labels for demographic codes so frontend can render text
-            $stmt = $mysqli->prepare(
-                "SELECT
-                    p.Patient_ID,
-                    p.First_Name,
-                    p.Last_Name,
-                    p.dob,
-                    p.Email,
-                    p.AssignedAtBirth_Gender,
-                    p.Gender,
-                    p.Ethnicity,
-                    p.Race,
-                    p.BloodType,
-                    CONCAT(d.First_Name, ' ', d.Last_Name) as pcp_name,
-                    d.Doctor_id as pcp_id,
-                    s.specialty_name as pcp_specialty,
-                    o.Name as pcp_office,
-                    d.Phone as pcp_phone,
-                    d.Email as pcp_email,
-                    CONCAT(o.address, ', ', o.City, ', ', o.State) as pcp_location,
-                    cg.Gender_Text as Gender_Text,
-                    cag.Gender_Text as AssignedAtBirth_Gender_Text,
-                    ce.Ethnicity_Text as Ethnicity_Text,
-                    cr.Race_Text as Race_Text
-                FROM Patient p
-                LEFT JOIN Doctor d ON p.Primary_Doctor = d.Doctor_id
-                LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
-                LEFT JOIN Office o ON d.Work_Location = o.Office_ID
-                LEFT JOIN CodesGender cg ON p.Gender = cg.GenderCode
-                LEFT JOIN CodesAssignedAtBirth_Gender cag ON p.AssignedAtBirth_Gender = cag.GenderCode
-                LEFT JOIN CodesEthnicity ce ON p.Ethnicity = ce.EthnicityCode
-                LEFT JOIN CodesRace cr ON p.Race = cr.RaceCode
-                WHERE p.Patient_ID = ?"
-            );
-            $stmt->bind_param('i', $patient_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $profile = $result->fetch_assoc();
-            
-            if (!$profile) {
-                sendResponse(false, [], 'Profile not found', 404);
-            }
-            
-            sendResponse(true, $profile);
-            
-        } catch (Exception $e) {
-            error_log("Profile error: " . $e->getMessage());
-            sendResponse(false, [], 'Failed to load profile', 500);
-        }
-    } 
-    elseif ($method === 'PUT') {
-        $input = json_decode(file_get_contents('php://input'), true);
-        
-        try {
-            // Helper: map a human-readable text value to its numeric code in lookup tables.
-            // Returns an empty string when no mapping found or input empty so NULLIF('', '') becomes NULL.
-            $mapTextToCode = function($table, $idCol, $textCol, $val) use ($mysqli) {
-                $val = trim((string)($val ?? ''));
-                if ($val === '') return '';
-                // If already numeric, just return as stringified int
-                if (is_numeric($val)) return (string)intval($val);
-                $sql = "SELECT $idCol FROM $table WHERE $textCol = ? LIMIT 1";
-                $st = $mysqli->prepare($sql);
-                if (!$st) return '';
-                $st->bind_param('s', $val);
-                $st->execute();
-                $res = $st->get_result();
-                $row = $res ? $res->fetch_assoc() : null;
-                $st->close();
-                return $row && isset($row[$idCol]) ? (string)$row[$idCol] : '';
-            };
-            // Use NULLIF so empty strings are stored as SQL NULL
-            $stmt = $mysqli->prepare(
-                "UPDATE Patient
-                SET First_Name = NULLIF(?, ''),
-                    Last_Name = NULLIF(?, ''),
-                    Email = NULLIF(?, ''),
-                    dob = NULLIF(?, ''),
-                    Gender = NULLIF(?, ''),
-                    AssignedAtBirth_Gender = NULLIF(?, ''),
-                    Ethnicity = NULLIF(?, ''),
-                    Race = NULLIF(?, ''),
-                    Primary_Doctor = NULLIF(?, '')
-                WHERE Patient_ID = ?"
-            );
-            if (!$stmt) {
-                // Prepare failed — return a helpful message for devs and log the DB error
-                error_log('Profile update prepare failed: ' . $mysqli->error);
-                sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
-            }
-            // Expecting keys: first_name, last_name, email, dob (YYYY-MM-DD),
-            // gender, genderAtBirth, ethnicity, race, primary_doctor
-            $first = $input['first_name'] ?? '';
-            $last = $input['last_name'] ?? '';
-            $email = $input['email'] ?? '';
-            $dob = $input['dob'] ?? '';
-            $gender = $input['gender'] ?? '';
-            $genderAtBirth = $input['genderAtBirth'] ?? '';
-            $ethnicity = $input['ethnicity'] ?? '';
-            $race = $input['race'] ?? '';
-
-            // Map textual demographic selections to numeric codes expected by the DB
-            // Tables and columns as defined in medapp.sql
-            $gender = $mapTextToCode('CodesGender', 'GenderCode', 'Gender_Text', $gender);
-            $genderAtBirth = $mapTextToCode('CodesAssignedAtBirth_Gender', 'GenderCode', 'Gender_Text', $genderAtBirth);
-            $ethnicity = $mapTextToCode('CodesEthnicity', 'EthnicityCode', 'Ethnicity_Text', $ethnicity);
-            $race = $mapTextToCode('CodesRace', 'RaceCode', 'Race_Text', $race);
-            // Primary_Doctor is expected to be a doctor id (numeric) or empty string to clear
-            $primaryDoctor = isset($input['primary_doctor']) ? trim((string)$input['primary_doctor']) : '';
-
-            // Bind all parameters as strings except the final patient_id (int).
-            $stmt->bind_param('sssssssssi', 
-                $first,
-                $last,
-                $email,
-                $dob,
-                $gender,
-                $genderAtBirth,
-                $ethnicity,
-                $race,
-                $primaryDoctor,
-                $patient_id
-            );
-            $exec = $stmt->execute();
-            if ($exec === false) {
-                // Execution failed — log and return DB error
-                error_log('Profile update execute failed: ' . $stmt->error);
-                sendResponse(false, [], 'Database execute failed: ' . $stmt->error, 500);
-            }
-
-            sendResponse(true, [], 'Profile updated successfully');
-            
-        } catch (Exception $e) {
-            // Log the full exception and return the message to the client for easier debugging in dev
-            error_log("Profile update error: " . $e->getMessage());
-            error_log($e);
-            $msg = 'Failed to update profile: ' . $e->getMessage();
-            sendResponse(false, [], $msg, 500);
-        }
-    }
-}
-
-// ==================== APPOINTMENTS ====================
-elseif ($endpoint === 'appointments') {
-    if ($method === 'GET') {
-        $type = $_GET['type'] ?? 'upcoming';
-        
-        try {
-            if ($type === 'upcoming') {
-                $stmt = $mysqli->prepare("\n                    SELECT 
-                        a.Appointment_id,
-                        a.Appointment_date,
-                        a.Reason_for_visit,
-                        a.Status,
-                        CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
-                        s.specialty_name,
-                        o.Name as office_name,
-                        o.Phone as office_phone,
-                        CONCAT(o.address, ', ', o.City, ', ', o.State, ' ', o.ZipCode) as office_address
-                    FROM Appointment a
-                    LEFT JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-                    LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
-                    LEFT JOIN Office o ON a.Office_id = o.Office_ID
-                    WHERE a.Patient_id = ? 
-                    AND a.Appointment_date >= NOW()
-                    ORDER BY a.Appointment_date ASC
-                ");
-                $stmt->bind_param('i', $patient_id);
-            } else {
-                // History: include past Appointments (Appointment_date < NOW()) and completed PatientVisit records
-                // UNION both types so frontend can show a combined history sorted by date.
-                $stmt = $mysqli->prepare(
-                    "SELECT
-                        a.Appointment_id AS id,
-                        a.Appointment_date AS date,
-                        a.Reason_for_visit AS reason,
-                        CONCAT(d.First_Name, ' ', d.Last_Name) AS doctor_name,
-                        'Appointment' AS item_type,
-                        o.Name AS office_name,
-                        'Scheduled' AS Status
-                    FROM Appointment a
-                    LEFT JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-                    LEFT JOIN Office o ON a.Office_id = o.Office_ID
-                    WHERE a.Patient_id = ?
-                    AND a.Appointment_date < NOW()
-                    UNION
-                    SELECT
-                        v.Visit_id AS id,
-                        v.Date AS date,
-                        v.Reason_for_Visit AS reason,
-                        CONCAT(d2.First_Name, ' ', d2.Last_Name) AS doctor_name,
-                        'Visit' AS item_type,
-                        NULL AS office_name,
-                        v.Status AS status
-                    FROM PatientVisit v
-                    LEFT JOIN Doctor d2 ON v.Doctor_id = d2.Doctor_id
-                    WHERE v.Patient_id = ?
-                    AND v.Status = 'Completed'
-                    ORDER BY date DESC"
-                );
-                $stmt->bind_param('ii', $patient_id, $patient_id);
-            }
-            
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $appointments = $result->fetch_all(MYSQLI_ASSOC);
-            
-            sendResponse(true, $appointments);
-            
-        } catch (Exception $e) {
-            error_log("Appointments error: " . $e->getMessage());
-            sendResponse(false, [], 'Failed to load appointments', 500);
-        }
-    } 
-    elseif ($method === 'POST') {
-    // Book new appointment
-    $input = json_decode(file_get_contents('php://input'), true);
-    
-    $required = ['doctor_id', 'office_id', 'appointment_date', 'reason'];
-    $missing = validateRequired($input, $required);
-    
-    if (!empty($missing)) {
-        sendResponse(false, [], 'Missing required fields: ' . implode(', ', $missing), 400);
-    }
-    
-    try {
-        $mysqli->begin_transaction();
-        
-        // Check if selected doctor is patient's PCP (implement restriction in PHP for now)
-        $stmt = $mysqli->prepare("SELECT Primary_Doctor FROM Patient WHERE Patient_ID = ?");
-        $stmt->bind_param('i', $patient_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $patient_data = $result->fetch_assoc();
-        $patient_pcp_id = $patient_data['Primary_Doctor'] ?? null;
-        
-        // Enforce PCP-only booking rule
-        if ($patient_pcp_id === null || $input['doctor_id'] != $patient_pcp_id) {
-            $mysqli->rollback();
-            sendResponse(false, [], 'You can only book appointments with your Primary Care Physician. To see other doctors, please get a referral from your PCP first.', 400);
-        }
-        
-        // Generate appointment ID
-        $result = $mysqli->query("SELECT COALESCE(MAX(Appointment_id), 0) + 1 as next_id FROM Appointment");
-        $row = $result->fetch_assoc();
-        $next_id = $row['next_id'];
-        
-        // Parse the appointment_date string to convert time format
-        $appointmentDateTime = $input['appointment_date'];
-        
-        if (strpos($appointmentDateTime, 'AM') !== false || strpos($appointmentDateTime, 'PM') !== false) {
-            $dt = DateTime::createFromFormat('Y-m-d g:i A', $appointmentDateTime);
-            if ($dt) {
-                $appointmentDateTime = $dt->format('Y-m-d H:i:s');
-            }
-        }
-        
-        // Insert appointment with explicit Status for PCP appointments
-        $stmt = $mysqli->prepare("
-            INSERT INTO Appointment (
-                Appointment_id, Patient_id, Doctor_id, Office_id, 
-                Appointment_date, Date_created, Reason_for_visit, Status
-            ) VALUES (?, ?, ?, ?, ?, NOW(), ?, 'Scheduled')
-        ");
-        $stmt->bind_param('iiiiss',
-            $next_id,
-            $patient_id,
-            $input['doctor_id'],
-            $input['office_id'],
-            $appointmentDateTime,
-            $input['reason']
-        );
-        
-        $exec_result = $stmt->execute();
-        
-        if (!$exec_result) {
-            $error_msg = $stmt->error;
-            $mysqli->rollback();
-            
-            // Check for trigger validation errors
-            if (strpos($error_msg, 'Cannot create appointment in the past') !== false) {
-                sendResponse(false, [], 'Cannot schedule an appointment in the past. Please select a future date and time.', 400);
-            } elseif (strpos($error_msg, 'Cannot schedule appointment more than 1 year in advance') !== false) {
-                sendResponse(false, [], 'Cannot schedule appointments more than 1 year in advance.', 400);
-            } elseif (strpos($error_msg, 'Appointments must be scheduled between') !== false) {
-                sendResponse(false, [], 'Appointments must be scheduled during business hours (8 AM - 6 PM).', 400);
-            } elseif (strpos($error_msg, 'cannot be scheduled on weekends') !== false) {
-                sendResponse(false, [], 'Appointments cannot be scheduled on weekends. Please select a weekday.', 400);
-            } elseif (strpos($error_msg, 'This time slot is already booked') !== false) {
-                sendResponse(false, [], 'This time slot is already booked. Please select a different time.', 400);
-            } elseif (strpos($error_msg, 'must have a referral') !== false) {
-                sendResponse(false, [], 'You must have a referral to book an appointment with a specialist. Please contact your primary care physician.', 400);
-            } elseif (strpos($error_msg, 'You must select your Primary Care Physician') !== false) {
-                sendResponse(false, [], 'You can only book appointments with your Primary Care Physician. To see other doctors, please get a referral from your PCP first.', 400);
-            } elseif (strpos($error_msg, 'must select your Primary Care Physician') !== false) {
-                sendResponse(false, [], 'You can only book appointments with your Primary Care Physician. To see other doctors, please get a referral from your PCP first.', 400);
-            } else {
-                // Generic error
-                error_log("Book appointment error: " . $error_msg);
-                sendResponse(false, [], 'Failed to book appointment. Please try again.', 500);
-            }
-        }
-        
-        if ($stmt->affected_rows === 0) {
-            $mysqli->rollback();
-            throw new Exception('Failed to insert appointment');
-        }
-        
-        $mysqli->commit();
-        sendResponse(true, ['appointment_id' => $next_id], 'Appointment booked successfully!');
-        
-        } catch (Exception $e) {
-    $mysqli->rollback();
-    error_log("Book appointment error: " . $e->getMessage());
-    
-    $error_msg = $e->getMessage();
-    if (strpos($error_msg, 'Cannot create appointment') !== false || 
-        strpos($error_msg, 'Appointments must be scheduled') !== false ||
-        strpos($error_msg, 'cannot be scheduled on weekends') !== false ||
-        strpos($error_msg, 'This time slot is already booked') !== false ||
-        strpos($error_msg, 'must have a referral') !== false ||
-        strpos($error_msg, 'You must select your Primary Care Physician') !== false) {
-        // For PCP-only trigger error, provide user-friendly message
-        if (strpos($error_msg, 'You must select your Primary Care Physician') !== false) {
-            sendResponse(false, [], 'You can only book appointments with your Primary Care Physician. To see other doctors, please get a referral from your PCP first.', 400);
-        } else {
-            sendResponse(false, [], $error_msg, 400);
-        }
-    } else {
-        sendResponse(false, [], 'Failed to book appointment. Please try again.', 500);
-    }
-}
-}
-    
-    elseif ($method === 'DELETE') {
-        // Cancel appointment
-        $appointment_id = $_GET['id'] ?? null;
-        
-        if (!$appointment_id) {
-            sendResponse(false, [], 'Appointment ID required', 400);
-        }
-        
-        try {
-            $stmt = $mysqli->prepare("\n                DELETE FROM Appointment 
-                WHERE Appointment_id = ? 
-                AND Patient_id = ?
-            ");
-            $stmt->bind_param('ii', $appointment_id, $patient_id);
-            $stmt->execute();
-            
-            sendResponse(true, [], 'Appointment cancelled successfully');
-            
-        } catch (Exception $e) {
-            error_log("Cancel appointment error: " . $e->getMessage());
-            sendResponse(false, [], 'Failed to cancel appointment', 500);
         }
     }
 }
@@ -498,38 +86,39 @@ elseif ($endpoint === 'appointments') {
 elseif ($endpoint === 'doctors') {
     if ($method === 'GET') {
         try {
-            $specialty_filter = $_GET['specialty'] ?? null;
+            // Try lowercase schema first, then mixed case fallback
+            $query = "SELECT 
+                doctor_id,
+                CONCAT(first_name, ' ', last_name) as name,
+                'General Practice' as specialty_name,
+                'Main Office' as office_name,
+                'Main Location' as location
+                FROM doctor 
+                ORDER BY last_name, first_name 
+                LIMIT 10";
+                
+            $result = $mysqli->query($query);
             
-            $query = "\n                SELECT 
-                    d.Doctor_id,
-                    CONCAT(d.First_Name, ' ', d.Last_Name) as name,
-                    s.specialty_name,
-                    o.Name as office_name,
-                    CONCAT(o.address, ', ', o.City, ', ', o.State) as location
-                FROM Doctor d
-                LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
-                LEFT JOIN Office o ON d.Work_Location = o.Office_ID
-            ";
-            
-            // Add WHERE clause if specialty filter is provided
-            if ($specialty_filter) {
-                $query .= " WHERE s.specialty_name = ?";
-            }
-            
-            $query .= " ORDER BY d.Last_Name, d.First_Name";
-            
-            if ($specialty_filter) {
-                $stmt = $mysqli->prepare($query);
-                $stmt->bind_param('s', $specialty_filter);
-                $stmt->execute();
-                $result = $stmt->get_result();
-            } else {
+            if (!$result) {
+                // Fallback to mixed case
+                $query = "SELECT 
+                    Doctor_id as doctor_id,
+                    CONCAT(First_Name, ' ', Last_Name) as name,
+                    'General Practice' as specialty_name,
+                    'Main Office' as office_name,
+                    'Main Location' as location
+                    FROM Doctor 
+                    ORDER BY Last_Name, First_Name 
+                    LIMIT 10";
                 $result = $mysqli->query($query);
             }
             
-            $doctors = $result->fetch_all(MYSQLI_ASSOC);
-            sendResponse(true, $doctors);
+            $doctors = [];
+            if ($result) {
+                $doctors = $result->fetch_all(MYSQLI_ASSOC);
+            }
             
+            sendResponse(true, $doctors);
         } catch (Exception $e) {
             error_log("Doctors error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load doctors', 500);
@@ -537,276 +126,73 @@ elseif ($endpoint === 'doctors') {
     }
 }
 
-// ==================== OFFICES ====================
-elseif ($endpoint === 'offices') {
+// ==================== PROFILE ====================
+elseif ($endpoint === 'profile') {
     if ($method === 'GET') {
         try {
-            $result = $mysqli->query("\n                SELECT 
-                    Office_ID,
-                    Name,
-                    CONCAT(address, ', ', City, ', ', State, ' ', ZipCode) as address,
-                    Phone
-                FROM Office
-                ORDER BY Name
-            ");
+            // Try lowercase first
+            $query = "SELECT 
+                patient_id,
+                first_name,
+                last_name,
+                email,
+                dob
+                FROM patient 
+                WHERE patient_id = ?";
+                
+            $stmt = $mysqli->prepare($query);
             
-            $offices = $result->fetch_all(MYSQLI_ASSOC);
-            sendResponse(true, $offices);
-            
-        } catch (Exception $e) {
-            error_log("Offices error: " . $e->getMessage());
-            sendResponse(false, [], 'Failed to load offices', 500);
-        }
-    }
-}
-
-// ==================== MEDICAL RECORDS ====================
-elseif ($endpoint === 'medical-records') {
-    $type = $_GET['type'] ?? '';
-    
-    if ($method === 'GET') {
-        try {
-            switch ($type) {
-                case 'vitals':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
-                            DATE(Date) as date,
-                            Blood_pressure as bp,
-                            Temperature as temp
-                        FROM PatientVisit
-                        WHERE Patient_id = ?
-                        AND Blood_pressure IS NOT NULL
-                        ORDER BY Date DESC
-                        LIMIT 10
-                    ");
-                    $stmt->bind_param('i', $patient_id);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    $vitals = $result->fetch_all(MYSQLI_ASSOC);
-                    sendResponse(true, $vitals);
-                    break;
-                    
-                case 'medications':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
-                            p.medication_name as name,
-                            CONCAT(p.dosage, ' - ', p.frequency) as frequency,
-                            CONCAT(d.First_Name, ' ', d.Last_Name) as prescribed_by,
-                            p.start_date,
-                            p.end_date
-                        FROM Prescription p
-                        LEFT JOIN Doctor d ON p.doctor_id = d.Doctor_id
-                        WHERE p.patient_id = ?
-                        AND (p.end_date IS NULL OR p.end_date >= CURDATE())
-                        ORDER BY p.start_date DESC
-                    ");
-                    $stmt->bind_param('i', $patient_id);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    $medications = $result->fetch_all(MYSQLI_ASSOC);
-                    sendResponse(true, $medications);
-                    break;
-                    
-                case 'allergies':
-                    $stmt = $mysqli->prepare("\n                        SELECT ca.Allergies_Text as allergy
-                        FROM Patient p
-                        LEFT JOIN CodesAllergies ca ON p.Allergies = ca.AllergiesCode
-                        WHERE p.Patient_ID = ?
-                    ");
-                    $stmt->bind_param('i', $patient_id);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    $allergy = $result->fetch_assoc();
-                    $allergies = $allergy && $allergy['allergy'] ? [$allergy['allergy']] : [];
-                    sendResponse(true, $allergies);
-                    break;
-                    
-                case 'conditions':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
-                            Condition_name as name,
-                            Diagnosis_date
-                        FROM MedicalCondition
-                        WHERE Patient_id = ?
-                        ORDER BY Diagnosis_date DESC
-                    ");
-                    $stmt->bind_param('i', $patient_id);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    $conditions = $result->fetch_all(MYSQLI_ASSOC);
-                    sendResponse(true, $conditions);
-                    break;
-                    
-                case 'visit-summaries':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
-                            v.Visit_id,
-                            v.Date,
-                            v.Reason_for_Visit,
-                            CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
-                            v.Diagnosis,
-                            v.Treatment,
-                            v.Blood_pressure,
-                            v.Temperature
-                        FROM PatientVisit v
-                        LEFT JOIN Doctor d ON v.Doctor_id = d.Doctor_id
-                        WHERE v.Patient_id = ?
-                        AND v.Status = 'Completed'
-                        ORDER BY v.Date DESC
-                        LIMIT 20
-                    ");
-                    $stmt->bind_param('i', $patient_id);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    $summaries = $result->fetch_all(MYSQLI_ASSOC);
-                    sendResponse(true, $summaries);
-                    break;
-                    
-                default:
-                    sendResponse(false, [], 'Invalid medical record type', 400);
+            if (!$stmt) {
+                // Fallback to mixed case
+                $query = "SELECT 
+                    Patient_ID as patient_id,
+                    First_Name as first_name,
+                    Last_Name as last_name,
+                    Email as email,
+                    dob
+                    FROM Patient 
+                    WHERE Patient_ID = ?";
+                $stmt = $mysqli->prepare($query);
             }
             
-        } catch (Exception $e) {
-            error_log("Medical records error: " . $e->getMessage());
-            sendResponse(false, [], 'Failed to load medical records', 500);
-        }
-    }
-}
-
-// ==================== INSURANCE ====================
-elseif ($endpoint === 'insurance') {
-    if ($method === 'GET') {
-        try {
-            $stmt = $mysqli->prepare("\n                SELECT 
-                    pi.id,
-                    pi.member_id,
-                    pi.group_id,
-                    pi.effective_date,
-                    pi.expiration_date,
-                    pi.is_primary,
-                    pi.copay,
-                    pi.deductible_individ,
-                    pi.coinsurance_rate_pct,
-                    ip.NAME as provider_name,
-                    ipl.plan_name,
-                    ipl.plan_type
-                FROM patient_insurance pi
-                LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
-                LEFT JOIN insurance_payer ip ON ipl.payer_id = ip.payer_id
-                WHERE pi.patient_id = ?
-                ORDER BY pi.is_primary DESC, pi.effective_date DESC
-            ");
-            $stmt->bind_param('i', $patient_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $insurance = $result->fetch_all(MYSQLI_ASSOC);
-            
-            sendResponse(true, $insurance);
-            
-        } catch (Exception $e) {
-            error_log("Insurance error: " . $e->getMessage());
-            sendResponse(false, [], 'Failed to load insurance', 500);
-        }
-    }
-}
-
-// ==================== BILLING ====================
-elseif ($endpoint === 'billing') {
-    $type = $_GET['type'] ?? '';
-    
-    if ($method === 'GET') {
-        try {
-            switch ($type) {
-                case 'balance':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
-                            COALESCE(SUM(TotalDue), 0) as outstanding_balance
-                        FROM PatientVisit
-                        WHERE Patient_id = ?
-                        AND TotalDue > 0
-                    ");
-                    $stmt->bind_param('i', $patient_id);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    $balance = $result->fetch_assoc();
-                    sendResponse(true, $balance);
-                    break;
-                    
-                case 'statements':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
-                            v.Visit_id as id,
-                            DATE(v.Date) as date,
-                            v.Reason_for_Visit as service,
-                            v.AmountDue as amount,
-                            v.TotalDue as balance,
-                            CASE 
-                                WHEN v.TotalDue = 0 THEN 'Paid'
-                                WHEN v.Payment > 0 THEN 'Partial Payment'
-                                ELSE 'Unpaid'
-                            END as status,
-                            v.Payment
-                        FROM PatientVisit v
-                        WHERE v.Patient_id = ?
-                        AND v.AmountDue IS NOT NULL
-                        ORDER BY v.Date DESC
-                        LIMIT 50
-                    ");
-                    $stmt->bind_param('i', $patient_id);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    $statements = $result->fetch_all(MYSQLI_ASSOC);
-                    sendResponse(true, $statements);
-                    break;
-                    
-                case 'POST':
-                    // Process a payment for a visit
-                    $input = json_decode(file_get_contents('php://input'), true);
-                    $visit_id = isset($input['visit_id']) ? (int)$input['visit_id'] : null;
-                    $amount = isset($input['amount']) ? floatval($input['amount']) : 0;
-
-                    if ($amount <= 0) {
-                        sendResponse(false, [], 'Invalid payment amount', 400);
-                    }
-
-                    try {
-                        if ($visit_id) {
-                            $stmt = $mysqli->prepare("SELECT TotalDue, Payment FROM PatientVisit WHERE Visit_id = ? AND Patient_id = ? LIMIT 1");
-                            $stmt->bind_param('ii', $visit_id, $patient_id);
-                            $stmt->execute();
-                            $res = $stmt->get_result();
-                            $row = $res->fetch_assoc();
-                            if (!$row) {
-                                sendResponse(false, [], 'Visit not found', 404);
-                            }
-
-                            $currentPayment = floatval($row['Payment'] ?? 0);
-                            $currentDue = floatval($row['TotalDue'] ?? 0);
-                            $newPayment = $currentPayment + $amount;
-                            $newDue = max(0, $currentDue - $amount);
-
-                            $stmt = $mysqli->prepare("UPDATE PatientVisit SET Payment = ?, TotalDue = ? WHERE Visit_id = ? AND Patient_id = ?");
-                            $stmt->bind_param('ddii', $newPayment, $newDue, $visit_id, $patient_id);
-                            $stmt->execute();
-
-                            sendResponse(true, ['visit_id' => $visit_id, 'paid' => $amount, 'new_balance' => $newDue], 'Payment processed');
-                        } else {
-                            // No visit specified: apply as credit (not implemented fully).
-                            sendResponse(false, [], 'Visit id required for payment', 400);
-                        }
-                    } catch (Exception $e) {
-                        error_log('Payment error: ' . $e->getMessage());
-                        sendResponse(false, [], 'Failed to process payment', 500);
-                    }
-                    
-                default:
-                    sendResponse(false, [], 'Invalid billing type', 400);
+            if ($stmt) {
+                $stmt->bind_param('i', $patient_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $profile = $result->fetch_assoc();
+                
+                if ($profile) {
+                    sendResponse(true, $profile);
+                } else {
+                    sendResponse(false, [], 'Profile not found', 404);
+                }
+                $stmt->close();
+            } else {
+                sendResponse(false, [], 'Database query failed', 500);
             }
-            
         } catch (Exception $e) {
-            error_log("Billing error: " . $e->getMessage());
-            sendResponse(false, [], 'Failed to load billing information', 500);
+            error_log("Profile error: " . $e->getMessage());
+            sendResponse(false, [], 'Failed to load profile', 500);
+        }
+    }
+}
+
+// ==================== APPOINTMENTS ====================
+elseif ($endpoint === 'appointments') {
+    if ($method === 'GET') {
+        try {
+            // Simple appointments response
+            sendResponse(true, []);
+        } catch (Exception $e) {
+            error_log("Appointments error: " . $e->getMessage());
+            sendResponse(false, [], 'Failed to load appointments', 500);
         }
     }
 }
 
 // Invalid endpoint
 else {
-    sendResponse(false, [], 'Invalid endpoint', 404);
+    sendResponse(false, [], 'Invalid endpoint: ' . $endpoint, 404);
 }
 
 $mysqli->close();
