@@ -7,9 +7,9 @@ header('Content-Type: application/json');
 
 // Database connection
 $host = getenv('AZURE_MYSQL_HOST') ?: 'localhost';
-$user = getenv('AZURE_MYSQL_USER') ?: 'root';
+$user = getenv('AZURE_MYSQL_USERNAME') ?: 'root';
 $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
-$name = getenv('AZURE_MYSQL_DB') ?: 'med-app-db';
+$name = getenv('AZURE_MYSQL_DBNAME') ?: 'med-app-db';
 $port = (int)(getenv('AZURE_MYSQL_PORT') ?: 3306);
 $mysqli = new mysqli($host, $user, $pass, $name, $port);
 
