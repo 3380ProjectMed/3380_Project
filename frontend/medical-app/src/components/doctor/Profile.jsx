@@ -27,7 +27,7 @@ function Profile() {
           setLoading(false);
           return;
         }
-        const res = await fetch(`http://localhost:8080/doctor_api/profile/get.php?doctor_id=${doctorId}`, { credentials: 'include' });
+        const res = await fetch(`/doctor_api/profile/get.php?doctor_id=${doctorId}`, { credentials: 'include' });
         const json = await res.json();
         if (json.success && json.profile) {
           setProfile(prev => ({ ...prev, ...json.profile }));

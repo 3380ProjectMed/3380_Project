@@ -46,18 +46,38 @@ if (empty($_SESSION['uid'])) {
 }
 
 // Connect to the database and return JSON on failure
-$mysqli = new mysqli(
-  $host = getenv('AZURE_MYSQL_HOST') ?: '',
-  $user = getenv('AZURE_MYSQL_USERNAME') ?: '',
-  $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '',
-  $db   = getenv('AZURE_MYSQL_DBNAME') ?: '',
-  $port = (int)(getenv('AZURE_MYSQL_PORT') ?: '3306')
-);
-if ($mysqli->connect_errno) {
-  http_response_code(500);
-  echo json_encode(['success' => false, 'error' => 'DB connection failed', 'detail' => $mysqli->connect_error]);
+// Initialize mysqli with SSL for Azure MySQL
+$mysqli = mysqli_init();
+if (!$mysqli) {
+    http_response_code(500);
+    echo json_encode(['error' => 'mysqli_init failed']);
     exit;
 }
+
+// Set SSL options BEFORE connecting
+$sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
+
+if (file_exists($sslCertPath)) {
+    $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, true);
+} else {
+    $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+}
+
+$host = getenv('AZURE_MYSQL_HOST') ?: '';
+$user = getenv('AZURE_MYSQL_USERNAME') ?: '';
+$pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
+$db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
+$port = (int)(getenv('AZURE_MYSQL_PORT') ?: '3306');
+
+// Connect with SSL
+if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, NULL, MYSQLI_CLIENT_SSL)) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
+    exit;
+}
+
 $mysqli->set_charset('utf8mb4');
 
 // Try to fetch the user and (if doctor) associated Doctor_id
