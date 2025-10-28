@@ -39,8 +39,8 @@ if (!$mysqli) {
 }
 
 // Set SSL options BEFORE connecting
-// Path to the certificate file (we'll create this below)
-$sslCertPath = __DIR__ . '/../../../certs/DigiCertGlobalRootCA.crt.pem';
+// Use absolute path for Azure App Service
+$sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
 
 if (file_exists($sslCertPath)) {
     // Use certificate verification (more secure)
