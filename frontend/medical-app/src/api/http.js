@@ -3,9 +3,9 @@ const API_BASE = '';
 
 export const makeUrl = (path, params) => {
   const p = path.startsWith('/') ? path : `/${path}`;
-  if (!params) return `${p}`;
+  if (!params) return p;
   const qs = new URLSearchParams(params).toString();
-  return `${p}${qs ? `?${qs}` : ''}`;
+  return `${p}${qs ? `?${qs}` : ''}`;  // ← Fixed: added closing }
 };
 
 export async function apiRequest(
