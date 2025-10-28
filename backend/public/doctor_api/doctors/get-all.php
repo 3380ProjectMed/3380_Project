@@ -5,10 +5,10 @@ require_once __DIR__ . '/../../../database.php';
 try {
     $conn = getDBConnection();
 
-    $sql = "SELECT d.Doctor_id, d.First_Name, d.Last_Name, d.Specialty, s.specialty_name
-            FROM Doctor d
-            LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
-            ORDER BY d.Last_Name, d.First_Name";
+    $sql = "SELECT d.doctor_id, d.first_name, d.last_name, d.specialty, s.specialty_name
+            FROM doctor d
+            LEFT JOIN specialty s ON d.specialty = s.specialty_id
+            ORDER BY d.last_name, d.first_name";
 
     $results = executeQuery($conn, $sql);
     closeDBConnection($conn);
@@ -16,11 +16,11 @@ try {
     // Normalize to a simple array
     $doctors = array_map(function($r) {
         return [
-            'id' => $r['Doctor_id'],
-            'first_name' => $r['First_Name'],
-            'last_name' => $r['Last_Name'],
-            'name' => trim($r['First_Name'] . ' ' . $r['Last_Name']),
-            'specialty_id' => $r['Specialty'],
+            'id' => $r['doctor_id'],
+            'first_name' => $r['first_name'],
+            'last_name' => $r['last_name'],
+            'name' => trim($r['first_name'] . ' ' . $r['last_name']),
+            'specialty_id' => $r['specialty'],
             'specialty_name' => $r['specialty_name']
         ];
     }, $results);

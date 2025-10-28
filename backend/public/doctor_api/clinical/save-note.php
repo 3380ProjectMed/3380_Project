@@ -1,6 +1,6 @@
 <?php
 /**
- * Save/update clinical note in PatientVisit.Treatment field
+ * Save/update clinical note in patient_visit.treatment field
  */
 require_once __DIR__ . '/../../../cors.php';
 require_once __DIR__ . '/../../../database.php';
@@ -15,12 +15,12 @@ try {
 
     $user_id = (int)$_SESSION['uid'];
     
-    // Get doctor info from session
+    // Get doctor info
     $conn = getDBConnection();
     $rows = executeQuery($conn, '
-        SELECT d.Doctor_id, CONCAT(d.First_Name, " ", d.Last_Name) as doctor_name
-        FROM Doctor d
-        JOIN user_account ua ON ua.email = d.Email
+        SELECT d.doctor_id, CONCAT(d.first_name, " ", d.last_name) as doctor_name
+        FROM doctor d
+        JOIN user_account ua ON ua.email = d.email
         WHERE ua.user_id = ?', 'i', [$user_id]);
     
     if (empty($rows)) {
@@ -30,7 +30,7 @@ try {
         exit;
     }
     
-    $doctor_id = (int)$rows[0]['Doctor_id'];
+    $doctor_id = (int)$rows[0]['doctor_id'];
     $doctor_name = $rows[0]['doctor_name'];
     
     // Get POST data
@@ -58,11 +58,11 @@ try {
     // If we have appointment_id, find the visit
     if ($visit_id === 0 && $appointment_id > 0) {
         $visitRows = executeQuery($conn, 
-            'SELECT Visit_id FROM PatientVisit WHERE Appointment_id = ? LIMIT 1', 
+            'SELECT visit_id FROM patient_visit WHERE appointment_id = ? LIMIT 1', 
             'i', [$appointment_id]);
         
         if (!empty($visitRows)) {
-            $visit_id = (int)$visitRows[0]['Visit_id'];
+            $visit_id = (int)$visitRows[0]['visit_id'];
         } else {
             closeDBConnection($conn);
             http_response_code(404);
@@ -74,13 +74,13 @@ try {
         }
     }
     
-    // Update the Treatment field in PatientVisit
-    $sql = "UPDATE PatientVisit 
-            SET Treatment = ?,
-                Diagnosis = COALESCE(?, Diagnosis),
-                LastUpdated = NOW(),
-                UpdatedBy = ?
-            WHERE Visit_id = ?";
+    // Update the treatment field in patient_visit (all lowercase)
+    $sql = "UPDATE patient_visit 
+            SET treatment = ?,
+                diagnosis = COALESCE(?, diagnosis),
+                last_updated = NOW(),
+                updated_by = ?
+            WHERE visit_id = ?";
     
     executeQuery($conn, $sql, 'sssi', [$note_text, $diagnosis, $doctor_name, $visit_id]);
     

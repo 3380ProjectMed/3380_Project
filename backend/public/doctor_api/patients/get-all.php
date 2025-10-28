@@ -1,14 +1,12 @@
 <?php
 /**
  * Get all patients for a doctor
- * Matches YOUR database schema
  */
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
 try {
-    // Add error logging
     error_reporting(E_ALL);
     error_log("=== Get All Patients API Called ===");
     
@@ -20,7 +18,6 @@ try {
         $doctor_id = intval($_GET['doctor_id']);
         error_log("Using doctor_id from query param: " . $doctor_id);
     } else {
-        // Require session and resolve
         session_start();
         if (!isset($_SESSION['uid'])) {
             http_response_code(401);
@@ -30,39 +27,42 @@ try {
         }
 
         $user_id = intval($_SESSION['uid']);
-        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        // Note: doctor table is lowercase, but columns are lowercase too
+        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
         if (!is_array($rows) || count($rows) === 0) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
             closeDBConnection($conn);
             exit;
         }
-        $doctor_id = (int)$rows[0]['Doctor_id'];
+        $doctor_id = (int)$rows[0]['doctor_id'];
     }
     
     error_log("Querying patients for doctor_id: " . $doctor_id);
     
-    // SQL query matching YOUR schema
+    // SQL query - Azure database uses lowercase table names
+    // appointment table has mixed case: Appointment_date, Patient_id, etc.
+    // patient table has all lowercase columns
     $sql = "SELECT 
-                p.Patient_ID,
-                p.First_Name,
-                p.Last_Name,
+                p.patient_id,
+                p.first_name,
+                p.last_name,
                 p.dob,
-                p.Email,
-                p.EmergencyContact,
-                p.BloodType,
-                ca.Allergies_Text as allergies,
-                cg.Gender_Text as gender,
+                p.email,
+                p.emergency_contact,
+                p.blood_type,
+                ca.allergies_text as allergies,
+                cg.gender_text as gender,
                 MAX(a.Appointment_date) as last_visit,
                 MIN(CASE WHEN a.Appointment_date > NOW() THEN a.Appointment_date END) as next_appointment
-            FROM Patient p
-            LEFT JOIN CodesAllergies ca ON p.Allergies = ca.AllergiesCode
-            LEFT JOIN CodesGender cg ON p.Gender = cg.GenderCode
-            LEFT JOIN Appointment a ON p.Patient_ID = a.Patient_id
-            WHERE p.Primary_Doctor = ?
-            GROUP BY p.Patient_ID, p.First_Name, p.Last_Name, p.dob, p.Email, 
-                     p.EmergencyContact, p.BloodType, ca.Allergies_Text, cg.Gender_Text
-            ORDER BY p.Last_Name, p.First_Name";
+            FROM patient p
+            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
+            LEFT JOIN appointment a ON p.patient_id = a.Patient_id
+            WHERE p.primary_doctor = ?
+            GROUP BY p.patient_id, p.first_name, p.last_name, p.dob, p.email, 
+                     p.emergency_contact, p.blood_type, ca.allergies_text, cg.gender_text
+            ORDER BY p.last_name, p.first_name";
     
     $patients = executeQuery($conn, $sql, 'i', [$doctor_id]);
     
@@ -84,51 +84,52 @@ try {
         }
         
         $formatted_patients[] = [
-            'id' => 'P' . str_pad($patient['Patient_ID'], 3, '0', STR_PAD_LEFT),
-            'name' => $patient['First_Name'] . ' ' . $patient['Last_Name'],
+            'id' => 'P' . str_pad($patient['patient_id'], 3, '0', STR_PAD_LEFT),
+            'name' => $patient['first_name'] . ' ' . $patient['last_name'],
             'dob' => $patient['dob'],
             'age' => $age,
             'gender' => $patient['gender'] ?: 'Not Specified',
-            'email' => $patient['Email'] ?: 'No email',
-            'phone' => $patient['EmergencyContact'] ?: 'No phone',
+            'email' => $patient['email'] ?: 'No email',
+            'phone' => $patient['emergency_contact'] ?: 'No phone',
             'allergies' => $patient['allergies'] ?: 'No Known Allergies',
-            'bloodType' => $patient['BloodType'] ?: 'Unknown',
+            'bloodType' => $patient['blood_type'] ?: 'Unknown',
             'lastVisit' => $patient['last_visit'] ? date('Y-m-d', strtotime($patient['last_visit'])) : 'No visits yet',
             'nextAppointment' => $patient['next_appointment'] ? date('Y-m-d', strtotime($patient['next_appointment'])) : 'None scheduled',
-            'chronicConditions' => [], // will be populated below
-            'currentMedications' => []  // will be populated below
+            'chronicConditions' => [],
+            'currentMedications' => []
         ];
     }
 
-    // Enrich each patient with chronic conditions and current medications (non-fatal)
+    // Enrich each patient with chronic conditions and current medications
     foreach ($formatted_patients as $idx => $fp) {
-        // extract numeric id
         $rawId = isset($fp['id']) ? intval(preg_replace('/[^0-9]/', '', $fp['id'])) : 0;
         if ($rawId <= 0) continue;
 
+        // Fetch medical conditions
         try {
-            $mc_sql = "SELECT Condition_name FROM MedicalCondition WHERE Patient_id = ? ORDER BY Diagnosis_date DESC";
+            $mc_sql = "SELECT condition_name FROM medical_condition WHERE patient_id = ? ORDER BY diagnosis_date DESC";
             $mcs = executeQuery($conn, $mc_sql, 'i', [$rawId]);
             if (is_array($mcs)) {
                 $formatted_patients[$idx]['chronicConditions'] = array_values(array_map(function($r){
-                    return $r['Condition_name'] ?? '';
+                    return $r['condition_name'] ?? '';
                 }, $mcs));
             }
         } catch (Exception $e) {
             error_log("Error fetching conditions for patient $rawId: " . $e->getMessage());
         }
 
+        // Fetch current prescriptions
         try {
             $rx_sql = "SELECT 
                        p.prescription_id, 
                        p.medication_name as name, 
                        CONCAT(p.dosage, ' - ', p.frequency) as frequency, 
-                       CONCAT(d.First_Name, ' ', d.Last_Name) as prescribed_by, 
+                       CONCAT(d.first_name, ' ', d.last_name) as prescribed_by, 
                        p.start_date, 
                        p.end_date, 
                        p.notes
-                       FROM Prescription p
-                       LEFT JOIN Doctor d ON p.doctor_id = d.Doctor_id
+                       FROM prescription p
+                       LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
                        WHERE p.patient_id = ?
                        AND (p.end_date IS NULL OR p.end_date >= CURDATE())
                        ORDER BY p.start_date DESC";
@@ -165,8 +166,7 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage(),
-        'trace' => $e->getTraceAsString() // Remove in production
+        'error' => $e->getMessage()
     ]);
 }
 ?>

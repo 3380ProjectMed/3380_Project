@@ -22,7 +22,7 @@ try {
 
         $conn = getDBConnection();
         // Resolve doctor_id from user's email
-        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
         if (empty($rows)) {
             closeDBConnection($conn);
             http_response_code(403);
@@ -36,19 +36,19 @@ try {
     
     // SQL query for doctor info
     $sql = "SELECT 
-                d.Doctor_id,
-                d.First_Name,
-                d.Last_Name,
-                d.Email,
-                d.Phone,
-                d.License_Number,
+                d.doctor_id,
+                d.first_name,
+                d.last_name,
+                d.email,
+                d.phone,
+                d.license_number,
                 s.specialty_name,
-                cg.Gender_Text as gender
-            FROM Doctor d
-            LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
-            LEFT JOIN CodesGender cg ON d.Gender = cg.GenderCode
-            WHERE d.Doctor_id = ?";
-    
+                cg.gender_text as gender
+            FROM doctor d
+            LEFT JOIN specialty s ON d.specialty = s.specialty_id
+            LEFT JOIN codes_gender cg ON d.gender = cg.gender_code
+            WHERE d.doctor_id = ?";
+
     $result = executeQuery($conn, $sql, 'i', [$doctor_id]);
     
     if (empty($result)) {
