@@ -1,4 +1,8 @@
 <?php
+/**
+ * Get doctor's work schedule
+ */
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
@@ -25,10 +29,11 @@ try {
             closeDBConnection($conn);
             exit;
         }
-        $doctor_id = (int)$rows[0]['Doctor_id'];
+        $doctor_id = (int)$rows[0]['doctor_id'];
     }
     
     // Get doctor's work schedule with office locations
+    // All lowercase for Azure database
     $sql = "SELECT 
                 ws.day_of_week,
                 ws.start_time,

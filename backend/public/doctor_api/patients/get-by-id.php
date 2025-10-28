@@ -19,20 +19,21 @@ try {
     $numeric = intval(preg_replace('/[^0-9]/', '', $raw));
     if ($numeric <= 0) throw new Exception('Invalid patient id');
 
+    // All lowercase for Azure database
     $sql = "SELECT 
-                p.Patient_ID,
-                p.First_Name,
-                p.Last_Name,
+                p.patient_id,
+                p.first_name,
+                p.last_name,
                 p.dob,
-                p.Email,
-                p.EmergencyContact,
-                p.BloodType,
-                ca.Allergies_Text as allergies,
-                cg.Gender_Text as gender
-            FROM Patient p
-            LEFT JOIN CodesAllergies ca ON p.Allergies = ca.AllergiesCode
-            LEFT JOIN CodesGender cg ON p.Gender = cg.GenderCode
-            WHERE p.Patient_ID = ?
+                p.email,
+                p.emergency_contact,
+                p.blood_type,
+                ca.allergies_text as allergies,
+                cg.gender_text as gender
+            FROM patient p
+            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
+            WHERE p.patient_id = ?
             LIMIT 1";
 
     $rows = executeQuery($conn, $sql, 'i', [$numeric]);
@@ -43,29 +44,43 @@ try {
     }
 
     $p = $rows[0];
-    $dob = new DateTime($p['dob']);
-    $now = new DateTime();
-    $age = $now->diff($dob)->y;
+    $age = 0;
+    if ($p['dob']) {
+        try {
+            $dob = new DateTime($p['dob']);
+            $now = new DateTime();
+            $age = $now->diff($dob)->y;
+        } catch (Exception $e) {
+            // Age calculation failed, keep as 0
+        }
+    }
 
     $patient = [
-        'id' => 'P' . str_pad($p['Patient_ID'], 3, '0', STR_PAD_LEFT),
-        'name' => $p['First_Name'] . ' ' . $p['Last_Name'],
+        'id' => 'P' . str_pad($p['patient_id'], 3, '0', STR_PAD_LEFT),
+        'name' => $p['first_name'] . ' ' . $p['last_name'],
         'dob' => $p['dob'],
         'age' => $age,
         'gender' => $p['gender'] ?: 'Not Specified',
-        'email' => $p['Email'] ?: 'No email',
-        'phone' => $p['EmergencyContact'] ?: 'No phone',
+        'email' => $p['email'] ?: 'No email',
+        'phone' => $p['emergency_contact'] ?: 'No phone',
         'allergies' => $p['allergies'] ?: 'No Known Allergies',
-        'bloodType' => $p['BloodType'] ?: 'Unknown',
+        'bloodType' => $p['blood_type'] ?: 'Unknown',
         'medicalHistory' => [],
         'currentMedications' => []
     ];
 
-    // Fetch current prescriptions for this patient (if Prescription table exists)
+    // Fetch current prescriptions
     try {
-    $meds_sql = "SELECT p.prescription_id, p.medication_name as name, CONCAT(p.dosage, ' - ', p.frequency) as frequency, CONCAT(d.First_Name, ' ', d.Last_Name) as prescribed_by, p.start_date, p.end_date, p.notes
-                     FROM Prescription p
-                     LEFT JOIN Doctor d ON p.doctor_id = d.Doctor_id
+        $meds_sql = "SELECT 
+                     p.prescription_id, 
+                     p.medication_name as name, 
+                     CONCAT(p.dosage, ' - ', p.frequency) as frequency, 
+                     CONCAT(d.first_name, ' ', d.last_name) as prescribed_by, 
+                     p.start_date, 
+                     p.end_date, 
+                     p.notes
+                     FROM prescription p
+                     LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
                      WHERE p.patient_id = ?
                      AND (p.end_date IS NULL OR p.end_date >= CURDATE())
                      ORDER BY p.start_date DESC";
@@ -85,16 +100,25 @@ try {
             }, $meds);
         }
     } catch (Exception $e) {
-        // non-fatal: leave currentMedications empty
+        error_log("Error fetching medications: " . $e->getMessage());
     }
 
-    // Fetch recent visit summaries from PatientVisit
+    // Fetch recent visit summaries from patient_visit
     try {
-        $visits_sql = "SELECT v.PatientVisit_id as visit_id, v.Appointment_id, v.Date as visit_date, v.Reason_for_Visit, CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name, v.Diagnosis, v.Treatment, v.Blood_pressure, v.Temperature
-                       FROM PatientVisit v
-                       LEFT JOIN Doctor d ON v.Doctor_id = d.Doctor_id
-                       WHERE v.Patient_id = ?
-                       ORDER BY v.Date DESC
+        $visits_sql = "SELECT 
+                       v.visit_id, 
+                       v.appointment_id, 
+                       v.date as visit_date, 
+                       v.reason_for_visit, 
+                       CONCAT(d.first_name, ' ', d.last_name) as doctor_name, 
+                       v.diagnosis, 
+                       v.treatment, 
+                       v.blood_pressure, 
+                       v.temperature
+                       FROM patient_visit v
+                       LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
+                       WHERE v.patient_id = ?
+                       ORDER BY v.date DESC
                        LIMIT 50";
 
         $visits = executeQuery($conn, $visits_sql, 'i', [$numeric]);
@@ -102,19 +126,19 @@ try {
             $patient['medicalHistory'] = array_map(function($v) {
                 return [
                     'visit_id' => $v['visit_id'] ?? null,
-                    'appointment_id' => $v['Appointment_id'] ?? null,
+                    'appointment_id' => $v['appointment_id'] ?? null,
                     'date' => $v['visit_date'] ?? null,
-                    'reason' => $v['Reason_for_Visit'] ?? '',
+                    'reason' => $v['reason_for_visit'] ?? '',
                     'doctor_name' => $v['doctor_name'] ?? '',
-                    'diagnosis' => $v['Diagnosis'] ?? '',
-                    'treatment' => $v['Treatment'] ?? '',
-                    'blood_pressure' => $v['Blood_pressure'] ?? null,
-                    'temperature' => $v['Temperature'] ?? null
+                    'diagnosis' => $v['diagnosis'] ?? '',
+                    'treatment' => $v['treatment'] ?? '',
+                    'blood_pressure' => $v['blood_pressure'] ?? null,
+                    'temperature' => $v['temperature'] ?? null
                 ];
             }, $visits);
         }
     } catch (Exception $e) {
-        // non-fatal: leave medicalHistory empty
+        error_log("Error fetching medical history: " . $e->getMessage());
     }
 
     closeDBConnection($conn);
@@ -124,5 +148,4 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-
 ?>

@@ -36,9 +36,9 @@ try {
     
     // Insert referral - Status is automatically 'Approved' since no approval needed
     $sql = "INSERT INTO referral 
-        (patient_id, referring_doctor_staff_id, specialist_doctor_staff_id, reason, status, date_of_approval)
-        VALUES (?, ?, ?, ?, 'Approved', CURDATE())";
-    
+        (patient_id, referring_doctor_staff_id, specialist_doctor_staff_id, reason, date_of_approval)
+        VALUES (?, ?, ?, ?, CURDATE())";
+
     $stmt = $conn->prepare($sql);
     $stmt->bind_param('iiis', $patient_id, $referring_doctor_id, $specialist_doctor_id, $reason);
     
