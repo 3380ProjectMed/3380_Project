@@ -129,7 +129,7 @@ function RequireRole({ roles, children }) {
       DOCTOR: "/doctor",
       ADMIN: "/admin",
       PATIENT: "/patientportal",
-      // NURSE: "/nurse",
+      NURSE: "/nurse",
     };
     const userHome = homeByRole[user.role] || "/patientportal";
     
@@ -148,7 +148,7 @@ function AutoPortal() {
 
 function homeFor(role) {
   switch (role) {
-    // case "ADMIN": return "/admin";            // disabled
+    case "ADMIN": return "/admin";            
     case "DOCTOR": return "/doctor";
     case "NURSE": return "/nurse";
     // case "RECEPTIONIST": return "/reception"; // disabled

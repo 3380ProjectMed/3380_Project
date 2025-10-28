@@ -85,7 +85,7 @@ function AdminPortal({ preview = false }) {
       setError(null);
       
       const res = await fetch(
-        `/api/admin_api/reports/financial-summary.php?start_date=${startDate}&end_date=${endDate}`,
+        `/admin_api/reports/financial-summary.php?start_date=${startDate}&end_date=${endDate}`,
         { credentials: 'include' }
       );
       
@@ -109,7 +109,7 @@ function AdminPortal({ preview = false }) {
       setError(null);
       
       const res = await fetch(
-        `/api/admin_api/reports/office-utilization.php?start_date=${startDate}&end_date=${endDate}`,
+        `/admin_api/reports/office-utilization.php?start_date=${startDate}&end_date=${endDate}`,
         { credentials: 'include' }
       );
       
