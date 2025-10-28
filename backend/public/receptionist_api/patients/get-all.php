@@ -1,7 +1,7 @@
 <?php
 // receptionist_api/patients/get-all.php
-require_once __DIR__ . '/../../cors.php';
-require_once __DIR__ . '/../../database.php';
+require_once __DIR__ . '/../../../cors.php';
+require_once __DIR__ . '/../../../database.php';
 
 try {
     $conn = getDBConnection();

@@ -5,8 +5,8 @@
  * ==========================================
  * Get detailed patient information by ID
  */
-require_once __DIR__ . '/../../cors.php';
-require_once __DIR__ . '/../../database.php';
+require_once __DIR__ . '/../../../cors.php';
+require_once __DIR__ . '/../../../database.php';
 
 try {
     $patientId = isset($_GET['id']) ? (int)$_GET['id'] : 0;

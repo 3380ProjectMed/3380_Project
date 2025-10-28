@@ -5,8 +5,8 @@
  * ==========================================
  * Get doctor's schedule for a specific date
  */
-require_once __DIR__ . '/../../cors.php';
-require_once __DIR__ . '/../../database.php';
+require_once __DIR__ . '/../../../cors.php';
+require_once __DIR__ . '/../../../database.php';
 
 try {
     $doctorId = isset($_GET['doctor_id']) ? (int)$_GET['doctor_id'] : 0;
