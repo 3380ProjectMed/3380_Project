@@ -57,7 +57,7 @@ function Profile() {
         phone: profile.phone,
         licenseNumber: profile.licenseNumber
       };
-          const res = await fetch('/api/doctor_api/profile/update.php', {
+          const res = await fetch('/doctor_api/profile/update.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

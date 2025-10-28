@@ -1,7 +1,7 @@
 <?php
 /**
  * Appointment & Visit Summary Report API
- * Location: /api/doctor_api/reports/get-appointment-report.php
+ * Location: /doctor_api/reports/get-appointment-report.php
  * 
  * Fetches appointments with comprehensive filtering options
  * Supports both doctor-specific and admin-level reporting

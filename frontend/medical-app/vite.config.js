@@ -7,9 +7,9 @@ export default defineConfig({
   server: {
     proxy: {
       // Proxy API calls. We need two entries:
-      // 1) /api/doctor_api/* -> strip the /api prefix so it becomes /doctor_api/* on the backend
+      // 1) /doctor_api/* -> strip the /api prefix so it becomes /doctor_api/* on the backend
       //    (those files live under /doctor_api in backend/public)
-      '/api/doctor_api': {
+      '/doctor_api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
