@@ -1,7 +1,7 @@
 <?php
 /**
  * Get doctor profile
- * Matches YOUR database schema
+ * Updated for Azure database
  */
 
 require_once '/home/site/wwwroot/cors.php';
@@ -21,7 +21,6 @@ try {
         $user_id = (int)$_SESSION['uid'];
 
         $conn = getDBConnection();
-        // Resolve doctor_id from user's email
         $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
         if (empty($rows)) {
             closeDBConnection($conn);
@@ -29,12 +28,12 @@ try {
             echo json_encode(['success' => false, 'error' => 'No doctor associated with this user']);
             exit;
         }
-        $doctor_id = (int)$rows[0]['Doctor_id'];
+        $doctor_id = (int)$rows[0]['doctor_id'];
     }
     
     $conn = $conn ?? getDBConnection();
     
-    // SQL query for doctor info
+    // SQL query for doctor info (all lowercase)
     $sql = "SELECT 
                 d.doctor_id,
                 d.first_name,
@@ -62,14 +61,14 @@ try {
     echo json_encode([
         'success' => true,
         'profile' => [
-            'firstName' => $doctor['First_Name'],
-            'lastName' => $doctor['Last_Name'],
-            'email' => $doctor['Email'],
-            'phone' => $doctor['Phone'] ?: 'Not provided',
-            'licenseNumber' => $doctor['License_Number'],
+            'firstName' => $doctor['first_name'],  // ← Fixed: lowercase from query
+            'lastName' => $doctor['last_name'],     // ← Fixed: lowercase
+            'email' => $doctor['email'],
+            'phone' => $doctor['phone'] ?: 'Not provided',
+            'licenseNumber' => $doctor['license_number'],  // ← Fixed: lowercase
             'specialties' => [$doctor['specialty_name']],
             'gender' => $doctor['gender'],
-            'bio' => '' // Add bio field to your database if needed
+            'bio' => ''
         ]
     ]);
     
