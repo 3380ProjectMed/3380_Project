@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
     session_start();
@@ -27,9 +27,9 @@ try {
     // Office statistics with appointment details
     // Note: Office table has columns: Office_ID, Name, City, State, address, ZipCode, DeptCount, Phone
     $sql = "SELECT 
-                o.Office_ID,
-                o.Name as office_name,
-                CONCAT(o.address, ', ', o.City, ', ', o.State, ' ', o.ZipCode) as address,
+                o.office_id,
+                o.name as office_name,
+                CONCAT(o.address, ', ', o.city, ', ', o.state, ' ', o.zipcode) as address,
                 COUNT(a.Appointment_id) as total_appointments,
                 COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) as completed,
                 COUNT(CASE WHEN a.Status = 'Cancelled' THEN 1 END) as cancelled,
@@ -45,11 +45,11 @@ try {
                     COUNT(a.Appointment_id) * 100.0 / NULLIF(DATEDIFF(?, ?) + 1, 0),
                     1
                 ) as utilization_rate
-            FROM Office o
-            LEFT JOIN Appointment a ON o.Office_ID = a.Office_id 
+            FROM office o
+            LEFT JOIN Appointment a ON o.office_id = a.Office_id 
                 AND DATE(a.Appointment_date) BETWEEN ? AND ?
-            LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
-            GROUP BY o.Office_ID
+            LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
+            GROUP BY o.office_id
             ORDER BY total_appointments DESC";
     
     $office_stats = executeQuery($conn, $sql, 'ssss', [$end_date, $start_date, $start_date, $end_date]);
