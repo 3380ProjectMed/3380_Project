@@ -47,83 +47,6 @@ export default function PatientPortal({ onLogout }) {
   const [billingStatements, setBillingStatements] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Profile-related state
-  const [profile, setProfile] = useState(null);
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    dob: '',
-    email: '',
-    gender: '',
-    genderAtBirth: '',
-    ethnicity: '',
-    race: ''
-  });
-  const [profileErrors, setProfileErrors] = useState({});
-  const [genderOptions] = useState(['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say']);
-  const [genderAtBirthOptions] = useState(['Male', 'Female']);
-  const [ethnicityOptions] = useState(['Hispanic or Latino', 'Not Hispanic or Latino', 'Prefer not to say']);
-  const [raceOptions] = useState(['White', 'Black or African American', 'Asian', 'American Indian or Alaska Native', 'Native Hawaiian or Other Pacific Islander', 'Other', 'Prefer not to say']);
-
-  // Profile functions
-  const startEditProfile = () => {
-    setFormData({
-      first_name: profile?.First_Name || '',
-      last_name: profile?.Last_Name || '',
-      dob: profile?.dob || '',
-      email: profile?.Email || '',
-      gender: profile?.Gender || '',
-      genderAtBirth: profile?.AssignedAtBirth_Gender || '',
-      ethnicity: profile?.Ethnicity || '',
-      race: profile?.Race || ''
-    });
-    setEditingProfile(true);
-  };
-
-  const cancelEditProfile = () => {
-    setEditingProfile(false);
-    setProfileErrors({});
-  };
-
-  const saveProfile = async () => {
-    // Basic validation
-    const errors = {};
-    if (!formData.first_name) errors.first_name = 'First name is required';
-    if (!formData.last_name) errors.last_name = 'Last name is required';
-    if (!formData.email) errors.email = 'Email is required';
-    
-    if (Object.keys(errors).length > 0) {
-      setProfileErrors(errors);
-      return;
-    }
-
-    try {
-      // Here you would call your API to save the profile
-      // const result = await api.profile.updateProfile(formData);
-      console.log('Saving profile:', formData);
-      
-      // For now, just update local state
-      setProfile(prev => ({
-        ...prev,
-        First_Name: formData.first_name,
-        Last_Name: formData.last_name,
-        dob: formData.dob,
-        Email: formData.email,
-        Gender: formData.gender,
-        AssignedAtBirth_Gender: formData.genderAtBirth,
-        Ethnicity: formData.ethnicity,
-        Race: formData.race
-      }));
-      
-      setEditingProfile(false);
-      setProfileErrors({});
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      setProfileErrors({ general: 'Failed to save profile' });
-    }
-  };
-
   // TODO: wire to your real API client; placeholders below avoid runtime errors.
   const api = {
     dashboard: { getDashboard: async () => ({ success: true, data: { upcoming_appointments: [], pcp: null, recent_activity: [] } }) },
@@ -363,30 +286,72 @@ export default function PatientPortal({ onLogout }) {
     </div>
   );
 
+  const [profile, setProfile] = useState(null);
   const renderProfile = () => (
-    <Profile
-      loading={loading}
-      profile={profile}
-      formData={formData}
-      setFormData={setFormData}
-      genderOptions={genderOptions}
-      genderAtBirthOptions={genderAtBirthOptions}
-      ethnicityOptions={ethnicityOptions}
-      raceOptions={raceOptions}
-      pcp={pcp}
-      profileErrors={profileErrors}
-      editingProfile={editingProfile}
-      startEditProfile={startEditProfile}
-      cancelEditProfile={cancelEditProfile}
-      saveProfile={saveProfile}
-    />
+    <div className="portal-content">
+      <h1 className="page-title">Profile & Primary Care Physician</h1>
+      {loading ? (
+        <div className="loading-spinner">Loading...</div>
+      ) : (
+        <div className="profile-grid">
+          <div className="profile-section">
+            <h2>Personal Information</h2>
+            <div className="form-group">
+              <label>Full Name</label>
+              <input type="text" className="form-input"
+                value={profile ? `${profile.First_Name} ${profile.Last_Name}` : ''} readOnly />
+            </div>
+            <div className="form-group">
+              <label>Date of Birth</label>
+              <input type="date" className="form-input" value={profile?.dob || ''} readOnly />
+            </div>
+            <div className="form-group">
+              <label>Email</label>
+              <input type="email" className="form-input" value={profile?.Email || ''} readOnly />
+            </div>
+            <div className="form-group">
+              <label>Emergency Contact</label>
+              <input type="tel" className="form-input" value={profile?.EmergencyContact || ''} readOnly />
+            </div>
+            <div className="form-group">
+              <label>Blood Type</label>
+              <input type="text" className="form-input" value={profile?.BloodType || 'Not specified'} readOnly />
+            </div>
+          </div>
+
+          {pcp && (
+            <div className="profile-section full-width">
+              <h2>Primary Care Physician</h2>
+              <div className="pcp-card">
+                <div className="pcp-avatar large"><Stethoscope /></div>
+                <div className="pcp-details">
+                  <h3>{pcp.pcp_name || pcp.name}</h3>
+                  <p><strong>Specialty:</strong> {pcp.pcp_specialty || pcp.specialty_name}</p>
+                  <p><MapPin className="small-icon" /> {pcp.pcp_office || pcp.office_name}</p>
+                  <p><Phone className="small-icon" /> {pcp.pcp_phone || pcp.Phone}</p>
+                  <p><Mail className="small-icon" /> {pcp.pcp_email || pcp.Email}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 
   const renderAppointments = () => (
     <div className="portal-content">
       <h1 className="page-title">Appointments</h1>
 
-      <button className="btn btn-primary btn-large" onClick={() => setShowBookingModal(true)}>
+      <button className="btn btn-primary btn-large" onClick={async () => {
+        setShowBookingModal(true);
+        setBookingStep(1);
+        // Load doctors if not already loaded
+        if (doctors.length === 0) {
+          const d = await api.appointments.getDoctors();
+          if (d.success) setDoctors(d.data ?? []);
+        }
+      }}>
         <Plus className="icon" /> Book New Appointment
       </button>
 
@@ -517,12 +482,135 @@ export default function PatientPortal({ onLogout }) {
     </div>
   );
 
-  // --- Booking modal renderer (unchanged) ---
+  // --- Booking modal renderer ---
   const renderBookingModal = () => (
     <div className="modal-overlay" onClick={() => setShowBookingModal(false)}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        {/* header + steps + step bodies + footer (your existing code) */}
-        {/* Keep your existing implementation here */}
+        <div className="modal-header">
+          <h2>Book New Appointment</h2>
+          <button className="close-button" onClick={() => setShowBookingModal(false)}>
+            <X className="icon" />
+          </button>
+        </div>
+        
+        <div className="modal-body">
+          {bookingStep === 1 && (
+            <div className="booking-step">
+              <h3>Select Doctor</h3>
+              <div className="doctor-list">
+                {doctors.map(doctor => (
+                  <div key={doctor.doctor_id} 
+                       className={`doctor-option ${selectedDoctor?.doctor_id === doctor.doctor_id ? 'selected' : ''}`}
+                       onClick={() => setSelectedDoctor(doctor)}>
+                    <div className="doctor-info">
+                      <h4>{doctor.name}</h4>
+                      <p>{doctor.specialty_name}</p>
+                      <p>{doctor.office_name}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {bookingStep === 2 && (
+            <div className="booking-step">
+              <h3>Select Date & Time</h3>
+              <div className="datetime-inputs">
+                <div className="form-group">
+                  <label>Date</label>
+                  <input 
+                    type="date" 
+                    className="form-input"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Time</label>
+                  <select 
+                    className="form-input"
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                  >
+                    <option value="">Select Time</option>
+                    <option value="09:00">9:00 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="14:00">2:00 PM</option>
+                    <option value="15:00">3:00 PM</option>
+                    <option value="16:00">4:00 PM</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {bookingStep === 3 && (
+            <div className="booking-step">
+              <h3>Reason for Visit</h3>
+              <textarea 
+                className="form-input"
+                placeholder="Please describe the reason for your visit..."
+                value={appointmentReason}
+                onChange={(e) => setAppointmentReason(e.target.value)}
+                rows="4"
+              />
+            </div>
+          )}
+        </div>
+        
+        <div className="modal-footer">
+          {bookingStep > 1 && (
+            <button className="btn btn-secondary" onClick={() => setBookingStep(bookingStep - 1)}>
+              Back
+            </button>
+          )}
+          
+          {bookingStep < 3 ? (
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setBookingStep(bookingStep + 1)}
+              disabled={
+                (bookingStep === 1 && !selectedDoctor) ||
+                (bookingStep === 2 && (!selectedDate || !selectedTime))
+              }
+            >
+              Next
+            </button>
+          ) : (
+            <button 
+              className="btn btn-primary" 
+              onClick={async () => {
+                try {
+                  // Call booking API
+                  const result = await api.appointments.bookAppointment({
+                    doctor_id: selectedDoctor.doctor_id,
+                    office_id: selectedDoctor.office_id || 1,
+                    appointment_date: `${selectedDate} ${selectedTime}:00`,
+                    reason: appointmentReason
+                  });
+                  
+                  if (result.success) {
+                    setShowBookingModal(false);
+                    setBookingStep(1);
+                    // Refresh appointments
+                    loadDashboard();
+                  } else {
+                    alert('Failed to book appointment: ' + (result.message || 'Unknown error'));
+                  }
+                } catch (error) {
+                  console.error('Booking error:', error);
+                  alert('Failed to book appointment. Please try again.');
+                }
+              }}
+              disabled={!appointmentReason.trim()}
+            >
+              Book Appointment
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
