@@ -18,7 +18,7 @@ try {
             exit;
         }
         $user_id = intval($_SESSION['uid']);
-        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
         if (!is_array($rows) || count($rows) === 0) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
@@ -30,20 +30,20 @@ try {
     
     // Get doctor's work schedule with office locations
     $sql = "SELECT 
-                ws.Day_of_week,
-                ws.Start_time,
-                ws.End_time,
-                o.Office_ID,
-                o.Name as office_name,
+                ws.day_of_week,
+                ws.start_time,
+                ws.end_time,
+                o.office_id,
+                o.name as office_name,
                 o.address,
-                o.City,
-                o.State
-            FROM WorkSchedule ws
-            JOIN Office o ON ws.Office_id = o.Office_ID
-            WHERE ws.Doctor_id = ?
+                o.city,
+                o.state
+            FROM work_schedule ws
+            JOIN office o ON ws.office_id = o.office_id
+            WHERE ws.doctor_id = ?
             ORDER BY 
-                FIELD(ws.Day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
-    
+                FIELD(ws.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
+
     $schedule = executeQuery($conn, $sql, 'i', [$doctor_id]);
     
     closeDBConnection($conn);

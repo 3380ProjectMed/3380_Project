@@ -8,6 +8,8 @@ try {
     
     $patient_id = intval($input['patient_id']);
     $specialist_doctor_id = intval($input['specialist_doctor_id']);
+    $reason = isset($input['reason']) ? $input['reason'] : null;
+    
     // Determine referring doctor: body overrides, otherwise session user
     if (isset($input['referring_doctor_id']) && intval($input['referring_doctor_id']) > 0) {
         $referring_doctor_id = intval($input['referring_doctor_id']);
@@ -19,24 +21,23 @@ try {
             exit;
         }
         $user_id = intval($_SESSION['uid']);
-        $rows = executeQuery(getDBConnection(), 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $conn = getDBConnection();
+        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
         if (!is_array($rows) || count($rows) === 0) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
+            closeDBConnection($conn);
             exit;
         }
         $referring_doctor_id = (int)$rows[0]['Doctor_id'];
     }
-    $reason = isset($input['reason']) ? $input['reason'] : null;
-    // NOTE: the Referral table does not have a separate `notes` column in the schema.
-    // Use the Reason field to store descriptive text. Ignore any `notes` input to avoid SQL errors.
     
     $conn = getDBConnection();
     
-    // Insert referral — store descriptive text in Reason (schema does not include `notes` column)
-    $sql = "INSERT INTO Referral 
-        (Patient_ID, referring_doctor_staff_id, specialist_doctor_staff_id, Reason, Status)
-        VALUES (?, ?, ?, ?, 'Pending')";
+    // Insert referral - Status is automatically 'Approved' since no approval needed
+    $sql = "INSERT INTO referral 
+        (patient_id, referring_doctor_staff_id, specialist_doctor_staff_id, reason, status, date_of_approval)
+        VALUES (?, ?, ?, ?, 'Approved', CURDATE())";
     
     $stmt = $conn->prepare($sql);
     $stmt->bind_param('iiis', $patient_id, $referring_doctor_id, $specialist_doctor_id, $reason);
@@ -46,7 +47,7 @@ try {
         
         echo json_encode([
             'success' => true,
-            'message' => 'Referral created successfully',
+            'message' => 'Referral sent to specialist successfully',
             'referral_id' => $referral_id
         ]);
     } else {
