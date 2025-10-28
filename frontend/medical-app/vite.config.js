@@ -21,6 +21,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
+      // Patient API endpoint
+      '/patient_api.php': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
       // 2) all other /api/* endpoints (for example /api/login.php) should be forwarded unchanged
       '/api': {
         target: 'http://localhost:8080',
