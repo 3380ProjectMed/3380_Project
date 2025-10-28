@@ -5,7 +5,8 @@ import {
   FileText,
   User,
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  Stethoscope
 } from 'lucide-react';
 import '../doctor/Sidebar.css';
 
@@ -22,7 +23,7 @@ function AdminSidebar({ currentPage, setCurrentPage, onLogout }) {
     <div className="sidebar">
       <div className="sidebar-content">
         <div className="sidebar-brand">
-          <ShieldCheck size={28} />
+          <Stethoscope size={28} />
           <span>MedConnect Admin</span>
         </div>
 
