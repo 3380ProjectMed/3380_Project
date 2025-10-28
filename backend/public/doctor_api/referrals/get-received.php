@@ -27,36 +27,27 @@ try {
     }
     
     $sql = "SELECT 
-                p.Patient_ID,
+                r.Referral_ID,
                 CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name,
-                p.dob,
-                TIMESTAMPDIFF(YEAR, p.dob, CURDATE()) as age,
-                cg.Gender_Text as gender,
-                cr.Race_Text as race,
-                ce.Ethnicity_Text as ethnicity,
-                ca.Allergies_Text as allergies,
-                p.BloodType,
-                ip.plan_name as insurance,
-                CONCAT(d.First_Name, ' ', d.Last_Name) as primary_doctor
-            FROM Patient p
-            LEFT JOIN CodesGender cg ON p.Gender = cg.GenderCode
-            LEFT JOIN CodesRace cr ON p.Race = cr.RaceCode
-            LEFT JOIN CodesEthnicity ce ON p.Ethnicity = ce.EthnicityCode
-            LEFT JOIN CodesAllergies ca ON p.Allergies = ca.AllergiesCode
-            LEFT JOIN Doctor d ON p.Primary_Doctor = d.Doctor_id
-            LEFT JOIN patient_insurance pi ON p.InsuranceID = pi.id
-            LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
-            WHERE p.Primary_Doctor = ?
-            ORDER BY p.Last_Name, p.First_Name";
+                p.Patient_ID,
+                CONCAT(d2.First_Name, ' ', d2.Last_Name) as specialist_name,
+                s.specialty_name,
+                r.Reason,
+                r.Status,
+                r.Date_of_approval
+            FROM Referral r
+            INNER JOIN Patient p ON r.Patient_ID = p.Patient_ID
+            LEFT JOIN Doctor d2 ON r.specialist_doctor_staff_id = d2.Doctor_id
+            LEFT JOIN Specialty s ON d2.Specialty = s.specialty_id
+            WHERE r.specialist_doctor_staff_id = ?
+            ORDER BY r.Referral_ID DESC";
     
     $results = executeQuery($conn, $sql, 'i', [$doctor_id]);
     closeDBConnection($conn);
     
     echo json_encode([
         'success' => true,
-        'reportTitle' => 'Patient Demographics Report',
-        'reportDate' => date('Y-m-d H:i:s'),
-        'data' => $results,
+        'referrals' => $results,
         'count' => count($results)
     ]);
     

@@ -28,17 +28,18 @@ try {
         $referring_doctor_id = (int)$rows[0]['Doctor_id'];
     }
     $reason = isset($input['reason']) ? $input['reason'] : null;
-    $notes = isset($input['notes']) ? $input['notes'] : null;
+    // NOTE: the Referral table does not have a separate `notes` column in the schema.
+    // Use the Reason field to store descriptive text. Ignore any `notes` input to avoid SQL errors.
     
     $conn = getDBConnection();
     
-    // Insert referral
+    // Insert referral — store descriptive text in Reason (schema does not include `notes` column)
     $sql = "INSERT INTO Referral 
-        (Patient_ID, referring_doctor_staff_id, specialist_doctor_staff_id, Reason, notes, Status)
-        VALUES (?, ?, ?, ?, ?, 'Pending')";
+        (Patient_ID, referring_doctor_staff_id, specialist_doctor_staff_id, Reason, Status)
+        VALUES (?, ?, ?, ?, 'Pending')";
     
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param('iiiss', $patient_id, $referring_doctor_id, $specialist_doctor_id, $reason, $notes);
+    $stmt->bind_param('iiis', $patient_id, $referring_doctor_id, $specialist_doctor_id, $reason);
     
     if ($stmt->execute()) {
         $referral_id = $conn->insert_id;

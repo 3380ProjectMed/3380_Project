@@ -1,0 +1,151 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy PHP app to Azure Web App - medconnect
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---------- Build React ----------
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build React app
+        working-directory: frontend/medical-app
+        run: |
+          set -e
+          npm ci
+          npm run build
+          test -f dist/index.html
+
+      # ---------- Prepare webroot ----------
+      - name: Stage webroot
+        run: |
+          set -e
+          WEBROOT="release/wwwroot"
+          mkdir -p "$WEBROOT"
+
+          # 1) React build output -> webroot
+          cp -r frontend/medical-app/dist/* "$WEBROOT/"
+
+          # 2) Copy ALL backend files
+          if [ -d backend/public ]; then
+            [ -d backend/public/api ] && cp -R backend/public/api "$WEBROOT/" || true
+            [ -d backend/public/admin_api ] && cp -R backend/public/admin_api "$WEBROOT/" || true
+            [ -d backend/public/doctor_api ] && cp -R backend/public/doctor_api "$WEBROOT/" || true
+            find backend/public -maxdepth 1 -name "*.php" -exec cp {} "$WEBROOT/" \;
+            [ -f backend/public/helpers.php ] && cp backend/public/helpers.php "$WEBROOT/" || true
+            [ -d backend/public/assets ] && cp -R backend/public/assets "$WEBROOT/" || true
+          fi
+
+          [ -f backend/database.php ] && cp backend/database.php "$WEBROOT/" || true
+          [ -f backend/cors.php ] && cp backend/cors.php "$WEBROOT/" || true
+
+          # 3) NGINX config + startup script
+          mkdir -p "$WEBROOT/nginx"
+          cp backend/nginx/nginx.conf "$WEBROOT/nginx/nginx.conf"
+          cp backend/nginx/startup.sh "$WEBROOT/nginx/startup.sh"
+          chmod 644 "$WEBROOT/nginx/nginx.conf"
+          chmod 755 "$WEBROOT/nginx/startup.sh"
+
+          [ -d backend/errors ] && { mkdir -p "$WEBROOT/errors"; cp -R backend/errors/. "$WEBROOT/errors/"; } || true
+          rm -f "$WEBROOT/hostingstart.html" 2>/dev/null || true
+
+          echo "---- Staged webroot ----"
+          ls -la "$WEBROOT"
+
+      # ---------- (Optional) Composer ----------
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+
+      - name: Detect composer.json (backend/)
+        id: composer_check
+        run: |
+          if [ -f backend/composer.json ]; then
+            echo "has_composer=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_composer=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Composer install
+        if: steps.composer_check.outputs.has_composer == 'true'
+        working-directory: backend
+        run: |
+          set -e
+          composer validate --no-check-publish
+          composer install --prefer-dist --no-progress --no-dev
+          mkdir -p ../release/wwwroot/vendor
+          cp -R vendor/. ../release/wwwroot/vendor/
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-app
+          path: release/wwwroot
+          retention-days: 1
+          if-no-files-found: error
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: php-app
+          path: .
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_6CC886C34E414BF3943753C0AFA54A22 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4BC2BA3CE10B4918955C3B76714BA6F9 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_0056C4E07D9E4BB59F4E449E1F3C8DDF }}
+
+      - name: "Deploy to Azure Web App"
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: "medconnect"
+          slot-name: "Production"
+          package: .
+
+      # Wait for deployment to fully complete before configuring
+      - name: Wait for deployment to stabilize
+        run: |
+          echo "Waiting 30 seconds for deployment to complete..."
+          sleep 30
+
+      # ---------- Post-deploy: Apply NGINX config & startup command ----------
+      - name: Configure NGINX on App Service
+        run: |
+          echo "=== Setting startup command (idempotent - safe to run multiple times) ==="
+          az webapp config set \
+            -g 3380_Resources -n medconnect \
+            --startup-file "/bin/sh /home/site/wwwroot/nginx/startup.sh" \
+            || echo "Warning: Failed to set startup command, but continuing..."
+
+          echo "=== Restarting app to apply configuration ==="
+          sleep 5  # Brief pause before restart
+          az webapp restart -g 3380_Resources -n medconnect
+
+          echo "✅ Deployment complete!"

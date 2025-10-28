@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+// Ensure CORS headers for cross-origin requests from the dev server
+require_once __DIR__ . '/../../cors.php';
 // Suppress HTML-formatted errors early to avoid leaking into JSON responses
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
@@ -45,11 +47,11 @@ if (empty($_SESSION['uid'])) {
 
 // Connect to the database and return JSON on failure
 $mysqli = new mysqli(
-  getenv('DB_HOST') ?: 'localhost',
-  getenv('DB_USER') ?: 'app',
-  getenv('DB_PASSWORD') ?: '',
-  getenv('DB_NAME') ?: 'med-app-db',
-  (int)(getenv('DB_PORT') ?: 3306)
+  $host = getenv('AZURE_MYSQL_HOST') ?: '',
+  $user = getenv('AZURE_MYSQL_USERNAME') ?: '',
+  $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '',
+  $db   = getenv('AZURE_MYSQL_DBNAME') ?: '',
+  $port = (int)(getenv('AZURE_MYSQL_PORT') ?: '3306')
 );
 if ($mysqli->connect_errno) {
   http_response_code(500);

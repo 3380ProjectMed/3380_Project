@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
 
   async function refreshUser() {
     try {
-     const r = await fetch('/api/me.php', { credentials: 'include' });
+     const r = await fetch('http://localhost:8080/api/me.php', { credentials: 'include' });
      if (r.ok) {
        setUser(await r.json());
      } else if (r.status === 401) {
@@ -28,10 +28,10 @@ export function AuthProvider({ children }) {
   useEffect(() => { refreshUser(); }, []);
 
   async function login(email, password) {
-    const r = await fetch('/api/login.php', {
+    const r = await fetch('http://localhost:8080/api/login.php', {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Origin': 'http://localhost:5173'},
       body: JSON.stringify({ email, password }),
     });
     if (!r.ok) {
@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    await fetch('/api/logout.php', { method: 'POST', credentials: 'include' });
+    await fetch('http://localhost:8080/api/logout.php', { method: 'POST', credentials: 'include' });
     setUser(null);
   }
 

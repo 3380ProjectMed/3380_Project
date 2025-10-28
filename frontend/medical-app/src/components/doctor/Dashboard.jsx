@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
-import { Calendar, Users, Clock, FileText, Search, Filter } from 'lucide-react';
+import { Calendar, Users, Clock, FileText, Search, Filter, CheckCircle, XCircle, PlayCircle } from 'lucide-react';
 import './Dashboard.css';
+
 function Dashboard({ setCurrentPage, onAppointmentClick }) {
   const auth = useAuth();
   const [appointments, setAppointments] = useState([]);
@@ -12,27 +13,35 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  // Fetch appointments when authenticated user (and doctor_id) becomes available
+  // Auto-refresh appointments every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const doctorId = auth.user?.doctor_id;
+      if (doctorId && !loading) {
+        fetchAppointments(doctorId, false); // Silent refresh
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [auth.user, loading]);
+
+  // Fetch appointments when authenticated user becomes available
   useEffect(() => {
     const doctorId = auth.user?.doctor_id ?? null;
-    // If auth is still loading, wait
     if (auth.loading) return;
 
     if (!doctorId) {
-      // No doctor associated with this user — surface a friendly message
       setError('No doctor account found for the logged-in user.');
       setLoading(false);
       return;
     }
 
     const loadForDoctor = async (did) => {
-      // load doctor profile first
       try {
-        const pr = await fetch(`http://localhost:8080/doctor_api/profile/get.php?doctor_id=${did}`, { credentials: 'include' });
+  const pr = await fetch(`/api/doctor_api/profile/get.php?doctor_id=${did}`, { credentials: 'include' });
         const pj = await pr.json();
         if (pj.success) setDoctorProfile(pj.profile);
       } catch (e) {
-        // ignore profile load failures for now
         console.error('Failed to load profile', e);
       }
       fetchAppointments(did);
@@ -57,14 +66,14 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
   /**
    * Fetch appointments from API
    */
-  const fetchAppointments = async (doctorIdParam) => {
+  const fetchAppointments = async (doctorIdParam, showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       setError(null);
       const doctorId = doctorIdParam ?? auth.user?.doctor_id;
       if (!doctorId) throw new Error('doctor_id missing');
 
-      const response = await fetch(`http://localhost:8080/doctor_api/appointments/get-today.php?doctor_id=${doctorId}`, { credentials: 'include' });
+  const response = await fetch(`/api/doctor_api/appointments/get-today.php?doctor_id=${doctorId}`, { credentials: 'include' });
       
       const data = await response.json();
       
@@ -78,7 +87,39 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       console.error('Error fetching appointments:', err);
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
+    }
+  };
+
+  /**
+   * Update appointment status
+   */
+  const updateAppointmentStatus = async (appointmentId, newStatus) => {
+    try {
+  const response = await fetch('/api/doctor_api/appointments/update-status.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          appointment_id: appointmentId,
+          status: newStatus
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Refresh appointments after status update
+        const doctorId = auth.user?.doctor_id;
+        if (doctorId) {
+          await fetchAppointments(doctorId, false);
+        }
+      } else {
+        throw new Error(data.error || 'Failed to update status');
+      }
+    } catch (err) {
+      console.error('Error updating status:', err);
+      alert('Failed to update appointment status: ' + err.message);
     }
   };
 
@@ -88,11 +129,15 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
   const getStatusClass = (status) => {
     const statusMap = {
       'scheduled': 'status-scheduled',
-      'in waiting': 'status-waiting',
-      'in consultation': 'status-consultation',
-      'completed': 'status-completed'
+      'upcoming': 'status-upcoming',
+      'ready': 'status-ready',
+      'waiting': 'status-waiting',
+      'in progress': 'status-in-progress',
+      'completed': 'status-completed',
+      'cancelled': 'status-cancelled',
+      'no-show': 'status-no-show'
     };
-    return statusMap[status.toLowerCase()] || '';
+    return statusMap[status.toLowerCase()] || 'status-scheduled';
   };
 
   /**
@@ -102,6 +147,52 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
     if (onAppointmentClick) {
       onAppointmentClick(appointment);
     }
+  };
+
+  /**
+   * Render status actions for each appointment
+   */
+  const renderStatusActions = (appointment) => {
+    const currentStatus = appointment.status.toLowerCase();
+    
+    // Don't show actions for completed, cancelled, or no-show
+    if (['completed', 'cancelled', 'no-show'].includes(currentStatus)) {
+      return null;
+    }
+
+    return (
+      <div className="status-actions" onClick={(e) => e.stopPropagation()}>
+        {currentStatus !== 'in progress' && (
+          <button 
+            className="action-btn-small btn-start"
+            onClick={() => updateAppointmentStatus(appointment.id, 'In Progress')}
+            title="Start Consultation"
+          >
+            <PlayCircle size={14} />
+          </button>
+        )}
+        {currentStatus === 'in progress' && (
+          <button 
+            className="action-btn-small btn-complete"
+            onClick={() => updateAppointmentStatus(appointment.id, 'Completed')}
+            title="Mark as Completed"
+          >
+            <CheckCircle size={14} />
+          </button>
+        )}
+        <button 
+          className="action-btn-small btn-cancel"
+          onClick={() => {
+            if (window.confirm('Mark this appointment as No-Show?')) {
+              updateAppointmentStatus(appointment.id, 'No-Show');
+            }
+          }}
+          title="No-Show"
+        >
+          <XCircle size={14} />
+        </button>
+      </div>
+    );
   };
 
   // Filter appointments
@@ -125,12 +216,12 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
           <h1>Welcome Back, Dr. {doctorProfile ? doctorProfile.lastName : 'Lastname'}</h1>
           <p className="office-info">
             <Calendar size={18} style={{display: 'inline', marginRight: '8px', verticalAlign: 'middle'}} />
-            {getCurrentDate()} • {' '}
+            {getCurrentDate()} {' '}
             <a href="#" onClick={(e) => {
               e.preventDefault(); 
               setCurrentPage('schedule');
             }}>
-              Main Clinic, Suite 305 {doctorProfile ? doctorProfile.workLocation : 'WorkLocation'}
+              {doctorProfile ? doctorProfile.workLocation : 'WorkLocation'}
             </a>
           </p>
         </div>
@@ -147,13 +238,13 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       {error && (
         <div className="alert alert-error">
           <strong>Error:</strong> {error}
-          <button onClick={fetchAppointments} style={{marginLeft: '1rem'}}>
+          <button onClick={() => fetchAppointments(auth.user?.doctor_id)} style={{marginLeft: '1rem'}}>
             Retry
           </button>
         </div>
       )}
 
-      {/* Main Content - Only show when not loading and no error */}
+      {/* Main Content */}
       {!loading && !error && (
         <>
           {/* ===== STATS CARDS ===== */}
@@ -250,10 +341,12 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
                     aria-label="Filter by status"
                   >
                     <option value="all">All Status</option>
-                    <option value="scheduled">Scheduled</option>
-                    <option value="in-waiting">In Waiting</option>
-                    <option value="in-consultation">In Consultation</option>
+                    <option value="upcoming">Upcoming</option>
+                    <option value="ready">Ready</option>
+                    <option value="waiting">Waiting</option>
+                    <option value="in progress">In Progress</option>
                     <option value="completed">Completed</option>
+                    <option value="no-show">No-Show</option>
                   </select>
                 </div>
               </div>
@@ -263,9 +356,11 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
             <div className="appointments-table">
               <div className="table-header">
                 <div className="col-time">TIME</div>
+                <div className="col-apptid">APPT ID</div>
                 <div className="col-patient">PATIENT'S NAME</div>
                 <div className="col-reason">REASON FOR VISIT</div>
                 <div className="col-status">STATUS</div>
+                <div className="col-actions">ACTIONS</div>
               </div>
               
               <div className="table-body">
@@ -281,15 +376,31 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
                         if (e.key === 'Enter') handleAppointmentRowClick(appointment);
                       }}
                     >
-                      <div className="col-time">{appointment.time}</div>
+                      <div className="col-time">
+                        {appointment.time}
+                        {appointment.waitingMinutes > 0 && (
+                          <span className="waiting-time">
+                            +{appointment.waitingMinutes}m
+                          </span>
+                        )}
+                      </div>
+                      <div className="col-apptid">{appointment.appointmentId || (`#${appointment.id}`)}</div>
                       <div className="col-patient">
                         <span className="patient-link">{appointment.patientName}</span>
+                        {appointment.allergies !== 'No Known Allergies' && (
+                          <span className="allergy-badge" title={appointment.allergies}>
+                            ⚠️ Allergies
+                          </span>
+                        )}
                       </div>
                       <div className="col-reason">{appointment.reason}</div>
                       <div className="col-status">
                         <span className={`status-badge ${getStatusClass(appointment.status)}`}>
                           {appointment.status}
                         </span>
+                      </div>
+                      <div className="col-actions">
+                        {renderStatusActions(appointment)}
                       </div>
                     </div>
                   ))
