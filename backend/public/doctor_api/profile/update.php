@@ -5,7 +5,7 @@
  */
 
 require_once '/home/site/wwwroot/cors.php';
-require_once __DIR__ . '/../../../database.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
     session_start();
