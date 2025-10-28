@@ -38,7 +38,7 @@ try {
     $conn = getDBConnection();
     
     // Verify receptionist has access to this appointment's office
-    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.Work_Location
+    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.Work_Location, s.Staff_Email
                   FROM Appointment a
                   JOIN Staff s ON s.Work_Location = a.Office_id
                   JOIN user_account ua ON ua.email = s.Staff_Email
@@ -56,36 +56,33 @@ try {
     $conn->begin_transaction();
     
     try {
-        // Insert payment record
-        $insertPaymentSql = "INSERT INTO Payment (
-                                Appointment_id, 
-                                Patient_id, 
-                                Payment_amount, 
-                                Payment_date, 
-                                Payment_method, 
-                                Transaction_id, 
-                                Notes
-                            ) VALUES (?, ?, ?, NOW(), ?, ?, ?)";
-        
-        $payment_method = $input['payment_method'] ?? 'cash';
-        $notes = $input['notes'] ?? '';
-        
-        executeQuery($conn, $insertPaymentSql, 'iidsss', [
-            $input['appointment_id'],
-            $input['patient_id'],
-            $input['payment_received'],
-            $payment_method,
-            $input['transaction_id'],
-            $notes
-        ]);
-        
-        $payment_id = $conn->insert_id;
-        
-        // Update PatientVisit to mark payment as recorded
+        // Update PatientVisit with payment information
         $updateVisitSql = "UPDATE PatientVisit 
-                          SET Status = 'Completed' 
+                          SET Status = 'Completed',
+                              Payment = ?,
+                              CopayAmount_Due = ?,
+                              AmountDue = ?,
+                              TotalDue = ? - ?,
+                              UpdatedBy = ?
                           WHERE Appointment_id = ?";
-        executeQuery($conn, $updateVisitSql, 'i', [$input['appointment_id']]);
+        
+        $amount_due = $input['copay_amount'];
+        $payment = $input['payment_received'];
+        $staff_email = $verifyResult[0]['Staff_Email'];
+        
+        executeQuery($conn, $updateVisitSql, 'ddddisi', [
+            $payment,
+            $input['copay_amount'],
+            $amount_due,
+            $amount_due,
+            $payment,
+            $staff_email,
+            $input['appointment_id']
+        ]);
+
+        // Get the Visit_id for the updated record
+        $getVisitSql = "SELECT Visit_id FROM PatientVisit WHERE Appointment_id = ?";
+        $visitResult = executeQuery($conn, $getVisitSql, 'i', [$input['appointment_id']]);
         
         $conn->commit();
         closeDBConnection($conn);
@@ -93,7 +90,7 @@ try {
         echo json_encode([
             'success' => true,
             'message' => 'Payment recorded successfully',
-            'payment_id' => $payment_id,
+            'payment_id' => $visitResult[0]['Visit_id'],
             'transaction_id' => $input['transaction_id']
         ]);
         

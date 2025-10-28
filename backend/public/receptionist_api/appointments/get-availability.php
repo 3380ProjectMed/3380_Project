@@ -48,16 +48,16 @@ try {
     
     // Get doctor's schedule for the specified date
     $scheduleSql = "SELECT 
-                        ds.Schedule_id,
-                        ds.Day_of_week,
-                        ds.Start_time,
-                        ds.End_time,
+                        ws.Schedule_id,
+                        ws.Day_of_week,
+                        ws.Start_time,
+                        ws.End_time,
                         d.First_Name,
                         d.Last_Name
-                    FROM DoctorSchedule ds
-                    JOIN Doctor d ON ds.Doctor_id = d.Doctor_id
-                    WHERE ds.Doctor_id = ?
-                    AND ds.Day_of_week = DAYNAME(?)";
+                    FROM WorkSchedule ws
+                    JOIN Doctor d ON ws.Doctor_id = d.Doctor_id
+                    WHERE ws.Doctor_id = ?
+                    AND ws.Day_of_week = DAYNAME(?)";
     
     $schedule = executeQuery($conn, $scheduleSql, 'is', [$doctor_id, $date]);
     

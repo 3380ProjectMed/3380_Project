@@ -59,13 +59,14 @@ try {
         
         if (empty($existingVisit)) {
             // Create new PatientVisit record
-            $insertVisitSql = "INSERT INTO PatientVisit (Appointment_id, Check_in_time, Status)
-                              VALUES (?, NOW(), 'Checked In')";
+            $insertVisitSql = "INSERT INTO PatientVisit (Appointment_id, Patient_id, Doctor_id, Office_id, Start_at, Status)
+                              SELECT a.Appointment_id, a.Patient_id, a.Doctor_id, a.Office_id, NOW(), 'Scheduled'
+                              FROM Appointment a WHERE a.Appointment_id = ?";
             executeQuery($conn, $insertVisitSql, 'i', [$appointment_id]);
         } else {
             // Update existing record
             $updateVisitSql = "UPDATE PatientVisit 
-                              SET Check_in_time = NOW(), Status = 'Checked In'
+                              SET Start_at = NOW(), Status = 'Scheduled'
                               WHERE Appointment_id = ?";
             executeQuery($conn, $updateVisitSql, 'i', [$appointment_id]);
         }

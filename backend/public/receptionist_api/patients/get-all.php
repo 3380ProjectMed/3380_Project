@@ -4,7 +4,30 @@ require_once __DIR__ . '/../../../cors.php';
 require_once __DIR__ . '/../../../database.php';
 
 try {
+    // Start session and require that the user is logged in
+    session_start();
+    if (empty($_SESSION['uid'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit;
+    }
+    
+    $user_id = (int)$_SESSION['uid'];
     $conn = getDBConnection();
+    
+    // Verify receptionist
+    $verifyStaffSql = "SELECT s.Staff_id 
+                       FROM Staff s 
+                       JOIN user_account ua ON ua.email = s.Staff_Email 
+                       WHERE ua.user_id = ? AND s.Staff_Role = 'RECEPTIONIST'";
+    $staffResult = executeQuery($conn, $verifyStaffSql, 'i', [$user_id]);
+    
+    if (empty($staffResult)) {
+        closeDBConnection($conn);
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Access denied - receptionist only']);
+        exit;
+    }
 
     // Optional search query
     $q = isset($_GET['q']) ? trim($_GET['q']) : '';

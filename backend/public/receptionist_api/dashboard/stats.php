@@ -45,13 +45,15 @@ try {
     // Get date parameter or use today
     $date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
     
-    // Get appointment statistics
+    // Get appointment and payment statistics
     $statsSql = "SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN a.Status = 'Scheduled' THEN 1 ELSE 0 END) as scheduled,
-                    SUM(CASE WHEN pv.Status = 'Checked In' THEN 1 ELSE 0 END) as checked_in,
-                    SUM(CASE WHEN pv.Status = 'Completed' THEN 1 ELSE 0 END) as completed,
-                    SUM(CASE WHEN a.Status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled
+                    SUM(CASE WHEN a.Status = 'Scheduled' AND pv.Visit_id IS NULL THEN 1 ELSE 0 END) as scheduled,
+                    SUM(CASE WHEN pv.Visit_id IS NOT NULL AND pv.End_at IS NULL THEN 1 ELSE 0 END) as checked_in,
+                    SUM(CASE WHEN pv.Visit_id IS NOT NULL AND pv.End_at IS NOT NULL THEN 1 ELSE 0 END) as completed,
+                    SUM(CASE WHEN a.Status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled,
+                    COUNT(pv.Payment) as payment_count,
+                    COALESCE(SUM(pv.Payment), 0) as total_collected
                  FROM Appointment a
                  LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
                  WHERE a.Office_id = ? AND DATE(a.Appointment_date) = ?";
@@ -62,22 +64,10 @@ try {
         'scheduled' => 0,
         'checked_in' => 0,
         'completed' => 0,
-        'cancelled' => 0
+        'cancelled' => 0,
+        'payment_count' => 0,
+        'total_collected' => 0
     ];
-    
-    // Get payment statistics for the day
-    $paymentSql = "SELECT 
-                      COUNT(*) as payment_count,
-                      COALESCE(SUM(Payment_amount), 0) as total_collected
-                   FROM Payment
-                   WHERE Appointment_id IN (
-                       SELECT Appointment_id 
-                       FROM Appointment 
-                       WHERE Office_id = ? AND DATE(Appointment_date) = ?
-                   )";
-    
-    $paymentResult = executeQuery($conn, $paymentSql, 'is', [$office_id, $date]);
-    $paymentStats = $paymentResult[0] ?? ['payment_count' => 0, 'total_collected' => 0];
     
     closeDBConnection($conn);
     
@@ -89,8 +79,8 @@ try {
             'checked_in' => (int)$stats['checked_in'],
             'completed' => (int)$stats['completed'],
             'cancelled' => (int)$stats['cancelled'],
-            'payment_count' => (int)$paymentStats['payment_count'],
-            'total_collected' => number_format($paymentStats['total_collected'], 2)
+            'payment_count' => (int)$stats['payment_count'],
+            'total_collected' => number_format($stats['total_collected'], 2)
         ],
         'office' => [
             'id' => $office_id,

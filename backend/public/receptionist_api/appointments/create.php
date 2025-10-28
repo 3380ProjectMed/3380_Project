@@ -84,8 +84,9 @@ try {
                         Appointment_date, 
                         Reason_for_visit, 
                         Office_id,
-                        Status
-                      ) VALUES (?, ?, ?, ?, ?, 'Scheduled')";
+                        Status,
+                        Date_created
+                      ) VALUES (?, ?, ?, ?, ?, 'Scheduled', NOW())";
         
         $reason = $input['Reason_for_visit'] ?? 'General Visit';
         

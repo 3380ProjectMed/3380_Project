@@ -49,24 +49,25 @@ try {
     
     // Get payments for this office on the specified date
     $sql = "SELECT 
-                p.Payment_id,
-                p.Payment_amount,
-                p.Payment_date,
-                p.Payment_method,
-                p.Transaction_id,
-                p.Notes,
-                p.Patient_id,
+                pv.Visit_id,
+                pv.Payment,
+                pv.CopayAmount_Due,
+                pv.AmountDue,
+                pv.TotalDue,
+                pv.LastUpdated as Payment_date,
+                pv.Patient_id,
                 CONCAT(pat.First_Name, ' ', pat.Last_Name) as patient_name,
                 a.Appointment_id,
                 a.Appointment_date,
                 CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name
-            FROM Payment p
-            INNER JOIN Appointment a ON p.Appointment_id = a.Appointment_id
-            INNER JOIN Patient pat ON p.Patient_id = pat.Patient_ID
+            FROM PatientVisit pv
+            INNER JOIN Appointment a ON pv.Appointment_id = a.Appointment_id
+            INNER JOIN Patient pat ON pv.Patient_id = pat.Patient_ID
             INNER JOIN Doctor d ON a.Doctor_id = d.Doctor_id
             WHERE a.Office_id = ?
-            AND DATE(p.Payment_date) = ?
-            ORDER BY p.Payment_date DESC";
+            AND DATE(pv.LastUpdated) = ?
+            AND pv.Payment IS NOT NULL
+            ORDER BY pv.LastUpdated DESC";
     
     $payments = executeQuery($conn, $sql, 'is', [$office_id, $date]);
     
@@ -81,25 +82,26 @@ try {
     ];
     
     foreach ($payments as $payment) {
-        $amount = $payment['Payment_amount'];
-        $method = strtolower($payment['Payment_method']);
+        $amount = $payment['Payment'];
+        $copay = $payment['CopayAmount_Due'];
         
-        // Add to method-specific total
-        if (isset($totals[$method])) {
-            $totals[$method] += $amount;
-        } else {
-            $totals['other'] += $amount;
-        }
+        // Add to totals
         $totals['total'] += $amount;
+        if ($copay > 0) {
+            $totals['insurance'] += ($amount - $copay);
+            $totals['card'] += $copay;
+        } else {
+            $totals['card'] += $amount;
+        }
         
         $formatted_payments[] = [
-            'payment_id' => $payment['Payment_id'],
+            'payment_id' => $payment['Visit_id'],
             'amount' => number_format($amount, 2),
             'payment_date' => date('Y-m-d', strtotime($payment['Payment_date'])),
             'payment_time' => date('g:i A', strtotime($payment['Payment_date'])),
-            'payment_method' => $payment['Payment_method'],
-            'transaction_id' => $payment['Transaction_id'],
-            'notes' => $payment['Notes'],
+            'payment_method' => $copay > 0 ? 'Insurance + Card' : 'Card',
+            'transaction_id' => null,
+            'notes' => '',
             'patient_id' => $payment['Patient_id'],
             'patientIdFormatted' => 'P' . str_pad($payment['Patient_id'], 3, '0', STR_PAD_LEFT),
             'patient_name' => $payment['patient_name'],

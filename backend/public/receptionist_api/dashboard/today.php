@@ -58,8 +58,10 @@ try {
                 p.EmergencyContact,
                 CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
                 d.Doctor_id as doctor_id,
+                pv.Visit_id,
                 pv.Status as visit_status,
-                pv.Check_in_time,
+                pv.Start_at as check_in_time,
+                pv.End_at as completion_time,
                 pi.copay
             FROM Appointment a
             INNER JOIN Patient p ON a.Patient_id = p.Patient_ID
@@ -89,10 +91,10 @@ try {
         
         // Determine display status
         $displayStatus = $dbStatus;
-        if ($visitStatus === 'Completed') {
+        if ($apt['completion_time']) {
             $displayStatus = 'Completed';
             $stats['completed']++;
-        } elseif ($visitStatus === 'Checked In' || $apt['Check_in_time']) {
+        } elseif ($apt['check_in_time']) {
             $displayStatus = 'Checked In';
             $stats['checked_in']++;
         } elseif ($dbStatus === 'Cancelled') {
@@ -117,7 +119,7 @@ try {
             'status' => $displayStatus,
             'dbStatus' => $dbStatus,
             'emergencyContact' => $apt['EmergencyContact'],
-            'checkInTime' => $apt['Check_in_time'],
+            'checkInTime' => $apt['check_in_time'],
             'copay' => $apt['copay'] ? number_format($apt['copay'], 2) : '0.00'
         ];
     }

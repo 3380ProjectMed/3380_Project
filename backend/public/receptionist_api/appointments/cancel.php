@@ -65,12 +65,13 @@ try {
         $existingVisit = executeQuery($conn, $checkVisitSql, 'i', [$appointment_id]);
         
         if (empty($existingVisit)) {
-            $insertVisitSql = "INSERT INTO PatientVisit (Appointment_id, Status)
-                              VALUES (?, 'Cancelled')";
+            $insertVisitSql = "INSERT INTO PatientVisit (Appointment_id, Patient_id, Doctor_id, Office_id, Status)
+                              SELECT a.Appointment_id, a.Patient_id, a.Doctor_id, a.Office_id, 'Canceled'
+                              FROM Appointment a WHERE a.Appointment_id = ?";
             executeQuery($conn, $insertVisitSql, 'i', [$appointment_id]);
         } else {
             $updateVisitSql = "UPDATE PatientVisit 
-                              SET Status = 'Cancelled'
+                              SET Status = 'Canceled'
                               WHERE Appointment_id = ?";
             executeQuery($conn, $updateVisitSql, 'i', [$appointment_id]);
         }

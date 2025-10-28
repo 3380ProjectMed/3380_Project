@@ -47,18 +47,18 @@ try {
     
     $office_id = (int)$rows[0]['office_id'];
     
-    $sql = "SELECT
+            $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
                 a.Reason_for_visit,
-                a.Status,
+                a.Status as apt_status,
                 CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name,
                 p.Patient_ID as patient_id,
                 p.EmergencyContact,
                 CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
                 d.Doctor_id as doctor_id,
                 pv.Status as visit_status,
-                pv.Check_in_time,
+                pv.Start_at as Check_in_time,
                 pi.copay
             FROM Appointment a
             INNER JOIN Patient p ON a.Patient_id = p.Patient_ID
@@ -67,14 +67,12 @@ try {
             LEFT JOIN patient_insurance pi ON p.InsuranceID = pi.id AND pi.is_primary = 1
             WHERE a.Office_id = ?
             AND DATE(a.Appointment_date) = ?
-            ORDER BY a.Appointment_date ASC";
-    
-    $appointments = executeQuery($conn, $sql, 'is', [$office_id, $date]);
+            ORDER BY a.Appointment_date ASC";    $appointments = executeQuery($conn, $sql, 'is', [$office_id, $date]);
     
     $formatted_appointments = [];
     
     foreach ($appointments as $apt) {
-        $dbStatus = $apt['Status'] ?? 'Scheduled';
+        $dbStatus = $apt['apt_status'] ?? 'Scheduled';
         $visitStatus = $apt['visit_status'] ?? null;
         
         // Determine display status

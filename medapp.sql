@@ -23,7 +23,7 @@ DROP TABLE IF EXISTS `Appointment`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `Appointment` (
-  `Appointment_id` int NOT NULL,
+  `Appointment_id` int NOT NULL AUTO_INCREMENT,
   `Patient_id` int DEFAULT NULL,
   `Doctor_id` int DEFAULT NULL,
   `Office_id` int DEFAULT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE `Appointment` (
   CONSTRAINT `fk_appt__doctor` FOREIGN KEY (`Doctor_id`) REFERENCES `Doctor` (`Doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_appt__office` FOREIGN KEY (`Office_id`) REFERENCES `Office` (`Office_ID`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_appt__patient` FOREIGN KEY (`Patient_id`) REFERENCES `Patient` (`Patient_ID`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1014 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -466,11 +466,11 @@ CREATE TABLE `PatientVisit` (
   KEY `idx_pv_doctor` (`Doctor_id`),
   KEY `idx_pv_nurse` (`Nurse_id`),
   KEY `idx_pv_office` (`Office_id`),
-  KEY `idx_pv_appt` (`Appointment_id`),
   KEY `idx_pv_date` (`Date`),
   KEY `idx_pv_start_end` (`Start_at`,`End_at`),
   KEY `fk_pv__insurance_used` (`Insurance_policy_id_used`),
-  CONSTRAINT `fk_pv__appt` FOREIGN KEY (`Appointment_id`) REFERENCES `Appointment` (`Appointment_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  KEY `fk_pv__appointment_idx` (`Appointment_id`),
+  CONSTRAINT `fk_pv__appointment` FOREIGN KEY (`Appointment_id`) REFERENCES `Appointment` (`Appointment_id`),
   CONSTRAINT `fk_pv__doctor` FOREIGN KEY (`Doctor_id`) REFERENCES `Doctor` (`Doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_pv__insurance_used` FOREIGN KEY (`Insurance_policy_id_used`) REFERENCES `patient_insurance` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_pv__nurse` FOREIGN KEY (`Nurse_id`) REFERENCES `Nurse` (`Nurse_id`) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -667,7 +667,7 @@ CREATE TABLE `Staff` (
 
 LOCK TABLES `Staff` WRITE;
 /*!40000 ALTER TABLE `Staff` DISABLE KEYS */;
-INSERT INTO `Staff` VALUES (101,'Jennifer','Taylor','987-65-4326',2,'j.taylor@medconnect.com',1,'Nurse',1,'RN123456'),(102,'Michael','Chen','987-65-4327',1,'m.chen@medconnect.com',1,'Nurse',2,'RN123457'),(103,'Sarah','Rodriguez','987-65-4328',2,'s.rodriguez@medconnect.com',2,'Nurse',1,'RN123458'),(104,'David','Anderson','987-65-4329',1,'d.anderson@medconnect.com',3,'Nurse',3,'RN123459'),(105,'Lisa','Martinez','987-65-4330',2,'l.martinez@medconnect.com',4,'Nurse',2,'RN123460'),(201,'Amanda','Wilson','987-65-4331',2,'a.wilson@medconnect.com',1,'Administrator',1,NULL),(202,'Christopher','Lee','987-65-4332',1,'c.lee@medconnect.com',2,'Receptionist',2,NULL),(204,'Daniel','Thompson','987-65-4334',1,'d.thompson@medconnect.com',4,'Receptionist',4,'RTT123456');
+INSERT INTO `Staff` VALUES (101,'Jennifer','Taylor','987-65-4326',2,'j.taylor@medconnect.com',1,'Nurse',1,'RN123456'),(102,'Michael','Chen','987-65-4327',1,'m.chen@medconnect.com',1,'Nurse',2,'RN123457'),(103,'Sarah','Rodriguez','987-65-4328',2,'s.rodriguez@medconnect.com',2,'Nurse',1,'RN123458'),(104,'David','Anderson','987-65-4329',1,'d.anderson@medconnect.com',3,'Nurse',3,'RN123459'),(105,'Lisa','Martinez','987-65-4330',2,'l.martinez@medconnect.com',4,'Nurse',2,'RN123460'),(201,'Amanda','Wilson','987-65-4331',2,'a.wilson@medconnect.com',1,'Administrator',1,NULL),(202,'Christopher','Lee','987-65-4332',1,'c.lee@medconnect.com',2,'Receptionist',2,NULL),(203,'Rocky','Stone','987-65-4333',1,'rocks@medconnect.com',3,'Receptionist',3,NULL),(204,'Daniel','Thompson','987-65-4334',1,'d.thompson@medconnect.com',4,'Receptionist',4,'RTT123456');
 /*!40000 ALTER TABLE `Staff` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -918,4 +918,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-27 21:00:38
+-- Dump completed on 2025-10-27 21:39:59

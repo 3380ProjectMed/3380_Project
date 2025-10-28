@@ -47,22 +47,23 @@ try {
     
     // Get payment history
     $sql = "SELECT 
-                p.Payment_id,
-                p.Payment_amount,
-                p.Payment_date,
-                p.Payment_method,
-                p.Transaction_id,
-                p.Notes,
+                pv.Visit_id,
+                pv.Payment,
+                pv.CopayAmount_Due,
+                pv.AmountDue,
+                pv.TotalDue,
+                pv.LastUpdated as Payment_date,
                 a.Appointment_id,
                 a.Appointment_date,
                 CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
                 o.Name as office_name
-            FROM Payment p
-            INNER JOIN Appointment a ON p.Appointment_id = a.Appointment_id
+            FROM PatientVisit pv
+            INNER JOIN Appointment a ON pv.Appointment_id = a.Appointment_id
             INNER JOIN Doctor d ON a.Doctor_id = d.Doctor_id
             LEFT JOIN Office o ON a.Office_id = o.Office_ID
-            WHERE p.Patient_id = ?
-            ORDER BY p.Payment_date DESC";
+            WHERE pv.Patient_id = ?
+            AND pv.Payment IS NOT NULL
+            ORDER BY pv.LastUpdated DESC";
     
     $payments = executeQuery($conn, $sql, 'i', [$patient_id]);
     
@@ -70,16 +71,18 @@ try {
     $total_paid = 0;
     
     foreach ($payments as $payment) {
-        $total_paid += $payment['Payment_amount'];
+        $amount = $payment['Payment'];
+        $total_paid += $amount;
+        $copay = $payment['CopayAmount_Due'];
         
         $formatted_payments[] = [
-            'payment_id' => $payment['Payment_id'],
-            'amount' => number_format($payment['Payment_amount'], 2),
+            'payment_id' => $payment['Visit_id'],
+            'amount' => number_format($amount, 2),
             'payment_date' => date('Y-m-d', strtotime($payment['Payment_date'])),
             'payment_time' => date('g:i A', strtotime($payment['Payment_date'])),
-            'payment_method' => $payment['Payment_method'],
-            'transaction_id' => $payment['Transaction_id'],
-            'notes' => $payment['Notes'],
+            'payment_method' => $copay > 0 ? 'Insurance + Card' : 'Card',
+            'transaction_id' => null,
+            'notes' => '',
             'appointment_id' => $payment['Appointment_id'],
             'appointmentIdFormatted' => 'A' . str_pad($payment['Appointment_id'], 4, '0', STR_PAD_LEFT),
             'appointment_date' => date('Y-m-d', strtotime($payment['Appointment_date'])),
