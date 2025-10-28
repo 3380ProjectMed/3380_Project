@@ -27,10 +27,11 @@ jobs:
         working-directory: frontend/medical-app
         run: |
           set -e
+          rm -rf node_modules/.vite
+          rm -rf dist               
           npm ci
           npm run build
           test -f dist/index.html
-
       # ---------- Prepare webroot ----------
       - name: Stage webroot
         run: |

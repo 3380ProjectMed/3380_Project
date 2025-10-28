@@ -5,7 +5,7 @@ export const makeUrl = (path, params) => {
   const p = path.startsWith('/') ? path : `/${path}`;
   if (!params) return p;
   const qs = new URLSearchParams(params).toString();
-  return `${p}${qs ? `?${qs}` : ''}`;  // ← Fixed: added closing }
+  return `${p}${qs ? `?${qs}` : ''}`;  
 };
 
 export async function apiRequest(
@@ -24,7 +24,7 @@ export async function apiRequest(
   const res = await fetch(makeUrl(path, params), init);
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} ${res.statusText} – ${text}`);
+    throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`); 
   }
   return json ? res.json() : res;
 }
