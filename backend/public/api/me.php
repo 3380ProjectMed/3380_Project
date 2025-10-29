@@ -57,9 +57,9 @@ header('Content-Type: application/json');
 debug_log('Session UID: ' . ($_SESSION['uid'] ?? 'NOT SET'));
 
 if (empty($_SESSION['uid'])) {
-  debug_log('No UID in session - returning 401');
-  http_response_code(401);
-  echo json_encode(['error' => 'Not authenticated']);
+  debug_log('No UID in session - returning 200 with null user');
+  http_response_code(200);
+  echo json_encode(['user' => null, 'authenticated' => false]);
   exit;
 }
 
