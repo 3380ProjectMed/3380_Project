@@ -14,9 +14,7 @@ export function AuthProvider({ children }) {
       
       if (r.ok) {
         const data = await r.json();
-        // With the updated me.php, unauthenticated users get:
-        // { user: null, authenticated: false }
-        // Authenticated users get the full user object
+        // me.php returns: { user: {...} || null, authenticated: true || false }
         setUser(data.user || null);
       } else {
         // Handle unexpected errors (500, etc)
@@ -49,15 +47,20 @@ export function AuthProvider({ children }) {
       throw new Error(msg);
     }
 
-    const data = await r.json(); // { user_id, username, email, role }
-    setUser(data); // Quick optimistic update
+    // login.php returns: { user_id, username, email, role }
+    // This is just the raw user data, not wrapped in { user: {...} }
+    const data = await r.json();
+    
+    // Set user immediately from login response
+    // Note: login.php doesn't include doctor_id, we'll get that from refreshUser
+    setUser(data);
 
     // Refresh the authoritative user record from server
     // This includes doctor_id and other joined data from me.php
     try {
       await refreshUser();
     } catch (e) {
-      // If refresh fails, keep the optimistic user
+      // If refresh fails, keep the optimistic user from login response
       console.warn('refreshUser after login failed:', e);
     }
 
@@ -70,6 +73,7 @@ export function AuthProvider({ children }) {
       credentials: 'include' 
     });
     setUser(null);
+    setLoading(false);
   }
 
   return (
