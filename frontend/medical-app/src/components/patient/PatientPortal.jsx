@@ -64,7 +64,6 @@ export default function PatientPortal({ onLogout }) {
   // Load page data on tab switch
   useEffect(() => {
     (async () => {
-      setLoading(true);
       try {
         switch (currentPage) {
           case 'dashboard': await loadDashboard(); break;
@@ -76,24 +75,28 @@ export default function PatientPortal({ onLogout }) {
         }
       } catch (e) {
         console.error('Error loading data:', e);
-      } finally {
-        setLoading(false);
       }
     })();
   }, [currentPage]);
 
   // --- Data fetchers ---
   async function loadDashboard() {
+    console.log('Loading dashboard data...');
     const r = await api.dashboard.getDashboard();
+    console.log('Dashboard API response:', r);
     if (r.success) {
       setUpcomingAppointments(r.data.upcoming_appointments ?? []);
       setPcp(r.data.pcp ?? null);
       setRecentActivity(r.data.recent_activity ?? []);
+    } else {
+      console.error('Dashboard API failed:', r);
     }
   }
 
   async function loadProfile() {
+    console.log('Loading profile data...');
     const r = await api.profile.getProfile();
+    console.log('Profile API response:', r);
     if (r.success) {
       setProfile(r.data);
       setPcp(r.data);
@@ -111,6 +114,8 @@ export default function PatientPortal({ onLogout }) {
         race: r.data.Race_Text ?? r.data.Race ?? fd.race,
       }));
       setProfileErrors({});
+    } else {
+      console.error('Profile API failed:', r);
     }
   }
 
@@ -292,6 +297,7 @@ export default function PatientPortal({ onLogout }) {
   }
 
   async function handleBookingSubmit() {
+    console.log('Submitting booking...', { selectedDoctor, selectedLocation, selectedDate, selectedTime });
     setBookingLoading(true);
     setBookingError(null);
     const appointmentData = {
@@ -302,24 +308,29 @@ export default function PatientPortal({ onLogout }) {
     };
     try {
       const r = await api.appointments.bookAppointment(appointmentData);
+      console.log('Booking API response:', r);
       if (r && r.success) {
         // Show success toast instead of alert
         setToast({ message: 'Appointment booked successfully!', type: 'success' });
+        // Force close modal and reset state
         setShowBookingModal(false);
         setBookingStep(1);
         setSelectedDoctor(null);
         setSelectedLocation(null);
-        setSelectedDate(''); setSelectedTime('');
-        setAppointmentReason(''); setNeedsReferral(false);
+        setSelectedDate(''); 
+        setSelectedTime('');
+        setAppointmentReason(''); 
+        setNeedsReferral(false);
+        setBookingLoading(false);
         loadAppointments();
       } else {
         const msg = r?.message || 'Failed to book appointment';
         setBookingError(msg);
+        setBookingLoading(false);
       }
     } catch (err) {
       console.error('Booking error', err);
       setBookingError(err.message || 'Failed to book appointment');
-    } finally {
       setBookingLoading(false);
     }
   }
