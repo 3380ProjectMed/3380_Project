@@ -54,6 +54,8 @@ $endpoint = $_GET['endpoint'] ?? '';
 if ($endpoint === 'dashboard') {
     if ($method === 'GET') {
         try {
+            error_log("Dashboard: Starting dashboard query for patient_id: " . $patient_id);
+            
             // Get upcoming appointments
             $stmt = $mysqli->prepare("
                 SELECT 
@@ -73,10 +75,23 @@ if ($endpoint === 'dashboard') {
                 AND a.appointment_date >= NOW()
                 ORDER BY a.appointment_date ASC
             ");
+            
+            if (!$stmt) {
+                error_log("Dashboard: Failed to prepare appointments query: " . $mysqli->error);
+                sendResponse(false, [], 'Failed to prepare appointments query: ' . $mysqli->error, 500);
+                return;
+            }
+            
             $stmt->bind_param('i', $patient_id);
-            $stmt->execute();
+            if (!$stmt->execute()) {
+                error_log("Dashboard: Failed to execute appointments query: " . $stmt->error);
+                sendResponse(false, [], 'Failed to execute appointments query: ' . $stmt->error, 500);
+                return;
+            }
+            
             $result = $stmt->get_result();
             $upcoming_appointments = $result->fetch_all(MYSQLI_ASSOC);
+            error_log("Dashboard: Found " . count($upcoming_appointments) . " upcoming appointments");
             
             // Get PCP info
             $stmt = $mysqli->prepare("
