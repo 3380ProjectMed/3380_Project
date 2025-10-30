@@ -51,6 +51,11 @@ if (!$patient_id) {
 $method = $_SERVER['REQUEST_METHOD'];
 $endpoint = $_GET['endpoint'] ?? '';
 
+// Simple test endpoint
+if ($endpoint === 'test') {
+    sendResponse(true, ['message' => 'Patient API is working', 'timestamp' => date('Y-m-d H:i:s')]);
+}
+
 error_log("Patient API: Method=$method, Endpoint=$endpoint, Patient_ID=$patient_id");
 
 // ==================== DASHBOARD ====================
