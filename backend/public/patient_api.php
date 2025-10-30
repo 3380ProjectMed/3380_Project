@@ -538,10 +538,11 @@ elseif ($endpoint === 'doctors') {
 elseif ($endpoint === 'offices') {
     if ($method === 'GET') {
         try {
-            $result = $mysqli->query("\n                SELECT 
+            $result = $mysqli->query("
+                SELECT 
                     office_id,
                     name,
-                    CONCAT(address, ', ', city, ', ', state, ' ', zipcode) as address,
+                    CONCAT(address, ', ', city, ', ', state, ' ', zipcode) as full_address,
                     phone
                 FROM office
                 ORDER BY name
@@ -583,7 +584,8 @@ elseif ($endpoint === 'medical-records') {
                     break;
                     
                 case 'medications':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
+                    $stmt = $mysqli->prepare("
+                        SELECT 
                             p.medication_name as name,
                             CONCAT(p.dosage, ' - ', p.frequency) as frequency,
                             CONCAT(d.first_name, ' ', d.last_name) as prescribed_by,
@@ -603,7 +605,8 @@ elseif ($endpoint === 'medical-records') {
                     break;
                     
                 case 'allergies':
-                    $stmt = $mysqli->prepare("\n                        SELECT ca.allergies_text as allergy
+                    $stmt = $mysqli->prepare("
+                        SELECT ca.allergies_text as allergy
                         FROM patient p
                         LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
                         WHERE p.patient_id = ?

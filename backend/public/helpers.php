@@ -23,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Start session (for when auth is ready)
 session_start();
 
-// ==================== TEMPORARY MOCK AUTH ====================
 function requireAuth($allowed_roles = ['PATIENT']) {
     // MOCK: For testing, dynamically find and use any valid patient
     if (!isset($_SESSION['patient_id'])) {
@@ -60,18 +59,8 @@ function requireAuth($allowed_roles = ['PATIENT']) {
             error_log("Mock auth: Database error, using fallback - " . $e->getMessage());
         }
     }
-    
-    // When real auth is ready, uncomment this:
-    /*
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-        sendResponse(false, [], 'Authentication required', 401);
-    }
-    
-    if (!in_array($_SESSION['role'], $allowed_roles)) {
-        sendResponse(false, [], 'Access denied', 403);
-    }
-    */
 }
+    
 
 // ==================== RESPONSE HELPER ====================
 function sendResponse($success, $data = [], $message = '', $statusCode = 200) {

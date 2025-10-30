@@ -9,6 +9,11 @@ import './PatientPortal.css';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useNavigate } from 'react-router-dom';
 import Profile from './Profile.jsx';
+import Dashboard from './Dashboard.jsx';
+import Appointments from './Appointments.jsx';
+import MedicalRecords from './MedicalRecords.jsx';
+import Insurance from './Insurance.jsx';
+import Billing from './Billing.jsx';
 import api from '../../patientapi.js';
 
 export default function PatientPortal({ onLogout }) {
@@ -126,7 +131,6 @@ export default function PatientPortal({ onLogout }) {
       office_id: selectedLocation,
       appointment_date: `${selectedDate} ${selectedTime}`,
       reason: appointmentReason,
-      needs_referral: needsReferral,
     };
     const r = await api.appointments.bookAppointment(appointmentData);
     if (r.success) {
@@ -255,51 +259,7 @@ export default function PatientPortal({ onLogout }) {
 
   const [profile, setProfile] = useState(null);
   const renderProfile = () => (
-    <div className="portal-content">
-      <h1 className="page-title">Profile & Primary Care Physician</h1>
-      <div className="profile-grid">
-          <div className="profile-section">
-            <h2>Personal Information</h2>
-            <div className="form-group">
-              <label>Full Name</label>
-              <input type="text" className="form-input"
-                value={profile ? `${profile.First_Name} ${profile.Last_Name}` : ''} readOnly />
-            </div>
-            <div className="form-group">
-              <label>Date of Birth</label>
-              <input type="date" className="form-input" value={profile?.dob || ''} readOnly />
-            </div>
-            <div className="form-group">
-              <label>Email</label>
-              <input type="email" className="form-input" value={profile?.Email || ''} readOnly />
-            </div>
-            <div className="form-group">
-              <label>Emergency Contact</label>
-              <input type="tel" className="form-input" value={profile?.EmergencyContact || ''} readOnly />
-            </div>
-            <div className="form-group">
-              <label>Blood Type</label>
-              <input type="text" className="form-input" value={profile?.BloodType || 'Not specified'} readOnly />
-            </div>
-          </div>
-
-          {pcp && (
-            <div className="profile-section full-width">
-              <h2>Primary Care Physician</h2>
-              <div className="pcp-card">
-                <div className="pcp-avatar large"><Stethoscope /></div>
-                <div className="pcp-details">
-                  <h3>{pcp.pcp_name || pcp.name}</h3>
-                  <p><strong>Specialty:</strong> {pcp.pcp_specialty || pcp.specialty_name}</p>
-                  <p><MapPin className="small-icon" /> {pcp.pcp_office || pcp.office_name}</p>
-                  <p><Phone className="small-icon" /> {pcp.pcp_phone || pcp.Phone}</p>
-                  <p><Mail className="small-icon" /> {pcp.pcp_email || pcp.Email}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-    </div>
+    <Profile />
   );
 
   const renderAppointments = () => (
@@ -477,7 +437,7 @@ export default function PatientPortal({ onLogout }) {
       {/* Main Content */}
       <main className="portal-main">
         {currentPage === 'dashboard' && renderDashboard()}
-        {currentPage === 'profile' && renderProfile()}
+        {currentPage === 'profile' && <Profile />}
         {currentPage === 'appointments' && renderAppointments()}
         {currentPage === 'records' && renderMedicalRecords()}
         {currentPage === 'insurance' && renderInsurance()}
