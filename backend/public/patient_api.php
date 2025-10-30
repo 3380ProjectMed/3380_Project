@@ -44,14 +44,18 @@ if (!$patient_id) {
 }
 
 if (!$patient_id) {
+    error_log("Patient API: No patient_id found. Session data: " . print_r($_SESSION, true));
     sendResponse(false, [], 'Patient ID not found for authenticated user', 400);
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
 $endpoint = $_GET['endpoint'] ?? '';
 
+error_log("Patient API: Method=$method, Endpoint=$endpoint, Patient_ID=$patient_id");
+
 // ==================== DASHBOARD ====================
 if ($endpoint === 'dashboard') {
+    error_log("Dashboard: Entering dashboard endpoint");
     if ($method === 'GET') {
         try {
             error_log("Dashboard: Starting dashboard query for patient_id: " . $patient_id);
