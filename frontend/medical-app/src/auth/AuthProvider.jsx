@@ -27,6 +27,19 @@ export function AuthProvider({ children }) {
   }
   useEffect(() => { refreshUser(); }, []);
 
+  const checkAuth = async () => {
+  try {
+    const response = await fetch('/api/me.php');
+    if (response.ok) {
+      const data = await response.json();
+      setUser(data.user); // Will be null if not authenticated
+    }
+  } catch (error) {
+    console.error('Auth check failed:', error);
+    setUser(null);
+  }
+};
+
   async function login(email, password) {
     const r = await fetch('/api/login.php', {
       method: 'POST',

@@ -3,9 +3,6 @@ import { apiRequest, makeUrl } from './http.js';
 
 const j = (path, init) => apiRequest(path, { json: true, ...init });
 
-// Export j for patientapi.js
-export { j };
-
 // ─── AUTH ───────────────────────────────────────────────────────
 export const login = (email, password) =>
   apiRequest('api/login.php', { method: 'POST', body: { email, password } });
