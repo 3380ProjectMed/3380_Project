@@ -527,6 +527,8 @@ export default function PatientPortal({ onLogout }) {
 
   return (
     <div className="landing-root">
+      {/* Top header intentionally removed for patient portal; navigation handled by the left Sidebar */}
+
       {/* Sidebar (fixed on the left) */}
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
 
