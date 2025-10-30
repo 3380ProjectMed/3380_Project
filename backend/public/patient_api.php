@@ -284,7 +284,8 @@ elseif ($endpoint === 'appointments') {
         
         try {
             if ($type === 'upcoming') {
-                $stmt = $mysqli->prepare("\n                    SELECT 
+                $stmt = $mysqli->prepare("
+                    SELECT 
                         a.appointment_id,
                         a.appointment_date,
                         a.reason_for_visit,
@@ -478,7 +479,7 @@ elseif ($endpoint === 'appointments') {
         }
         
         try {
-            $stmt = $mysqli->prepare("\n                DELETE FROM appointment 
+            $stmt = $mysqli->prepare("                DELETE FROM appointment 
                 WHERE appointment_id = ? 
                 AND patient_id = ?
             ");
@@ -575,7 +576,7 @@ elseif ($endpoint === 'medical-records') {
         try {
             switch ($type) {
                 case 'vitals':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
+                    $stmt = $mysqli->prepare("                        SELECT 
                             DATE(date) as date,
                             blood_pressure as bp,
                             temperature as temp
@@ -629,7 +630,7 @@ elseif ($endpoint === 'medical-records') {
                     break;
                     
                 case 'conditions':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
+                    $stmt = $mysqli->prepare("                        SELECT 
                             condition_name as name,
                             diagnosis_date
                         FROM medical_condition
@@ -644,7 +645,7 @@ elseif ($endpoint === 'medical-records') {
                     break;
                     
                 case 'visit-summaries':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
+                    $stmt = $mysqli->prepare("                        SELECT 
                             v.visit_id,
                             v.date,
                             v.reason_for_visit,
@@ -682,7 +683,7 @@ elseif ($endpoint === 'medical-records') {
 elseif ($endpoint === 'insurance') {
     if ($method === 'GET') {
         try {
-            $stmt = $mysqli->prepare("\n                SELECT 
+            $stmt = $mysqli->prepare("                SELECT 
                     pi.id,
                     pi.member_id,
                     pi.group_id,
@@ -723,7 +724,7 @@ elseif ($endpoint === 'billing') {
         try {
             switch ($type) {
                 case 'balance':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
+                    $stmt = $mysqli->prepare("                        SELECT 
                             COALESCE(SUM(total_due), 0) as outstanding_balance
                         FROM patient_visit
                         WHERE patient_id = ?
@@ -737,7 +738,7 @@ elseif ($endpoint === 'billing') {
                     break;
                     
                 case 'statements':
-                    $stmt = $mysqli->prepare("\n                        SELECT 
+                    $stmt = $mysqli->prepare("                        SELECT 
                             v.visit_id as id,
                             DATE(v.date) as date,
                             v.reason_for_visit as service,
