@@ -55,7 +55,8 @@ if ($endpoint === 'dashboard') {
     if ($method === 'GET') {
         try {
             // Get upcoming appointments
-            $stmt = $mysqli->prepare("\n                SELECT 
+            $stmt = $mysqli->prepare("
+                SELECT 
                     a.appointment_id,
                     a.appointment_date,
                     a.reason_for_visit,
@@ -78,7 +79,8 @@ if ($endpoint === 'dashboard') {
             $upcoming_appointments = $result->fetch_all(MYSQLI_ASSOC);
             
             // Get PCP info
-            $stmt = $mysqli->prepare("\n                SELECT 
+            $stmt = $mysqli->prepare("
+                SELECT 
                     d.doctor_id,
                     CONCAT(d.first_name, ' ', d.last_name) as name,
                     s.specialty_name,
@@ -98,7 +100,8 @@ if ($endpoint === 'dashboard') {
             $pcp = $result->fetch_assoc();
             
             // Get recent activity (last 3 visits)
-            $stmt = $mysqli->prepare("\n                SELECT 
+            $stmt = $mysqli->prepare("
+                SELECT 
                     v.visit_id,
                     v.date,
                     CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
@@ -548,12 +551,18 @@ elseif ($endpoint === 'offices') {
                 ORDER BY name
             ");
             
+            if (!$result) {
+                error_log("Offices query failed: " . $mysqli->error);
+                sendResponse(false, [], 'Database query failed: ' . $mysqli->error, 500);
+                return;
+            }
+            
             $offices = $result->fetch_all(MYSQLI_ASSOC);
             sendResponse(true, $offices);
             
         } catch (Exception $e) {
             error_log("Offices error: " . $e->getMessage());
-            sendResponse(false, [], 'Failed to load offices', 500);
+            sendResponse(false, [], 'Failed to load offices: ' . $e->getMessage(), 500);
         }
     }
 }
