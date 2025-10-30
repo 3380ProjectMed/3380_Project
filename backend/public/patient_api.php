@@ -36,25 +36,17 @@ function requireAuth($allowed_roles = ['PATIENT']) {
                     error_log("Patient auth: Found patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
                 } else {
                     error_log("Patient auth: No patient found for email = " . $user_email);
-                    // If no patient found for the logged-in email, use fallback
-                    $_SESSION['patient_id'] = 2; // Use Maria Garcia as default
-                    $_SESSION['role'] = 'PATIENT';
-                    $_SESSION['username'] = 'mariagarcia';
+                    // If no patient found for the logged-in email, return error
+                    sendResponse(false, [], 'No patient record found for logged-in user: ' . $user_email, 403);
                 }
             } catch (Exception $e) {
                 error_log("Patient auth: Database error - " . $e->getMessage());
-                // If database error, use Maria Garcia as default
-                $_SESSION['patient_id'] = 2;
-                $_SESSION['role'] = 'PATIENT';
-                $_SESSION['username'] = 'mariagarcia';
+                sendResponse(false, [], 'Authentication error: ' . $e->getMessage(), 500);
             }
         } else {
-            // No email in session, use Maria Garcia as default for testing
-            $_SESSION['patient_id'] = 2;
-            $_SESSION['role'] = 'PATIENT';
-            $_SESSION['username'] = 'mariagarcia';
-            $_SESSION['email'] = 'maria.garcia@email.com';
-            error_log("Patient auth: No email in session, using Maria Garcia as default");
+            // No email in session - user needs to be properly authenticated
+            error_log("Patient auth: No email in session - user not properly authenticated");
+            sendResponse(false, [], 'User not properly authenticated - no email in session', 401);
         }
     }
 }
