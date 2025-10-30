@@ -25,11 +25,40 @@ session_start();
 
 // ==================== TEMPORARY MOCK AUTH ====================
 function requireAuth($allowed_roles = ['PATIENT']) {
-    // MOCK: For testing, always set a fake patient_id
+    // MOCK: For testing, dynamically find and use any valid patient
     if (!isset($_SESSION['patient_id'])) {
-        $_SESSION['patient_id'] = 1; // Hardcoded test patient ID
-        $_SESSION['role'] = 'PATIENT';
-        $_SESSION['username'] = 'johndoe';
+        // Get a database connection to find a valid patient
+        try {
+            require_once '../database.php';
+            $mysqli = getDBConnection();
+            
+            // Find the first available patient in the database
+            $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient LIMIT 1");
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $patient = $result->fetch_assoc();
+            $stmt->close();
+            
+            if ($patient) {
+                $_SESSION['patient_id'] = $patient['patient_id'];
+                $_SESSION['role'] = 'PATIENT';
+                $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
+                $_SESSION['email'] = $patient['email'];
+                error_log("Mock auth: Using patient_id = " . $patient['patient_id'] . " (" . $patient['first_name'] . " " . $patient['last_name'] . ")");
+            } else {
+                // Fallback if no patients found
+                $_SESSION['patient_id'] = 1;
+                $_SESSION['role'] = 'PATIENT';
+                $_SESSION['username'] = 'testpatient';
+                error_log("Mock auth: No patients found in database, using fallback patient_id = 1");
+            }
+        } catch (Exception $e) {
+            // If database connection fails, use fallback
+            $_SESSION['patient_id'] = 1;
+            $_SESSION['role'] = 'PATIENT';
+            $_SESSION['username'] = 'testpatient';
+            error_log("Mock auth: Database error, using fallback - " . $e->getMessage());
+        }
     }
     
     // When real auth is ready, uncomment this:
