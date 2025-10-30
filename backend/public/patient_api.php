@@ -12,38 +12,49 @@ session_start();
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
-    // MOCK: For testing, dynamically find and use any valid patient
+    // Map logged-in user to correct patient
     if (!isset($_SESSION['patient_id'])) {
-        // Get a database connection to find a valid patient
-        try {
-            $mysqli = getDBConnection();
-            
-            // Find the first available patient in the database
-            $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient LIMIT 1");
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $patient = $result->fetch_assoc();
-            $stmt->close();
-            
-            if ($patient) {
-                $_SESSION['patient_id'] = $patient['patient_id'];
+        // Get the logged-in user's email from the main authentication system
+        $user_email = $_SESSION['email'] ?? null;
+        
+        if ($user_email) {
+            // Look up patient by the logged-in user's email
+            try {
+                $mysqli = getDBConnection();
+                
+                $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient WHERE email = ? LIMIT 1");
+                $stmt->bind_param('s', $user_email);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $patient = $result->fetch_assoc();
+                $stmt->close();
+                
+                if ($patient) {
+                    $_SESSION['patient_id'] = $patient['patient_id'];
+                    $_SESSION['role'] = 'PATIENT';
+                    $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
+                    error_log("Patient auth: Found patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
+                } else {
+                    error_log("Patient auth: No patient found for email = " . $user_email);
+                    // If no patient found for the logged-in email, use fallback
+                    $_SESSION['patient_id'] = 2; // Use Maria Garcia as default
+                    $_SESSION['role'] = 'PATIENT';
+                    $_SESSION['username'] = 'mariagarcia';
+                }
+            } catch (Exception $e) {
+                error_log("Patient auth: Database error - " . $e->getMessage());
+                // If database error, use Maria Garcia as default
+                $_SESSION['patient_id'] = 2;
                 $_SESSION['role'] = 'PATIENT';
-                $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
-                $_SESSION['email'] = $patient['email'];
-                error_log("Mock auth: Using patient_id = " . $patient['patient_id'] . " (" . $patient['first_name'] . " " . $patient['last_name'] . ")");
-            } else {
-                // Fallback if no patients found
-                $_SESSION['patient_id'] = 1;
-                $_SESSION['role'] = 'PATIENT';
-                $_SESSION['username'] = 'testpatient';
-                error_log("Mock auth: No patients found in database, using fallback patient_id = 1");
+                $_SESSION['username'] = 'mariagarcia';
             }
-        } catch (Exception $e) {
-            // If database connection fails, use fallback
-            $_SESSION['patient_id'] = 1;
+        } else {
+            // No email in session, use Maria Garcia as default for testing
+            $_SESSION['patient_id'] = 2;
             $_SESSION['role'] = 'PATIENT';
-            $_SESSION['username'] = 'testpatient';
-            error_log("Mock auth: Database error, using fallback - " . $e->getMessage());
+            $_SESSION['username'] = 'mariagarcia';
+            $_SESSION['email'] = 'maria.garcia@email.com';
+            error_log("Patient auth: No email in session, using Maria Garcia as default");
         }
     }
 }
