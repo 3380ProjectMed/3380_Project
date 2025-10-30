@@ -1,8 +1,9 @@
 <?php
 // patient_api.php - Patient Portal API Endpoints (cleaned and fixed)
 
-require_once 'helpers.php';
-require_once '../database.php';
+require_once __DIR__ . '/../cors.php';
+require_once __DIR__ . '/../database.php';
+require_once __DIR__ . '/helpers.php';
 
 header('Content-Type: application/json');
 
