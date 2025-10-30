@@ -6,12 +6,6 @@ import {
   LogOut, Home
 } from 'lucide-react';
 import './PatientPortal.css';
-import Sidebar from './Sidebar.jsx';
-import Dashboard from './Dashboard.jsx';
-import Appointments from './Appointments.jsx';
-import MedicalRecords from './MedicalRecords.jsx';
-import Insurance from './Insurance.jsx';
-import Billing from './Billing.jsx';
 import Profile from './Profile.jsx';
 import api from '../../patientapi.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
@@ -402,6 +396,326 @@ export default function PatientPortal({ onLogout }) {
     'Other'
   ];
 
+  // --- Render functions for inline sections ---
+  const renderDashboard = () => (
+    <div className="portal-content">
+      <h1 className="page-title">Welcome Back, {displayName}</h1>
+      {loading ? (
+        <div className="loading-spinner">Loading...</div>
+      ) : (
+        <div className="dashboard-grid">
+          <div className="dashboard-card large">
+            <div className="card-header">
+              <h2><Calendar className="icon" /> Upcoming Appointments</h2>
+            </div>
+            <div className="card-content">
+              {upcomingAppointments.length === 0 ? (
+                <p className="text-gray">No upcoming appointments</p>
+              ) : (
+                upcomingAppointments.map(apt => (
+                  <div key={apt.Appointment_id} className="appointment-item">
+                    <div className="appointment-info">
+                      <h3>{apt.doctor_name}</h3>
+                      <p>{apt.specialty_name}</p>
+                      <p className="appointment-details">
+                        <Clock className="small-icon" /> {new Date(apt.Appointment_date).toLocaleString()}
+                      </p>
+                      <p className="appointment-details">
+                        <MapPin className="small-icon" /> {apt.office_name}
+                      </p>
+                    </div>
+                    <span className={`status-badge ${apt.status?.toLowerCase?.() ?? 'scheduled'}`}>
+                      {apt.status ?? 'Scheduled'}
+                    </span>
+                  </div>
+                ))
+              )}
+              <button className="btn btn-primary btn-full" onClick={() => setShowBookingModal(true)}>
+                <Plus className="icon" /> Book New Appointment
+              </button>
+            </div>
+          </div>
+
+          <div className="dashboard-card">
+            <div className="card-header">
+              <h2><User className="icon" /> Primary Care Physician</h2>
+            </div>
+            <div className="card-content">
+              {pcp ? (
+                <div className="pcp-info">
+                  <div className="pcp-avatar"><Stethoscope /></div>
+                  <div>
+                    <h3>{pcp.name || pcp.pcp_name}</h3>
+                    <p>{pcp.specialty_name || pcp.pcp_specialty}</p>
+                    <p><MapPin className="small-icon" /> {pcp.office_name || pcp.pcp_office}</p>
+                    <p><Phone className="small-icon" /> {pcp.Phone || pcp.pcp_phone}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray">No PCP assigned</p>
+              )}
+            </div>
+          </div>
+
+          <div className="dashboard-card">
+            <div className="card-header">
+              <h2><Activity className="icon" /> Recent Activity</h2>
+            </div>
+            <div className="card-content">
+              {recentActivity.length === 0 ? (
+                <p className="text-gray">No recent activity</p>
+              ) : (
+                <div className="activity-list">
+                  {recentActivity.map((activity, idx) => (
+                    <div key={idx} className="activity-item">
+                      <Check className="activity-icon success" />
+                      <div>
+                        <p><strong>{activity.Status}</strong></p>
+                        <p className="text-small">
+                          {activity.doctor_name} — {new Date(activity.Date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderAppointments = () => (
+    <div className="portal-content">
+      <h1 className="page-title">Appointments</h1>
+
+      <button className="btn btn-primary btn-large" onClick={() => setShowBookingModal(true)}>
+        <Plus className="icon" /> Book New Appointment
+      </button>
+
+      {loading ? (
+        <div className="loading-spinner">Loading...</div>
+      ) : (
+        <>
+          <div className="appointments-section">
+            <h2>Upcoming Appointments</h2>
+            {upcomingAppointments.length === 0 ? (
+              <p className="text-gray">No upcoming appointments</p>
+            ) : (
+              <div className="appointments-list">
+                {upcomingAppointments.map(apt => (
+                  <div key={apt.Appointment_id} className="appointment-card">
+                    <div className="appointment-header">
+                      <div>
+                        <h3>{apt.doctor_name}</h3>
+                        <p>{apt.specialty_name}</p>
+                      </div>
+                      <span className={`status-badge ${apt.status?.toLowerCase?.() ?? 'scheduled'}`}>
+                        {apt.status ?? 'Scheduled'}
+                      </span>
+                    </div>
+                    <div className="appointment-body">
+                      <p><Calendar className="small-icon" /> {new Date(apt.Appointment_date).toLocaleDateString()}</p>
+                      <p><Clock className="small-icon" /> {new Date(apt.Appointment_date).toLocaleTimeString()}</p>
+                      <p><MapPin className="small-icon" /> {apt.office_name}</p>
+                    </div>
+                    <div className="appointment-footer">
+                      <button className="btn btn-danger btn-small"
+                        onClick={() => handleCancelAppointment(apt.Appointment_id)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="appointments-section">
+            <h2>Appointment History</h2>
+            {appointmentHistory.length === 0 ? (
+              <p className="text-gray">No appointment history</p>
+            ) : (
+              <div className="history-list">
+                {appointmentHistory.map(apt => (
+                  <div key={apt.Visit_id} className="history-item">
+                    <div>
+                      <h4>{apt.doctor_name}</h4>
+                      <p>{new Date(apt.Date).toLocaleDateString()} — {apt.Reason_for_Visit}</p>
+                    </div>
+                    <button className="btn btn-link">
+                      View Summary <ChevronRight className="small-icon" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const renderMedicalRecords = () => (
+    <div className="portal-content">
+      <h1 className="page-title">Medical Records</h1>
+      {loading ? (
+        <div className="loading-spinner">Loading...</div>
+      ) : (
+        <div className="records-grid">
+          <div className="records-section">
+            <h2><Heart className="icon" /> Vitals History</h2>
+            {vitalsHistory.length === 0 ? (
+              <p className="text-gray">No vitals recorded</p>
+            ) : (
+              <div className="vitals-list">
+                {vitalsHistory.map((vital, idx) => (
+                  <div key={idx} className="vital-item">
+                    <div className="vital-date">{new Date(vital.Date).toLocaleDateString()}</div>
+                    <div className="vital-values">
+                      <span>BP: {vital.blood_pressure || 'N/A'}</span>
+                      <span>HR: {vital.heart_rate || 'N/A'}</span>
+                      <span>Temp: {vital.temperature || 'N/A'}</span>
+                      <span>Weight: {vital.weight || 'N/A'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="records-section">
+            <h2><Pill className="icon" /> Current Medications</h2>
+            {medications.length === 0 ? (
+              <p className="text-gray">No medications on file</p>
+            ) : (
+              <div className="medications-list">
+                {medications.map((med, idx) => (
+                  <div key={idx} className="medication-item">
+                    <h4>{med.medication_name}</h4>
+                    <p>{med.dosage} - {med.frequency}</p>
+                    <p className="text-small">Prescribed by {med.prescribing_doctor}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="records-section">
+            <h2><AlertCircle className="icon" /> Allergies</h2>
+            {allergies.length === 0 ? (
+              <p className="text-gray">No known allergies</p>
+            ) : (
+              <div className="allergies-list">
+                {allergies.map((allergy, idx) => (
+                  <div key={idx} className="allergy-item">
+                    <h4>{allergy.allergen}</h4>
+                    <p>{allergy.reaction}</p>
+                    <span className={`severity-badge ${allergy.severity?.toLowerCase()}`}>
+                      {allergy.severity}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="records-section">
+            <h2><FileText className="icon" /> Conditions</h2>
+            {conditions.length === 0 ? (
+              <p className="text-gray">No conditions on file</p>
+            ) : (
+              <div className="conditions-list">
+                {conditions.map((condition, idx) => (
+                  <div key={idx} className="condition-item">
+                    <h4>{condition.condition_name}</h4>
+                    <p>Diagnosed: {new Date(condition.diagnosis_date).toLocaleDateString()}</p>
+                    <p className="text-small">Status: {condition.status}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderInsurance = () => (
+    <div className="portal-content">
+      <h1 className="page-title">Insurance Details</h1>
+      {loading ? (
+        <div className="loading-spinner">Loading...</div>
+      ) : insurancePolicies.length === 0 ? (
+        <p className="text-gray">No insurance policies on file</p>
+      ) : (
+        <div className="insurance-list">
+          {insurancePolicies.map((policy, idx) => (
+            <div key={idx} className="insurance-card">
+              <div className="insurance-header">
+                <div>
+                  <h3>{policy.is_primary ? 'Primary' : 'Secondary'} Insurance</h3>
+                  <h2>{policy.provider_name}</h2>
+                </div>
+                <Shield className="insurance-icon" />
+              </div>
+              <div className="insurance-body">
+                <p><strong>Policy Number:</strong> {policy.policy_number}</p>
+                <p><strong>Group Number:</strong> {policy.group_number}</p>
+                <p><strong>Member ID:</strong> {policy.member_id}</p>
+                <p><strong>Effective Date:</strong> {new Date(policy.effective_date).toLocaleDateString()}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderBilling = () => (
+    <div className="portal-content">
+      <h1 className="page-title">Billing & Payments</h1>
+      {loading ? (
+        <div className="loading-spinner">Loading...</div>
+      ) : (
+        <>
+          <div className="billing-summary">
+            <div className="balance-card">
+              <h3>Outstanding Balance</h3>
+              <h1 className="balance-amount">${billingBalance.toFixed(2)}</h1>
+              <button className="btn btn-primary btn-large">
+                <CreditCard className="icon" /> Make Payment
+              </button>
+            </div>
+          </div>
+
+          <div className="billing-statements">
+            <h2>Recent Statements</h2>
+            {billingStatements.length === 0 ? (
+              <p className="text-gray">No billing statements available</p>
+            ) : (
+              <div className="statements-list">
+                {billingStatements.map((statement, idx) => (
+                  <div key={idx} className="statement-item">
+                    <div>
+                      <h4>Statement #{statement.statement_id}</h4>
+                      <p>{new Date(statement.statement_date).toLocaleDateString()}</p>
+                    </div>
+                    <div className="statement-amount">
+                      ${statement.amount_due.toFixed(2)}
+                    </div>
+                    <button className="btn btn-link">View Details</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   // --- Booking modal renderer ---
   const renderBookingModal = () => (
     <div className="modal-overlay" onClick={() => setShowBookingModal(false)}>
@@ -526,20 +840,53 @@ export default function PatientPortal({ onLogout }) {
   };
 
   return (
-    <div className="landing-root">
-      {/* Top header intentionally removed for patient portal; navigation handled by the left Sidebar */}
+    <div className="patient-portal-root">
+      {/* Header */}
+      <header className="patient-portal-header">
+        <div className="patient-portal-container">
+          <div className="logo">
+            <div className="logo-icon"><Stethoscope className="icon" /></div>
+            <span>MedConnect</span>
+          </div>
 
-      {/* Sidebar (fixed on the left) */}
-      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
+          <nav className="portal-nav">
+            <button className={currentPage === 'dashboard' ? 'active' : ''} onClick={() => setCurrentPage('dashboard')}>
+              <Home className="nav-icon" /> Dashboard
+            </button>
+            <button className={currentPage === 'profile' ? 'active' : ''} onClick={() => setCurrentPage('profile')}>
+              <User className="nav-icon" /> Profile
+            </button>
+            <button className={currentPage === 'appointments' ? 'active' : ''} onClick={() => setCurrentPage('appointments')}>
+              <Calendar className="nav-icon" /> Appointments
+            </button>
+            <button className={currentPage === 'records' ? 'active' : ''} onClick={() => setCurrentPage('records')}>
+              <FileText className="nav-icon" /> Medical Records
+            </button>
+            <button className={currentPage === 'insurance' ? 'active' : ''} onClick={() => setCurrentPage('insurance')}>
+              <Shield className="nav-icon" /> Insurance
+            </button>
+            <button className={currentPage === 'billing' ? 'active' : ''} onClick={() => setCurrentPage('billing')}>
+              <CreditCard className="nav-icon" /> Billing
+            </button>
+          </nav>
+
+          <div className="header-actions">
+            <button className="btn btn-secondary" onClick={handleLogout}>
+              <LogOut className="icon" />
+              Log Out
+            </button>
+          </div>
+        </div>
+      </header>
 
       {/* Main Content */}
       <main className="portal-main">
-        {currentPage === 'dashboard' && <Dashboard {...portalProps} />}
+        {currentPage === 'dashboard' && renderDashboard()}
         {currentPage === 'profile' && <Profile {...portalProps} />}
-        {currentPage === 'appointments' && <Appointments {...portalProps} />}
-        {currentPage === 'records' && <MedicalRecords {...portalProps} />}
-        {currentPage === 'insurance' && <Insurance {...portalProps} />}
-        {currentPage === 'billing' && <Billing {...portalProps} />}
+        {currentPage === 'appointments' && renderAppointments()}
+        {currentPage === 'records' && renderMedicalRecords()}
+        {currentPage === 'insurance' && renderInsurance()}
+        {currentPage === 'billing' && renderBilling()}
       </main>
 
       {showBookingModal && renderBookingModal()}
