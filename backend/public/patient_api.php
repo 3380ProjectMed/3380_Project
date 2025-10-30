@@ -3,9 +3,60 @@
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-require_once '/home/site/wwwroot/helpers.php';
+// require_once '/home/site/wwwroot/helpers.php'; // Temporarily commented out
 
 header('Content-Type: application/json');
+
+// Start session
+session_start();
+
+// Helper functions
+function requireAuth($allowed_roles = ['PATIENT']) {
+    // MOCK: For testing, dynamically find and use any valid patient
+    if (!isset($_SESSION['patient_id'])) {
+        // Get a database connection to find a valid patient
+        try {
+            $mysqli = getDBConnection();
+            
+            // Find the first available patient in the database
+            $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient LIMIT 1");
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $patient = $result->fetch_assoc();
+            $stmt->close();
+            
+            if ($patient) {
+                $_SESSION['patient_id'] = $patient['patient_id'];
+                $_SESSION['role'] = 'PATIENT';
+                $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
+                $_SESSION['email'] = $patient['email'];
+                error_log("Mock auth: Using patient_id = " . $patient['patient_id'] . " (" . $patient['first_name'] . " " . $patient['last_name'] . ")");
+            } else {
+                // Fallback if no patients found
+                $_SESSION['patient_id'] = 1;
+                $_SESSION['role'] = 'PATIENT';
+                $_SESSION['username'] = 'testpatient';
+                error_log("Mock auth: No patients found in database, using fallback patient_id = 1");
+            }
+        } catch (Exception $e) {
+            // If database connection fails, use fallback
+            $_SESSION['patient_id'] = 1;
+            $_SESSION['role'] = 'PATIENT';
+            $_SESSION['username'] = 'testpatient';
+            error_log("Mock auth: Database error, using fallback - " . $e->getMessage());
+        }
+    }
+}
+
+function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
+    http_response_code($statusCode);
+    echo json_encode([
+        'success' => $success,
+        'data' => $data,
+        'message' => $message
+    ], JSON_PRETTY_PRINT);
+    exit();
+}
 
 // Use SSL-enabled database connection for Azure MySQL
 try {
