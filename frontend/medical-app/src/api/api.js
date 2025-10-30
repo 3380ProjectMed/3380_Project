@@ -1,7 +1,7 @@
 // /home/site/wwwroot/apis/api.js
 import { apiRequest, makeUrl } from './http.js';
 
-const j = (path, init) => apiRequest(path, { json: true, ...init });
+export const j = (path, init) => apiRequest(path, { json: true, ...init });
 
 // ─── AUTH ───────────────────────────────────────────────────────
 export const login = (email, password) =>
