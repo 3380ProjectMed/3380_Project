@@ -452,10 +452,14 @@ elseif ($endpoint === 'appointments') {
     // Book new appointment
     $input = json_decode(file_get_contents('php://input'), true);
     
+    // Debug: Log the received booking data
+    error_log("Booking API: Received data = " . json_encode($input));
+    
     $required = ['doctor_id', 'office_id', 'appointment_date', 'reason'];
     $missing = validateRequired($input, $required);
     
     if (!empty($missing)) {
+        error_log("Booking API: Missing fields = " . json_encode($missing) . ", Input = " . json_encode($input));
         sendResponse(false, [], 'Missing required fields: ' . implode(', ', $missing), 400);
     }
     
