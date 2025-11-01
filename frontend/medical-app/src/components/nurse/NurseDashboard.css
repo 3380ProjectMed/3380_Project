@@ -1,5 +1,5 @@
-/* ===== Standalone Nurse Dashboard ===== */
-.nurse-dashboard {
+/* ========== DASHBOARD COMPONENT ========== */
+.dashboard {
   padding: 2rem;
   background: transparent;
   min-height: 100vh;
@@ -9,8 +9,12 @@
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
-/* Header card */
-.nurse-dashboard__header .welcome-card {
+/* Dashboard Header Section */
+.dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.welcome-section {
   background: linear-gradient(135deg, #03045e, #0077b6);
   color: white;
   padding: 2rem 2.5rem;
@@ -18,39 +22,40 @@
   box-shadow: 0 8px 16px rgba(3, 4, 94, 0.15);
 }
 
-.nurse-dashboard__header .welcome-card h1 {
+.welcome-section h1 {
   margin: 0 0 0.5rem 0;
-  font-size: 2.2rem;
-  font-weight: 800;
+  font-size: 2.5rem;
+  font-weight: 700;
 }
 
-.nurse-dashboard__header .welcome-card .meta-line {
+.office-info {
   margin: 0;
   opacity: 0.95;
-  font-size: 1rem;
+  font-size: 1.1rem;
   color: #caf0f8;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.nurse-dashboard__header .welcome-card .meta-line a {
+.office-info a {
   color: #90e0ef;
   text-decoration: none;
   font-weight: 600;
   border-bottom: 2px solid transparent;
   transition: border-color 0.2s;
 }
-.nurse-dashboard__header .welcome-card .meta-line a:hover {
+
+.office-info a:hover {
   border-bottom-color: #90e0ef;
 }
 
-/* Stats */
-.nurse-stats {
+/* Stats Grid */
+.stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
-  margin: 2rem 0;
+  margin-bottom: 2rem;
 }
 
 .stat-card {
@@ -64,6 +69,7 @@
   border: 2px solid transparent;
   transition: all 0.3s ease;
 }
+
 .stat-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0, 119, 182, 0.15);
@@ -79,24 +85,30 @@
   flex-shrink: 0;
 }
 
-.stat-card.primary .stat-icon {
+.stat-primary .stat-icon {
   background: linear-gradient(135deg, #dbeafe, #bfdbfe);
   color: #1e40af;
 }
-.stat-card.warning .stat-icon {
+
+.stat-warning .stat-icon {
   background: linear-gradient(135deg, #fef3c7, #fde68a);
   color: #92400e;
 }
-.stat-card.info .stat-icon {
+
+.stat-info .stat-icon {
   background: linear-gradient(135deg, #caf0f8, #90e0ef);
   color: #0077b6;
 }
-.stat-card.success .stat-icon {
+
+.stat-success .stat-icon {
   background: linear-gradient(135deg, #d1fae5, #a7f3d0);
   color: #065f46;
 }
 
-.stat-content { flex: 1; }
+.stat-content {
+  flex: 1;
+}
+
 .stat-value {
   font-size: 2rem;
   font-weight: 800;
@@ -104,19 +116,21 @@
   line-height: 1;
   margin-bottom: 0.25rem;
 }
+
 .stat-label {
   font-size: 0.875rem;
   color: #6b7280;
   font-weight: 500;
 }
 
-/* Quick actions */
-.nurse-actions {
+/* Quick Actions */
+.quick-actions {
   display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
   flex-wrap: wrap;
 }
+
 .action-btn {
   display: inline-flex;
   align-items: center;
@@ -130,6 +144,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .action-btn:hover {
   background: #00b4d8;
   color: white;
@@ -137,8 +152,8 @@
   box-shadow: 0 4px 12px rgba(0, 180, 216, 0.2);
 }
 
-/* Schedule block */
-.nurse-schedule {
+/* Schedule Section */
+.schedule-section {
   background: white;
   border-radius: 1rem;
   padding: 2rem;
@@ -146,7 +161,6 @@
   border: 1px solid rgba(0, 180, 216, 0.1);
 }
 
-/* Section header */
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -155,17 +169,20 @@
   gap: 1rem;
   flex-wrap: wrap;
 }
+
 .section-header h2 {
   color: #03045e;
   margin: 0;
   font-size: 1.75rem;
   font-weight: 700;
 }
+
 .section-controls {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
 }
+
 .search-box,
 .filter-box {
   display: flex;
@@ -177,10 +194,12 @@
   padding: 0.5rem 1rem;
   transition: border-color 0.2s;
 }
+
 .search-box:focus-within,
 .filter-box:focus-within {
   border-color: #00b4d8;
 }
+
 .search-box input,
 .filter-box select {
   border: none;
@@ -190,11 +209,21 @@
   color: #1f2937;
   min-width: 150px;
 }
-.search-box input::placeholder { color: #9ca3af; }
-.filter-box select { cursor: pointer; }
 
-/* Table */
-.appointments-table { width: 100%; overflow-x: auto; }
+.search-box input::placeholder {
+  color: #9ca3af;
+}
+
+.filter-box select {
+  cursor: pointer;
+}
+
+/* Appointments Table */
+.appointments-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .table-header {
   display: grid;
   grid-template-columns: 120px 2fr 2fr 150px;
@@ -209,7 +238,13 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.table-body { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .table-row {
   display: grid;
   grid-template-columns: 120px 2fr 2fr 150px;
@@ -222,6 +257,7 @@
   transition: all 0.2s ease;
   border: 2px solid transparent;
 }
+
 .table-row:hover {
   background: #caf0f8;
   transform: translateX(4px);
@@ -229,15 +265,40 @@
   box-shadow: 0 4px 12px rgba(0, 180, 216, 0.15);
 }
 
-/* Columns */
-.col-time { font-weight: 700; color: #0077b6; font-size: 1rem; }
-.col-patient { font-weight: 600; color: #03045e; }
-.patient-link { color: #0077b6; text-decoration: none; transition: color 0.2s; }
-.patient-link:hover { color: #00b4d8; text-decoration: underline; }
-.col-reason { color: #1f2937; font-size: 0.95rem; }
-.col-status { display: flex; justify-content: flex-start; }
+/* Table Columns */
+.col-time {
+  font-weight: 700;
+  color: #0077b6;
+  font-size: 1rem;
+}
 
-/* Status badges */
+.col-patient {
+  font-weight: 600;
+  color: #03045e;
+}
+
+.patient-link {
+  color: #0077b6;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.patient-link:hover {
+  color: #00b4d8;
+  text-decoration: underline;
+}
+
+.col-reason {
+  color: #1f2937;
+  font-size: 0.95rem;
+}
+
+.col-status {
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* Status Badges */
 .status-badge {
   display: inline-block;
   padding: 0.5rem 1rem;
@@ -247,36 +308,86 @@
   text-align: center;
   white-space: nowrap;
 }
-.status-scheduled { background: #dbeafe; color: #1e40af; }
-.status-waiting { background: #fef3c7; color: #92400e; }
-.status-consultation { background: #d1fae5; color: #065f46; }
-.status-completed { background: #e5e7eb; color: #374151; }
 
-/* Empty state */
+.status-scheduled {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-waiting {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-consultation {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-completed {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* Empty State */
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;
   color: #9ca3af;
 }
-.empty-state p { margin: 0.5rem 0 0 0; }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .nurse-dashboard { padding: 1rem; }
-  .nurse-dashboard__header .welcome-card { padding: 1.5rem; }
-  .nurse-dashboard__header .welcome-card h1 { font-size: 1.75rem; }
-  .nurse-stats { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-  .nurse-schedule { padding: 1.5rem; }
-  .section-header { flex-direction: column; align-items: flex-start; }
-  .section-controls { width: 100%; }
-  .table-header, .table-row {
-    grid-template-columns: 100px 1.5fr 1.5fr 120px;
-    gap: 1rem; padding: 1rem;
-  }
+.empty-state svg {
+  margin: 0 auto 1rem;
+  opacity: 0.3;
 }
-@media (max-width: 768px) {
-  .table-header, .table-row {
-    grid-template-columns: 80px 1fr 1fr 1fr;
-    gap: 0.75rem; padding: 0.875rem 1rem; font-size: 0.813rem;
+
+.empty-state p {
+  margin: 0;
+  font-size: 1.1rem;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .dashboard {
+    padding: 1rem;
+  }
+  
+  .welcome-section {
+    padding: 1.5rem;
+  }
+  
+  .welcome-section h1 {
+    font-size: 1.75rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  
+  .schedule-section {
+    padding: 1.5rem;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .section-controls {
+    width: 100%;
+  }
+  
+  .search-box,
+  .filter-box {
+    flex: 1;
+  }
+  
+  .table-header,
+  .table-row {
+    grid-template-columns: 100px 1.5fr 1.5fr 120px;
+    gap: 1rem;
+    padding: 1rem;
   }
 }
