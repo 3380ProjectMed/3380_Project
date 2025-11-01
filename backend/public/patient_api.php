@@ -285,11 +285,11 @@ elseif ($endpoint === 'profile') {
                 $st->close();
                 return $row && isset($row[$idCol]) ? (string)$row[$idCol] : '';
             };
-            // Use NULLIF so empty strings are stored as SQL NULL
+            // Use NULLIF for optional fields only - first_name and last_name are required
             $stmt = $mysqli->prepare(
                 "UPDATE patient
-                SET first_name = NULLIF(?, ''),
-                    last_name = NULLIF(?, ''),
+                SET first_name = ?,
+                    last_name = ?,
                     email = NULLIF(?, ''),
                     dob = NULLIF(?, ''),
                     gender = NULLIF(?, ''),

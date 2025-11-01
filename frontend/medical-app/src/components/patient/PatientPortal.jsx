@@ -235,14 +235,14 @@ export default function PatientPortal({ onLogout }) {
     // Revert formData to last fetched profile values and exit edit mode
     setFormData(fd => ({
       ...fd,
-      first_name: profile?.First_Name || '',
-      last_name: profile?.Last_Name || '',
+      first_name: profile?.first_name || '',
+      last_name: profile?.last_name || '',
       dob: profile?.dob || '',
-      email: profile?.Email || '',
-      gender: profile?.Gender ?? fd.gender,
-      genderAtBirth: profile?.AssignedAtBirth_Gender ?? fd.genderAtBirth,
-      ethnicity: profile?.Ethnicity ?? fd.ethnicity,
-      race: profile?.Race ?? fd.race,
+      email: profile?.email || '',
+      gender: profile?.gender ?? fd.gender,
+      genderAtBirth: profile?.assigned_at_birth_gender ?? fd.genderAtBirth,
+      ethnicity: profile?.ethnicity ?? fd.ethnicity,
+      race: profile?.race ?? fd.race,
     }));
     setProfileErrors({});
     setEditingProfile(false);
@@ -301,7 +301,7 @@ export default function PatientPortal({ onLogout }) {
     setBookingLoading(true);
     setBookingError(null);
     const appointmentData = {
-      doctor_id: selectedDoctor?.Doctor_id,
+      doctor_id: selectedDoctor?.doctor_id,
       office_id: selectedLocation,
       appointment_date: `${selectedDate} ${selectedTime}`,
       reason: appointmentReason,
