@@ -1,14 +1,21 @@
+import { j } from './api/api.js';
+
+// Use direct backend host during development to avoid dev-proxy mismatch or origin issues.
+// Vite provides import.meta.env.DEV which is true in dev server.
+// In production, the backend should be at the same origin (Azure App Service)
+const PATIENT_API_BASE = import.meta.env.DEV ? '' : '';
+
 // ==================== DASHBOARD ====================
 export const dashboardAPI = {
-  getDashboard: () => j('/api/patient_api.php?endpoint=dashboard')
+  getDashboard: () => j(`${PATIENT_API_BASE}/patient_api.php?endpoint=dashboard`)
 };
 
 // ==================== PROFILE ====================
 export const profileAPI = {
-  getProfile: () => j('/api/patient_api.php?endpoint=profile'),
+  getProfile: () => j(`${PATIENT_API_BASE}/patient_api.php?endpoint=profile`),
 
   updateProfile: (profileData) => 
-    j('/api/patient_api.php?endpoint=profile', {
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=profile`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profileData)
@@ -18,69 +25,74 @@ export const profileAPI = {
 // ==================== APPOINTMENTS ====================
 export const appointmentsAPI = {
   getUpcoming: () => 
-    j('/api/patient_api.php?endpoint=appointments&type=upcoming'),
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=appointments&type=upcoming`),
 
   getHistory: () => 
-    j('/api/patient_api.php?endpoint=appointments&type=history'),
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=appointments&type=history`),
 
   bookAppointment: (appointmentData) => 
-    j('/api/patient_api.php?endpoint=appointments', {
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=appointments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(appointmentData)
     }),
 
   cancelAppointment: (appointmentId) => 
-    j(`/api/patient_api.php?endpoint=appointments&id=${appointmentId}`, {
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=appointments&id=${appointmentId}`, {
       method: 'DELETE'
     }),
 
-  getDoctors: () => 
-    j('/api/patient_api.php?endpoint=doctors'),
+  // FIXED: Use PATIENT_API_BASE and j() helper like other endpoints
+  getDoctors: (specialty = null) => {
+    const url = specialty 
+      ? `${PATIENT_API_BASE}/patient_api.php?endpoint=doctors&specialty=${encodeURIComponent(specialty)}`
+      : `${PATIENT_API_BASE}/patient_api.php?endpoint=doctors`;
+    return j(url);
+  },
 
   getOffices: () => 
-    j('/api/patient_api.php?endpoint=offices')
-};
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=offices`)
+}
 
 // ==================== MEDICAL RECORDS ====================
 export const medicalRecordsAPI = {
   getVitals: () => 
-    j('/api/patient_api.php?endpoint=medical-records&type=vitals'),
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=vitals`),
 
   getMedications: () => 
-    j('/api/patient_api.php?endpoint=medical-records&type=medications'),
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=medications`),
 
   getAllergies: () => 
-    j('/api/patient_api.php?endpoint=medical-records&type=allergies'),
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=allergies`),
 
   getConditions: () => 
-    j('/api/patient_api.php?endpoint=medical-records&type=conditions'),
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=conditions`),
 
   getVisitSummaries: () => 
-    j('/api/patient_api.php?endpoint=medical-records&type=visit-summaries')
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=visit-summaries`)
 };
 
 // ==================== INSURANCE ====================
 export const insuranceAPI = {
   getInsurance: () => 
-    j('/api/patient_api.php?endpoint=insurance'),
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=insurance`),
 
   addInsurance: (insuranceData) => 
-    j('/api/patient_api.php?endpoint=insurance', {
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=insurance`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(insuranceData)
     }),
 
   updateInsurance: (insuranceId, insuranceData) => 
-    j(`/api/patient_api.php?endpoint=insurance&id=${insuranceId}`, {
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=insurance&id=${insuranceId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(insuranceData)
     }),
 
   removeInsurance: (insuranceId) => 
-    j(`/api/patient_api.php?endpoint=insurance&id=${insuranceId}`, {
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=insurance&id=${insuranceId}`, {
       method: 'DELETE'
     })
 };
@@ -88,13 +100,13 @@ export const insuranceAPI = {
 // ==================== BILLING ====================
 export const billingAPI = {
   getBalance: () => 
-    j('/api/patient_api.php?endpoint=billing&type=balance'),
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=billing&type=balance`),
 
   getStatements: () => 
-    j('/api/patient_api.php?endpoint=billing&type=statements'),
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=billing&type=statements`),
 
   processPayment: (paymentData) => 
-    j('/api/patient_api.php?endpoint=billing', {
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=billing`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(paymentData)

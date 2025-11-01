@@ -51,7 +51,7 @@ function DoctorPortal() {
         const useIdParam = /\D/.test(String(rawPatientId));
         const param = useIdParam ? `id=${encodeURIComponent(String(rawPatientId))}` : `patient_id=${encodeURIComponent(numericMatch ? numericMatch[0] : String(rawPatientId))}`;
 
-        const res = await fetch(`/api/doctor_api/patients/get-by-id.php?${param}`, { credentials: 'include' });
+        const res = await fetch(`/doctor_api/patients/get-by-id.php?${param}`, { credentials: 'include' });
         const json = await res.json();
         if (json && json.success) {
           setSelectedPatient(json.patient);

@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
 
   async function refreshUser() {
     try {
-     const r = await fetch('http://localhost:8080/api/me.php', { credentials: 'include' });
+     const r = await fetch('/api/me.php', { credentials: 'include' });
      if (r.ok) {
        setUser(await r.json());
      } else if (r.status === 401) {
@@ -27,11 +27,24 @@ export function AuthProvider({ children }) {
   }
   useEffect(() => { refreshUser(); }, []);
 
+  const checkAuth = async () => {
+  try {
+    const response = await fetch('/api/me.php');
+    if (response.ok) {
+      const data = await response.json();
+      setUser(data.user); // Will be null if not authenticated
+    }
+  } catch (error) {
+    console.error('Auth check failed:', error);
+    setUser(null);
+  }
+};
+
   async function login(email, password) {
-    const r = await fetch('http://localhost:8080/api/login.php', {
+    const r = await fetch('/api/login.php', {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json', 'Origin': 'http://localhost:5173'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
     if (!r.ok) {
@@ -52,7 +65,7 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    await fetch('http://localhost:8080/api/logout.php', { method: 'POST', credentials: 'include' });
+    await fetch('/api/logout.php', { method: 'POST', credentials: 'include' });
     setUser(null);
   }
 

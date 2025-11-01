@@ -61,7 +61,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       setError(null);
       try {
         // Use proxy-relative path so dev server forwards to backend and avoids CORS/html errors
-        const res = await fetch(`/api/doctor_api/patients/get-all.php?doctor_id=${did}`, { credentials: 'include' });
+        const res = await fetch(`/doctor_api/patients/get-all.php?doctor_id=${did}`, { credentials: 'include' });
         const payload = await res.json();
         if (payload.success) {
           setPatients(payload.patients);
@@ -91,7 +91,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       setError(null);
       try {
   // query patient by id using proxy-relative URL
-  const res = await fetch(`/api/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(q)}`, { credentials: 'include' });
+  const res = await fetch(`/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(q)}`, { credentials: 'include' });
         const payload = await res.json();
         if (payload.success) {
           setPatients([payload.patient]);
@@ -128,7 +128,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       // Prefer the clinical detail endpoint which returns medicalHistory, medicationHistory, chronicConditions and currentMedications
       // The clinical endpoint expects a numeric patient_id. Convert 'P001' -> 1
       const numericId = parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
-      const res = await fetch(`/api/doctor_api/clinical/get-patient-details.php?patient_id=${numericId}`, { credentials: 'include' });
+      const res = await fetch(`/doctor_api/clinical/get-patient-details.php?patient_id=${numericId}`, { credentials: 'include' });
       const payload = await res.json();
       if (payload.success && payload.patient) {
         // Merge the lightweight row data we already have with the enriched details returned by the clinical endpoint
@@ -158,7 +158,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
         if (onPatientClick) onPatientClick(merged);
       } else {
         // Fallback: try the patients get-by-id if clinical endpoint didn't return details
-        const fallback = await fetch(`/api/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`, { credentials: 'include' });
+        const fallback = await fetch(`/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`, { credentials: 'include' });
         const fbPayload = await fallback.json();
         if (fbPayload.success && fbPayload.patient) {
           setSelectedPatient(fbPayload.patient);

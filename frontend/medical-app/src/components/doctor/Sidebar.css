@@ -12,6 +12,11 @@
   display: flex;
   flex-direction: column;
   z-index: 1000;
+  /* CRITICAL: Make sure sidebar is always visible on desktop */
+  visibility: visible !important;
+  opacity: 1 !important;
+  /* ensure sidebar uses the same font as the app */
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
 .sidebar-content {
@@ -97,8 +102,8 @@
   transform: translateX(2px);
 }
 
-/* Mobile Responsive */
-@media (max-width: 1024px) {
+/* Mobile Responsive - only hide on very small screens */
+@media (max-width: 767px) {
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.3s ease;
@@ -106,5 +111,13 @@
   
   .sidebar.mobile-open {
     transform: translateX(0);
+  }
+}
+
+/* Ensure sidebar is visible on tablet and desktop */
+@media (min-width: 768px) {
+  .sidebar {
+    transform: translateX(0) !important;
+    display: flex !important;
   }
 }

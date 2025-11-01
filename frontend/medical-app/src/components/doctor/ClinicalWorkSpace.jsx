@@ -1,709 +1,546 @@
 import React, { useState, useEffect } from 'react';
-import './ClinicalWorkSpace.css';
 import { 
-  FileText, 
-  Activity, 
-  Clock, 
-  User, 
-  Calendar, 
-  AlertCircle,
-  Heart,
-  Thermometer,
-  Save,
-  X,
-  ArrowLeft,
-  Pill,
-  TestTube,
-  Clipboard
+  User, Calendar, Clock, AlertCircle, FileText, Activity,
+  Heart, Thermometer, Droplet, Pill, History, Save, X, ChevronDown, ChevronUp
 } from 'lucide-react';
+import './ClinicalWorkSpace.css';
 
-/**
- * ClinicalWorkSpace Component
- * 
- * Main workspace for doctors to:
- * - View patient visit details (created when patient checks in)
- * - View vitals recorded by nurses (read-only)
- * - Write clinical notes
- * - View patient history
- * 
- * Props:
- * @param {Object} appointment - Selected appointment with patient info
- * @param {Function} onBack - Navigate back to previous page
- */
-function ClinicalWorkSpace({ appointment, onBack }) {
-  const [currentTab, setCurrentTab] = useState('notes');
-  const [clinicalNote, setClinicalNote] = useState('');
-  const [currentVisit, setCurrentVisit] = useState(null);
-  const [patientInfo, setPatientInfo] = useState(null);
-  const [visitHistory, setVisitHistory] = useState([]);
-  const [medications, setMedications] = useState([]);
-  const [conditions, setConditions] = useState([]);
-  const [medicalHistoryList, setMedicalHistoryList] = useState([]);
-  const [medicationHistoryList, setMedicationHistoryList] = useState([]);
+export default function ClinicalWorkSpace({ appointmentId, onClose }) {
+  const [patientData, setPatientData] = useState(null);
+  const [notes, setNotes] = useState([]);
+  const [activeNote, setActiveNote] = useState('');
+  const [diagnosis, setDiagnosis] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [hasCheckedIn, setHasCheckedIn] = useState(false);
-  const [currentVitals, setCurrentVitals] = useState({});
+  const [expandedSections, setExpandedSections] = useState({
+    vitals: true,
+    currentMedications: true,
+    chronicConditions: true,
+    medicalHistory: false,
+    medicationHistory: false,
+    previousNotes: false
+  });
 
-  // Extract appointment ID from various possible formats
-  const appointmentId = appointment?.id || 
-                       appointment?.Appointment_id || 
-                       appointment?.appointment_id || 
-                       null;
+  useEffect(() => {
+    if (appointmentId) {
+      fetchPatientDetails();
+      fetchNotes();
+    }
+  }, [appointmentId]);
 
-  const patientId = appointment?.patientId || 
-                   appointment?.Patient_id || 
-                   appointment?.patient_id ||
-                   null;
-
-  /**
-   * Fetch current visit (if patient has checked in)
-   */
-  const fetchCurrentVisit = async () => {
+  const fetchPatientDetails = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      if (!appointmentId) {
-        throw new Error('No appointment ID available');
-      }
-
-      const res = await fetch(
-        `/api/doctor_api/clinical/get-patient-details.php?appointment_id=${appointmentId}`,
+      
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+      
+      const response = await fetch(
+        `${API_BASE}/doctor_api/clinical/get-patient-details.php?appointment_id=${appointmentId}`,
         { credentials: 'include' }
       );
       
-      const json = await res.json();
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        throw new Error('Server returned non-JSON response');
+      }
+
+      const data = await response.json();
       
-      if (json.success && json.has_visit) {
-        setCurrentVisit(json.visit);
-        setCurrentVitals(json.vitals || {});
-        setPatientInfo(json.patient);
-        setHasCheckedIn(true);
-        
-        // Pre-fill note if there's existing treatment text
-        if (json.visit.treatment) {
-          setClinicalNote(json.visit.treatment);
+      if (data.success) {
+        setPatientData(data);
+        // Pre-populate diagnosis if exists
+        if (data.visit && data.visit.diagnosis) {
+          setDiagnosis(data.visit.diagnosis);
         }
-      } else if (json.has_visit === false) {
-        // Patient hasn't checked in yet
-        setHasCheckedIn(false);
-        setError('Patient has not checked in yet. Vitals and visit details will appear after check-in.');
+        // Pre-populate note if exists
+        if (data.visit && data.visit.treatment) {
+          setActiveNote(data.visit.treatment);
+        }
+      } else if (data.has_visit === false) {
+        // Patient hasn't checked in yet - fetch basic patient info
+        await fetchBasicPatientInfo();
       } else {
-        throw new Error(json.error || 'Failed to load visit');
+        throw new Error(data.error || 'Failed to load patient data');
       }
     } catch (err) {
-      console.error('Failed to fetch visit', err);
-      setError(err.message);
+      console.error('Error fetching patient details:', err);
+      setError(err.message || 'Failed to load patient information');
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Fetch patient history (all previous visits)
+   * Fetch basic patient information when no visit exists yet
    */
-  const fetchPatientHistory = async () => {
-    if (!patientId) return;
-    
+  const fetchBasicPatientInfo = async () => {
     try {
-      const res = await fetch(
-        `/api/doctor_api/clinical/get-notes.php?patient_id=${patientId}`,
-        { credentials: 'include' }
-      );
-      const json = await res.json();
-      
-      if (json.success) {
-        setVisitHistory(json.notes || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch history', err);
-    }
-  };
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
 
-  /**
-   * Fetch patient medications
-   */
-  const fetchMedications = async () => {
-    if (!patientId) return;
-    
-    try {
-      // Use the clinical patient-details endpoint (proxied) so we get
-      // medical/medication history and current medications in one call.
-      const res = await fetch(
-        `/api/doctor_api/clinical/get-patient-details.php?patient_id=${patientId}`,
+      // First get patient_id from appointment
+      const aptResponse = await fetch(
+        `${API_BASE}/doctor_api/appointments/get.php?appointment_id=${appointmentId}`,
         { credentials: 'include' }
       );
-      const json = await res.json();
+
+      if (!aptResponse.ok) {
+        throw new Error('Could not fetch appointment details');
+      }
+
+      const aptData = await aptResponse.json();
       
-      if (json.success) {
-        setMedications(json.patient.currentMedications || []);
-        setConditions(json.patient.chronicConditions || []);
-        // optional: medical history (past diagnoses / procedures)
-        setMedicalHistoryList(json.patient.medicalHistory || []);
-        // optional: medication history (past meds and durations)
-        setMedicationHistoryList(json.patient.medicationHistory || []);
-        // If the clinical endpoint included vitals and a most recent visit, use them
-        if (json.vitals) {
-          setCurrentVitals(json.vitals || {});
+      if (aptData.success && aptData.appointment) {
+        const patientId = aptData.appointment.patient_id || aptData.appointment.Patient_id;
+        
+        // Now fetch patient basic info
+        const patResponse = await fetch(
+          `${API_BASE}/doctor_api/patients/get-by-id.php?patient_id=${patientId}`,
+          { credentials: 'include' }
+        );
+
+        if (!patResponse.ok) {
+          throw new Error('Could not fetch patient information');
+        }
+
+        const patData = await patResponse.json();
+        
+        if (patData.success && patData.patient) {
+          // Structure the data to match expected format
+          setPatientData({
+            success: true,
+            has_visit: false,
+            visit: {
+              appointment_id: appointmentId,
+              patient_id: patientId,
+              reason: aptData.appointment.reason || aptData.appointment.Reason_for_visit || '',
+              status: null,
+              diagnosis: null,
+              treatment: null
+            },
+            vitals: {
+              blood_pressure: null,
+              temperature: null,
+              recorded_by: null
+            },
+            patient: {
+              id: patientId,
+              name: patData.patient.name,
+              dob: patData.patient.dob,
+              age: patData.patient.age,
+              gender: patData.patient.gender,
+              blood_type: patData.patient.bloodType || patData.patient.blood_type,
+              allergies: patData.patient.allergies,
+              medicalHistory: patData.patient.medicalHistory || [],
+              medicationHistory: patData.patient.medicationHistory || [],
+              chronicConditions: patData.patient.chronicConditions || [],
+              currentMedications: patData.patient.currentMedications || []
+            }
+          });
         }
       }
     } catch (err) {
-      console.error('Failed to fetch medications', err);
+      console.error('Error fetching basic patient info:', err);
+      setError('Patient has not checked in yet. Basic information unavailable.');
     }
   };
 
-  /**
-   * Save clinical note to PatientVisit.Treatment
-   */
-  const handleSaveNote = async () => {
-    if (!currentVisit) {
-      alert('Cannot save note: No visit record found. Patient must check in first.');
-      return;
+  const fetchNotes = async () => {
+    try {
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+      
+      const response = await fetch(
+        `${API_BASE}/doctor_api/clinical/get-notes.php?appointment_id=${appointmentId}`,
+        { credentials: 'include' }
+      );
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setNotes(data.notes || []);
+      }
+    } catch (err) {
+      console.error('Error fetching notes:', err);
     }
+  };
 
-    if (!clinicalNote.trim()) {
-      alert('Please enter a note before saving.');
+  const handleSaveNote = async () => {
+    if (!activeNote.trim()) {
+      alert('Please enter a note before saving');
       return;
     }
 
     try {
+      setSaving(true);
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+      
       const payload = {
-        visit_id: currentVisit.visit_id,
-        appointment_id: currentVisit.appointment_id,
-        note_text: clinicalNote
+        appointment_id: appointmentId,
+        note_text: activeNote,
+        diagnosis: diagnosis || null
       };
 
-      const res = await fetch('/api/doctor_api/clinical/save-note.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      });
+      if (patientData?.visit?.visit_id) {
+        payload.visit_id = patientData.visit.visit_id;
+      }
+
+      const response = await fetch(
+        `${API_BASE}/doctor_api/clinical/save-note.php`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      const data = await response.json();
       
-      const json = await res.json();
-      
-      if (json.success) {
-        alert('Clinical note saved successfully!');
-        // Refresh the visit to show updated info
-        fetchCurrentVisit();
-        fetchPatientHistory(); // Refresh history
+      if (data.success) {
+        alert('Note saved successfully!');
+        fetchNotes();
+        fetchPatientDetails();
       } else {
-        alert('Failed to save note: ' + (json.error || 'Unknown error'));
+        throw new Error(data.error || 'Failed to save note');
       }
     } catch (err) {
-      console.error('Save note failed', err);
-      alert('Network error while saving note');
+      console.error('Error saving note:', err);
+      alert('Error saving note: ' + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Load data on mount
-  useEffect(() => {
-    if (appointmentId) {
-      fetchCurrentVisit();
-    }
-    if (patientId) {
-      fetchPatientHistory();
-      fetchMedications();
-    }
-  }, [appointmentId, patientId]);
-
-  /**
-   * NOTES TAB - Clinical documentation
-   */
-  const NotesTab = () => (
-    <div className="notes-tab">
-      {!hasCheckedIn ? (
-        <div className="alert alert-warning">
-          <AlertCircle size={20} />
-          <p>Patient has not checked in yet. Clinical notes can be added after check-in.</p>
-        </div>
-      ) : (
-        <>
-          <div className="note-templates">
-            <h4>Quick Templates</h4>
-            <div className="template-buttons">
-              <button 
-                className="template-btn"
-                onClick={() => setClinicalNote('Chief Complaint:\n\nHistory of Present Illness:\n\nPhysical Examination:\n\nAssessment:\n\nPlan:\n')}
-              >
-                SOAP Note
-              </button>
-              <button 
-                className="template-btn"
-                onClick={() => setClinicalNote('Patient presents for follow-up visit.\n\nCurrent status:\n\nMedication review:\n\nRecommendations:\n')}
-              >
-                Follow-up
-              </button>
-              <button 
-                className="template-btn"
-                onClick={() => setClinicalNote('Annual physical examination\n\nReview of Systems:\n- Constitutional:\n- Cardiovascular:\n- Respiratory:\n- GI:\n\nScreenings performed:\n')}
-              >
-                Annual Physical
-              </button>
-            </div>
-          </div>
-
-          <div className="note-editor">
-            <div className="editor-header">
-              <h4>Clinical Note</h4>
-              <span className="note-date">{new Date().toLocaleDateString()}</span>
-            </div>
-            <textarea
-              className="note-textarea"
-              value={clinicalNote}
-              onChange={(e) => setClinicalNote(e.target.value)}
-              placeholder="Begin typing your clinical note here...
-
-Use templates above for structured documentation."
-            />
-          </div>
-
-          <div className="note-actions">
-            <button className="btn-save" onClick={handleSaveNote}>
-              <Save size={18} />
-              Save Note
-            </button>
-            <button className="btn-cancel" onClick={() => setClinicalNote('')}>
-              <X size={18} />
-              Clear
-            </button>
-          </div>
-
-          {currentVisit && currentVisit.last_updated && (
-            <div className="note-metadata">
-              <small>
-                Last updated: {new Date(currentVisit.last_updated).toLocaleString()} 
-                {currentVisit.updated_by && ` by ${currentVisit.updated_by}`}
-              </small>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Previous Notes Section */}
-      <div className="previous-notes">
-        <h4>Recent Visit Notes</h4>
-        {visitHistory.length === 0 ? (
-          <div className="empty">No previous notes found</div>
-        ) : (
-          visitHistory.map((v, idx) => (
-            <div key={idx} className="note-card">
-              <div className="note-card-header">
-                <span className="note-date">
-                  {v.date ? new Date(v.date).toLocaleDateString() : 'Unknown date'}
-                </span>
-                <span className="note-provider">{v.doctor_name || 'Unknown doctor'}</span>
-              </div>
-              <div className="note-card-body">
-                <strong>{v.reason || 'Visit'}</strong>
-                {v.diagnosis && (
-                  <div className="note-diagnosis">
-                    <em>Diagnosis:</em> {typeof v.diagnosis === 'string' ? v.diagnosis : JSON.stringify(v.diagnosis)}
-                  </div>
-                )}
-                <p className="note-preview">{v.note_text || v.treatment || 'No notes recorded'}</p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-          </div>
-  );
-
-  /**
-   * VITALS TAB - View vitals recorded by nurses (read-only)
-   */
-  const VitalsTab = () => (
-    <div className="vitals-tab">
-      {!hasCheckedIn ? (
-        <div className="alert alert-warning">
-          <AlertCircle size={20} />
-          <p>Patient has not checked in yet. Vitals will appear after nursing staff records them.</p>
-        </div>
-      ) : (
-        <>
-          <div className="vitals-info-banner">
-            <AlertCircle size={18} />
-            <span>Vitals are recorded by nursing staff and are read-only for doctors</span>
-          </div>
-
-          <div className="vitals-grid">
-            {/* Blood Pressure */}
-            <div className="vital-card readonly">
-              <div className="vital-icon">
-                <Heart size={24} />
-              </div>
-              <label>Blood Pressure</label>
-              <div className="vital-value">
-                {currentVitals.blood_pressure || currentVisit?.vitals?.blood_pressure || 'Not recorded'}
-              </div>
-              <span className="vital-unit">mmHg</span>
-            </div>
-
-            {/* Temperature */}
-            <div className="vital-card readonly">
-              <div className="vital-icon">
-                <Thermometer size={24} />
-              </div>
-              <label>Temperature</label>
-              <div className="vital-value">
-                {currentVitals.temperature ? `${currentVitals.temperature}°F` : (currentVisit?.vitals?.temperature ? `${currentVisit.vitals.temperature}°F` : 'Not recorded')}
-              </div>
-              <span className="vital-unit">°F</span>
-            </div>
-          </div>
-
-          {(currentVitals.recorded_by || currentVisit?.vitals?.recorded_by) && (
-            <div className="vitals-recorded-by">
-              <small>Recorded by: {currentVitals.recorded_by || currentVisit.vitals.recorded_by}</small>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Vital Signs History */}
-      <div className="vitals-history">
-        <h4>Recent Vitals</h4>
-        <div className="vitals-history-table">
-          <div className="history-row header">
-            <span>Date</span>
-            <span>BP</span>
-            <span>Temp</span>
-            <span>Recorded By</span>
-          </div>
-          {visitHistory.length === 0 ? (
-            <div className="history-row"><span className="empty">No vitals recorded</span></div>
-          ) : (
-            visitHistory.map((v, i) => (
-              <div key={i} className="history-row">
-                <span>{v.date ? new Date(v.date).toLocaleDateString() : '-'}</span>
-                <span>{v.blood_pressure || '-'}</span>
-                <span>{v.temperature ? `${v.temperature}°F` : '-'}</span>
-                <span>{v.recorded_by || '-'}</span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  /**
-   * HISTORY TAB - Patient medical history
-   */
-  const HistoryTab = () => (
-    <div className="history-tab">
-      {/* Chronic Conditions */}
-      <div className="history-section">
-        <h4>
-          <Clipboard size={20} />
-          Chronic Conditions
-        </h4>
-        <div className="condition-list">
-          {conditions.length === 0 ? (
-            <div className="empty">No chronic conditions recorded</div>
-          ) : (
-            conditions.map((condition, index) => (
-              <div key={index} className="condition-tag">
-                {condition}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Current Medications */}
-      <div className="history-section">
-        <h4>
-          <Pill size={20} />
-          Current Medications
-        </h4>
-        <div className="medication-list">
-          {medications.length === 0 ? (
-            <div className="empty">No current medications</div>
-          ) : (
-            medications.map((med, index) => (
-              <div key={index} className="medication-item">
-                <div className="med-icon">💊</div>
-                <div>
-                  <strong>
-                    {typeof med === 'string' ? med : (med.medication_name || 'Medication')}
-                  </strong>
-                  {typeof med !== 'string' && med.dosage && (
-                    <div className="med-info">{med.dosage}</div>
-                  )}
-                  {typeof med !== 'string' && med.frequency && (
-                    <div className="med-info">{med.frequency}</div>
-                  )}
-                  {typeof med !== 'string' && med.prescribed_by && (
-                    <div className="med-info">Prescribed by: {med.prescribed_by}</div>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Medical History (past diagnoses / procedures) */}
-      <div className="history-section">
-        <h4>
-          <Clipboard size={20} />
-          Medical History
-        </h4>
-        <div className="medical-history-list">
-          {medicalHistoryList.length === 0 ? (
-            <div className="empty">No past medical history recorded</div>
-          ) : (
-            medicalHistoryList.map((h, i) => (
-              <div key={i} className="medical-history-item">
-                <strong>{h.condition || h.Condition_Name || ''}</strong>
-                {h.diagnosis_date && (
-                  <div className="mh-date">Diagnosed: {new Date(h.diagnosis_date).toLocaleDateString()}</div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Medication History (previous/long-term drugs) */}
-      <div className="history-section">
-        <h4>
-          <TestTube size={20} />
-          Medication History
-        </h4>
-        <div className="medication-history-list">
-          {medicationHistoryList.length === 0 ? (
-            <div className="empty">No medication history recorded</div>
-          ) : (
-            medicationHistoryList.map((m, idx) => (
-              <div key={idx} className="med-history-item">
-                <strong>{m.drug || m.Drug_name || ''}</strong>
-                {m.notes && <div className="mh-notes">{m.notes}</div>}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Visit History */}
-      <div className="history-section">
-        <h4>
-          <Clock size={20} />
-          Visit History
-        </h4>
-        <div className="visit-timeline">
-          {visitHistory.length === 0 ? (
-            <div className="empty">No visit history found</div>
-          ) : (
-            visitHistory.map((v, idx) => {
-              const date = v.date ? new Date(v.date).toLocaleDateString() : 'Unknown date';
-              const title = v.reason || 'Visit';
-              const diagnosis = typeof v.diagnosis === 'string' ? v.diagnosis : (v.diagnosis ? JSON.stringify(v.diagnosis) : '');
-              const noteText = v.note_text || v.treatment || '';
-
-              return (
-                <div className="visit-item" key={idx}>
-                  <div className="visit-date">{date}</div>
-                  <div className="visit-content">
-                    <strong>{title}</strong>
-                    {diagnosis && <div className="visit-diagnosis">Diagnosis: {diagnosis}</div>}
-                    {noteText && <p>{noteText}</p>}
-                    {v.blood_pressure && (
-                      <div className="visit-vitals">
-                        <small>Vitals: BP {v.blood_pressure}</small>
-                        {v.temperature && <small>, Temp {v.temperature}°F</small>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* Lab Results */}
-      <div className="history-section">
-        <h4>
-          <TestTube size={20} />
-          Recent Lab Results
-        </h4>
-        <div className="lab-results">
-          <div className="empty">No recent lab results</div>
-        </div>
-      </div>
-    </div>
-  );
-
-  /**
-   * Render tab content based on currentTab
-   */
-  const renderTabContent = () => {
-    switch (currentTab) {
-      case 'notes':
-        return <NotesTab />;
-      case 'vitals':
-        return <VitalsTab />;
-      case 'history':
-        return <HistoryTab />;
-      default:
-        return <NotesTab />;
-    }
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="clinical-workspace">
-        <div className="loading-state">
-          <Activity size={48} className="spinning" />
-          <p>Loading patient visit...</p>
+        <div className="workspace-loading">
+          <div className="spinner"></div>
+          <p>Loading patient information...</p>
         </div>
       </div>
     );
   }
 
-  // Use patient info from current visit or appointment
-  const displayPatient = patientInfo || {
-    name: appointment?.patientName || 'Unknown Patient',
-    age: null,
-    gender: '',
-    dob: '',
-    blood_type: '',
-    allergies: ''
-  };
+  if (error && !patientData) {
+    return (
+      <div className="clinical-workspace">
+        <div className="workspace-header">
+          <h2>Clinical Workspace</h2>
+          <button onClick={onClose} className="btn-close">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="workspace-error">
+          <AlertCircle size={48} />
+          <h3>Unable to Load Patient Information</h3>
+          <p>{error}</p>
+          <button onClick={fetchPatientDetails} className="btn-retry">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const patient = patientData?.patient;
+  const visit = patientData?.visit;
+  const vitals = patientData?.vitals;
+  const hasVisit = patientData?.has_visit !== false;
 
   return (
     <div className="clinical-workspace">
-      {/* Back Button */}
-      {onBack && (
-        <button className="btn-back" onClick={onBack}>
-          <ArrowLeft size={18} />
-          Back to Dashboard
+      {/* Header */}
+      <div className="workspace-header">
+        <div className="header-info">
+          <h2>
+            <User size={24} />
+            {patient?.name || 'Patient'}
+          </h2>
+          <div className="patient-meta">
+            <span>{patient?.age} years old</span>
+            <span>•</span>
+            <span>{patient?.gender || 'Unknown'}</span>
+            <span>•</span>
+            <span>Blood Type: {patient?.blood_type || 'Unknown'}</span>
+          </div>
+        </div>
+        <button onClick={onClose} className="btn-close">
+          <X size={20} />
         </button>
-      )}
-
-      {/* Error Banner */}
-      {error && !hasCheckedIn && (
-        <div className="alert alert-warning">
-          <AlertCircle size={20} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Patient Header Card */}
-      <div className="patient-header">
-        <div className="patient-header-left">
-          <div className="patient-avatar">
-            <User size={32} />
-          </div>
-          <div className="patient-info">
-            <h2>{displayPatient.name}</h2>
-            <div className="patient-meta">
-              {displayPatient.age && (
-                <span><User size={14} /> {displayPatient.age} yrs</span>
-              )}
-              {displayPatient.gender && (
-                <span>{displayPatient.gender}</span>
-              )}
-              {displayPatient.dob && (
-                <span><Calendar size={14} /> DOB: {displayPatient.dob}</span>
-              )}
-              {displayPatient.blood_type && (
-                <span>🩸 {displayPatient.blood_type}</span>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        <div className="patient-header-right">
-          <div className="appointment-info">
-            <div className="info-item">
-              <Clock size={16} />
-              <span>{appointment?.time || 'No time'}</span>
-            </div>
-            <div className="info-item">
-              <FileText size={16} />
-              <span>{appointment?.reason || currentVisit?.reason || 'No reason'}</span>
-            </div>
-            {currentVisit && (
-              <div className="info-item">
-                <span className={`status-badge status-${currentVisit.status?.toLowerCase().replace(' ', '-')}`}>
-                  {currentVisit.status}
-                </span>
-              </div>
-            )}
-            {!hasCheckedIn && (
-              <div className="info-item">
-                <span className="status-badge status-pending">
-                  Not Checked In
-                </span>
-              </div>
-            )}
-          </div>
-          
-        </div>
       </div>
 
-      {/* Allergies Alert */}
-      {displayPatient.allergies && displayPatient.allergies !== 'None' && displayPatient.allergies !== 'No Known Allergies' && (
-        <div className="allergies-alert">
-          <AlertCircle size={20} />
-          <span><strong>ALLERGIES:</strong> {displayPatient.allergies}</span>
-        </div>
-      )}
+      <div className="workspace-content">
+        {/* Left Column - Patient Information */}
+        <div className="workspace-column left-column">
+          
+          {/* Visit Information */}
+          <div className="info-card">
+            <h3><Calendar size={20} /> Visit Information</h3>
+            <div className="info-grid">
+              <div className="info-item">
+                <span className="label">Reason for Visit:</span>
+                <span className="value">{visit?.reason || 'Not specified'}</span>
+              </div>
+              {hasVisit && visit?.status && (
+                <div className="info-item">
+                  <span className="label">Status:</span>
+                  <span className="value status-badge">{visit.status}</span>
+                </div>
+              )}
+              {!hasVisit && (
+                <div className="info-item warning">
+                  <AlertCircle size={16} />
+                  <span>Patient has not checked in yet. Vitals will be available after check-in.</span>
+                </div>
+              )}
+            </div>
+          </div>
 
-      {/* Visit Info Banner (when checked in) */}
-      {hasCheckedIn && currentVisit && (
-        <div className="visit-info-banner">
-          <div className="visit-info-item">
-            <strong>Department:</strong> {currentVisit.department || 'N/A'}
-          </div>
-          <div className="visit-info-item">
-            <strong>Visit Date:</strong> {currentVisit.date ? new Date(currentVisit.date).toLocaleString() : 'N/A'}
-          </div>
-          {currentVisit.nurse_name && (
-            <div className="visit-info-item">
-              <strong>Nurse:</strong> {currentVisit.nurse_name}
+          {/* Vitals - Only show if patient has checked in */}
+          {hasVisit && (
+            <div className="info-card collapsible">
+              <div className="card-header" onClick={() => toggleSection('vitals')}>
+                <h3><Activity size={20} /> Vital Signs</h3>
+                {expandedSections.vitals ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+              </div>
+              {expandedSections.vitals && (
+                <div className="vitals-grid">
+                  <div className="vital-item">
+                    <Heart className="vital-icon bp" size={24} />
+                    <div>
+                      <span className="vital-label">Blood Pressure</span>
+                      <span className="vital-value">{vitals?.blood_pressure || 'Not recorded'}</span>
+                    </div>
+                  </div>
+                  <div className="vital-item">
+                    <Thermometer className="vital-icon temp" size={24} />
+                    <div>
+                      <span className="vital-label">Temperature</span>
+                      <span className="vital-value">{vitals?.temperature ? `${vitals.temperature}°F` : 'Not recorded'}</span>
+                    </div>
+                  </div>
+                  {vitals?.recorded_by && (
+                    <div className="vital-footer">
+                      Recorded by: {vitals.recorded_by}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
+
+          {/* Allergies */}
+          <div className="info-card alert-card">
+            <h3><AlertCircle size={20} /> Allergies</h3>
+            <p className="allergy-text">{patient?.allergies || 'No known allergies'}</p>
+          </div>
+
+          {/* Current Medications */}
+          <div className="info-card collapsible">
+            <div className="card-header" onClick={() => toggleSection('currentMedications')}>
+              <h3><Pill size={20} /> Current Medications</h3>
+              {expandedSections.currentMedications ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
+            {expandedSections.currentMedications && (
+              <div className="medications-list">
+                {patient?.currentMedications && patient.currentMedications.length > 0 ? (
+                  patient.currentMedications.map((med, idx) => (
+                    <div key={idx} className="medication-item">
+                      <div className="med-name">{med.name}</div>
+                      <div className="med-details">{med.frequency}</div>
+                      {med.prescribed_by && (
+                        <div className="med-prescriber">Prescribed by: {med.prescribed_by}</div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="empty-state">No current medications</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Chronic Conditions */}
+          <div className="info-card collapsible">
+            <div className="card-header" onClick={() => toggleSection('chronicConditions')}>
+              <h3><FileText size={20} /> Chronic Conditions</h3>
+              {expandedSections.chronicConditions ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
+            {expandedSections.chronicConditions && (
+              <div className="conditions-list">
+                {patient?.chronicConditions && patient.chronicConditions.length > 0 ? (
+                  <ul>
+                    {patient.chronicConditions.map((condition, idx) => (
+                      <li key={idx}>{condition}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="empty-state">No chronic conditions recorded</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Medical History */}
+          <div className="info-card collapsible">
+            <div className="card-header" onClick={() => toggleSection('medicalHistory')}>
+              <h3><History size={20} /> Medical History</h3>
+              {expandedSections.medicalHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
+            {expandedSections.medicalHistory && (
+              <div className="history-list">
+                {patient?.medicalHistory && patient.medicalHistory.length > 0 ? (
+                  patient.medicalHistory.map((item, idx) => (
+                    <div key={idx} className="history-item">
+                      <div className="history-condition">{item.condition}</div>
+                      <div className="history-date">{item.diagnosis_date || 'Date unknown'}</div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="empty-state">No medical history available</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Medication History */}
+          <div className="info-card collapsible">
+            <div className="card-header" onClick={() => toggleSection('medicationHistory')}>
+              <h3><Pill size={20} /> Medication History</h3>
+              {expandedSections.medicationHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
+            {expandedSections.medicationHistory && (
+              <div className="med-history-list">
+                {patient?.medicationHistory && patient.medicationHistory.length > 0 ? (
+                  patient.medicationHistory.map((med, idx) => (
+                    <div key={idx} className="med-history-item">
+                      <div className="med-name">{med.drug}</div>
+                      <div className="med-notes">{med.notes}</div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="empty-state">No medication history available</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      )}
 
-      {/* Tab Navigation */}
-      <div className="tabs">
-        <button
-          className={`tab-btn ${currentTab === 'notes' ? 'active' : ''}`}
-          onClick={() => setCurrentTab('notes')}
-        >
-          <FileText size={18} />
-          Visit Notes
-        </button>
-        <button
-          className={`tab-btn ${currentTab === 'vitals' ? 'active' : ''}`}
-          onClick={() => setCurrentTab('vitals')}
-        >
-          <Activity size={18} />
-          Vitals
-        </button>
-        <button
-          className={`tab-btn ${currentTab === 'history' ? 'active' : ''}`}
-          onClick={() => setCurrentTab('history')}
-        >
-          <Clock size={18} />
-          History
-        </button>
-      </div>
+        {/* Right Column - Clinical Notes */}
+        <div className="workspace-column right-column">
+          
+          {/* Diagnosis Section */}
+          <div className="notes-card">
+            <h3><FileText size={20} /> Diagnosis</h3>
+            <textarea
+              className="diagnosis-input"
+              value={diagnosis}
+              onChange={(e) => setDiagnosis(e.target.value)}
+              placeholder="Enter diagnosis..."
+              rows={2}
+              disabled={!hasVisit}
+            />
+            {!hasVisit && (
+              <p className="input-warning">
+                <AlertCircle size={14} /> Patient must check in before adding diagnosis
+              </p>
+            )}
+          </div>
 
-      {/* Tab Content */}
-      <div className="tab-content">
-        {renderTabContent()}
+          {/* Clinical Notes */}
+          <div className="notes-card">
+            <h3><FileText size={20} /> Clinical Notes</h3>
+            <textarea
+              className="notes-textarea"
+              value={activeNote}
+              onChange={(e) => setActiveNote(e.target.value)}
+              placeholder="Enter your clinical notes here..."
+              rows={12}
+              disabled={!hasVisit}
+            />
+            <div className="notes-actions">
+              <button 
+                onClick={handleSaveNote} 
+                className="btn-save"
+                disabled={saving || !activeNote.trim() || !hasVisit}
+              >
+                <Save size={18} />
+                {saving ? 'Saving...' : 'Save Note'}
+              </button>
+              <button 
+                onClick={() => {
+                  setActiveNote('');
+                  setDiagnosis('');
+                }} 
+                className="btn-clear"
+                disabled={!hasVisit}
+              >
+                Clear
+              </button>
+            </div>
+            {!hasVisit && (
+              <p className="input-warning">
+                <AlertCircle size={14} /> Patient must check in before adding notes
+              </p>
+            )}
+          </div>
+
+          {/* Previous Notes */}
+          <div className="notes-card collapsible">
+            <div className="card-header" onClick={() => toggleSection('previousNotes')}>
+              <h3><History size={20} /> Previous Visit Notes</h3>
+              {expandedSections.previousNotes ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
+            {expandedSections.previousNotes && (
+              <div className="previous-notes">
+                {notes.length > 0 ? (
+                  notes.map((note, idx) => (
+                    <div key={idx} className="note-item">
+                      <div className="note-header">
+                        <span className="note-date">
+                          {note.visit_date ? new Date(note.visit_date).toLocaleDateString() : 'Unknown date'}
+                        </span>
+                        <span className="note-doctor">{note.doctor_name}</span>
+                      </div>
+                      {note.diagnosis && (
+                        <div className="note-diagnosis">
+                          <strong>Diagnosis:</strong> {note.diagnosis}
+                        </div>
+                      )}
+                      <div className="note-text">{note.note_text || note.treatment || 'No notes'}</div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="empty-state">No previous visit notes</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
-export default ClinicalWorkSpace;
