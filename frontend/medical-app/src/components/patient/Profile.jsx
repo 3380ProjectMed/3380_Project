@@ -28,14 +28,14 @@ export default function Profile(props) {
                 // reset all fields to last fetched profile values
                 setFormData((fd) => ({
                   ...fd,
-                  first_name: profile?.First_Name || '',
-                  last_name: profile?.Last_Name || '',
+                  first_name: profile?.first_name || '',
+                  last_name: profile?.last_name || '',
                   dob: profile?.dob || '',
-                  email: profile?.Email || '',
-                  gender: profile?.Gender ?? fd.gender,
-                  genderAtBirth: profile?.AssignedAtBirth_Gender ?? fd.genderAtBirth,
-                  ethnicity: profile?.Ethnicity ?? fd.ethnicity,
-                  race: profile?.Race ?? fd.race,
+                  email: profile?.email || '',
+                  gender: profile?.gender ?? fd.gender,
+                  genderAtBirth: profile?.assigned_at_birth_gender ?? fd.genderAtBirth,
+                  ethnicity: profile?.ethnicity ?? fd.ethnicity,
+                  race: profile?.race ?? fd.race,
                 }));
               }}
             >
@@ -61,18 +61,18 @@ export default function Profile(props) {
             <>
                 <div className="profile-section">
                   <h2>Personal Information</h2>
-                  <div className="static-field"><strong>First Name:</strong> {profile?.First_Name || '-'}</div>
-                  <div className="static-field"><strong>Last Name:</strong> {profile?.Last_Name || '-'}</div>
+                  <div className="static-field"><strong>First Name:</strong> {profile?.first_name || '-'}</div>
+                  <div className="static-field"><strong>Last Name:</strong> {profile?.last_name || '-'}</div>
                   <div className="static-field"><strong>Date of Birth:</strong> {profile?.dob || '-'}</div>
-                  <div className="static-field"><strong>Email:</strong> {profile?.Email || '-'}</div>
+                  <div className="static-field"><strong>Email:</strong> {profile?.email || '-'}</div>
                 </div>
 
               <div className="profile-section">
                 <h2>Demographics</h2>
-                <div className="static-field"><strong>Gender:</strong> {profile?.Gender_Text || profile?.Gender || '-'}</div>
-                <div className="static-field"><strong>Assigned at Birth:</strong> {profile?.AssignedAtBirth_Gender_Text || profile?.AssignedAtBirth_Gender || '-'}</div>
-                <div className="static-field"><strong>Ethnicity:</strong> {profile?.Ethnicity_Text || profile?.Ethnicity || '-'}</div>
-                <div className="static-field"><strong>Race:</strong> {profile?.Race_Text || profile?.Race || '-'}</div>
+                <div className="static-field"><strong>Gender:</strong> {profile?.Gender_Text || profile?.gender || '-'}</div>
+                <div className="static-field"><strong>Assigned at Birth:</strong> {profile?.AssignedAtBirth_Gender_Text || profile?.assigned_at_birth_gender || '-'}</div>
+                <div className="static-field"><strong>Ethnicity:</strong> {profile?.Ethnicity_Text || profile?.ethnicity || '-'}</div>
+                <div className="static-field"><strong>Race:</strong> {profile?.Race_Text || profile?.race || '-'}</div>
               </div>
             </>
           ) : (
