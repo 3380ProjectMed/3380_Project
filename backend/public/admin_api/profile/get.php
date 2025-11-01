@@ -4,8 +4,8 @@
  * Matches YOUR database schema
  */
 
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
     session_start();
@@ -28,13 +28,13 @@ try {
 
     // SQL query for staff info
     $sql = "SELECT 
-                s.First_Name, 
-                s.Last_Name,
-                s.Staff_Email as Email, 
-                cg.Gender_Text as gender
-            FROM Staff s
-            LEFT JOIN CodesGender cg ON s.Gender = cg.GenderCode
-            WHERE s.Staff_id = ?";
+                s.first_name, 
+                s.last_name,
+                s.staff_email as Email, 
+                cg.gender_text as gender
+            FROM staff s
+            LEFT JOIN codes_gender cg ON s.gender = cg.gender_code
+            WHERE s.staff_id = ?";
 
     $result = executeQuery($conn, $sql, 'i', [$staff_id]);
 
