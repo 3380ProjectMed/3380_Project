@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import "./NursePatients.css";
-import { searchNursePatients } from '../../api/nurse';
+import { getNursePatientsUpcoming } from '../../api/nurse';
 import { useAuth } from '../../auth/AuthProvider';
 
 export default function NursePatients() {
@@ -28,16 +28,10 @@ export default function NursePatients() {
     setLoading(true);
     try {
       if (authLoading) return;
-      const email = user?.email;
-      if (!email) {
-        setError('No authenticated user');
-        setLoading(false);
-        return;
-      }
-      const r = await searchNursePatients(email, query || undefined, pg, pageSize);
-      // backend returns { nurse: {...}, patients: [...] }
-      setPatients(r.patients || []);
-      setTotal(Array.isArray(r.patients) ? r.patients.length : 0);
+      // Use session-authenticated endpoint to get upcoming patients for nurse's location
+      const list = await getNursePatientsUpcoming(query || undefined);
+      setPatients(list || []);
+      setTotal(Array.isArray(list) ? list.length : 0);
     } catch (e) {
       // Handle nurse-not-found specially
       const msg = (e && e.data && e.data.error) ? e.data.error : (e.message || 'Failed to load');
@@ -79,7 +73,7 @@ export default function NursePatients() {
                 <div className={p.allergies === "None" ? "allergy-none" : "allergy-has"}>{p.allergies}</div>
               </div>
             ))}
-            {!loading && patients.length === 0 && <div className="empty">No patients found</div>}
+            {!loading && patients.length === 0 && <div className="empty">No upcoming patients for your location.</div>}
           </div>
         </div>
 

@@ -1,32 +1,31 @@
 import React, { useEffect, useState } from "react";
 import "./NurseSchedule.css";
-import { getNurseSchedule } from '../../api/nurse';
+import { getNurseScheduleToday } from '../../api/nurse';
 
 export default function NurseSchedule() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  async function loadSchedule() {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getNurseScheduleToday().catch(() => []);
+      setRows(data || []);
+    } catch (e) {
+      setError(e && e.data && e.data.error === 'NURSE_NOT_FOUND' ? 'No nurse record is associated with this account.' : (e.message || 'Failed to load schedule'));
+    } finally { setLoading(false); }
+  }
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setLoading(true);
-      try {
-        const today = new Date().toISOString().slice(0,10);
-        const data = await getNurseSchedule({ date: today }).catch(() => []);
-        if (mounted) setRows(data || []);
-      } catch (e) {
-        if (mounted) setError(e.message || 'Failed to load schedule');
-      } finally { if (mounted) setLoading(false); }
-    }
-    load();
-    return () => { mounted = false; };
-  }, []);
+  useEffect(() => { loadSchedule(); }, []);
 
   return (
     <div className="nurse-page">
       <div className="nurse-schedule-page">
         <h1>My Schedule</h1>
+        <div style={{ marginBottom: 12 }}>
+          <button onClick={() => loadSchedule()}>Retry</button>
+        </div>
         <div className="nurse-table">
           <div className="thead">
             <div>Date</div><div>Time</div><div>Patient</div><div>Location</div><div>Reason</div>
@@ -41,7 +40,7 @@ export default function NurseSchedule() {
                 <div>{r.reason}</div>
               </div>
             )) : (
-              <div className="empty">{loading ? 'Loading...' : (error || 'No schedule')}</div>
+              <div className="empty">{loading ? 'Loading...' : (error || 'No schedule found for your location today')}</div>
             )}
           </div>
         </div>

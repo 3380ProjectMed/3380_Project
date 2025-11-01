@@ -194,6 +194,36 @@ export async function searchNursePatients(email, q, page, pageSize) {
 }
 
 /**
+ * Get nurse profile (session-authenticated)
+ * GET /nurse_api/profile/get.php
+ */
+export async function getNurseProfileSession() {
+  if (USE_MOCKS) return { nurseId: 1, staffId: 101, officeId: 1, firstName: 'Mock', lastName: 'Nurse' };
+  return request('GET', '/nurse_api/profile/get.php');
+}
+
+/**
+ * Get today's schedule for the nurse (session-authenticated)
+ * GET /nurse_api/schedule/get-today.php
+ */
+export async function getNurseScheduleToday() {
+  if (USE_MOCKS) return mockSchedule();
+  return request('GET', '/nurse_api/schedule/get-today.php');
+}
+
+/**
+ * Get upcoming patients for the nurse's location (session-authenticated)
+ * GET /nurse_api/patients/get-upcoming.php?q=
+ */
+export async function getNursePatientsUpcoming(q) {
+  if (USE_MOCKS) return (await mockPatients()).items;
+  const qs = new URLSearchParams();
+  if (q) qs.set('q', q);
+  const path = `/nurse_api/patients/get-upcoming.php${qs.toString() ? `?${qs.toString()}` : ''}`;
+  return request('GET', path);
+}
+
+/**
  * Get nurse patient by id
  * GET /nurse/patients/:id
  * @param {string} id
