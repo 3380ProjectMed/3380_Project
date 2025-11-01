@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode(file_get_contents('php://input'), true);
 
 // Validate required fields
-$required_fields = ['firstName', 'lastName', 'email', 'password', 'dateOfBirth', 'phone', 'gender'];
+$required_fields = ['firstName', 'lastName', 'email', 'password', 'confirmPassword', 'dateOfBirth', 'phone', 'gender'];
 foreach ($required_fields as $field) {
     if (empty($input[$field])) {
         $response['errors'][$field] = ucfirst(str_replace('_', ' ', $field)) . ' is required';
@@ -50,21 +50,44 @@ if (strlen($input['password']) < 8) {
     $response['errors']['password'] = 'Password must be at least 8 characters';
 }
 
+// Add password confirmation validation
+if ($input['password'] !== $input['confirmPassword']) {
+    $response['errors']['confirmPassword'] = 'Passwords do not match';
+}
+
 if (!empty($response['errors'])) {
     $response['message'] = 'Validation failed';
     echo json_encode($response);
     exit;
 }
 
-// Create database connection - FIXED: using correct variable names
-$mysqli = new mysqli($host, $user, $pass, $db, $port);
+// Initialize mysqli with SSL support (like login.php)
+$mysqli = mysqli_init();
+if (!$mysqli) {
+    $response['message'] = 'mysqli_init failed';
+    echo json_encode($response);
+    exit;
+}
 
-// Check connection
-if ($mysqli->connect_error) {
+// Set SSL options BEFORE connecting
+$sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
+
+if (file_exists($sslCertPath)) {
+    $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 1);
+} else {
+    $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 0);
+}
+
+// NOW connect with SSL
+if (!@$mysqli->real_connect($host, $user, $pass, $db, (int)$port, NULL, MYSQLI_CLIENT_SSL)) {
     $response['message'] = 'Database connection failed: ' . $mysqli->connect_error;
     echo json_encode($response);
     exit;
 }
+
+$mysqli->set_charset('utf8mb4');
 
 // Start transaction
 $mysqli->begin_transaction();
@@ -142,19 +165,19 @@ try {
         $emergency_contact = $input['emergencyContact'] . ':' . $emergency_phone;
     }
     
-    // Insert into Patient table - FIXED: using correct column names from your schema
+    // Insert into Patient table - Using PascalCase column names to match schema
     $stmt = $mysqli->prepare(
-        "INSERT INTO patient (
-            first_name, 
-            last_name, 
+        "INSERT INTO Patient (
+            First_Name, 
+            Last_Name, 
             dob, 
-            ssn, 
-            emergency_contact, 
-            assigned_at_birth,
-            gender,
-            email, 
-            consent_disclosure,
-            payer_type
+            SSN, 
+            EmergencyContact, 
+            AssignedAtBirth_Gender,
+            Gender,
+            Email, 
+            Consent_Disclose,
+            PayerType
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'N', 'Self-Pay')"
     );
     
@@ -185,7 +208,8 @@ try {
     $response['data'] = [
         'user_id' => $user_id,
         'patient_id' => $patient_id,
-        'username' => $username
+        'username' => $username,
+        'password_hash' => $password_hash  // Return hash so you can use it for other users
     ];
     
 } catch (Exception $e) {
