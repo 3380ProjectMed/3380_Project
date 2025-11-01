@@ -178,22 +178,20 @@ try {
 
     // $ssn already set above as TEMP + user_id
 
-    // Emergency contact: store digits only (VARCHAR(15))
-    $emergency_contact = null;
-    if (!empty($input['emergencyPhone'])) {
-        $emergency_contact = substr(preg_replace('/[^0-9]/', '', $input['emergencyPhone']), 0, 15);
-    }
+    // Emergency contact fields (all optional)
+    $ec_fn  = isset($input['emergencyContactfn']) && trim($input['emergencyContactfn']) !== '' ? trim($input['emergencyContactfn']) : null;
+    $ec_ln  = isset($input['emergencyContactln']) && trim($input['emergencyContactln']) !== '' ? trim($input['emergencyContactln']) : null;
+    $ec_rel = isset($input['emergencyContactrl']) && trim($input['emergencyContactrl']) !== '' ? trim($input['emergencyContactrl']) : null;
+    $ec_ph  = isset($input['emergencyPhone'])     && trim($input['emergencyPhone'])     !== '' ? substr(preg_replace('/\D+/', '', $input['emergencyPhone']), 0, 15) : null;
 
     // Gender map (SMALLINT)
-    $gender_map = [
-        'male' => 1, 'female' => 2, 'other' => 3, 'prefer-not-to-say' => 4
-    ];
+    $gender_map = ['male'=>1,'female'=>2,'other'=>3,'prefer-not-to-say'=>4];
     $assigned_at_birth_gender = $gender_map[strtolower($input['gender'])] ?? 3;
     $gender = $assigned_at_birth_gender;
 
     // Optional codes
     $ethnicity = (isset($input['ethnicity']) && $input['ethnicity'] !== '') ? (int)$input['ethnicity'] : null;
-    $race      = (isset($input['race']) && $input['race'] !== '') ? (int)$input['race'] : null;
+    $race      = (isset($input['race'])      && $input['race']      !== '') ? (int)$input['race']      : null;
 
     $email = $input['email'];
 
@@ -205,14 +203,29 @@ try {
     $allergies          = (isset($input['allergiesCode'])     && $input['allergiesCode']     !== '') ? (int)$input['allergiesCode']     : null;
     $blood_type         = (isset($input['bloodType'])         && $input['bloodType']         !== '') ? $input['bloodType']              : null;
 
-    // ----- INSERT into Patient -----
+    // ----- Optional insert into emergency_contact -----
+    $emergency_contact_id = null;
+    if ($ec_fn || $ec_ln || $ec_rel || $ec_ph) {
+        $stmt = $mysqli->prepare(
+            "INSERT INTO emergency_contact (first_name, last_name, relation, phone)
+            VALUES (?, ?, ?, ?)"
+        );
+        $stmt->bind_param("ssss", $ec_fn, $ec_ln, $ec_rel, $ec_ph);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to create emergency contact: ' . $stmt->error);
+        }
+        $emergency_contact_id = $mysqli->insert_id;
+        $stmt->close();
+    }
+
+    // ----- INSERT into Patient (with emergency_contact_id) -----
     $stmt = $mysqli->prepare(
         "INSERT INTO Patient (
             first_name,
             last_name,
             dob,
             ssn,
-            emergency_contact,
+            emergency_contact_id,
             assigned_at_birth_gender,
             gender,
             ethnicity,
@@ -228,14 +241,15 @@ try {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
 
-    // Types: sssss | iiii | s | iiiiii | s  (total 17)
+    // Types (17 total):
+    // 1-4 ssss | 5 i | 6-9 iiii | 10 s | 11-16 iiiiii | 17 s
     $stmt->bind_param(
-        'sssssiiiisiiiiiis',
+        'ssssiiiiisiiiiiis',
         $first_name,
         $last_name,
         $dob,
         $ssn,
-        $emergency_contact,
+        $emergency_contact_id,
         $assigned_at_birth_gender,
         $gender,
         $ethnicity,

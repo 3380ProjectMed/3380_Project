@@ -3,22 +3,15 @@ import { Mail, Lock, User, Phone, Calendar, MapPin, UserPlus } from 'lucide-reac
 import './SignUp.css';
 
 export default function SignUp() {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    dateOfBirth: '',
-    phone: '',
-    gender: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    emergencyContact: '',
-    emergencyPhone: ''
-  });
+const [formData, setFormData] = useState({
+  firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
+  dateOfBirth: '', phone: '', gender: '',
+  address: '', city: '', state: '', zipCode: '',
+  emergencyContactfn: '',
+  emergencyContactln: '',
+  emergencyContactrl: '',
+  emergencyPhone: ''
+});
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -306,14 +299,36 @@ export default function SignUp() {
               
               <div className="signup-grid">
                 <div className="signup-field">
-                  <label htmlFor="emergencyContact" className="signup-label">
-                    Contact Name
+                  <label htmlFor="emergencyContactfn" className="signup-label">
+                    Contact First Name
                   </label>
                   <input
                     type="text"
-                    id="emergencyContact"
-                    name="emergencyContact"
-                    value={formData.emergencyContact}
+                    id="emergencyContactfn"
+                    name="emergencyContactfn"
+                    value={formData.emergencyContactfn}
+                    onChange={handleChange}
+                    className="signup-input"
+                  />
+                  <label htmlFor="emergencyContactln" className="signup-label">
+                    Contact Last Name
+                  </label>
+                  <input
+                    type="text"
+                    id="emergencyContactln"
+                    name="emergencyContactln"
+                    value={formData.emergencyContactln}
+                    onChange={handleChange}
+                    className="signup-input"
+                  />
+                  <label htmlFor="emergencyContactrl" className="signup-label">
+                    Contact Relation to Patient
+                  </label>
+                  <input
+                    type="text"
+                    id="emergencyContactrl"
+                    name="emergencyContactrl"
+                    value={formData.emergencyContactrl}
                     onChange={handleChange}
                     className="signup-input"
                   />
