@@ -3,11 +3,12 @@
 header('Content-Type: application/json');
 
 // Database configuration
-  $host = getenv('AZURE_MYSQL_HOST') ?: '';
-  $user = getenv('AZURE_MYSQL_USERNAME') ?: '';
-  $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
-  $db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
-  $port = getenv('AZURE_MYSQL_PORT') ?: '3306';
+$host = getenv('AZURE_MYSQL_HOST') ?: '';
+$user = getenv('AZURE_MYSQL_USERNAME') ?: '';
+$pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
+$db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
+$port = getenv('AZURE_MYSQL_PORT') ?: '3306';
+
 // Initialize response array
 $response = [
     'success' => false,
@@ -55,12 +56,12 @@ if (!empty($response['errors'])) {
     exit;
 }
 
-// Create database connection
-$mysqli = new mysqli($db_host, $db_user, $db_pass, $db_name);
+// Create database connection - FIXED: using correct variable names
+$mysqli = new mysqli($host, $user, $pass, $db, $port);
 
 // Check connection
 if ($mysqli->connect_error) {
-    $response['message'] = 'Database connection failed';
+    $response['message'] = 'Database connection failed: ' . $mysqli->connect_error;
     echo json_encode($response);
     exit;
 }
@@ -117,7 +118,7 @@ try {
     $user_id = $mysqli->insert_id;
     $stmt->close();
     
-    // Map gender value to code
+    // Map gender value to code (matching your SMALLINT field)
     // Assuming: 1 = Male, 2 = Female, 3 = Other, 4 = Prefer not to say
     $gender_map = [
         'male' => 1,
@@ -125,45 +126,40 @@ try {
         'other' => 3,
         'prefer-not-to-say' => 4
     ];
-    $assigned_gender = $gender_map[$input['gender']] ?? 3;
+    $assigned_gender = $gender_map[strtolower($input['gender'])] ?? 3;
     
     // Generate SSN placeholder (you should implement proper SSN handling)
-    // For now, using a temporary placeholder - MUST BE REPLACED with actual SSN collection
+    // For now, using a temporary placeholder
     $ssn = 'TEMP' . str_pad($user_id, 7, '0', STR_PAD_LEFT);
     
     // Format phone number (remove non-numeric characters)
     $phone = preg_replace('/[^0-9]/', '', $input['phone']);
     
-    // Format emergency contact phone if provided
-    $emergency_phone = null;
-    if (!empty($input['emergencyPhone'])) {
-        $emergency_phone = preg_replace('/[^0-9]/', '', $input['emergencyPhone']);
-    }
-    
-    // Prepare emergency contact string
+    // Format emergency contact
     $emergency_contact = null;
-    if (!empty($input['emergencyContact']) && !empty($emergency_phone)) {
+    if (!empty($input['emergencyContact']) && !empty($input['emergencyPhone'])) {
+        $emergency_phone = preg_replace('/[^0-9]/', '', $input['emergencyPhone']);
         $emergency_contact = $input['emergencyContact'] . ':' . $emergency_phone;
     }
     
-    // Insert into Patient table
+    // Insert into Patient table - FIXED: using correct column names from your schema
     $stmt = $mysqli->prepare(
-        "INSERT INTO Patient (
-            First_Name, 
-            Last_Name, 
+        "INSERT INTO patient (
+            first_name, 
+            last_name, 
             dob, 
-            SSN, 
-            EmergencyContact, 
-            AssignedAtBirth_Gender,
-            Gender,
-            Email, 
-            Consent_Disclose,
-            PayerType
+            ssn, 
+            emergency_contact, 
+            assigned_at_birth,
+            gender,
+            email, 
+            consent_disclosure,
+            payer_type
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'N', 'Self-Pay')"
     );
     
     $stmt->bind_param(
-        "sssssiss",
+        "sssssiis",
         $input['firstName'],
         $input['lastName'],
         $input['dateOfBirth'],
@@ -175,14 +171,11 @@ try {
     );
     
     if (!$stmt->execute()) {
-        throw new Exception('Failed to create patient record');
+        throw new Exception('Failed to create patient record: ' . $stmt->error);
     }
     
     $patient_id = $mysqli->insert_id;
     $stmt->close();
-    
-    // If address information is provided, you might want to store it in a separate address table
-    // This is optional based on your database schema
     
     // Commit transaction
     $mysqli->commit();

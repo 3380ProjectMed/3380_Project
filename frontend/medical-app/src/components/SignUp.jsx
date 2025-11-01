@@ -66,17 +66,39 @@ export default function SignUp() {
       }));
     }
   };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
     
-    setTimeout(() => {
-      console.log('Form submitted:', formData);
-      alert('Account created successfully!');
+    try {
+      const response = await fetch('/api/signup.php', {  // Adjust path as needed
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('Account created successfully!');
+        // Redirect to login or dashboard
+        window.location.href = '/login';
+      } else {
+        // Display server-side errors
+        if (data.errors) {
+          setErrors(data.errors);
+        }
+        alert(data.message || 'Registration failed');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (
