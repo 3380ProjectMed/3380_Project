@@ -181,14 +181,16 @@ export async function updateAppointmentStatus(apptId, status) {
  * @param {number} [pageSize]
  * @returns {Promise<{ items: NursePatient[]; total: number }>}
  */
-export async function searchNursePatients(q, page, pageSize) {
+export async function searchNursePatients(email, q, page, pageSize) {
+  // signature: (email, q, page, pageSize)
   if (USE_MOCKS) return mockPatients();
   const qs = new URLSearchParams();
   if (q) qs.set('q', q);
   if (page != null) qs.set('page', String(page));
-  if (pageSize != null) qs.set('pageSize', String(pageSize));
-  const path = `/nurse/patients${qs.toString() ? `?${qs.toString()}` : ''}`;
-  return request('GET', path);
+  if (pageSize != null) qs.set('limit', String(pageSize));
+  const path = `/nurse_api/patients/get-all.php${qs.toString() ? `?${qs.toString()}` : ''}`;
+  // attach X-User-Email header so backend can resolve the nurse record
+  return request('GET', path, undefined, { headers: { 'X-User-Email': String(email || '') } });
 }
 
 /**

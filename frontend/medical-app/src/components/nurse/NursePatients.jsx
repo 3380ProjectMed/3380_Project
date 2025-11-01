@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import "./NursePatients.css";
 import { searchNursePatients } from '../../api/nurse';
+import { useAuth } from '../../auth/AuthProvider';
 
 export default function NursePatients() {
   const [q, setQ] = useState("");
@@ -12,6 +13,8 @@ export default function NursePatients() {
   const [error, setError] = useState(null);
   const debounceRef = useRef(null);
 
+  const { user, loading: authLoading } = useAuth();
+
   useEffect(() => {
     // debounce search
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -19,16 +22,30 @@ export default function NursePatients() {
       load(q, page);
     }, 300);
     return () => clearTimeout(debounceRef.current);
-  }, [q, page]);
+  }, [q, page, user, authLoading]);
 
   async function load(query, pg) {
     setLoading(true);
     try {
-      const r = await searchNursePatients(query || undefined, pg, pageSize);
-      setPatients(r.items || []);
-      setTotal(r.total || 0);
+      if (authLoading) return;
+      const email = user?.email;
+      if (!email) {
+        setError('No authenticated user');
+        setLoading(false);
+        return;
+      }
+      const r = await searchNursePatients(email, query || undefined, pg, pageSize);
+      // backend returns { nurse: {...}, patients: [...] }
+      setPatients(r.patients || []);
+      setTotal(Array.isArray(r.patients) ? r.patients.length : 0);
     } catch (e) {
-      setError(e.message || 'Failed to load');
+      // Handle nurse-not-found specially
+      const msg = (e && e.data && e.data.error) ? e.data.error : (e.message || 'Failed to load');
+      if (msg === 'NURSE_NOT_FOUND') {
+        setError('No nurse record is associated with this account.');
+      } else {
+        setError(e.message || 'Failed to load');
+      }
     } finally {
       setLoading(false);
     }
@@ -37,7 +54,7 @@ export default function NursePatients() {
   return (
     <div className="nurse-page">
       <div className="nurse-patients-page">
-        <h1>My Patients</h1>
+  <h1>My Patients</h1>
 
         <div className="searchbar">
           <input
@@ -55,10 +72,10 @@ export default function NursePatients() {
           <div className="tbody">
             {loading && <div className="empty">Loading…</div>}
             {!loading && patients.map((p) => (
-              <div key={p.id} className="row">
-                <div className="mono">{p.id}</div>
+              <div key={p.patient_id} className="row">
+                <div className="mono">{p.patient_id}</div>
                 <div>{p.name}</div>
-                <div>{new Date(p.dob).toLocaleDateString()}</div>
+                <div>{p.dob}</div>
                 <div className={p.allergies === "None" ? "allergy-none" : "allergy-has"}>{p.allergies}</div>
               </div>
             ))}
