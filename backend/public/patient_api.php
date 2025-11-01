@@ -7,11 +7,18 @@ require_once '/home/site/wwwroot/database.php';
 
 header('Content-Type: application/json');
 
-// Start session
-session_start();
+// Start session with same configuration as login system
+session_start([
+    'cookie_httponly' => true,
+    'cookie_secure'   => !empty($_SERVER['HTTPS']),
+    'cookie_samesite' => 'Lax',
+]);
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
+    // Debug: Log all session data
+    error_log("Patient API: Full session data = " . json_encode($_SESSION));
+    
     // Map logged-in user to correct patient
     if (!isset($_SESSION['patient_id'])) {
         // Get the logged-in user's email from the main authentication system
