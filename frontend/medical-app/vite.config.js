@@ -14,12 +14,17 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
-      // Admin API lives under /admin_api on the backend (not /api/admin_api),
+      // Admin API lives under /admin_api on the backend (not /admin_api),
       // so strip the /api prefix when forwarding requests to admin endpoints.
-      '/api/admin_api': {
+      '/admin_api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      // Patient API endpoint
+      '/patient_api.php': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
       },
       // 2) all other /api/* endpoints (for example /api/login.php) should be forwarded unchanged
       '/api': {

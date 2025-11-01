@@ -1,7 +1,7 @@
 <?php
 /**
  * Get doctor profile
- * Matches YOUR database schema
+ * Updated for Azure database
  */
 
 require_once '/home/site/wwwroot/cors.php';
@@ -21,34 +21,33 @@ try {
         $user_id = (int)$_SESSION['uid'];
 
         $conn = getDBConnection();
-        // Resolve doctor_id from user's email
-        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
         if (empty($rows)) {
             closeDBConnection($conn);
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'No doctor associated with this user']);
             exit;
         }
-        $doctor_id = (int)$rows[0]['Doctor_id'];
+        $doctor_id = (int)$rows[0]['doctor_id'];
     }
     
     $conn = $conn ?? getDBConnection();
     
-    // SQL query for doctor info
+    // SQL query for doctor info (all lowercase)
     $sql = "SELECT 
-                d.Doctor_id,
-                d.First_Name,
-                d.Last_Name,
-                d.Email,
-                d.Phone,
-                d.License_Number,
+                d.doctor_id,
+                d.first_name,
+                d.last_name,
+                d.email,
+                d.phone,
+                d.license_number,
                 s.specialty_name,
-                cg.Gender_Text as gender
-            FROM Doctor d
-            LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
-            LEFT JOIN CodesGender cg ON d.Gender = cg.GenderCode
-            WHERE d.Doctor_id = ?";
-    
+                cg.gender_text as gender
+            FROM doctor d
+            LEFT JOIN specialty s ON d.specialty = s.specialty_id
+            LEFT JOIN codes_gender cg ON d.gender = cg.gender_code
+            WHERE d.doctor_id = ?";
+
     $result = executeQuery($conn, $sql, 'i', [$doctor_id]);
     
     if (empty($result)) {
@@ -62,14 +61,14 @@ try {
     echo json_encode([
         'success' => true,
         'profile' => [
-            'firstName' => $doctor['First_Name'],
-            'lastName' => $doctor['Last_Name'],
-            'email' => $doctor['Email'],
-            'phone' => $doctor['Phone'] ?: 'Not provided',
-            'licenseNumber' => $doctor['License_Number'],
+            'firstName' => $doctor['first_name'],  // ← Fixed: lowercase from query
+            'lastName' => $doctor['last_name'],     // ← Fixed: lowercase
+            'email' => $doctor['email'],
+            'phone' => $doctor['phone'] ?: 'Not provided',
+            'licenseNumber' => $doctor['license_number'],  // ← Fixed: lowercase
             'specialties' => [$doctor['specialty_name']],
             'gender' => $doctor['gender'],
-            'bio' => '' // Add bio field to your database if needed
+            'bio' => ''
         ]
     ]);
     

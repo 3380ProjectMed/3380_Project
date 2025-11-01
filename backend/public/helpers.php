@@ -23,27 +23,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Start session (for when auth is ready)
 session_start();
 
-// ==================== TEMPORARY MOCK AUTH ====================
-// TODO: Replace this with real auth when teammate finishes
 function requireAuth($allowed_roles = ['PATIENT']) {
-    // MOCK: For testing, always set a fake patient_id
+    // MOCK: For testing, dynamically find and use any valid patient
     if (!isset($_SESSION['patient_id'])) {
-        $_SESSION['patient_id'] = 1; // Hardcoded test patient ID
-        $_SESSION['role'] = 'PATIENT';
-        $_SESSION['username'] = 'johndoe';
+        // Get a database connection to find a valid patient
+        try {
+            require_once '../database.php';
+            $mysqli = getDBConnection();
+            
+            // Find the first available patient in the database
+            $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient LIMIT 1");
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $patient = $result->fetch_assoc();
+            $stmt->close();
+            
+            if ($patient) {
+                $_SESSION['patient_id'] = $patient['patient_id'];
+                $_SESSION['role'] = 'PATIENT';
+                $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
+                $_SESSION['email'] = $patient['email'];
+                error_log("Mock auth: Using patient_id = " . $patient['patient_id'] . " (" . $patient['first_name'] . " " . $patient['last_name'] . ")");
+            } else {
+                // Fallback if no patients found
+                $_SESSION['patient_id'] = 1;
+                $_SESSION['role'] = 'PATIENT';
+                $_SESSION['username'] = 'testpatient';
+                error_log("Mock auth: No patients found in database, using fallback patient_id = 1");
+            }
+        } catch (Exception $e) {
+            // If database connection fails, use fallback
+            $_SESSION['patient_id'] = 1;
+            $_SESSION['role'] = 'PATIENT';
+            $_SESSION['username'] = 'testpatient';
+            error_log("Mock auth: Database error, using fallback - " . $e->getMessage());
+        }
     }
-    
-    // When real auth is ready, uncomment this:
-    /*
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-        sendResponse(false, [], 'Authentication required', 401);
-    }
-    
-    if (!in_array($_SESSION['role'], $allowed_roles)) {
-        sendResponse(false, [], 'Access denied', 403);
-    }
-    */
 }
+    
 
 // ==================== RESPONSE HELPER ====================
 function sendResponse($success, $data = [], $message = '', $statusCode = 200) {

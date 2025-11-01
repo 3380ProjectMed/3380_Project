@@ -58,7 +58,7 @@ function EditUserModal({ user, onClose, onSave }) {
     
     try {
       setLoading(true);
-      const res = await fetch('/api/admin_api/users/reset-password.php', {
+      const res = await fetch('/admin_api/users/reset-password.php', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -94,7 +94,7 @@ function EditUserModal({ user, onClose, onSave }) {
       setLoading(true);
       setError(null);
       
-      const res = await fetch('/api/admin_api/update.php', {
+      const res = await fetch('/admin_api/update.php', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -135,7 +135,7 @@ function EditUserModal({ user, onClose, onSave }) {
     
     try {
       setLoading(true);
-      const res = await fetch('/api/admin_api/update.php', {
+      const res = await fetch('/admin_api/update.php', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 8.0.43, for macos15 (x86_64)
 --
--- Host: localhost    Database: med-app-db
+-- Host: medconnect-db.mysql.database.azure.com    Database: med-app-db
 -- ------------------------------------------------------
--- Server version	8.4.6
+-- Server version	8.0.42-azure
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */
 ;
@@ -26,7 +26,7 @@
 ;
 
 --
--- Table structure for table `Appointment`
+-- Table structure for table `appointment`
 --
 
 DROP TABLE IF EXISTS `Appointment`;
@@ -63,7 +63,7 @@ CREATE TABLE `Appointment` (
 ;
 
 --
--- Dumping data for table `Appointment`
+-- Dumping data for table `appointment`
 --
 
 LOCK TABLES `Appointment` WRITE;
@@ -290,7 +290,7 @@ DELIMITER;
 ;
 
 --
--- Table structure for table `CodesAllergies`
+-- Table structure for table `codes_gender`
 --
 
 DROP TABLE IF EXISTS `CodesAllergies`;
@@ -307,7 +307,7 @@ CREATE TABLE `CodesAllergies` (
 ;
 
 --
--- Dumping data for table `CodesAllergies`
+-- Dumping data for table `codesallergies`
 --
 
 LOCK TABLES `CodesAllergies` WRITE;
@@ -346,7 +346,7 @@ VALUES (1, 'Penicillin'),
 UNLOCK TABLES;
 
 --
--- Table structure for table `CodesAssignedAtBirth_Gender`
+-- Table structure for table `codesassignedatbirth_gender`
 --
 
 DROP TABLE IF EXISTS `CodesAssignedAtBirth_Gender`;
@@ -363,7 +363,7 @@ CREATE TABLE `CodesAssignedAtBirth_Gender` (
 ;
 
 --
--- Dumping data for table `CodesAssignedAtBirth_Gender`
+-- Dumping data for table `codesassignedatbirth_gender`
 --
 
 LOCK TABLES `CodesAssignedAtBirth_Gender` WRITE;
@@ -381,7 +381,7 @@ VALUES (1, 'Male'),
 UNLOCK TABLES;
 
 --
--- Table structure for table `CodesEthnicity`
+-- Table structure for table `codesethnicity`
 --
 
 DROP TABLE IF EXISTS `CodesEthnicity`;
@@ -398,7 +398,7 @@ CREATE TABLE `CodesEthnicity` (
 ;
 
 --
--- Dumping data for table `CodesEthnicity`
+-- Dumping data for table `codesethnicity`
 --
 
 LOCK TABLES `CodesEthnicity` WRITE;
@@ -415,7 +415,7 @@ VALUES (1, 'Hispanic or Latino'),
 UNLOCK TABLES;
 
 --
--- Table structure for table `CodesGender`
+-- Table structure for table `codesgender`
 --
 
 DROP TABLE IF EXISTS `CodesGender`;
@@ -432,7 +432,7 @@ CREATE TABLE `CodesGender` (
 ;
 
 --
--- Dumping data for table `CodesGender`
+-- Dumping data for table `codesgender`
 --
 
 LOCK TABLES `CodesGender` WRITE;
@@ -451,7 +451,7 @@ VALUES (1, 'Male'),
 UNLOCK TABLES;
 
 --
--- Table structure for table `CodesRace`
+-- Table structure for table `codesrace`
 --
 
 DROP TABLE IF EXISTS `CodesRace`;
@@ -468,7 +468,7 @@ CREATE TABLE `CodesRace` (
 ;
 
 --
--- Dumping data for table `CodesRace`
+-- Dumping data for table `codesrace`
 --
 
 LOCK TABLES `CodesRace` WRITE;
@@ -498,7 +498,7 @@ VALUES (1, 'White'),
 UNLOCK TABLES;
 
 --
--- Table structure for table `Doctor`
+-- Table structure for table `doctor`
 --
 
 DROP TABLE IF EXISTS `Doctor`;
@@ -535,7 +535,7 @@ CREATE TABLE `Doctor` (
 ;
 
 --
--- Dumping data for table `Doctor`
+-- Dumping data for table `doctor`
 --
 
 LOCK TABLES `Doctor` WRITE;
@@ -639,7 +639,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `MedicalCondition`
+-- Table structure for table `insurance_payer`
 --
 
 DROP TABLE IF EXISTS `MedicalCondition`;
@@ -666,7 +666,7 @@ CREATE TABLE `MedicalCondition` (
 ;
 
 --
--- Dumping data for table `MedicalCondition`
+-- Dumping data for table `medicalcondition`
 --
 
 LOCK TABLES `MedicalCondition` WRITE;
@@ -789,7 +789,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `MedicalHistory`
+-- Table structure for table `medicalhistory`
 --
 
 DROP TABLE IF EXISTS `MedicalHistory`;
@@ -810,7 +810,7 @@ CREATE TABLE `MedicalHistory` (
 ;
 
 --
--- Dumping data for table `MedicalHistory`
+-- Dumping data for table `medicalhistory`
 --
 
 LOCK TABLES `MedicalHistory` WRITE;
@@ -887,7 +887,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `MedicationHistory`
+-- Table structure for table `medication_history`
 --
 
 DROP TABLE IF EXISTS `MedicationHistory`;
@@ -908,7 +908,7 @@ CREATE TABLE `MedicationHistory` (
 ;
 
 --
--- Dumping data for table `MedicationHistory`
+-- Dumping data for table `medicationhistory`
 --
 
 LOCK TABLES `MedicationHistory` WRITE;
@@ -999,7 +999,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `Nurse`
+-- Table structure for table `nurse`
 --
 
 DROP TABLE IF EXISTS `Nurse`;
@@ -1019,7 +1019,7 @@ CREATE TABLE `Nurse` (
 ;
 
 --
--- Dumping data for table `Nurse`
+-- Dumping data for table `nurse`
 --
 
 LOCK TABLES `Nurse` WRITE;
@@ -1037,7 +1037,7 @@ VALUES (1, 101, 'Emergency'),
 UNLOCK TABLES;
 
 --
--- Table structure for table `Office`
+-- Table structure for table `office`
 --
 
 DROP TABLE IF EXISTS `Office`;
@@ -1060,7 +1060,7 @@ CREATE TABLE `Office` (
 ;
 
 --
--- Dumping data for table `Office`
+-- Dumping data for table `office`
 --
 
 LOCK TABLES `Office` WRITE;
@@ -1113,7 +1113,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `Patient`
+-- Table structure for table `patient`
 --
 
 DROP TABLE IF EXISTS `Patient`;
@@ -1182,7 +1182,7 @@ CREATE TABLE `Patient` (
 ;
 
 --
--- Dumping data for table `Patient`
+-- Dumping data for table `patient`
 --
 
 LOCK TABLES `Patient` WRITE;
@@ -1371,7 +1371,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `PatientVisit`
+-- Table structure for table `patient_insurance`
 --
 
 DROP TABLE IF EXISTS `PatientVisit`;
@@ -1472,7 +1472,7 @@ CREATE TABLE `PatientVisit` (
 ;
 
 --
--- Dumping data for table `PatientVisit`
+-- Dumping data for table `patientvisit`
 --
 
 LOCK TABLES `PatientVisit` WRITE;
@@ -1845,7 +1845,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `Prescription`
+-- Table structure for table `prescription`
 --
 
 DROP TABLE IF EXISTS `Prescription`;
@@ -1879,7 +1879,7 @@ CREATE TABLE `Prescription` (
 ;
 
 --
--- Dumping data for table `Prescription`
+-- Dumping data for table `prescription`
 --
 
 LOCK TABLES `Prescription` WRITE;
@@ -1967,7 +1967,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `Referral`
+-- Table structure for table `referral`
 --
 
 DROP TABLE IF EXISTS `Referral`;
@@ -2002,7 +2002,7 @@ CREATE TABLE `Referral` (
 ;
 
 --
--- Dumping data for table `Referral`
+-- Dumping data for table `referral`
 --
 
 LOCK TABLES `Referral` WRITE;
@@ -2135,7 +2135,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `ResponsibleParty`
+-- Table structure for table `responsible_party`
 --
 
 DROP TABLE IF EXISTS `ResponsibleParty`;
@@ -2160,7 +2160,7 @@ CREATE TABLE `ResponsibleParty` (
 ;
 
 --
--- Dumping data for table `ResponsibleParty`
+-- Dumping data for table `responsible_party`
 --
 
 LOCK TABLES `ResponsibleParty` WRITE;
@@ -2206,7 +2206,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `Specialty`
+-- Table structure for table `specialty`
 --
 
 DROP TABLE IF EXISTS `Specialty`;
@@ -2224,7 +2224,7 @@ CREATE TABLE `Specialty` (
 ;
 
 --
--- Dumping data for table `Specialty`
+-- Dumping data for table `specialty`
 --
 
 LOCK TABLES `Specialty` WRITE;
@@ -2261,7 +2261,7 @@ VALUES (14, 'Cardiology'),
 UNLOCK TABLES;
 
 --
--- Table structure for table `Staff`
+-- Table structure for table `staff`
 --
 
 DROP TABLE IF EXISTS `Staff`;
@@ -2294,7 +2294,7 @@ CREATE TABLE `Staff` (
 ;
 
 --
--- Dumping data for table `Staff`
+-- Dumping data for table `staff`
 --
 
 LOCK TABLES `Staff` WRITE;
@@ -2403,7 +2403,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `VaccinationHistory`
+-- Table structure for table `user_account`
 --
 
 DROP TABLE IF EXISTS `VaccinationHistory`;
@@ -2425,7 +2425,7 @@ CREATE TABLE `VaccinationHistory` (
 ;
 
 --
--- Dumping data for table `VaccinationHistory`
+-- Dumping data for table `user_account`
 --
 
 LOCK TABLES `VaccinationHistory` WRITE;
@@ -2501,7 +2501,7 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `WorkSchedule`
+-- Table structure for table `vaccination_history`
 --
 
 DROP TABLE IF EXISTS `WorkSchedule`;
@@ -2549,7 +2549,7 @@ CREATE TABLE `WorkSchedule` (
 ;
 
 --
--- Dumping data for table `WorkSchedule`
+-- Dumping data for table `vaccination_history`
 --
 
 LOCK TABLES `WorkSchedule` WRITE;
@@ -2727,920 +2727,69 @@ VALUES (
 UNLOCK TABLES;
 
 --
--- Table structure for table `insurance_payer`
+-- Table structure for table `vaccinationhistory`
 --
 
--- Trigger: Check if referral is needed based on PCP
-DROP TRIGGER IF EXISTS `trg_appointment_check_referral` $
-
-CREATE TRIGGER `trg_appointment_check_referral`
-BEFORE INSERT ON `appointment`
-FOR EACH ROW
-BEGIN
-    DECLARE patient_pcp_id INT;
-    
-    -- Get patient's primary care physician
-    SELECT primary_doctor INTO patient_pcp_id
-    FROM patient
-    WHERE patient_id = NEW.patient_id;
-    
-    -- If seeing a doctor other than PCP, set status to Pending (needs referral)
-    IF patient_pcp_id IS NULL OR NEW.doctor_id != patient_pcp_id THEN
-        SET NEW.status = 'Pending';
-    ELSE 
-        SET NEW.status = 'Scheduled';
-    END IF;
-END$
-
-DELIMITER;
-
--- Table: referral
-DROP TABLE IF EXISTS `referral`;
-
-CREATE TABLE `referral` (
-    `referral_id` INT NOT NULL AUTO_INCREMENT,
-    `patient_id` INT NOT NULL,
-    `date_of_approval` DATE DEFAULT NULL,
-    `referring_doctor_staff_id` INT DEFAULT NULL,
-    `specialist_doctor_staff_id` INT DEFAULT NULL,
-    `reason` VARCHAR(300) DEFAULT NULL,
-    `appointment_id` INT DEFAULT NULL,
-    `status` ENUM(
-        'Pending',
-        'Approved',
-        'Denied'
-    ) DEFAULT 'Pending',
-    PRIMARY KEY (`referral_id`),
-    KEY `idx_ref_patient` (`patient_id`),
-    KEY `idx_ref_refdoc` (`referring_doctor_staff_id`),
-    KEY `idx_ref_specdoc` (`specialist_doctor_staff_id`),
-    KEY `idx_ref_appt` (`appointment_id`),
-    CONSTRAINT `fk_ref__appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointment` (`appointment_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT `fk_ref__patient` FOREIGN KEY (`patient_id`) REFERENCES `patient` (`patient_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT `fk_ref__referring_doctor` FOREIGN KEY (`referring_doctor_staff_id`) REFERENCES `doctor` (`doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT `fk_ref__specialist_doctor` FOREIGN KEY (`specialist_doctor_staff_id`) REFERENCES `doctor` (`doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-INSERT INTO
-    `referral`
-VALUES (
-        1,
-        5,
-        NULL,
-        2,
-        4,
-        'Orthopedic consultation for knee pain',
-        1008,
-        'Approved'
-    ),
-    (
-        2,
-        1,
-        '2025-10-25',
-        1,
-        7,
-        'Dermatology screening for skin rash',
-        NULL,
-        'Pending'
-    ),
-    (
-        3,
-        4,
-        '2025-10-16',
-        4,
-        2,
-        'Cardiology evaluation for chest pain',
-        NULL,
-        'Approved'
-    ),
-    (
-        4,
-        1,
-        NULL,
-        1,
-        2,
-        'Heart check ',
-        NULL,
-        'Pending'
-    ),
-    (
-        5,
-        3,
-        NULL,
-        1,
-        1,
-        'test',
-        NULL,
-        'Pending'
-    );
-
--- Table: prescription
-DROP TABLE IF EXISTS `prescription`;
-
-CREATE TABLE `prescription` (
-    `prescription_id` INT NOT NULL AUTO_INCREMENT,
-    `patient_id` INT NOT NULL,
-    `doctor_id` INT NOT NULL,
-    `appointment_id` INT DEFAULT NULL,
-    `medication_name` VARCHAR(100) NOT NULL,
-    `dosage` VARCHAR(50) DEFAULT NULL,
-    `frequency` VARCHAR(50) DEFAULT NULL,
-    `route` VARCHAR(50) DEFAULT NULL,
-    `start_date` DATE NOT NULL,
-    `end_date` DATE DEFAULT NULL,
-    `refills_allowed` TINYINT DEFAULT NULL,
-    `notes` VARCHAR(255) DEFAULT NULL,
-    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`prescription_id`),
-    KEY `idx_rx_patient` (`patient_id`),
-    KEY `idx_rx_doctor` (`doctor_id`),
-    KEY `idx_rx_appt` (`appointment_id`),
-    CONSTRAINT `fk_rx__appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointment` (`appointment_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT `fk_rx__doctor` FOREIGN KEY (`doctor_id`) REFERENCES `doctor` (`doctor_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT `fk_rx__patient` FOREIGN KEY (`patient_id`) REFERENCES `patient` (`patient_id`) ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-INSERT INTO
-    `prescription`
-VALUES (
-        1,
-        1,
-        1,
-        1001,
-        'Lisinopril',
-        '10mg',
-        'Once daily',
-        'Oral',
-        '2025-01-15',
-        NULL,
-        11,
-        'For hypertension control',
-        '2025-10-23 04:41:08'
-    ),
-    (
-        2,
-        1,
-        1,
-        1001,
-        'Metformin',
-        '500mg',
-        'Twice daily',
-        'Oral',
-        '2024-05-19',
-        NULL,
-        11,
-        'For diabetes management',
-        '2025-10-23 04:41:08'
-    ),
-    (
-        3,
-        3,
-        1,
-        1002,
-        'Atorvastatin',
-        '20mg',
-        'Once daily',
-        'Oral',
-        '2024-01-16',
-        NULL,
-        6,
-        'For cholesterol management',
-        '2025-10-23 04:41:08'
-    ),
-    (
-        4,
-        5,
-        2,
-        1003,
-        'Ibuprofen',
-        '600mg',
-        'Three times daily as needed',
-        'Oral',
-        '2025-06-15',
-        '2024-10-15',
-        2,
-        'For osteoarthritis pain',
-        '2025-10-23 04:41:08'
-    ),
-    (
-        5,
-        6,
-        5,
-        1009,
-        'Sertraline',
-        '50mg',
-        'Once daily',
-        'Oral',
-        '2024-11-17',
-        NULL,
-        6,
-        'For anxiety management',
-        '2025-10-23 04:41:08'
-    );
-
--- Table: patient_visit
-DROP TABLE IF EXISTS `patient_visit`;
-
-CREATE TABLE `patient_visit` (
-    `visit_id` INT NOT NULL AUTO_INCREMENT,
-    `appointment_id` INT DEFAULT NULL,
-    `patient_id` INT NOT NULL,
-    `office_id` INT DEFAULT NULL,
-    `date` DATETIME DEFAULT NULL,
-    `blood_pressure` VARCHAR(7) DEFAULT NULL,
-    `doctor_id` INT DEFAULT NULL,
-    `nurse_id` INT DEFAULT NULL,
-    `status` ENUM(
-        'Scheduled',
-        'Completed',
-        'Canceled',
-        'No-Show'
-    ) DEFAULT NULL,
-    `diagnosis` JSON DEFAULT NULL,
-    `treatment` TEXT,
-    `reason_for_visit` VARCHAR(300) DEFAULT NULL,
-    `department` VARCHAR(50) DEFAULT NULL,
-    `amount_due` DECIMAL(15, 2) DEFAULT NULL,
-    `payment` DECIMAL(15, 2) DEFAULT NULL,
-    `total_due` DECIMAL(15, 2) DEFAULT NULL,
-    `copay_amount_due` DECIMAL(15, 2) DEFAULT NULL,
-    `treatment_cost_due` DECIMAL(15, 2) DEFAULT NULL,
-    `consent_to_treatment` TINYINT(1) DEFAULT NULL,
-    `present_illnesses` JSON DEFAULT NULL,
-    `temperature` DECIMAL(4, 1) DEFAULT NULL,
-    `start_at` DATETIME DEFAULT NULL,
-    `end_at` DATETIME DEFAULT NULL,
-    `insurance_policy_id_used` INT UNSIGNED DEFAULT NULL,
-    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `created_by` VARCHAR(30) DEFAULT NULL,
-    `last_updated` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `updated_by` VARCHAR(30) DEFAULT NULL,
-    PRIMARY KEY (`visit_id`),
-    KEY `idx_pv_patient` (`patient_id`),
-    KEY `idx_pv_doctor` (`doctor_id`),
-    KEY `idx_pv_nurse` (`nurse_id`),
-    KEY `idx_pv_office` (`office_id`),
-    KEY `idx_pv_appt` (`appointment_id`),
-    KEY `idx_pv_date` (`date`),
-    KEY `idx_pv_start_end` (`start_at`, `end_at`),
-    KEY `fk_pv__insurance_used` (`insurance_policy_id_used`),
-    CONSTRAINT `fk_pv__appt` FOREIGN KEY (`appointment_id`) REFERENCES `appointment` (`appointment_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT `fk_pv__doctor` FOREIGN KEY (`doctor_id`) REFERENCES `doctor` (`doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT `fk_pv__insurance_used` FOREIGN KEY (`insurance_policy_id_used`) REFERENCES `patient_insurance` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT `fk_pv__nurse` FOREIGN KEY (`nurse_id`) REFERENCES `nurse` (`nurse_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT `fk_pv__office` FOREIGN KEY (`office_id`) REFERENCES `office` (`office_id`) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT `fk_pv__patient` FOREIGN KEY (`patient_id`) REFERENCES `patient` (`patient_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT `chk_pv_times` CHECK (
-        (`end_at` IS NULL)
-        OR (`start_at` IS NULL)
-        OR (`start_at` <= `end_at`)
-    ),
-    CONSTRAINT `chk_pv_amount_due` CHECK (
-        (`amount_due` IS NULL)
-        OR (`amount_due` >= 0)
-    ),
-    CONSTRAINT `chk_pv_payment` CHECK (
-        (`payment` IS NULL)
-        OR (`payment` >= 0)
-    ),
-    CONSTRAINT `chk_pv_total_due` CHECK (
-        (`total_due` IS NULL)
-        OR (
-            `total_due` >= -999999999999.99
-        )
-    ),
-    CONSTRAINT `chk_pv_copay` CHECK (
-        (`copay_amount_due` IS NULL)
-        OR (`copay_amount_due` >= 0)
-    ),
-    CONSTRAINT `chk_pv_treatment_cost` CHECK (
-        (`treatment_cost_due` IS NULL)
-        OR (`treatment_cost_due` >= 0)
-    )
-) ENGINE = InnoDB AUTO_INCREMENT = 17 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-INSERT INTO
-    `patient_visit`
-VALUES (
-        1,
-        1001,
-        1,
-        1,
-        '2025-01-15 09:00:00',
-        '120/80',
-        1,
-        1,
-        'Completed',
-        '[\"Hypertension\", \"Type 2 Diabetes\"]',
-        'Continue current medications, lifestyle modifications',
-        'Annual physical examination',
-        'Internal Medicine',
-        150.00,
-        25.00,
-        125.00,
-        25.00,
-        125.00,
-        1,
-        '[\"Stable condition\"]',
-        98.6,
-        '2024-01-15 09:00:00',
-        '2024-01-15 09:45:00',
-        1,
-        '2025-10-23 04:41:08',
-        'Dr. Emily Chen',
-        '2025-10-23 04:41:08',
-        'Dr. Emily Chen'
-    ),
-    (
-        2,
-        1002,
-        3,
-        3,
-        '2025-01-16 14:00:00',
-        '118/76',
-        1,
-        2,
-        'Completed',
-        '[\"Hyperlipidemia\"]',
-        'Start statin therapy, dietary changes',
-        'Follow-up consultation',
-        'Internal Medicine',
-        120.00,
-        15.00,
-        105.00,
-        15.00,
-        105.00,
-        1,
-        '[\"Elevated cholesterol levels\"]',
-        98.4,
-        '2024-01-16 14:00:00',
-        '2024-01-16 14:30:00',
-        3,
-        '2025-10-23 04:41:08',
-        'Dr. Emily Chen',
-        '2025-10-23 04:41:08',
-        'Dr. Emily Chen'
-    ),
-    (
-        3,
-        1003,
-        5,
-        1,
-        '2025-01-15 10:30:00',
-        '130/85',
-        2,
-        5,
-        'Completed',
-        '[\"Osteoarthritis\"]',
-        'Pain management, physical therapy referral',
-        'Cardiology checkup',
-        'Cardiology',
-        200.00,
-        25.00,
-        175.00,
-        25.00,
-        175.00,
-        1,
-        '[\"Joint pain in knees\"]',
-        98.2,
-        '2024-01-15 10:30:00',
-        '2024-01-15 11:15:00',
-        5,
-        '2025-10-23 04:41:08',
-        'Dr. James Rodriguez',
-        '2025-10-23 04:41:08',
-        'Dr. James Rodriguez'
-    ),
-    (
-        15,
-        1013,
-        5,
-        1,
-        '2025-10-24 10:30:00',
-        '120/80',
-        1,
-        2,
-        'Scheduled',
-        '[\"Mild Severity\", \"Flu\"]',
-        'Prescribed rest and hydration; recommended follow-up in one week.',
-        'Fever and cough',
-        'Internal Medicine',
-        200.00,
-        50.00,
-        150.00,
-        20.00,
-        180.00,
-        1,
-        '{\"Cough\": true, \"Fever\": true}',
-        99.5,
-        '2025-10-24 10:30:00',
-        '2025-10-24 11:00:00',
-        5,
-        '2025-10-25 04:21:57',
-        'nurse.jane',
-        '2025-10-25 04:49:03',
-        NULL
-    ),
-    (
-        16,
-        1013,
-        5,
-        1,
-        '2025-10-25 01:15:00',
-        '130/80',
-        1,
-        1,
-        'Scheduled',
-        NULL,
-        NULL,
-        NULL,
-        'Internal Medicine',
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        99.0,
-        '2025-10-24 01:30:00',
-        NULL,
-        5,
-        '2025-10-24 01:10:00',
-        NULL,
-        '2025-10-25 18:16:49',
-        NULL
-    );
-
--- Table: medical_condition
-DROP TABLE IF EXISTS `medical_condition`;
-
-CREATE TABLE `medical_condition` (
-    `condition_id` INT NOT NULL AUTO_INCREMENT,
-    `patient_id` INT DEFAULT NULL,
-    `condition_name` VARCHAR(100) DEFAULT NULL,
-    `diagnosis_date` DATE DEFAULT NULL,
-    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `created_by` VARCHAR(30) DEFAULT NULL,
-    `last_updated` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `updated_by` VARCHAR(30) DEFAULT NULL,
-    PRIMARY KEY (`condition_id`),
-    KEY `idx_mc_patient` (`patient_id`),
-    KEY `idx_mc_condition_name` (`condition_name`),
-    KEY `idx_mc_diagnosis_date` (`diagnosis_date`),
-    CONSTRAINT `fk_mc__patient` FOREIGN KEY (`patient_id`) REFERENCES `patient` (`patient_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 12 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-INSERT INTO
-    `medical_condition`
-VALUES (
-        1,
-        1,
-        'Hypertension',
-        '2024-03-10',
-        '2025-10-23 04:41:08',
-        'Dr. Emily Chen',
-        '2025-10-23 04:41:08',
-        'Dr. Emily Chen'
-    ),
-    (
-        2,
-        1,
-        'Type 2 Diabetes',
-        '2022-07-15',
-        '2025-10-23 04:41:08',
-        'Dr. Emily Chen',
-        '2025-10-23 04:41:08',
-        'Dr. Emily Chen'
-    ),
-    (
-        3,
-        2,
-        'Asthma',
-        '2021-05-20',
-        '2025-10-23 04:41:08',
-        'Dr. Susan Lee',
-        '2025-10-23 04:41:08',
-        'Dr. Susan Lee'
-    ),
-    (
-        4,
-        2,
-        'Migraine',
-        '2020-11-03',
-        '2025-10-23 04:41:08',
-        'Dr. Susan Lee',
-        '2025-10-23 04:41:08',
-        'Dr. Susan Lee'
-    ),
-    (
-        5,
-        3,
-        'Hyperlipidemia',
-        '2021-01-12',
-        '2025-10-23 04:41:08',
-        'Dr. Emily Chen',
-        '2025-10-23 04:41:08',
-        'Dr. Emily Chen'
-    ),
-    (
-        6,
-        4,
-        'Hypothyroidism',
-        '2023-09-08',
-        '2025-10-23 04:41:08',
-        'Dr. Richard Patel',
-        '2025-10-23 04:41:08',
-        'Dr. Richard Patel'
-    ),
-    (
-        7,
-        5,
-        'Osteoarthritis',
-        '2024-12-15',
-        '2025-10-23 04:41:08',
-        'Dr. James Rodriguez',
-        '2025-10-23 04:41:08',
-        'Dr. James Rodriguez'
-    ),
-    (
-        8,
-        5,
-        'GERD',
-        '2022-04-22',
-        '2025-10-23 04:41:08',
-        'Dr. James Rodriguez',
-        '2025-10-23 04:41:08',
-        'Dr. James Rodriguez'
-    ),
-    (
-        9,
-        6,
-        'Anxiety Disorder',
-        '2024-08-30',
-        '2025-10-23 04:41:08',
-        'Dr. Maria Garcia',
-        '2025-10-23 04:41:08',
-        'Dr. Maria Garcia'
-    ),
-    (
-        10,
-        7,
-        'COPD',
-        '2022-06-18',
-        '2025-10-23 04:41:08',
-        'Dr. James Rodriguez',
-        '2025-10-23 04:41:08',
-        'Dr. James Rodriguez'
-    ),
-    (
-        11,
-        8,
-        'PCOS',
-        '2021-03-25',
-        '2025-10-23 04:41:08',
-        'Dr. Susan Lee',
-        '2025-10-23 04:41:08',
-        'Dr. Susan Lee'
-    );
-
--- Table: medical_history
-DROP TABLE IF EXISTS `medical_history`;
-
-CREATE TABLE `medical_history` (
-    `history_id` INT NOT NULL AUTO_INCREMENT,
-    `patient_id` INT NOT NULL,
-    `condition_name` VARCHAR(100) NOT NULL,
-    `diagnosis_date` DATE NOT NULL,
-    PRIMARY KEY (`history_id`),
-    KEY `idx_medhist_patient` (`patient_id`),
-    CONSTRAINT `fk_mh__patient` FOREIGN KEY (`patient_id`) REFERENCES `patient` (`patient_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 15 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-INSERT INTO
-    `medical_history`
-VALUES (
-        1,
-        1,
-        'Hypertension',
-        '2021-03-10'
-    ),
-    (
-        2,
-        1,
-        'Type 2 Diabetes',
-        '2019-07-15'
-    ),
-    (3, 2, 'Asthma', '2022-05-20'),
-    (
-        4,
-        2,
-        'Migraine',
-        '2021-11-03'
-    ),
-    (
-        5,
-        3,
-        'Hyperlipidemia',
-        '2020-01-12'
-    ),
-    (
-        6,
-        4,
-        'Hypothyroidism',
-        '2019-09-08'
-    ),
-    (
-        7,
-        5,
-        'Osteoarthritis',
-        '2016-12-15'
-    ),
-    (8, 5, 'GERD', '2019-04-22'),
-    (
-        9,
-        6,
-        'Anxiety Disorder',
-        '2020-08-30'
-    ),
-    (10, 7, 'COPD', '2014-06-18'),
-    (11, 8, 'PCOS', '2018-03-25'),
-    (
-        12,
-        1,
-        'Appendectomy',
-        '2010-08-12'
-    ),
-    (
-        13,
-        3,
-        'Tonsillectomy',
-        '2025-03-22'
-    ),
-    (
-        14,
-        7,
-        'Knee Replacement',
-        '2024-11-05'
-    );
-
--- Table: medication_history
-DROP TABLE IF EXISTS `medication_history`;
-
-CREATE TABLE `medication_history` (
-    `drug_id` INT NOT NULL AUTO_INCREMENT,
-    `patient_id` INT NOT NULL,
-    `drug_name` VARCHAR(100) NOT NULL,
-    `duration_and_frequency_of_drug_use` VARCHAR(150) DEFAULT NULL,
-    PRIMARY KEY (`drug_id`),
-    KEY `idx_medhist_patient` (`patient_id`),
-    CONSTRAINT `fk_medhist_patient` FOREIGN KEY (`patient_id`) REFERENCES `patient` (`patient_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 14 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-INSERT INTO
-    `medication_history`
-VALUES (
-        1,
-        1,
-        'Lisinopril 10mg',
-        'Once daily since August 2020'
-    ),
-    (
-        2,
-        1,
-        'Metformin 500mg',
-        'Twice daily since December 20223'
-    ),
-    (
-        3,
-        2,
-        'Albuterol Inhaler',
-        'As needed since November 2024'
-    ),
-    (
-        4,
-        2,
-        'Sumatriptan 50mg',
-        'As needed for migraines since March 2018'
-    ),
-    (
-        5,
-        3,
-        'Atorvastatin 20mg',
-        'Once daily since June 2021'
-    ),
-    (
-        6,
-        4,
-        'Levothyroxine 75mcg',
-        'Once daily since May 2017'
-    ),
-    (
-        7,
-        5,
-        'Ibuprofen 600mg',
-        'Three times daily as needed since June 2012'
-    ),
-    (
-        8,
-        5,
-        'Omeprazole 20mg',
-        'Once daily since May 2021'
-    ),
-    (
-        9,
-        6,
-        'Sertraline 50mg',
-        'Once daily since August 2020'
-    ),
-    (
-        10,
-        7,
-        'Spiriva HandiHaler',
-        'Once daily since September 2024'
-    ),
-    (
-        11,
-        7,
-        'Albuterol Nebulizer',
-        'Four times daily since Feburary 2021'
-    ),
-    (
-        12,
-        8,
-        'Metformin 1000mg',
-        'Twice daily since January 2022'
-    ),
-    (
-        13,
-        8,
-        'Drospirenone/Ethinyl Estradiol',
-        'Once daily since March 2025'
-    );
-
--- Table: vaccination_history
-DROP TABLE IF EXISTS `vaccination_history`;
-
-CREATE TABLE `vaccination_history` (
-    `vaccination_id` INT NOT NULL AUTO_INCREMENT,
-    `patient_id` INT NOT NULL,
-    `vaccination_name` VARCHAR(100) NOT NULL,
-    `date_of_vaccination` DATE NOT NULL,
-    `date_for_booster` DATE DEFAULT NULL,
-    PRIMARY KEY (`vaccination_id`),
-    KEY `idx_vaxhist_patient` (`patient_id`),
-    CONSTRAINT `fk_vaxhist_patient` FOREIGN KEY (`patient_id`) REFERENCES `patient` (`patient_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 10 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-INSERT INTO
-    `vaccination_history`
-VALUES (
-        1,
-        1,
-        'Influenza Vaccine',
-        '2023-10-15',
-        '2024-10-15'
-    ),
-    (
-        2,
-        1,
-        'COVID-19 Bivalent',
-        '2023-11-20',
-        '2024-11-20'
-    ),
-    (
-        3,
-        2,
-        'Influenza Vaccine',
-        '2023-10-20',
-        '2024-10-20'
-    ),
-    (
-        4,
-        3,
-        'Tetanus Booster',
-        '2022-05-10',
-        '2032-05-10'
-    ),
-    (
-        5,
-        4,
-        'Influenza Vaccine',
-        '2023-10-25',
-        '2024-10-25'
-    ),
-    (
-        6,
-        5,
-        'Shingles Vaccine',
-        '2023-09-15',
-        NULL
-    ),
-    (
-        7,
-        6,
-        'HPV Vaccine',
-        '2023-08-10',
-        '2024-02-10'
-    ),
-    (
-        8,
-        7,
-        'Pneumococcal Vaccine',
-        '2023-07-20',
-        NULL
-    ),
-    (
-        9,
-        8,
-        'Influenza Vaccine',
-        '2023-10-30',
-        '2024-10-30'
-    );
-
--- Table: responsible_party
-DROP TABLE IF EXISTS `responsible_party`;
-
-CREATE TABLE `responsible_party` (
-    `responsible_party_id` INT NOT NULL AUTO_INCREMENT,
-    `first_name` VARCHAR(30) NOT NULL,
-    `last_name` VARCHAR(30) NOT NULL,
-    `apartment_no` VARCHAR(10) DEFAULT NULL,
-    `building_no` VARCHAR(10) DEFAULT NULL,
-    `state` VARCHAR(20) NOT NULL,
-    `zipcode` VARCHAR(10) NOT NULL,
-    `city` VARCHAR(30) NOT NULL,
-    `responsible_party_pn` VARCHAR(20) NOT NULL,
-    PRIMARY KEY (`responsible_party_id`),
-    KEY `idx_resp_party_name` (`last_name`, `first_name`)
-) ENGINE = InnoDB AUTO_INCREMENT = 4 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-INSERT INTO
-    `responsible_party`
-VALUES (
-        1,
-        'Robert',
-        'Smith',
-        'A',
-        '1',
-        'TX',
-        '77002',
-        'Houston',
-        '555-2001'
-    ),
-    (
-        2,
-        'Carlos',
-        'Garcia',
-        'B',
-        '2',
-        'TX',
-        '77024',
-        'Houston',
-        '555-2002'
-    ),
-    (
-        3,
-        'Susan',
-        'Johnson',
-        NULL,
-        '3',
-        'TX',
-        '77007',
-        'Houston',
-        '555-2003'
-    );
-
--- Table: user_account
-DROP TABLE IF EXISTS `user_account`;
-
-CREATE TABLE `user_account` (
-  `user_id` int unsigned NOT NULL AUTO_INCREMENT,
-  `username` varchar(50) NOT NULL,
-  `email` varchar(254) NOT NULL,
-  `password_hash` varchar(255) NOT NULL,
-  `role` enum('ADMIN','DOCTOR','NURSE','PATIENT','RECEPTIONIST') DEFAULT NULL,
-  `mfa_enabled` tinyint(1) NOT NULL DEFAULT '0',
-  `last_login_at` datetime DEFAULT NULL,
-  `failed_login_count` smallint unsigned NOT NULL DEFAULT '0',
-  `is_active` tinyint(1) NOT NULL DEFAULT '1',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`user_id`),
-  UNIQUE KEY `ux_user_username` (`username`),
-  UNIQUE KEY `ux_user_email` (`email`),
-  KEY `idx_user_last_login` (`last_login_at`),
-  CONSTRAINT `user_account_chk_1` CHECK ((`failed_login_count` >= 0))
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+DROP TABLE IF EXISTS `vaccinationhistory`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `vaccinationhistory` (
+  `VaccinationID` int NOT NULL AUTO_INCREMENT,
+  `patient_id` int NOT NULL,
+  `Vaccination_name` varchar(100) NOT NULL,
+  `DateOfVaccination` date NOT NULL,
+  `DateForBooster` date DEFAULT NULL,
+  PRIMARY KEY (`VaccinationID`),
+  KEY `ix_vaxhist_patient` (`patient_id`),
+  CONSTRAINT `fk_vaxhist_patient` FOREIGN KEY (`patient_id`) REFERENCES `patient` (`Patient_ID`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `user_account`
+-- Dumping data for table `vaccinationhistory`
 --
 
-LOCK TABLES `user_account` WRITE;
-/*!40000 ALTER TABLE `user_account` DISABLE KEYS */;
-INSERT INTO `user_account` VALUES (1,'p101','john.smith@email.com','MedApp123!','PATIENT',0,NULL,0,1,'2025-10-22 04:54:59'),(2,'d201','echen@medconnect.com','MedApp123!','DOCTOR',0,NULL,0,1,'2025-10-22 04:54:59'),(3,'n301','tnguyen@medconnect.com','MedApp123!','NURSE',0,NULL,0,1,'2025-10-23 14:54:01'),(4,'a401','a.wilson@medconnect.com','MedApp123!','ADMIN',0,NULL,0,1,'2025-10-25 14:54:01');
-/*!40000 ALTER TABLE `user_account` ENABLE KEYS */;
+LOCK TABLES `vaccinationhistory` WRITE;
+/*!40000 ALTER TABLE `vaccinationhistory` DISABLE KEYS */;
+/*!40000 ALTER TABLE `vaccinationhistory` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `work_schedule`
+--
+
+DROP TABLE IF EXISTS `work_schedule`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `work_schedule` (
+  `schedule_id` int NOT NULL AUTO_INCREMENT,
+  `office_id` int NOT NULL,
+  `staff_id` int DEFAULT NULL,
+  `doctor_id` int DEFAULT NULL,
+  `nurse_id` int DEFAULT NULL,
+  `days` date DEFAULT NULL,
+  `start_time` time DEFAULT NULL,
+  `end_time` time DEFAULT NULL,
+  `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') DEFAULT NULL,
+  PRIMARY KEY (`schedule_id`),
+  KEY `idx_ws_office` (`office_id`),
+  KEY `idx_ws_doctor` (`doctor_id`),
+  KEY `idx_ws_nurse` (`nurse_id`),
+  KEY `idx_ws_staff` (`staff_id`),
+  KEY `idx_ws_daydate` (`day_of_week`,`days`),
+  CONSTRAINT `fk_wsin__office` FOREIGN KEY (`office_id`) REFERENCES `office` (`office_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `chk_ws_times` CHECK (((`end_time` is null) or (`start_time` is null) or (`start_time` <= `end_time`)))
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `work_schedule`
+--
+
+LOCK TABLES `work_schedule` WRITE;
+/*!40000 ALTER TABLE `work_schedule` DISABLE KEYS */;
+INSERT INTO `work_schedule` VALUES (1,1,101,NULL,1,'2024-01-15','08:00:00','16:00:00','Monday'),(2,1,102,NULL,2,'2024-01-15','12:00:00','20:00:00','Monday'),(3,1,NULL,1,NULL,'2024-01-15','09:00:00','17:00:00','Monday'),(4,2,NULL,3,NULL,'2024-01-15','08:30:00','16:30:00','Monday'),(5,1,NULL,2,NULL,'2024-01-15','10:00:00','18:00:00','Monday'),(6,1,NULL,1,NULL,NULL,'09:00:00','17:00:00','Monday'),(7,2,NULL,1,NULL,NULL,'09:00:00','17:00:00','Tuesday'),(8,1,NULL,1,NULL,NULL,'09:00:00','17:00:00','Wednesday'),(9,2,NULL,1,NULL,NULL,'09:00:00','17:00:00','Thursday'),(10,1,NULL,1,NULL,NULL,'09:00:00','17:00:00','Friday'),(11,1,NULL,2,NULL,NULL,'08:00:00','16:00:00','Monday'),(12,1,NULL,2,NULL,NULL,'08:00:00','16:00:00','Wednesday'),(13,4,NULL,2,NULL,NULL,'10:00:00','18:00:00','Tuesday'),(14,4,NULL,2,NULL,NULL,'10:00:00','18:00:00','Thursday'),(15,4,NULL,2,NULL,NULL,'09:00:00','13:00:00','Friday');
+/*!40000 ALTER TABLE `work_schedule` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

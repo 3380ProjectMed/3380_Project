@@ -2,7 +2,8 @@ import { j } from './api/api.js';
 
 // Use direct backend host during development to avoid dev-proxy mismatch or origin issues.
 // Vite provides import.meta.env.DEV which is true in dev server.
-const PATIENT_API_BASE = '';
+// In production, the backend should be at the same origin (Azure App Service)
+const PATIENT_API_BASE = import.meta.env.DEV ? '' : '';
 
 // ==================== DASHBOARD ====================
 export const dashboardAPI = {

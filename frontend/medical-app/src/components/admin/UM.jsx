@@ -31,7 +31,7 @@ function UM() {
       setLoading(true);
       setError(null);
       
-      const res = await fetch('/api/admin_api/get-all.php', {
+      const res = await fetch('/admin_api/get-all.php', {
         credentials: 'include'
       });
       
@@ -51,7 +51,7 @@ function UM() {
 
   const handleEditUser = async (userId) => {
     try {
-      const res = await fetch(`/api/admin_api/users/get-by-id.php?user_id=${userId}`, {
+      const res = await fetch(`/admin_api/users/get-by-id.php?user_id=${userId}`, {
         credentials: 'include'
       });
       
@@ -74,7 +74,7 @@ function UM() {
     }
 
     try {
-      const res = await fetch('/api/admin_api/delete.php', {
+      const res = await fetch('/admin_api/delete.php', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -109,7 +109,7 @@ function UM() {
     }
 
     try {
-      const res = await fetch('/api/admin_api/create.php', {
+      const res = await fetch('/admin_api/create.php', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

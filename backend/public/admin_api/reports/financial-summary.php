@@ -1,7 +1,6 @@
 <?php
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
-
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 try {
     session_start();
     
@@ -18,32 +17,32 @@ try {
     
     // Daily revenue breakdown
     $sql = "SELECT 
-                DATE(pv.Date) as visit_date,
+                DATE(pv.date) as visit_date,
                 COUNT(*) as total_visits,
-                SUM(pv.AmountDue) as gross_revenue,
-                SUM(pv.Payment) as collected_payments,
-                SUM(pv.TotalDue) as outstanding_balance,
-                COUNT(DISTINCT pv.Patient_id) as unique_patients
-            FROM PatientVisit pv
-            WHERE pv.Date BETWEEN ? AND ?
-            GROUP BY DATE(pv.Date)
+                SUM(pv.amount_due) as gross_revenue,
+                SUM(pv.payment) as collected_payments,
+                SUM(pv.total_due) as outstanding_balance,
+                COUNT(DISTINCT pv.patient_id) as unique_patients
+            FROM patient_visit pv
+            WHERE pv.date BETWEEN ? AND ?
+            GROUP BY DATE(pv.date)
             ORDER BY visit_date DESC";
     
     $daily_revenue = executeQuery($conn, $sql, 'ss', [$start_date, $end_date]);
     
     // Revenue by insurance
     $sql = "SELECT 
-                ipayer.NAME as insurance_company,
+                ipayer.name as insurance_company,
                 ip.plan_name,
                 COUNT(*) as visit_count,
-                SUM(pv.Payment) as total_payments,
-                SUM(pv.TotalDue) as outstanding
-            FROM PatientVisit pv
-            LEFT JOIN patient_insurance pi ON pv.Insurance_policy_id_used = pi.id
+                SUM(pv.payment) as total_payments,
+                SUM(pv.total_due) as outstanding
+            FROM patient_visit pv
+            LEFT JOIN patient_insurance pi ON pv.insurance_policy_id_used = pi.id
             LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
             LEFT JOIN insurance_payer ipayer ON ip.payer_id = ipayer.payer_id
-            WHERE pv.Date BETWEEN ? AND ?
-            GROUP BY ipayer.NAME, ip.plan_name
+            WHERE pv.date BETWEEN ? AND ?
+            GROUP BY ipayer.name, ip.plan_name
             ORDER BY total_payments DESC";
     
     $insurance_breakdown = executeQuery($conn, $sql, 'ss', [$start_date, $end_date]);
@@ -51,11 +50,11 @@ try {
     // Summary totals
     $sql = "SELECT 
                 COUNT(*) as total_visits,
-                SUM(AmountDue) as total_revenue,
-                SUM(Payment) as total_collected,
-                SUM(TotalDue) as total_outstanding
-            FROM PatientVisit
-            WHERE Date BETWEEN ? AND ?";
+                SUM(amount_due) as total_revenue,
+                SUM(payment) as total_collected,
+                SUM(total_due) as total_outstanding
+            FROM patient_visit
+            WHERE date BETWEEN ? AND ?";
     
     $summary = executeQuery($conn, $sql, 'ss', [$start_date, $end_date]);
     

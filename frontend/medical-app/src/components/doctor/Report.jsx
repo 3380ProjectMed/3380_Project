@@ -7,11 +7,9 @@ export default function AppointmentReport() {
   const [filters, setFilters] = useState({
     StartDate: new Date().toISOString().split('T')[0].slice(0, 8) + '01',
     EndDate: new Date().toISOString().split('T')[0],
-    // Doctor filter removed per UX request
     OfficeID: 'all',
     Status: 'all',
     PatientID: 'all',
-  // BookingChannel removed — not needed
     VisitReason: '',
     InsurancePolicyID: 'all',
     NurseID: 'all'
@@ -26,6 +24,7 @@ export default function AppointmentReport() {
   // Dropdown options state
   const [offices, setOffices] = useState([]);
   const [nurses, setNurses] = useState([]);
+  const [doctors, setDoctors] = useState([]);
 
   // UI state
   const [showFilters, setShowFilters] = useState(true);
@@ -42,7 +41,14 @@ export default function AppointmentReport() {
 
   const fetchDropdownOptions = async () => {
     try {
-      // offices and nurses endpoints are not available in this backend; they'll be derived from report results
+      // Fetch doctors for dropdown
+      const docResponse = await fetch('/doctor_api/doctors/get-all.php', { credentials: 'include' });
+      if (docResponse.ok) {
+        const docData = await docResponse.json();
+        if (docData.success) {
+          setDoctors(docData.doctors || []);
+        }
+      }
     } catch (err) {
       console.error('Error fetching dropdown options:', err);
     }
@@ -60,18 +66,18 @@ export default function AppointmentReport() {
         }
       });
 
-  const response = await fetch(`/doctor_api/reports/get-appointment-report.php?${queryParams}`, { credentials: 'include' });
-
-      const contentType = response.headers.get('content-type') || '';
+      const response = await fetch(`/doctor_api/reports/get-appointment-report.php?${queryParams}`, { 
+        credentials: 'include' 
+      });
 
       if (!response.ok) {
-        // Try to read text (may be HTML error page)
         const text = await response.text();
         const short = text.length > 1000 ? text.slice(0, 1000) + '...' : text;
         setError(`Server returned ${response.status}: ${short}`);
         return;
       }
 
+      const contentType = response.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
         const data = await response.json();
         if (data.success) {
@@ -79,31 +85,41 @@ export default function AppointmentReport() {
           setAppointments(appts);
           setStatistics(data.data.statistics || null);
 
-          // derive offices and nurses from appointments for filter dropdowns
+          // Derive offices and nurses from appointments
           const officeMap = new Map();
           const nurseMap = new Map();
+          
           appts.forEach(a => {
-            if (a.Office_ID || a.office_id || a.office_id === 0) {
-              const id = a.Office_ID ?? a.office_id ?? a.OfficeId ?? null;
-              const name = a.office_name || a.office || `${a.office_city || ''}`;
-              if (id) officeMap.set(id, { Office_ID: id, Name: name });
+            // Check for office (handle both formats)
+            const officeId = a.office_id ?? a.Office_ID;
+            const officeName = a.office_name ?? a.office;
+            if (officeId) {
+              officeMap.set(officeId, { 
+                office_id: officeId, 
+                name: officeName || 'Unknown Office' 
+              });
             }
-            if (a.Nurse_id || a.Nurse_id === 0 || a.nurse_id) {
-              const nid = a.Nurse_id ?? a.nurse_id ?? a.NurseId ?? null;
-              const nname = a.nurse_name || (a.nurse || 'Unknown');
-              if (nid) nurseMap.set(nid, { Nurse_id: nid, name: nname });
+            
+            // Check for nurse (handle both formats)
+            const nurseId = a.nurse_id ?? a.Nurse_id;
+            const nurseName = a.nurse_name ?? a.nurse;
+            if (nurseId) {
+              nurseMap.set(nurseId, { 
+                nurse_id: nurseId, 
+                name: nurseName || 'Unknown Nurse' 
+              });
             }
           });
+          
           setOffices(Array.from(officeMap.values()));
           setNurses(Array.from(nurseMap.values()));
         } else {
           setError(data.error || 'Failed to fetch report');
         }
       } else {
-        // Non-JSON response (often HTML). Capture a short snippet to help debugging.
         const text = await response.text();
         const short = text.length > 1000 ? text.slice(0, 1000) + '...' : text;
-        setError('Invalid JSON response from server (see server output): ' + short);
+        setError('Invalid JSON response from server: ' + short);
       }
     } catch (err) {
       setError('Network error: ' + err.message);
@@ -143,15 +159,15 @@ export default function AppointmentReport() {
   const exportToCSV = () => {
     if (appointments.length === 0) return;
 
-    const headers = ['Date', 'Time', 'Patient', 'Office', 'Status', 'Reason', 'Insurance Type'];
+    const headers = ['Date', 'Time', 'Patient', 'Office', 'Status', 'Reason', 'Insurance'];
     const rows = appointments.map(apt => [
-      apt.Appointment_date,
-      apt.Appointment_time || 'N/A',
-      apt.patient_name,
-      apt.office_name,
-      apt.Status || 'N/A',
-      (apt.Reason || apt.Reason_for_visit) || 'N/A',
-      apt.insurance_type || apt.insurance_company || 'N/A'
+      apt.appointment_date || apt.Appointment_date || 'N/A',
+      apt.appointment_time || apt.Appointment_time || 'N/A',
+      apt.patient_name || 'N/A',
+      apt.office_name || 'N/A',
+      apt.status || apt.Status || 'N/A',
+      apt.reason || apt.Reason_for_visit || apt.Reason || 'N/A',
+      apt.insurance_company || apt.insurance_type || 'N/A'
     ]);
 
     const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
@@ -167,7 +183,8 @@ export default function AppointmentReport() {
     switch (status) {
       case 'Completed': return 'bg-green-100 text-green-800 border-green-300';
       case 'Scheduled': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'Canceled': return 'bg-red-100 text-red-800 border-red-300';
+      case 'Canceled': 
+      case 'Cancelled': return 'bg-red-100 text-red-800 border-red-300';
       case 'No-Show': return 'bg-orange-100 text-orange-800 border-orange-300';
       default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -178,7 +195,7 @@ export default function AppointmentReport() {
       <div className="report-view">
         <div className="report-header">
           <div>
-            <h2> <Calendar className="selector-icon" /> Appointment & Visit Report</h2>
+            <h2><Calendar className="selector-icon" /> Appointment & Visit Report</h2>
             <p className="report-subtitle">View and analyze appointments from {filters.StartDate} to {filters.EndDate}</p>
           </div>
           <div className="report-header-actions">
@@ -187,8 +204,6 @@ export default function AppointmentReport() {
             </button>
           </div>
         </div>
-
-        {/* Top summary cards removed — not required for current backend/UX */}
 
         <div className="report-section">
           <div className="report-header" style={{justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer'}} onClick={() => setShowFilters(!showFilters)}>
@@ -231,26 +246,34 @@ export default function AppointmentReport() {
                 <select value={filters.OfficeID} onChange={(e) => handleFilterChange('OfficeID', e.target.value)} className="date-range-select">
                   <option value="all">All Offices</option>
                   {offices.map(office => (
-                    <option key={office.Office_ID} value={office.Office_ID}>{office.Name} - {office.City}</option>
+                    <option key={office.office_id} value={office.office_id}>
+                      {office.name}
+                    </option>
                   ))}
                 </select>
               </div>
-
-              {/* Booking Channel removed from filters */}
 
               <div>
                 <label>Nurse</label>
                 <select value={filters.NurseID} onChange={(e) => handleFilterChange('NurseID', e.target.value)} className="date-range-select">
                   <option value="all">All Nurses</option>
                   {nurses.map(nurse => (
-                    <option key={nurse.Nurse_id} value={nurse.Nurse_id}>{nurse.name}</option>
+                    <option key={nurse.nurse_id} value={nurse.nurse_id}>
+                      {nurse.name}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
                 <label>Visit Reason</label>
-                <input type="text" value={filters.VisitReason} onChange={(e) => handleFilterChange('VisitReason', e.target.value)} placeholder="e.g. Annual Checkup" className="date-range-select" />
+                <input 
+                  type="text" 
+                  value={filters.VisitReason} 
+                  onChange={(e) => handleFilterChange('VisitReason', e.target.value)} 
+                  placeholder="e.g. Annual Checkup" 
+                  className="date-range-select" 
+                />
               </div>
             </div>
           )}
@@ -265,7 +288,7 @@ export default function AppointmentReport() {
             <div style={{padding: '3rem', textAlign: 'center', color: 'red'}}>{error}</div>
           ) : appointments.length === 0 ? (
             <div style={{padding: '3rem', textAlign: 'center', color: '#6b7280'}}>
-              <Search style={{width: 64, height: 64}} />
+              <Search style={{width: 64, height: 64, margin: '0 auto'}} />
               <p>No appointments found matching your filters</p>
             </div>
           ) : (
@@ -277,18 +300,23 @@ export default function AppointmentReport() {
                 <div>Office</div>
                 <div>Status</div>
                 <div>Reason</div>
-                <div>Type of Insurance</div>
+                <div>Insurance</div>
               </div>
-              {appointments.map((apt, index) => (
-                <div key={apt.Appointment_id} className="table-row">
-                  <div>{apt.Appointment_date}</div>
-                  <div>{apt.Appointment_time || 'N/A'}</div>
-                  <div style={{fontWeight: 700}}>{apt.patient_name}</div>
-                  <div>{apt.office_name}</div>
-                  <div><span className="risk-badge">{apt.Status}</span></div>
-                  <div>{apt.Reason || 'N/A'}</div>
-                  {/* Show insurance company/type from joined insurance tables */}
-                  <div style={{fontWeight: 700}}>{apt.insurance_type || apt.insurance_company || 'N/A'}</div>
+              {appointments.map((apt) => (
+                <div key={apt.appointment_id} className="table-row">
+                  <div>{apt.appointment_date || 'N/A'}</div>
+                  <div>{apt.appointment_time || 'N/A'}</div>
+                  <div style={{fontWeight: 700}}>{apt.patient_name || 'N/A'}</div>
+                  <div>{apt.office_name || 'N/A'}</div>
+                  <div>
+                    <span className={`risk-badge ${getStatusColor(apt.status)}`}>
+                      {apt.status || 'N/A'}
+                    </span>
+                  </div>
+                  <div>{apt.reason || 'N/A'}</div>
+                  <div style={{fontWeight: 700}}>
+                    {apt.insurance_company || apt.insurance_type || 'N/A'}
+                  </div>
                 </div>
               ))}
             </div>

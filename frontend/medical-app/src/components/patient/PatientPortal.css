@@ -150,8 +150,8 @@
 .portal-main {
   margin-left: 260px; /* Space for sidebar */
   padding: 2rem;
-  min-height: calc(100vh - 70px);
-  max-width: calc(1400px + 260px);
+  min-height: 100vh;
+  width: calc(100% - 260px);
 }
 
 .portal-content {
