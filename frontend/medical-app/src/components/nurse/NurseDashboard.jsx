@@ -12,7 +12,12 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
+  // Date label
+  const getCurrentDate = () => {
   // Date label
   const getCurrentDate = () => {
     const today = new Date();
@@ -68,7 +73,13 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
   });
 
   // Status badge color map (same as doctor)
+  // Status badge color map (same as doctor)
   const getStatusClass = (status) => {
+    const statusMap = {
+      'scheduled': 'status-scheduled',
+      'in waiting': 'status-waiting',
+      'in consultation': 'status-consultation',
+      'completed': 'status-completed'
     const statusMap = {
       'scheduled': 'status-scheduled',
       'in waiting': 'status-waiting',
@@ -76,10 +87,14 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
       'completed': 'status-completed'
     };
     return statusMap[status.toLowerCase()] || '';
+    return statusMap[status.toLowerCase()] || '';
   };
 
   // Row click -> Nurse intake / Clinical flow
+  // Row click -> Nurse intake / Clinical flow
   const handleAppointmentRowClick = (appointment) => {
+    if (onAppointmentClick) onAppointmentClick(appointment);
+    if (setCurrentPage) setCurrentPage('clinical'); // optional
     if (onAppointmentClick) onAppointmentClick(appointment);
     if (setCurrentPage) setCurrentPage('clinical'); // optional
   };
@@ -89,7 +104,15 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
       {/* ===== WELCOME HEADER (Doctor look, Nurse copy) ===== */}
       <div className="dashboard-header">
         <div className="welcome-section">
+    <div className="dashboard">
+      {/* ===== WELCOME HEADER (Doctor look, Nurse copy) ===== */}
+      <div className="dashboard-header">
+        <div className="welcome-section">
           <h1>Welcome Back, Nurse Lastname</h1>
+          <p className="office-info">
+            <Calendar size={18} style={{display: 'inline', marginRight: '8px', verticalAlign: 'middle'}} />
+            {getCurrentDate()} • {' '}
+            <a href="#" onClick={(e) => e.preventDefault()}>
           <p className="office-info">
             <Calendar size={18} style={{display: 'inline', marginRight: '8px', verticalAlign: 'middle'}} />
             {getCurrentDate()} • {' '}
@@ -103,6 +126,9 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
       {/* ===== STATS CARDS (same structure/colors as doctor) ===== */}
       <div className="stats-grid">
         <div className="stat-card stat-primary">
+      {/* ===== STATS CARDS (same structure/colors as doctor) ===== */}
+      <div className="stats-grid">
+        <div className="stat-card stat-primary">
           <div className="stat-icon">
             <Calendar size={24} />
           </div>
@@ -112,6 +138,7 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
           </div>
         </div>
 
+        <div className="stat-card stat-warning">
         <div className="stat-card stat-warning">
           <div className="stat-icon">
             <Users size={24} />
@@ -123,6 +150,7 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
         </div>
 
         <div className="stat-card stat-info">
+        <div className="stat-card stat-info">
           <div className="stat-icon">
             <Clock size={24} />
           </div>
@@ -132,6 +160,7 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
           </div>
         </div>
 
+        <div className="stat-card stat-success">
         <div className="stat-card stat-success">
           <div className="stat-icon">
             <FileText size={24} />
@@ -149,9 +178,18 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
           className="action-btn" 
           onClick={() => setCurrentPage && setCurrentPage('patients')}
         >
+      <div className="quick-actions">
+        <button 
+          className="action-btn" 
+          onClick={() => setCurrentPage && setCurrentPage('patients')}
+        >
           <Users size={18} />
           View All Patients
         </button>
+        <button 
+          className="action-btn" 
+          onClick={() => setCurrentPage && setCurrentPage('schedule')}
+        >
         <button 
           className="action-btn" 
           onClick={() => setCurrentPage && setCurrentPage('schedule')}
@@ -163,6 +201,10 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
           className="action-btn" 
           onClick={() => setCurrentPage && setCurrentPage('clinical')}
         >
+        <button 
+          className="action-btn" 
+          onClick={() => setCurrentPage && setCurrentPage('clinical')}
+        >
           <FileText size={18} />
           Clinical / Intake
         </button>
@@ -170,11 +212,14 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
 
       {/* ===== TODAY'S SCHEDULE TABLE (fully matches doctor) ===== */}
       <div className="schedule-section">
+      {/* ===== TODAY'S SCHEDULE TABLE (fully matches doctor) ===== */}
+      <div className="schedule-section">
         <div className="section-header">
           <h2>Today's Schedule</h2>
           <div className="section-controls">
             <div className="search-box">
               <Search size={18} />
+              <input 
               <input 
                 type="text"
                 placeholder="Search patients..."
@@ -185,6 +230,11 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
             </div>
             <div className="filter-box">
               <Filter size={18} />
+              <select 
+                value={filterStatus} 
+                onChange={(e) => setFilterStatus(e.target.value)}
+                aria-label="Filter by status"
+              >
               <select 
                 value={filterStatus} 
                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -215,16 +265,29 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
                   key={appointment.id} 
                   className="table-row" 
                   onClick={() => handleAppointmentRowClick(appointment)}
+            {filteredAppointments.length > 0 ? (
+              filteredAppointments.map((appointment) => (
+                <div 
+                  key={appointment.id} 
+                  className="table-row" 
+                  onClick={() => handleAppointmentRowClick(appointment)}
                   role="button"
                   tabIndex={0}
                   onKeyPress={(e) => e.key === 'Enter' && handleAppointmentRowClick(appointment)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAppointmentRowClick(appointment)}
                 >
+                  <div className="col-time">{appointment.time}</div>
                   <div className="col-time">{appointment.time}</div>
                   <div className="col-patient">
                     <span className="patient-link">{appointment.patientName}</span>
+                    <span className="patient-link">{appointment.patientName}</span>
                   </div>
                   <div className="col-reason">{appointment.reason}</div>
+                  <div className="col-reason">{appointment.reason}</div>
                   <div className="col-status">
+                    <span className={`status-badge ${getStatusClass(appointment.status)}`}>
+                      {appointment.status}
+                    </span>
                     <span className={`status-badge ${getStatusClass(appointment.status)}`}>
                       {appointment.status}
                     </span>

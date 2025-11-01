@@ -11,6 +11,17 @@ import {
   LogOut,
 } from "lucide-react";
 import "./NurseSidebar.css";
+import {
+  Home,
+  Calendar,
+  Users,
+  ClipboardList,
+  User,
+  BarChart2,
+  Share2,
+  LogOut,
+} from "lucide-react";
+import "./NurseSidebar.css";
 
 export default function NurseSidebar({ currentPage, setCurrentPage, onLogout }) {
   const items = [
@@ -38,13 +49,32 @@ export default function NurseSidebar({ currentPage, setCurrentPage, onLogout }) 
           </button>
         ))}
       </nav>
+    <aside className="nurse-sidebar">
+      <div className="nurse-sidebar__brand">Nurse Portal</div>
 
+      <nav className="nurse-sidebar__nav">
+        {items.map((i) => (
+          <button
+            key={i.id}
+            className={`nurse-sidebar__link ${currentPage === i.id ? "active" : ""}`}
+            onClick={() => setCurrentPage(i.id)}
+          >
+            {i.icon}
+            <span>{i.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div className="nurse-sidebar__footer">
+        <button className="nurse-sidebar__logout" onClick={onLogout}>
+          <LogOut size={18} />
       <div className="nurse-sidebar__footer">
         <button className="nurse-sidebar__logout" onClick={onLogout}>
           <LogOut size={18} />
           <span>Logout</span>
         </button>
       </div>
+    </aside>
     </aside>
   );
 }

@@ -14,10 +14,15 @@ export default function NursePortal() {
   const handleLogout = () => {
     if (confirm("Log out of Nurse Portal?")) {
       window.location.href = "/login";
+
+  const handleLogout = () => {
+    if (confirm("Log out of Nurse Portal?")) {
+      window.location.href = "/login";
     }
   };
 
   return (
+    <div className="nurse-portal">
     <div className="nurse-portal">
       <NurseSidebar
         currentPage={currentPage}
