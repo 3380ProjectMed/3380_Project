@@ -6,13 +6,13 @@ try {
     $userId = $_GET['user_id'] ?? null;
 
     // Example query (adjust table/columns to real schema)
-    $stmt = $pdo->prepare(""
+    $stmt = $pdo->prepare("
         SELECT id, note, created_at
         FROM clinical_notes
         WHERE nurse_id = :uid
         ORDER BY created_at DESC
         LIMIT 50
-    """);
+    ");
     $stmt->execute([':uid' => $userId]);
     $rows = $stmt->fetchAll();
 

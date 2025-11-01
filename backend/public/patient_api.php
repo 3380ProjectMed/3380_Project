@@ -1,8 +1,8 @@
 <?php
 // patient_api.php - Patient Portal API Endpoints (cleaned and fixed)
 
-require_once '/home/site/wwwroot/cors.php';
-require_once '/home/site/wwwroot/database.php';
+require_once '../cors.php';
+require_once '../database.php';
 // require_once 'helpers.php'; // Temporarily commented out
 
 header('Content-Type: application/json');
@@ -468,7 +468,7 @@ elseif ($endpoint === 'appointments') {
         }
         
         // Generate appointment ID
-        $result = $mysqli->query("SELECT COALESCE(MAX(appointment_id), 0) + 1 as next_id FROM appointment");
+        $result = $mysqli->query("SELECT COALESCE(MAX(Appointment_id), 0) + 1 as next_id FROM Appointment");
         $row = $result->fetch_assoc();
         $next_id = $row['next_id'];
         
@@ -487,9 +487,9 @@ elseif ($endpoint === 'appointments') {
         
         // Insert appointment with explicit status for PCP appointments
         $stmt = $mysqli->prepare("
-            INSERT INTO appointment (
-                appointment_id, patient_id, doctor_id, office_id, 
-                appointment_date, date_created, reason_for_visit, status
+            INSERT INTO Appointment (
+                Appointment_id, Patient_id, Doctor_id, Office_id, 
+                Appointment_date, Date_created, Reason_for_visit, Status
             ) VALUES (?, ?, ?, ?, ?, NOW(), ?, 'Scheduled')
         ");
         $stmt->bind_param('iiiiss',

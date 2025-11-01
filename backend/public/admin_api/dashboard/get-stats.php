@@ -52,7 +52,7 @@ try {
     
     // Revenue today (from PatientVisit)
     $result = executeQuery($conn, 
-        'SELECT COALESCE(SUM(Payment), 0) as total FROM patient_vist WHERE DATE(Date) = CURRENT_DATE'
+        'SELECT COALESCE(SUM(Payment), 0) as total FROM patient_visit WHERE DATE(Date) = CURRENT_DATE'
     );
     $stats['revenue_today'] = floatval($result[0]['total']);
     
