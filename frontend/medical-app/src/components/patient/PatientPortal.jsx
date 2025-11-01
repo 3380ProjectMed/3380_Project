@@ -250,7 +250,26 @@ export default function PatientPortal({ onLogout }) {
 
   // --- Booking helpers ---
   const timeSlots = ['9:00 AM','10:00 AM','11:00 AM','2:00 PM','3:00 PM','4:00 PM'];
-  const handleBookingNext = () => setBookingStep(s => Math.min(4, s + 1));
+  
+  const handleBookingNext = () => {
+    // Validate each step before proceeding
+    if (bookingStep === 1 && !selectedDoctor) {
+      setBookingError('Please select a doctor before proceeding');
+      return;
+    }
+    if (bookingStep === 2 && !selectedLocation) {
+      setBookingError('Please select an office location before proceeding');
+      return;
+    }
+    if (bookingStep === 3 && (!selectedDate || !selectedTime)) {
+      setBookingError('Please select both date and time before proceeding');
+      return;
+    }
+    
+    setBookingError(null); // Clear any previous errors
+    setBookingStep(s => Math.min(4, s + 1));
+  };
+  
   const handleBookingBack = () => setBookingStep(s => Math.max(1, s - 1));
 
   // Ensure doctors/offices are loaded when booking modal opens
@@ -300,12 +319,42 @@ export default function PatientPortal({ onLogout }) {
     console.log('Submitting booking...', { selectedDoctor, selectedLocation, selectedDate, selectedTime });
     setBookingLoading(true);
     setBookingError(null);
+    
+    // Validate all required fields before submitting
+    if (!selectedDoctor?.doctor_id) {
+      setBookingError('Please select a doctor');
+      setBookingLoading(false);
+      return;
+    }
+    if (!selectedLocation) {
+      setBookingError('Please select an office location');
+      setBookingLoading(false);
+      return;
+    }
+    if (!selectedDate) {
+      setBookingError('Please select a date');
+      setBookingLoading(false);
+      return;
+    }
+    if (!selectedTime) {
+      setBookingError('Please select a time');
+      setBookingLoading(false);
+      return;
+    }
+    if (!appointmentReason?.trim()) {
+      setBookingError('Please provide a reason for the appointment');
+      setBookingLoading(false);
+      return;
+    }
+    
     const appointmentData = {
-      doctor_id: selectedDoctor?.doctor_id,
+      doctor_id: selectedDoctor.doctor_id,
       office_id: selectedLocation,
       appointment_date: `${selectedDate} ${selectedTime}`,
-      reason: appointmentReason,
+      reason: appointmentReason.trim(),
     };
+    
+    console.log('Appointment data being sent:', appointmentData);
     try {
       const r = await api.appointments.bookAppointment(appointmentData);
       console.log('Booking API response:', r);
