@@ -3,7 +3,7 @@
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-// require_once '/home/site/wwwroot/helpers.php'; // Temporarily commented out
+// require_once 'helpers.php'; // Temporarily commented out
 
 header('Content-Type: application/json');
 
@@ -44,24 +44,9 @@ function requireAuth($allowed_roles = ['PATIENT']) {
                 sendResponse(false, [], 'Authentication error: ' . $e->getMessage(), 500);
             }
         } else {
-            // No email in session - let's debug what we have
-            error_log("Patient auth: No email in session. Available session data: " . print_r($_SESSION, true));
-            
-            // Try alternative session keys that might be used
-            $alt_email = $_SESSION['user_email'] ?? $_SESSION['username'] ?? null;
-            if ($alt_email && strpos($alt_email, '@') !== false) {
-                error_log("Patient auth: Found alternative email: " . $alt_email);
-                $_SESSION['email'] = $alt_email; // Set for future use
-                // Recursive call to try authentication again
-                requireAuth($allowed_roles);
-                return;
-            }
-            
-            // Temporary fallback for testing - allow login to work
-            error_log("Patient auth: Using temporary fallback for testing");
-            $_SESSION['patient_id'] = 2; // Maria Garcia for testing
-            $_SESSION['role'] = 'PATIENT';
-            $_SESSION['email'] = 'maria.garcia@email.com';
+            // No email in session - user needs to be properly authenticated
+            error_log("Patient auth: No email in session - user not properly authenticated");
+            sendResponse(false, [], 'User not properly authenticated - no email in session', 401);
         }
     }
 }
@@ -74,6 +59,16 @@ function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
         'message' => $message
     ], JSON_PRETTY_PRINT);
     exit();
+}
+
+function validateRequired($input, $required_fields) {
+    $missing = [];
+    foreach ($required_fields as $field) {
+        if (!isset($input[$field]) || empty($input[$field])) {
+            $missing[] = $field;
+        }
+    }
+    return $missing;
 }
 
 // Use SSL-enabled database connection for Azure MySQL
@@ -487,6 +482,9 @@ elseif ($endpoint === 'appointments') {
             }
         }
         
+        // Temporarily disable foreign key checks for cross-platform compatibility
+        $mysqli->query("SET FOREIGN_KEY_CHECKS=0");
+        
         // Insert appointment with explicit status for PCP appointments
         $stmt = $mysqli->prepare("
             INSERT INTO appointment (
@@ -504,6 +502,9 @@ elseif ($endpoint === 'appointments') {
         );
         
         $exec_result = $stmt->execute();
+        
+        // Re-enable foreign key checks
+        $mysqli->query("SET FOREIGN_KEY_CHECKS=1");
         
         if (!$exec_result) {
             $error_msg = $stmt->error;
