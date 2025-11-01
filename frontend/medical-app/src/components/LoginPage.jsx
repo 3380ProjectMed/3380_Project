@@ -1,58 +1,59 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, ArrowRight, AlertCircle, Info, User, Stethoscope } from "lucide-react";
+import { Mail, Lock, AlertCircle, Info, Stethoscope } from "lucide-react";
 import "./LoginPage.css";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const nav = useNavigate();
-  const loc = useLocation();
-  const from = loc.state?.from?.pathname || "/patientportal";
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loginAttempted, setLoginAttempted] = useState(false);
   
-// inside LoginPage.jsx
-
-async function onSubmit(e) {
-  e.preventDefault();
-  setErr("");
-  setSubmitting(true);
-
-  try {
-    const u = await login(email, password);
-
-    // Normalize role (handles 'admin' vs 'ADMIN', etc.)
-    const role = String(u?.role || '').toUpperCase();
-
-    // Only include destinations you actually have routes for right now
-    const destByRole = {
-      PATIENT: "/patientportal",
-      DOCTOR:  "/doctor",
-      NURSE:   "/nurse",
-      // ADMIN: "/admin",           // disabled for now
-      // RECEPTIONIST: "/reception" // not enabled yet
-    };
-
-    const roleDest = destByRole[role] || "/patientportal";
-
-    // If you want to honor `from` when it's set, keep this line.
-    // If you want to ALWAYS go to the role home, replace `from || roleDest` with `roleDest`.
-    nav(from || roleDest, { replace: true });
-
-  } catch (ex) {
-    setErr(ex.message || "Login failed. Please try again.");
-  } finally {
-    setSubmitting(false);
+  // Redirect after user state is populated
+  useEffect(() => {
+    if (loginAttempted && user?.role) {
+      const destByRole = {
+        PATIENT: "/patientportal",
+        DOCTOR: "/doctor",
+        ADMIN: "/admin",
+        NURSE: "/nurse",
+      };
+      const normalizedRole = (user.role || '').toUpperCase();
+      const destination = destByRole[normalizedRole] || "/patientportal";
+      
+      console.log('✅ Login successful:', { 
+        role: normalizedRole, 
+        destination,
+        user 
+      });
+      
+      nav(destination, { replace: true });
+    }
+  }, [user, loginAttempted, nav]);
+  
+  async function onSubmit(e) {
+    e.preventDefault();
+    setErr("");
+    setSubmitting(true);
+    
+    try {
+      await login(email, password);
+      setLoginAttempted(true);
+    } catch (ex) {
+      setErr(ex.message || "Login failed");
+      setLoginAttempted(false);
+    } finally {
+      setSubmitting(false);
+    }
   }
-}
   
   return (
     <div className="landing-root">
-      {/* Header */}
       <header className="landing-header">
         <div className="landing-container">
           <div className="logo">
@@ -69,21 +70,15 @@ async function onSubmit(e) {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="landing-container login-container">
         <div className="login-wrapper">
-          
-          {/* Welcome Header */}
           <div className="login-welcome">
             <h1 className="login-title">Welcome Back</h1>
             <p className="login-subtitle">Sign in to access your account</p>
           </div>
 
-          {/* Login Card */}
           <div className="login-card">
             <div className="login-card-content">
-              
-              {/* Error Alert */}
               {err && (
                 <div className="login-error">
                   <AlertCircle className="login-error-icon" />
@@ -91,10 +86,7 @@ async function onSubmit(e) {
                 </div>
               )}
 
-              {/* Login Form */}
               <form onSubmit={onSubmit}>
-                
-                {/* Email Field */}
                 <div className="login-field">
                   <label htmlFor="email" className="login-label">
                     Email Address
@@ -113,7 +105,6 @@ async function onSubmit(e) {
                   </div>
                 </div>
 
-                {/* Password Field */}
                 <div className="login-field">
                   <div className="login-label-row">
                     <label htmlFor="password" className="login-label">
@@ -137,7 +128,6 @@ async function onSubmit(e) {
                   </div>
                 </div>
 
-                {/* Submit Button */}
                 <button 
                   type="submit"
                   disabled={submitting}
@@ -149,21 +139,17 @@ async function onSubmit(e) {
                       Signing in...
                     </>
                   ) : (
-                    <>
-                      Sign In
-                    </>
+                    "Sign In"
                   )}
                 </button>
               </form>
 
-              {/* Divider */}
               <div className="login-divider">
                 <div className="login-divider-line" />
                 <span className="login-divider-text">New to MedConnect?</span>
                 <div className="login-divider-line" />
               </div>
 
-              {/* Sign Up Link */}
               <div className="login-signup">
                 <p className="login-signup-text">
                   Don't have an account?{" "}
@@ -173,7 +159,6 @@ async function onSubmit(e) {
                 </p>
               </div>
 
-              {/* Info Note */}
               <div className="login-note">
                 <Info className="login-note-icon" />
                 <p className="login-note-text">

@@ -1,14 +1,13 @@
-// /home/site/wwwroot/apis/http.js
-const API_BASE = import.meta.env.VITE_API_BASE ?? '/backend/public';
+// Force relative URLs - works for both dev (via proxy) and production (via nginx)
+const API_BASE = '';
 
 export const makeUrl = (path, params) => {
   const p = path.startsWith('/') ? path : `/${path}`;
-  if (!params) return `${API_BASE}${p}`;
+  if (!params) return p;
   const qs = new URLSearchParams(params).toString();
-  return `${API_BASE}${p}${qs ? `?${qs}` : ''}`;
+  return `${p}${qs ? `?${qs}` : ''}`;  
 };
 
-// Generic fetch wrapper
 export async function apiRequest(
   path,
   { method = 'GET', params, body, headers = {}, credentials = 'include', json = true } = {}
@@ -25,7 +24,7 @@ export async function apiRequest(
   const res = await fetch(makeUrl(path, params), init);
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} ${res.statusText} – ${text}`);
+    throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`); 
   }
   return json ? res.json() : res;
 }

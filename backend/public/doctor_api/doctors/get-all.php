@@ -1,34 +1,70 @@
 <?php
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
+/**
+ * Get all doctors (for admin or dropdowns)
+ */
+
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
+    session_start();
+    
+    // Optional: Require authentication
+    if (!isset($_SESSION['uid'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit;
+    }
+    
     $conn = getDBConnection();
-
-    $sql = "SELECT d.Doctor_id, d.First_Name, d.Last_Name, d.Specialty, s.specialty_name
-            FROM Doctor d
-            LEFT JOIN Specialty s ON d.Specialty = s.specialty_id
-            ORDER BY d.Last_Name, d.First_Name";
-
-    $results = executeQuery($conn, $sql);
-    closeDBConnection($conn);
-
-    // Normalize to a simple array
-    $doctors = array_map(function($r) {
-        return [
-            'id' => $r['Doctor_id'],
-            'first_name' => $r['First_Name'],
-            'last_name' => $r['Last_Name'],
-            'name' => trim($r['First_Name'] . ' ' . $r['Last_Name']),
-            'specialty_id' => $r['Specialty'],
-            'specialty_name' => $r['specialty_name']
+    
+    // Get all doctors with their specialty (all lowercase for Azure)
+    $sql = "SELECT 
+                d.doctor_id,
+                d.first_name,
+                d.last_name,
+                d.email,
+                d.phone,
+                d.license_number,
+                s.specialty_name,
+                cg.gender_text as gender
+            FROM doctor d
+            LEFT JOIN specialty s ON d.specialty = s.specialty_id
+            LEFT JOIN codes_gender cg ON d.gender = cg.gender_code
+            ORDER BY d.last_name, d.first_name";
+    
+    $doctors = executeQuery($conn, $sql, '', []);
+    
+    // Format response
+    $formatted_doctors = [];
+    foreach ($doctors as $doc) {
+        $formatted_doctors[] = [
+            'doctor_id' => (int)$doc['doctor_id'],
+            'firstName' => $doc['first_name'],
+            'lastName' => $doc['last_name'],
+            'fullName' => $doc['first_name'] . ' ' . $doc['last_name'],
+            'email' => $doc['email'],
+            'phone' => $doc['phone'] ?: 'Not provided',
+            'licenseNumber' => $doc['license_number'],
+            'specialty' => $doc['specialty_name'],
+            'gender' => $doc['gender']
         ];
-    }, $results);
-
-    echo json_encode(['success' => true, 'doctors' => $doctors]);
+    }
+    
+    closeDBConnection($conn);
+    
+    echo json_encode([
+        'success' => true,
+        'doctors' => $formatted_doctors,
+        'count' => count($formatted_doctors)
+    ]);
+    
 } catch (Exception $e) {
+    error_log("Error in doctors/get-all.php: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ]);
 }
-
 ?>

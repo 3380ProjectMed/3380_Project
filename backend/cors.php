@@ -1,44 +1,41 @@
 <?php
-header("Access-Control-Allow-Origin: http://localhost:5173");
-header("Access-Control-Allow-Credentials: true"); // ⭐ Must be true
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Content-Type: application/json; charset=UTF-8");
-
-/**
- * Minimal CORS helper for PHP APIs.
- * - Whitelists allowed origins (dev + prod).
- * - Supports credentials.
- * - Handles OPTIONS preflight.
- */
-
 $allowedOrigins = [
-    'http://localhost:5173',                     // Vite dev
-    'https://medconnect.azurewebsites.net',      // App Service
-    // 'https://your-custom-domain.tld',         // add if/when you map a custom domain
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://medconnect.azurewebsites.net',
+    'https://medconnect-h8gyeya7hbdffxaq.westus3-01.azurewebsites.net',
 ];
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+// Only send CORS headers if there's an Origin header (cross-origin request)
 if ($origin && in_array($origin, $allowedOrigins, true)) {
     header("Access-Control-Allow-Origin: {$origin}");
-    header('Vary: Origin'); // caching correctness when multiple origins
-    header('Access-Control-Allow-Credentials: true'); // if you use cookies/sessions
-}
-
-// Reflect headers the browser asked for, but keep a safe default
-$reqHeaders = $_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'] ?? 'Content-Type, Authorization';
-
-// Methods you actually support; keep this tight if possible
-$allowMethods = 'GET, POST, PUT, DELETE, OPTIONS';
-
-// Preflight
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+    header('Vary: Origin');
+    header('Access-Control-Allow-Credentials: true');
+    
+    $allowHeaders = 'Content-Type, Authorization, X-Requested-With';
+    $allowMethods = 'GET, POST, PUT, DELETE, OPTIONS';
+    
     header("Access-Control-Allow-Methods: {$allowMethods}");
-    header("Access-Control-Allow-Headers: {$reqHeaders}");
-    header('Access-Control-Max-Age: 600'); // cache preflight for 10 minutes
-    http_response_code(204);
-    exit;
+    header("Access-Control-Allow-Headers: {$allowHeaders}");
+    
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+        header('Access-Control-Max-Age: 600');
+        http_response_code(204);
+        exit;
+    }
 }
 
-// For JSON APIs, let the endpoint set Content-Type. If you want a default:
-// header('Content-Type: application/json; charset=utf-8');
+// Session configuration
+if (session_status() === PHP_SESSION_NONE) {
+    // For same-origin requests (production on same domain)
+    ini_set('session.cookie_samesite', 'Lax');  // Changed from 'None'!
+    ini_set('session.cookie_secure', '1');       // HTTPS
+    ini_set('session.cookie_httponly', '1');     // Security
+    ini_set('session.gc_maxlifetime', 3600);     // 1 hour
+    
+    // Optional: Set explicit cookie path
+    ini_set('session.cookie_path', '/');
+}
+

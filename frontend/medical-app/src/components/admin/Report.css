@@ -1,0 +1,215 @@
+/* Report specific styles - align with Dashboard tokens */
+
+.report-container {
+	padding: 2rem;
+	max-width: 1400px;
+	margin: 0 auto;
+	/* leave room for fixed sidebar (sidebar width is 16rem) */
+	margin-left: 16rem;
+	box-sizing: border-box;
+	/* match site font */
+	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Remove left margin on small screens where sidebar collapses */
+@media (max-width: 900px) {
+	.report-container {
+		margin-left: 0;
+		padding: 1rem;
+	}
+}
+
+.report-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 1.25rem;
+}
+
+.report-header-left h1 {
+	margin: 0;
+	font-size: 1.75rem;
+	color: #03045e;
+}
+
+.report-header .office-info {
+	margin-top: 0.25rem;
+	font-size: 0.95rem;
+	color: #6b7280;
+}
+
+.report-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.toolbar-actions {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.btn-ghost {
+	background: transparent;
+	border: 1px solid transparent;
+	padding: 0.5rem 0.75rem;
+	border-radius: 0.5rem;
+	cursor: pointer;
+}
+
+.btn-primary {
+	background: #0077b6;
+	color: white;
+	border: none;
+	padding: 0.5rem 0.75rem;
+	border-radius: 0.5rem;
+	cursor: pointer;
+}
+
+.btn-secondary {
+	background: #90e0ef;
+	color: #023e8a;
+	border: none;
+	padding: 0.45rem 0.6rem;
+	border-radius: 0.5rem;
+	cursor: pointer;
+}
+
+.compact-filters {
+	display: flex;
+	justify-content: flex-start;
+	margin-bottom: 1rem;
+}
+
+.filter-inputs {
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.filter-label {
+	font-size: 0.85rem;
+	color: #374151;
+	margin-right: 0.25rem;
+}
+
+.filter-date-input {
+	border: 1px solid #e5e7eb;
+	background: #fff;
+	padding: 0.4rem 0.6rem;
+	border-radius: 6px;
+}
+
+.stats-grid {
+	margin: 0 0 1.25rem 0;
+}
+
+.report-section {
+	background: white;
+	border-radius: 0.75rem;
+	padding: 1rem;
+	box-shadow: 0 4px 12px rgba(0,119,182,0.06);
+	margin-bottom: 1rem;
+}
+
+.table-container {
+	width: 100%;
+	overflow-x: auto;
+}
+
+.report-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.95rem;
+}
+
+.report-table th,
+.report-table td {
+	padding: 0.75rem 0.75rem;
+	text-align: left;
+	border-bottom: 1px solid #eef2f7;
+}
+
+.report-table thead th {
+	background: linear-gradient(135deg,#caf0f8,#ffffff);
+	font-weight: 700;
+	text-transform: uppercase;
+	font-size: 0.85rem;
+	color: #03045e;
+}
+
+.rate-badge {
+	display: inline-block;
+	padding: 0.25rem 0.5rem;
+	border-radius: 999px;
+	font-weight: 700;
+	font-size: 0.85rem;
+}
+
+.rate-good { background: #d1fae5; color: #065f46; }
+.rate-poor { background: #fff3e0; color: #92400e; }
+.rate-fair { background: #fff9c4; color: #f57f17; }
+
+.utilization-bar {
+	position: relative;
+	height: 18px;
+	background: #f1f5f9;
+	border-radius: 999px;
+	overflow: hidden;
+}
+
+.utilization-fill {
+	height: 100%;
+	background: linear-gradient(90deg,#00b4d8,#0077b6);
+}
+
+.util-high { background: linear-gradient(90deg,#34d399,#059669); }
+.util-medium { background: linear-gradient(90deg,#60a5fa,#2563eb); }
+.util-low { background: linear-gradient(90deg,#fef3c7,#f59e0b); }
+
+.utilization-text {
+	position: absolute;
+	right: 8px;
+	top: 50%;
+	transform: translateY(-50%);
+	font-weight: 700;
+	font-size: 0.8rem;
+	color: #023047;
+}
+
+.loading-container {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1.5rem;
+}
+
+.loading-spinner {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	border: 4px solid rgba(3,4,94,0.12);
+	border-top-color: #0077b6;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state {
+	text-align: center;
+	padding: 2.5rem 1rem;
+	color: #9ca3af;
+}
+
+/* Small tweaks for mobile */
+@media (max-width: 768px) {
+	.report-header-left h1 { font-size: 1.25rem; }
+	.report-container { padding: 1rem; }
+	.report-table th, .report-table td { padding: 0.5rem 0.5rem; font-size: 0.85rem; }
+}
+

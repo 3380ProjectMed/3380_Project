@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
     $conn = getDBConnection();
@@ -16,32 +16,31 @@ try {
             exit;
         }
         $user_id = intval($_SESSION['uid']);
-        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
         if (!is_array($rows) || count($rows) === 0) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
             closeDBConnection($conn);
             exit;
         }
-        $doctor_id = (int)$rows[0]['Doctor_id'];
+        $doctor_id = (int)$rows[0]['doctor_id'];
     }
     
     $sql = "SELECT 
-                r.Referral_ID,
-                CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name,
-                p.Patient_ID,
-                CONCAT(d2.First_Name, ' ', d2.Last_Name) as specialist_name,
+                r.referral_id,
+                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                p.patient_id,
+                CONCAT(d2.first_name, ' ', d2.last_name) as specialist_name,
                 s.specialty_name,
-                r.Reason,
-                r.Status,
-                r.Date_of_approval
-            FROM Referral r
-            INNER JOIN Patient p ON r.Patient_ID = p.Patient_ID
-            LEFT JOIN Doctor d2 ON r.specialist_doctor_staff_id = d2.Doctor_id
-            LEFT JOIN Specialty s ON d2.Specialty = s.specialty_id
+                r.reason,
+                r.date_of_approval
+            FROM referral r
+            INNER JOIN patient p ON r.patient_id = p.patient_id
+            LEFT JOIN doctor d2 ON r.specialist_doctor_staff_id = d2.doctor_id
+            LEFT JOIN specialty s ON d2.specialty = s.specialty_id
             WHERE r.specialist_doctor_staff_id = ?
-            ORDER BY r.Referral_ID DESC";
-    
+            ORDER BY r.referral_id DESC";
+
     $results = executeQuery($conn, $sql, 'i', [$doctor_id]);
     closeDBConnection($conn);
     

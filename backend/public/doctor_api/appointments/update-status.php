@@ -2,8 +2,8 @@
 /**
  * Update appointment status
  */
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
     session_start();
@@ -13,7 +13,6 @@ try {
         exit;
     }
     
-    // Get POST data
     $input = json_decode(file_get_contents('php://input'), true);
     
     if (!isset($input['appointment_id']) || !isset($input['status'])) {
@@ -26,7 +25,7 @@ try {
     $status = $input['status'];
     
     // Validate status
-    $validStatuses = ['Scheduled', 'Waiting', 'In Progress', 'Completed', 'Cancelled', 'No-Show'];
+    $validStatuses = ['Scheduled', 'Pending', 'Waiting', 'In Progress', 'Completed', 'Cancelled', 'No-Show'];
     if (!in_array($status, $validStatuses)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid status']);
@@ -36,7 +35,8 @@ try {
     $conn = getDBConnection();
     
     // Update the appointment status
-    $sql = "UPDATE Appointment SET Status = ? WHERE Appointment_id = ?";
+    // appointment table has mixed case: Appointment_id, Status
+    $sql = "UPDATE appointment SET Status = ? WHERE Appointment_id = ?";
     executeQuery($conn, $sql, 'si', [$status, $appointment_id]);
     
     closeDBConnection($conn);

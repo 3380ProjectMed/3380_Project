@@ -123,9 +123,19 @@ function RequireRole({ roles, children }) {
   if (loading) return <div style={{ padding: 24 }}>Loading…</div>;
   if (!user) return <Navigate to="/login" state={{ from: loc }} replace />;
 
-  if (roles && !roles.includes(user.role)) {
-    return <Navigate to={homeFor(user.role)} replace />;
+   if (roles && !roles.includes(user.role)) {
+    // Redirect to their appropriate home instead of login
+    const homeByRole = {
+      DOCTOR: "/doctor",
+      ADMIN: "/admin",
+      PATIENT: "/patientportal",
+      NURSE: "/nurse",
+    };
+    const userHome = homeByRole[user.role] || "/patientportal";
+    
+    return <Navigate to={userHome} replace />;
   }
+  
   return children;
 }
 
@@ -138,7 +148,7 @@ function AutoPortal() {
 
 function homeFor(role) {
   switch (role) {
-    // case "ADMIN": return "/admin";            // disabled
+    case "ADMIN": return "/admin";            
     case "DOCTOR": return "/doctor";
     case "NURSE": return "/nurse";
     // case "RECEPTIONIST": return "/reception"; // disabled

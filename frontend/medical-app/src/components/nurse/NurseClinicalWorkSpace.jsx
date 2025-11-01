@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FileText, Activity, Clock, User, Save, X } from "lucide-react";
 import "./NurseClinicalWorkSpace.css";
+import { saveNurseVitals, saveNurseNote } from '../../api/nurse';
 
 export default function NurseClinicalWorkSpace() {
   const [tab, setTab] = useState("notes");
@@ -14,8 +15,32 @@ export default function NurseClinicalWorkSpace() {
     allergies: "Penicillin", lastVisit: "2025-09-15"
   };
 
-  const saveNote = () => { alert("Clinical note saved (mock)."); };
-  const saveVitals = () => { alert("Vitals saved (mock)."); };
+  const saveNote = async (apptId) => {
+    if (!apptId) { alert('No appointment selected (mock save)'); return; }
+    try {
+      await saveNurseNote(apptId, { body: note });
+      alert('Clinical note saved');
+      setNote('');
+    } catch (e) {
+      alert('Failed to save note: ' + (e.message || e));
+    }
+  };
+  const saveVitals = async (apptId) => {
+    if (!apptId) { alert('No appointment selected (mock save)'); return; }
+    try {
+      // map local keys to API payload keys
+      const payload = {
+        bp: vitals.bloodPressure,
+        hr: vitals.heartRate,
+        temp: vitals.temperature,
+        spo2: vitals.oxygenSaturation
+      };
+      await saveNurseVitals(apptId, payload);
+      alert('Vitals saved');
+    } catch (e) {
+      alert('Failed to save vitals: ' + (e.message || e));
+    }
+  };
 
   return (
     <div className="nurse-page">
@@ -47,7 +72,10 @@ export default function NurseClinicalWorkSpace() {
               onChange={(e)=>setNote(e.target.value)}
             />
             <div className="actions">
-              <button className="primary" onClick={saveNote}><Save size={16}/> Save Note</button>
+              <button className="primary" onClick={() => {
+                const appt = prompt('Enter appointment id to save note (e.g. 123)');
+                saveNote(appt);
+              }}><Save size={16}/> Save Note</button>
               <button className="ghost" onClick={()=>setNote("")}><X size={16}/> Clear</button>
             </div>
           </div>
@@ -72,7 +100,10 @@ export default function NurseClinicalWorkSpace() {
               </div>
             ))}
             <div style={{textAlign:"center"}}>
-              <button className="primary" onClick={saveVitals}><Save size={16}/> Save Vitals</button>
+              <button className="primary" onClick={() => {
+                const appt = prompt('Enter appointment id to save vitals (e.g. 123)');
+                saveVitals(appt);
+              }}><Save size={16}/> Save Vitals</button>
             </div>
           </div>
         )}

@@ -1,12 +1,27 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./NurseSchedule.css";
+import { getNurseSchedule } from '../../api/nurse';
 
 export default function NurseSchedule() {
-  const data = [
-    { date: "2025-10-23", time: "09:00", patient: "Sarah Connor", location: "Main Clinic", reason: "Follow-up" },
-    { date: "2025-10-23", time: "10:30", patient: "John Doe", location: "Main Clinic", reason: "Annual Physical" },
-    { date: "2025-10-23", time: "14:00", patient: "Emma Wilson", location: "Satellite Office", reason: "Consultation" },
-  ];
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      setLoading(true);
+      try {
+        const today = new Date().toISOString().slice(0,10);
+        const data = await getNurseSchedule({ date: today }).catch(() => []);
+        if (mounted) setRows(data || []);
+      } catch (e) {
+        if (mounted) setError(e.message || 'Failed to load schedule');
+      } finally { if (mounted) setLoading(false); }
+    }
+    load();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="nurse-page">
@@ -17,15 +32,17 @@ export default function NurseSchedule() {
             <div>Date</div><div>Time</div><div>Patient</div><div>Location</div><div>Reason</div>
           </div>
           <div className="tbody">
-            {data.map((r, i) => (
+            {rows.length ? rows.map((r, i) => (
               <div key={i} className="row">
-                <div>{r.date}</div>
-                <div>{r.time}</div>
-                <div>{r.patient}</div>
-                <div>{r.location}</div>
+                <div>{new Date(r.time).toLocaleDateString()}</div>
+                <div>{new Date(r.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                <div>{r.patientName}</div>
+                <div>{r.location || ''}</div>
                 <div>{r.reason}</div>
               </div>
-            ))}
+            )) : (
+              <div className="empty">{loading ? 'Loading...' : (error || 'No schedule')}</div>
+            )}
           </div>
         </div>
       </div>

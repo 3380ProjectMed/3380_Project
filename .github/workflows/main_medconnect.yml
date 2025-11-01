@@ -27,10 +27,11 @@ jobs:
         working-directory: frontend/medical-app
         run: |
           set -e
+          rm -rf node_modules/.vite
+          rm -rf dist               
           npm ci
           npm run build
           test -f dist/index.html
-
       # ---------- Prepare webroot ----------
       - name: Stage webroot
         run: |
@@ -53,6 +54,11 @@ jobs:
 
           [ -f backend/database.php ] && cp backend/database.php "$WEBROOT/" || true
           [ -f backend/cors.php ] && cp backend/cors.php "$WEBROOT/" || true
+          if [ -f DigiCertGlobalRootG2.crt ]; then
+            mkdir -p "$WEBROOT/certs"
+            cp DigiCertGlobalRootG2.crt "$WEBROOT/certs/"
+            echo "✓ Copied SSL certificate"
+          fi
 
           # 3) NGINX config + startup script
           mkdir -p "$WEBROOT/nginx"
