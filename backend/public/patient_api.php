@@ -1,9 +1,9 @@
 <?php
 // patient_api.php - Patient Portal API Endpoints (cleaned and fixed)
 
-require_once '../cors.php';
-require_once '../database.php';
-// require_once 'helpers.php'; // Temporarily commented out
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
+// require_once 'helpers.php'; 
 
 header('Content-Type: application/json');
 
@@ -16,11 +16,13 @@ function requireAuth($allowed_roles = ['PATIENT']) {
     if (!isset($_SESSION['patient_id'])) {
         // Get the logged-in user's email from the main authentication system
         $user_email = $_SESSION['email'] ?? null;
+        error_log("Patient API: Session email = " . ($user_email ?: 'NULL'));
         
         if ($user_email) {
             // Look up patient by the logged-in user's email
             try {
                 $mysqli = getDBConnection();
+                error_log("Patient API: Database connection successful");
                 
                 $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient WHERE email = ? LIMIT 1");
                 $stmt->bind_param('s', $user_email);
