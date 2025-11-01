@@ -6,13 +6,20 @@ ini_set('display_errors', '1');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../../error.log');
 
-// Ensure CORS headers are sent for requests coming from the dev server
 require_once __DIR__ . '/../cors.php';
+
+// Azure App Service HTTPS detection
+// Azure terminates SSL at the load balancer, so check for proxy headers
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+    || (!empty($_SERVER['HTTP_X_ARR_SSL'])) // Azure-specific header
+    || $_SERVER['SERVER_PORT'] == 443;
 
 session_start([
   'cookie_httponly' => true,
-  'cookie_secure'   => !empty($_SERVER['HTTPS']),
+  'cookie_secure'   => $isHttps,  // ← Use proper HTTPS detection
   'cookie_samesite' => 'Lax',
+  'cookie_path'     => '/',
 ]);
 
 header('Content-Type: application/json');

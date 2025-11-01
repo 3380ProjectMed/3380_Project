@@ -80,10 +80,10 @@ debug_log('SSL cert exists: ' . (file_exists($sslCertPath) ? 'YES' : 'NO'));
 
 if (file_exists($sslCertPath)) {
     $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);
-    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, true);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 1);
 } else {
     $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
-    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 0);
 }
 
 $host = getenv('AZURE_MYSQL_HOST') ?: '';
