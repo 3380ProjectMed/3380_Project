@@ -203,72 +203,73 @@ try {
     $allergies          = (isset($input['allergiesCode'])     && $input['allergiesCode']     !== '') ? (int)$input['allergiesCode']     : null;
     $blood_type         = (isset($input['bloodType'])         && $input['bloodType']         !== '') ? $input['bloodType']              : null;
 
-    // ----- Optional insert into emergency_contact -----
-    $emergency_contact_id = null;
-    if ($ec_fn || $ec_ln || $ec_rel || $ec_ph) {
-        $stmt = $mysqli->prepare(
-            "INSERT INTO emergency_contact (first_name, last_name, relation, phone)
-            VALUES (?, ?, ?, ?)"
-        );
-        $stmt->bind_param("ssss", $ec_fn, $ec_ln, $ec_rel, $ec_ph);
-        if (!$stmt->execute()) {
-            throw new Exception('Failed to create emergency contact: ' . $stmt->error);
-        }
-        $emergency_contact_id = $mysqli->insert_id;
-        $stmt->close();
-    }
-
-    // ----- INSERT into Patient (with emergency_contact_id) -----
     $stmt = $mysqli->prepare(
-        "INSERT INTO Patient (
-            first_name,
-            last_name,
-            dob,
-            ssn,
-            emergency_contact_id,
-            assigned_at_birth_gender,
-            gender,
-            ethnicity,
-            race,
-            email,
-            primary_doctor,
-            specialty_doctor,
-            insurance_id,
-            insurance_provider,
-            prescription,
-            allergies,
-            blood_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO Patient (
+        first_name,
+        last_name,
+        dob,
+        ssn,
+        assigned_at_birth_gender,
+        gender,
+        ethnicity,
+        race,
+        email,
+        primary_doctor,
+        specialty_doctor,
+        insurance_id,
+        insurance_provider,
+        prescription,
+        allergies,
+        blood_type
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+);
+
+// types: 'ssss' + 'iiii' + 's' + 'iiiiii' + 's'  => 16 params
+$stmt->bind_param(
+    'ssssiiiisiiiiiis',
+    $first_name,
+    $last_name,
+    $dob,
+    $ssn,
+    $assigned_at_birth_gender,
+    $gender,
+    $ethnicity,
+    $race,
+    $email,
+    $primary_doctor,
+    $specialty_doctor,
+    $insurance_id,
+    $insurance_provider,
+    $prescription,
+    $allergies,
+    $blood_type
+);
+
+if (!$stmt->execute()) {
+    throw new Exception('Failed to create patient record: ' . $stmt->error);
+}
+$patient_id = $mysqli->insert_id;
+$stmt->close();
+
+if ($ec_fn || $ec_ln || $ec_rel || $ec_ph) {
+    $stmt = $mysqli->prepare(
+        "INSERT INTO emergency_contact (
+            patient_id,
+            ec_first_name,
+            ec_last_name,
+            ec_phone,
+            relationship
+        ) VALUES (?, ?, ?, ?, ?)"
     );
 
-    // Types (17 total):
-    // 1-4 ssss | 5 i | 6-9 iiii | 10 s | 11-16 iiiiii | 17 s
-    $stmt->bind_param(
-        'ssssiiiiisiiiiiis',
-        $first_name,
-        $last_name,
-        $dob,
-        $ssn,
-        $emergency_contact_id,
-        $assigned_at_birth_gender,
-        $gender,
-        $ethnicity,
-        $race,
-        $email,
-        $primary_doctor,
-        $specialty_doctor,
-        $insurance_id,
-        $insurance_provider,
-        $prescription,
-        $allergies,
-        $blood_type
-    );
+    // NOTE: order matches the column list above (phone before relationship)
+    $stmt->bind_param("issss", $patient_id, $ec_fn, $ec_ln, $ec_ph, $ec_rel);
 
     if (!$stmt->execute()) {
-        throw new Exception('Failed to create patient record: ' . $stmt->error);
+        throw new Exception('Failed to create emergency contact: ' . $stmt->error);
     }
-    $patient_id = $mysqli->insert_id;
     $stmt->close();
+}
     
     // Commit transaction
     $mysqli->commit();
