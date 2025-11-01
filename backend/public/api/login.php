@@ -39,17 +39,14 @@ if (!$mysqli) {
 }
 
 // Set SSL options BEFORE connecting
-// Use absolute path for Azure App Service
 $sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
 
 if (file_exists($sslCertPath)) {
-    // Use certificate verification (more secure)
     $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);
-    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, true);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 1);
 } else {
-    // Fallback: Don't verify (less secure, but works if cert is missing)
     $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
-    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 0);
 }
 
 // NOW connect (only once!)
@@ -69,11 +66,14 @@ if (!$input || !isset($input['email']) || !isset($input['password'])) {
     exit;
 }
 
-$email = $mysqli->real_escape_string($input['email']);
+$email = $input['email'];
 $password = $input['password'];
 
-// Query user - using your actual table name 'user_account'
-$sql = "SELECT user_id, username, email, password_hash, role FROM user_account WHERE email = ? LIMIT 1";
+// Query user - get failed_login_count too
+$sql = "SELECT user_id, username, email, password_hash, role, failed_login_count, is_active 
+        FROM user_account 
+        WHERE email = ? 
+        LIMIT 1";
 $stmt = $mysqli->prepare($sql);
 
 if (!$stmt) {
@@ -97,15 +97,54 @@ if (!$result || $result->num_rows === 0) {
 $user = $result->fetch_assoc();
 $stmt->close();
 
-// Verify password - FIXED: use password_hash instead of password
-if (!hash_equals($password, $user['password_hash'])) {
+// Check if account is active
+if (!$user['is_active']) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Account is disabled']);
+    $mysqli->close();
+    exit;
+}
+
+// Check if account is locked (password_hash is NULL due to trigger)
+if ($user['password_hash'] === null) {
+    http_response_code(403);
+    echo json_encode([
+        'error' => 'Account locked due to too many failed login attempts. Please reset your password.'
+    ]);
+    $mysqli->close();
+    exit;
+}
+
+// Verify password - FIXED: use password_verify() instead of hash_equals()
+if (!password_verify($password, $user['password_hash'])) {
+    // Password is incorrect - increment failed_login_count
+    $updateStmt = $mysqli->prepare(
+        "UPDATE user_account 
+         SET failed_login_count = failed_login_count + 1 
+         WHERE user_id = ?"
+    );
+    $updateStmt->bind_param('i', $user['user_id']);
+    $updateStmt->execute();
+    $updateStmt->close();
+    
     http_response_code(401);
     echo json_encode(['error' => 'Invalid credentials']);
     $mysqli->close();
     exit;
 }
 
-// Set session - using 'uid' to match me.php
+// Password is correct - reset failed_login_count and update last_login_at
+$updateStmt = $mysqli->prepare(
+    "UPDATE user_account 
+     SET failed_login_count = 0, 
+         last_login_at = CURRENT_TIMESTAMP 
+     WHERE user_id = ?"
+);
+$updateStmt->bind_param('i', $user['user_id']);
+$updateStmt->execute();
+$updateStmt->close();
+
+// Set session
 $_SESSION['uid'] = $user['user_id'];
 $_SESSION['email'] = $user['email'];
 $_SESSION['role'] = $user['role'];
