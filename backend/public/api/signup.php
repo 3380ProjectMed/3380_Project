@@ -166,37 +166,93 @@ try {
     }
     
     // Insert into Patient table - Using PascalCase column names to match schema
+// ----- Derived fields for Patient -----
+    $first_name = trim($input['firstName']);
+    $last_name  = trim($input['lastName']);
+
+    try {
+        $dob = (new DateTime($input['dateOfBirth']))->format('Y-m-d');
+    } catch (Exception $e) {
+        throw new Exception('Invalid date of birth format');
+    }
+
+    // $ssn already set above as TEMP + user_id
+
+    // Emergency contact: store digits only (VARCHAR(15))
+    $emergency_contact = null;
+    if (!empty($input['emergencyPhone'])) {
+        $emergency_contact = substr(preg_replace('/[^0-9]/', '', $input['emergencyPhone']), 0, 15);
+    }
+
+    // Gender map (SMALLINT)
+    $gender_map = [
+        'male' => 1, 'female' => 2, 'other' => 3, 'prefer-not-to-say' => 4
+    ];
+    $assigned_at_birth_gender = $gender_map[strtolower($input['gender'])] ?? 3;
+    $gender = $assigned_at_birth_gender;
+
+    // Optional codes
+    $ethnicity = (isset($input['ethnicity']) && $input['ethnicity'] !== '') ? (int)$input['ethnicity'] : null;
+    $race      = (isset($input['race']) && $input['race'] !== '') ? (int)$input['race'] : null;
+
+    $email = $input['email'];
+
+    $primary_doctor     = (isset($input['primaryDoctor'])     && $input['primaryDoctor']     !== '') ? (int)$input['primaryDoctor']     : null;
+    $specialty_doctor   = (isset($input['specialtyDoctor'])   && $input['specialtyDoctor']   !== '') ? (int)$input['specialtyDoctor']   : null;
+    $insurance_id       = (isset($input['insuranceId'])       && $input['insuranceId']       !== '') ? (int)$input['insuranceId']       : null;
+    $insurance_provider = (isset($input['insuranceProvider']) && $input['insuranceProvider'] !== '') ? (int)$input['insuranceProvider'] : null;
+    $prescription       = (isset($input['prescriptionId'])    && $input['prescriptionId']    !== '') ? (int)$input['prescriptionId']    : null;
+    $allergies          = (isset($input['allergiesCode'])     && $input['allergiesCode']     !== '') ? (int)$input['allergiesCode']     : null;
+    $blood_type         = (isset($input['bloodType'])         && $input['bloodType']         !== '') ? $input['bloodType']              : null;
+
+    // ----- INSERT into Patient -----
     $stmt = $mysqli->prepare(
         "INSERT INTO Patient (
-            First_Name, 
-            Last_Name, 
-            dob, 
-            SSN, 
-            EmergencyContact, 
-            AssignedAtBirth_Gender,
-            Gender,
-            Email, 
-            Consent_Disclose,
-            PayerType
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'N', 'Self-Pay')"
+            first_name,
+            last_name,
+            dob,
+            ssn,
+            emergency_contact,
+            assigned_at_birth_gender,
+            gender,
+            ethnicity,
+            race,
+            email,
+            primary_doctor,
+            specialty_doctor,
+            insurance_id,
+            insurance_provider,
+            prescription,
+            allergies,
+            blood_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
-    
+
+    // Types: sssss | iiii | s | iiiiii | s  (total 17)
     $stmt->bind_param(
-        "sssssiis",
-        $input['firstName'],
-        $input['lastName'],
-        $input['dateOfBirth'],
+        'sssssiiiisiiiiiis',
+        $first_name,
+        $last_name,
+        $dob,
         $ssn,
         $emergency_contact,
-        $assigned_gender,
-        $assigned_gender,
-        $input['email']
+        $assigned_at_birth_gender,
+        $gender,
+        $ethnicity,
+        $race,
+        $email,
+        $primary_doctor,
+        $specialty_doctor,
+        $insurance_id,
+        $insurance_provider,
+        $prescription,
+        $allergies,
+        $blood_type
     );
-    
+
     if (!$stmt->execute()) {
         throw new Exception('Failed to create patient record: ' . $stmt->error);
     }
-    
     $patient_id = $mysqli->insert_id;
     $stmt->close();
     
