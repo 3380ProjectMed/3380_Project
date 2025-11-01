@@ -30,15 +30,18 @@ export default function NursePatients() {
       if (authLoading) return;
       // Use session-authenticated endpoint to get upcoming patients for nurse's location
       const list = await getNursePatientsUpcoming(query || undefined);
-      setPatients(list || []);
-      setTotal(Array.isArray(list) ? list.length : 0);
+  setPatients(Array.isArray(list) ? list : []);
+  setTotal(Array.isArray(list) ? list.length : 0);
     } catch (e) {
       // Handle nurse-not-found specially
-      const msg = (e && e.data && e.data.error) ? e.data.error : (e.message || 'Failed to load');
+      const msg = e?.data?.error ? e.data.error : (e?.message || 'Failed to load');
       if (msg === 'NURSE_NOT_FOUND') {
         setError('No nurse record is associated with this account.');
+      } else if (e?.status === 401) {
+        // request helper will redirect, but ensure state is cleared
+        setError('Unauthorized — redirecting to login');
       } else {
-        setError(e.message || 'Failed to load');
+        setError(e?.message || 'Failed to load');
       }
     } finally {
       setLoading(false);

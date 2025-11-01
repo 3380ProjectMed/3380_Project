@@ -10,10 +10,14 @@ export default function NurseSchedule() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getNurseScheduleToday().catch(() => []);
-      setRows(data || []);
+  const data = await getNurseScheduleToday().catch(() => []);
+  setRows(Array.isArray(data) ? data : []);
     } catch (e) {
-      setError(e && e.data && e.data.error === 'NURSE_NOT_FOUND' ? 'No nurse record is associated with this account.' : (e.message || 'Failed to load schedule'));
+      if (e?.status === 401) {
+        setError('Unauthorized — redirecting to login');
+      } else {
+        setError(e?.data?.error === 'NURSE_NOT_FOUND' ? 'No nurse record is associated with this account.' : (e?.message || 'Failed to load schedule'));
+      }
     } finally { setLoading(false); }
   }
 
