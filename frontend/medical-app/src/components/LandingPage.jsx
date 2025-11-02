@@ -117,7 +117,7 @@ export default function LandingPage() {
           </nav>
           
           <div className="header-actions">
-            <button 
+            {/* <button 
               onClick={() => setShowTest(true)}
               style={{
                 padding: '8px 12px',
@@ -130,7 +130,7 @@ export default function LandingPage() {
               }}
             >
               Test Connection
-            </button>
+            </button> */}
             <a href="/login" className="btn btn-primary">
               <LogIn className="icon" />
               Log In
