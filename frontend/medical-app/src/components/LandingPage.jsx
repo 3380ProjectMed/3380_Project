@@ -42,6 +42,20 @@ export default function LandingPage() {
 
   return (
     <div className="landing-root">
+      <div style={{
+        background: '#fff3cd',
+        border: '2px solid #ffc107',
+        padding: '15px',
+        margin: '20px 0',
+        borderRadius: '8px',
+        textAlign: 'center'
+        }}>
+        <strong>⚠️ EDUCATIONAL PROJECT ONLY</strong>
+        <p style={{margin: '5px 0'}}>
+          This is a student project for learning purposes.
+          Not a real medical application. No real patient data is stored.
+        </p>
+      </div>
       
       {/* Header */}
       <header className="landing-header">
