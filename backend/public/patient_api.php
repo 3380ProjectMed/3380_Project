@@ -72,8 +72,24 @@ function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
 
 function validateRequired($input, $required_fields) {
     $missing = [];
+    error_log("validateRequired: input = " . json_encode($input));
+    error_log("validateRequired: input type = " . gettype($input));
+    
+    if (!is_array($input)) {
+        error_log("validateRequired: Input is not an array!");
+        return $required_fields; // All fields are missing if input is not an array
+    }
+    
     foreach ($required_fields as $field) {
-        if (!isset($input[$field]) || empty($input[$field])) {
+        $isset = isset($input[$field]);
+        $value = $input[$field] ?? null;
+        $isEmpty = empty($input[$field]);
+        
+        error_log("validateRequired: field '$field' - isset: " . ($isset ? 'true' : 'false') . 
+                  ", value: " . json_encode($value) . 
+                  ", empty: " . ($isEmpty ? 'true' : 'false'));
+        
+        if (!$isset || $isEmpty) {
             $missing[] = $field;
         }
     }
@@ -284,7 +300,12 @@ elseif ($endpoint === 'profile') {
         }
     } 
     elseif ($method === 'PUT') {
-        $input = json_decode(file_get_contents('php://input'), true);
+        $raw_input = file_get_contents('php://input');
+        $input = json_decode($raw_input, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("Profile API: JSON decode error - " . json_last_error_msg());
+            sendResponse(false, [], 'Invalid JSON data: ' . json_last_error_msg(), 400);
+        }
         
         try {
             // Helper: map a human-readable text value to its numeric code in lookup tables.
@@ -450,10 +471,17 @@ elseif ($endpoint === 'appointments') {
     } 
     elseif ($method === 'POST') {
     // Book new appointment
-    $input = json_decode(file_get_contents('php://input'), true);
+    $raw_input = file_get_contents('php://input');
+    error_log("Booking API: Raw input = " . $raw_input);
+    
+    $input = json_decode($raw_input, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log("Booking API: JSON decode error - " . json_last_error_msg());
+        sendResponse(false, [], 'Invalid JSON data: ' . json_last_error_msg(), 400);
+    }
     
     // Debug: Log the received booking data
-    error_log("Booking API: Received data = " . json_encode($input));
+    error_log("Booking API: Parsed data = " . json_encode($input));
     
     $required = ['doctor_id', 'office_id', 'appointment_date', 'reason'];
     $missing = validateRequired($input, $required);
