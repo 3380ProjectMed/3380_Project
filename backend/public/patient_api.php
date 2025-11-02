@@ -500,7 +500,7 @@ elseif ($endpoint === 'appointments') {
         
         // Insert appointment with explicit status for PCP appointments
         $stmt = $mysqli->prepare("
-            INSERT INTO Appointment (
+            INSERT INTO appointment (
                 Appointment_id, Patient_id, Doctor_id, Office_id, 
                 Appointment_date, Date_created, Reason_for_visit, Status
             ) VALUES (?, ?, ?, ?, ?, NOW(), ?, 'Scheduled')
