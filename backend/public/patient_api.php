@@ -7,10 +7,17 @@ require_once '/home/site/wwwroot/database.php';
 
 header('Content-Type: application/json');
 
+// Azure App Service HTTPS detection
+// Azure terminates SSL at the load balancer, so check for proxy headers
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+    || (!empty($_SERVER['HTTP_X_ARR_SSL'])) // Azure-specific header
+    || $_SERVER['SERVER_PORT'] == 443;
+
 // Start session with same configuration as login system
 session_start([
     'cookie_httponly' => true,
-    'cookie_secure'   => !empty($_SERVER['HTTPS']),
+    'cookie_secure'   => $isHttps,  // ← Use proper HTTPS detection
     'cookie_samesite' => 'Lax',
 ]);
 
