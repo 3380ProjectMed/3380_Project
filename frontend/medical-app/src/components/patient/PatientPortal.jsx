@@ -379,7 +379,26 @@ export default function PatientPortal({ onLogout }) {
       }
     } catch (err) {
       console.error('Booking error', err);
-      setBookingError(err.message || 'Failed to book appointment');
+      
+      // Extract user-friendly message from API error response
+      let errorMessage = 'Failed to book appointment';
+      if (err.message) {
+        // Try to extract JSON from error message (format: "HTTP 400 Bad Request - {json}")
+        const jsonMatch = err.message.match(/- ({.*})$/);
+        if (jsonMatch) {
+          try {
+            const errorData = JSON.parse(jsonMatch[1]);
+            errorMessage = errorData.message || errorMessage;
+          } catch (parseErr) {
+            // If JSON parsing fails, use the original error message
+            errorMessage = err.message;
+          }
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setBookingError(errorMessage);
       setBookingLoading(false);
     }
   }
@@ -404,7 +423,26 @@ export default function PatientPortal({ onLogout }) {
       }
     } catch (err) {
       console.error('Cancel appointment error', err);
-      setToast({ message: 'Failed to cancel appointment', type: 'error' });
+      
+      // Extract user-friendly message from API error response
+      let errorMessage = 'Failed to cancel appointment';
+      if (err.message) {
+        // Try to extract JSON from error message (format: "HTTP 400 Bad Request - {json}")
+        const jsonMatch = err.message.match(/- ({.*})$/);
+        if (jsonMatch) {
+          try {
+            const errorData = JSON.parse(jsonMatch[1]);
+            errorMessage = errorData.message || errorMessage;
+          } catch (parseErr) {
+            // If JSON parsing fails, use the original error message
+            errorMessage = err.message;
+          }
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setToast({ message: errorMessage, type: 'error' });
     } finally {
       setShowCancelModal(false);
       setAppointmentToCancel(null);

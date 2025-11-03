@@ -40,13 +40,16 @@ function requireAuth($allowed_roles = ['PATIENT']) {
                 } else {
                     // If no patient found for the logged-in email, return error
                     sendResponse(false, [], 'No patient record found for logged-in user: ' . $user_email, 403);
+                    exit();
                 }
             } catch (Exception $e) {
                 sendResponse(false, [], 'Authentication error: ' . $e->getMessage(), 500);
+                exit();
             }
         } else {
             // No email in session - user needs to be properly authenticated
             sendResponse(false, [], 'User not properly authenticated - no email in session', 401);
+            exit();
         }
     }
 }
