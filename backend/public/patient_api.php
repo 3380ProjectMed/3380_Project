@@ -16,20 +16,15 @@ session_start([
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
-    // Debug: Log all session data
-    error_log("Patient API: Full session data = " . json_encode($_SESSION));
-    
     // Map logged-in user to correct patient
     if (!isset($_SESSION['patient_id'])) {
         // Get the logged-in user's email from the main authentication system
         $user_email = $_SESSION['email'] ?? null;
-        error_log("Patient API: Session email = " . ($user_email ?: 'NULL'));
         
         if ($user_email) {
             // Look up patient by the logged-in user's email
             try {
                 $mysqli = getDBConnection();
-                error_log("Patient API: Database connection successful");
                 
                 $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient WHERE email = ? LIMIT 1");
                 $stmt->bind_param('s', $user_email);
@@ -42,19 +37,15 @@ function requireAuth($allowed_roles = ['PATIENT']) {
                     $_SESSION['patient_id'] = $patient['patient_id'];
                     $_SESSION['role'] = 'PATIENT';
                     $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
-                    error_log("Patient auth: Found patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
                 } else {
-                    error_log("Patient auth: No patient found for email = " . $user_email);
                     // If no patient found for the logged-in email, return error
                     sendResponse(false, [], 'No patient record found for logged-in user: ' . $user_email, 403);
                 }
             } catch (Exception $e) {
-                error_log("Patient auth: Database error - " . $e->getMessage());
                 sendResponse(false, [], 'Authentication error: ' . $e->getMessage(), 500);
             }
         } else {
             // No email in session - user needs to be properly authenticated
-            error_log("Patient auth: No email in session - user not properly authenticated");
             sendResponse(false, [], 'User not properly authenticated - no email in session', 401);
         }
     }
@@ -72,24 +63,13 @@ function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
 
 function validateRequired($input, $required_fields) {
     $missing = [];
-    error_log("validateRequired: input = " . json_encode($input));
-    error_log("validateRequired: input type = " . gettype($input));
     
     if (!is_array($input)) {
-        error_log("validateRequired: Input is not an array!");
         return $required_fields; // All fields are missing if input is not an array
     }
     
     foreach ($required_fields as $field) {
-        $isset = isset($input[$field]);
-        $value = $input[$field] ?? null;
-        $isEmpty = empty($input[$field]);
-        
-        error_log("validateRequired: field '$field' - isset: " . ($isset ? 'true' : 'false') . 
-                  ", value: " . json_encode($value) . 
-                  ", empty: " . ($isEmpty ? 'true' : 'false'));
-        
-        if (!$isset || $isEmpty) {
+        if (!isset($input[$field]) || empty($input[$field])) {
             $missing[] = $field;
         }
     }
@@ -100,7 +80,6 @@ function validateRequired($input, $required_fields) {
 try {
     $mysqli = getDBConnection();
 } catch (Exception $e) {
-    error_log('Database connection failed: ' . $e->getMessage());
     sendResponse(false, [], 'Database connection error: ' . $e->getMessage(), 500);
 }
 
@@ -127,14 +106,11 @@ if (!$patient_id) {
                 $_SESSION['patient_id'] = $patient_id;
             }
             $stmt->close();
-        } else {
-            error_log('Patient lookup prepare failed: ' . $mysqli->error);
         }
     }
 }
 
 if (!$patient_id) {
-    error_log("Patient API: No patient_id found. Session data: " . print_r($_SESSION, true));
     sendResponse(false, [], 'Patient ID not found for authenticated user', 400);
 }
 
@@ -146,14 +122,10 @@ if ($endpoint === 'test') {
     sendResponse(true, ['message' => 'Patient API is working', 'timestamp' => date('Y-m-d H:i:s')]);
 }
 
-error_log("Patient API: Method=$method, Endpoint=$endpoint, Patient_ID=$patient_id");
-
 // ==================== DASHBOARD ====================
 if ($endpoint === 'dashboard') {
-    error_log("Dashboard: Entering dashboard endpoint");
     if ($method === 'GET') {
         try {
-            error_log("Dashboard: Starting dashboard query for patient_id: " . $patient_id);
             
             // Get upcoming appointments
             $stmt = $mysqli->prepare("
@@ -176,21 +148,18 @@ if ($endpoint === 'dashboard') {
             ");
             
             if (!$stmt) {
-                error_log("Dashboard: Failed to prepare appointments query: " . $mysqli->error);
                 sendResponse(false, [], 'Failed to prepare appointments query: ' . $mysqli->error, 500);
                 return;
             }
             
             $stmt->bind_param('i', $patient_id);
             if (!$stmt->execute()) {
-                error_log("Dashboard: Failed to execute appointments query: " . $stmt->error);
                 sendResponse(false, [], 'Failed to execute appointments query: ' . $stmt->error, 500);
                 return;
             }
             
             $result = $stmt->get_result();
             $upcoming_appointments = $result->fetch_all(MYSQLI_ASSOC);
-            error_log("Dashboard: Found " . count($upcoming_appointments) . " upcoming appointments");
             
             // Get PCP info
             $stmt = $mysqli->prepare("
@@ -239,7 +208,6 @@ if ($endpoint === 'dashboard') {
             ]);
             
         } catch (Exception $e) {
-            error_log("Dashboard error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load dashboard', 500);
         }
     }
@@ -303,7 +271,6 @@ elseif ($endpoint === 'profile') {
         $raw_input = file_get_contents('php://input');
         $input = json_decode($raw_input, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log("Profile API: JSON decode error - " . json_last_error_msg());
             sendResponse(false, [], 'Invalid JSON data: ' . json_last_error_msg(), 400);
         }
         
@@ -341,7 +308,6 @@ elseif ($endpoint === 'profile') {
             );
             if (!$stmt) {
                 // Prepare failed — return a helpful message for devs and log the DB error
-                error_log('Profile update prepare failed: ' . $mysqli->error);
                 sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
             }
             // Expecting keys: first_name, last_name, email, dob (YYYY-MM-DD),
@@ -380,7 +346,6 @@ elseif ($endpoint === 'profile') {
             $exec = $stmt->execute();
             if ($exec === false) {
                 // Execution failed — log and return DB error
-                error_log('Profile update execute failed: ' . $stmt->error);
                 sendResponse(false, [], 'Database execute failed: ' . $stmt->error, 500);
             }
 
@@ -389,7 +354,6 @@ elseif ($endpoint === 'profile') {
         } catch (Exception $e) {
             // Log the full exception and return the message to the client for easier debugging in dev
             error_log("Profile update error: " . $e->getMessage());
-            error_log($e);
             $msg = 'Failed to update profile: ' . $e->getMessage();
             sendResponse(false, [], $msg, 500);
         }
@@ -472,9 +436,6 @@ elseif ($endpoint === 'appointments') {
     elseif ($method === 'POST') {
     // Book new appointment
     $raw_input = file_get_contents('php://input');
-    error_log("Booking API: Raw input = " . $raw_input);
-    error_log("Booking API: Raw input length = " . strlen($raw_input));
-    error_log("Booking API: Raw input bytes = " . bin2hex($raw_input));
     
     // Try to clean the input and decode
     $cleaned_input = trim($raw_input);
@@ -482,33 +443,25 @@ elseif ($endpoint === 'appointments') {
     
     // If that fails, try without associative array flag
     if (!is_array($input)) {
-        error_log("Booking API: First decode failed, trying alternative method");
         $input = json_decode($cleaned_input);
         if (is_object($input)) {
             $input = (array) $input; // Convert object to array
-            error_log("Booking API: Converted object to array");
         }
     }
     
     // Check both JSON errors and if result is actually an array
     if (json_last_error() !== JSON_ERROR_NONE) {
-        error_log("Booking API: JSON decode error - " . json_last_error_msg());
         sendResponse(false, [], 'Invalid JSON data: ' . json_last_error_msg(), 400);
     }
     
     if (!is_array($input)) {
-        error_log("Booking API: JSON decode failed - result is not array. Type: " . gettype($input) . ", Value: " . var_export($input, true));
         sendResponse(false, [], 'JSON parsing failed - invalid data format', 400);
     }
-    
-    // Debug: Log the received booking data
-    error_log("Booking API: Parsed data = " . json_encode($input));
     
     $required = ['doctor_id', 'office_id', 'appointment_date', 'reason'];
     $missing = validateRequired($input, $required);
     
     if (!empty($missing)) {
-        error_log("Booking API: Missing fields = " . json_encode($missing) . ", Input = " . json_encode($input));
         sendResponse(false, [], 'Missing required fields: ' . implode(', ', $missing), 400);
     }
     
@@ -710,7 +663,6 @@ elseif ($endpoint === 'offices') {
             ");
             
             if (!$result) {
-                error_log("Offices query failed: " . $mysqli->error);
                 sendResponse(false, [], 'Database query failed: ' . $mysqli->error, 500);
                 return;
             }

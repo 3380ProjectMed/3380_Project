@@ -40,7 +40,6 @@ export const appointmentsAPI = {
       method: 'DELETE'
     }),
 
-  // FIXED: Use PATIENT_API_BASE and j() helper like other endpoints
   getDoctors: (specialty = null) => {
     const url = specialty 
       ? `${PATIENT_API_BASE}/patient_api.php?endpoint=doctors&specialty=${encodeURIComponent(specialty)}`
