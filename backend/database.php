@@ -20,7 +20,7 @@ function getDBConnection() {
     }
 
     // Set SSL options BEFORE connecting
-    $sslCertPath = '/home/site/wwwroot/DigiCertGlobalRootG2.crt';
+    $sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
     
     if (file_exists($sslCertPath)) {
         $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);

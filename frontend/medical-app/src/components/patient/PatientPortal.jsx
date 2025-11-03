@@ -103,15 +103,15 @@ export default function PatientPortal({ onLogout }) {
       // populate editable form fields with current profile values
       setFormData(fd => ({
         ...fd,
-        first_name: r.data.First_Name || '',
-        last_name: r.data.Last_Name || '',
+        first_name: r.data.first_name || '',
+        last_name: r.data.last_name || '',
         dob: r.data.dob || '',
-        email: r.data.Email || '',
+        email: r.data.email || '',
         // prefer human-readable labels returned by the API
-        gender: r.data.Gender_Text ?? r.data.Gender ?? fd.gender,
-        genderAtBirth: r.data.AssignedAtBirth_Gender_Text ?? r.data.AssignedAtBirth_Gender ?? fd.genderAtBirth,
-        ethnicity: r.data.Ethnicity_Text ?? r.data.Ethnicity ?? fd.ethnicity,
-        race: r.data.Race_Text ?? r.data.Race ?? fd.race,
+        gender: r.data.Gender_Text ?? r.data.gender ?? fd.gender,
+        genderAtBirth: r.data.AssignedAtBirth_Gender_Text ?? r.data.assigned_at_birth_gender ?? fd.genderAtBirth,
+        ethnicity: r.data.Ethnicity_Text ?? r.data.ethnicity ?? fd.ethnicity,
+        race: r.data.Race_Text ?? r.data.race ?? fd.race,
       }));
       setProfileErrors({});
     } else {
@@ -235,14 +235,14 @@ export default function PatientPortal({ onLogout }) {
     // Revert formData to last fetched profile values and exit edit mode
     setFormData(fd => ({
       ...fd,
-      first_name: profile?.First_Name || '',
-      last_name: profile?.Last_Name || '',
+      first_name: profile?.first_name || '',
+      last_name: profile?.last_name || '',
       dob: profile?.dob || '',
-      email: profile?.Email || '',
-      gender: profile?.Gender ?? fd.gender,
-      genderAtBirth: profile?.AssignedAtBirth_Gender ?? fd.genderAtBirth,
-      ethnicity: profile?.Ethnicity ?? fd.ethnicity,
-      race: profile?.Race ?? fd.race,
+      email: profile?.email || '',
+      gender: profile?.gender ?? fd.gender,
+      genderAtBirth: profile?.assigned_at_birth_gender ?? fd.genderAtBirth,
+      ethnicity: profile?.ethnicity ?? fd.ethnicity,
+      race: profile?.race ?? fd.race,
     }));
     setProfileErrors({});
     setEditingProfile(false);
@@ -250,7 +250,26 @@ export default function PatientPortal({ onLogout }) {
 
   // --- Booking helpers ---
   const timeSlots = ['9:00 AM','10:00 AM','11:00 AM','2:00 PM','3:00 PM','4:00 PM'];
-  const handleBookingNext = () => setBookingStep(s => Math.min(4, s + 1));
+  
+  const handleBookingNext = () => {
+    // Validate each step before proceeding
+    if (bookingStep === 1 && !selectedDoctor) {
+      setBookingError('Please select a doctor before proceeding');
+      return;
+    }
+    if (bookingStep === 2 && !selectedLocation) {
+      setBookingError('Please select an office location before proceeding');
+      return;
+    }
+    if (bookingStep === 3 && (!selectedDate || !selectedTime)) {
+      setBookingError('Please select both date and time before proceeding');
+      return;
+    }
+    
+    setBookingError(null); // Clear any previous errors
+    setBookingStep(s => Math.min(4, s + 1));
+  };
+  
   const handleBookingBack = () => setBookingStep(s => Math.max(1, s - 1));
 
   // Ensure doctors/offices are loaded when booking modal opens
@@ -300,12 +319,42 @@ export default function PatientPortal({ onLogout }) {
     console.log('Submitting booking...', { selectedDoctor, selectedLocation, selectedDate, selectedTime });
     setBookingLoading(true);
     setBookingError(null);
+    
+    // Validate all required fields before submitting
+    if (!selectedDoctor?.doctor_id) {
+      setBookingError('Please select a doctor');
+      setBookingLoading(false);
+      return;
+    }
+    if (!selectedLocation) {
+      setBookingError('Please select an office location');
+      setBookingLoading(false);
+      return;
+    }
+    if (!selectedDate) {
+      setBookingError('Please select a date');
+      setBookingLoading(false);
+      return;
+    }
+    if (!selectedTime) {
+      setBookingError('Please select a time');
+      setBookingLoading(false);
+      return;
+    }
+    if (!appointmentReason?.trim()) {
+      setBookingError('Please provide a reason for the appointment');
+      setBookingLoading(false);
+      return;
+    }
+    
     const appointmentData = {
-      doctor_id: selectedDoctor?.Doctor_id,
+      doctor_id: selectedDoctor.doctor_id,
       office_id: selectedLocation,
       appointment_date: `${selectedDate} ${selectedTime}`,
-      reason: appointmentReason,
+      reason: appointmentReason.trim(),
     };
+    
+    console.log('Appointment data being sent:', appointmentData);
     try {
       const r = await api.appointments.bookAppointment(appointmentData);
       console.log('Booking API response:', r);
@@ -424,16 +473,16 @@ export default function PatientPortal({ onLogout }) {
 
         <div style={{ marginTop: 12 }}>
           <label>Doctor</label>
-            <select className="form-input" value={selectedDoctor ? String(selectedDoctor.Doctor_id) : ''}
+            <select className="form-input" value={selectedDoctor ? String(selectedDoctor.doctor_id) : ''}
             onChange={(e) => {
               const id = e.target.value;
-              // Doctor_id from backend may be a string; compare loosely or coerce
-              const d = doctors.find(x => String(x.Doctor_id) === String(id)) || null;
+              // doctor_id from backend may be a string; compare loosely or coerce
+              const d = doctors.find(x => String(x.doctor_id) === String(id)) || null;
               setSelectedDoctor(d);
             }}>
             <option value="">Select doctor</option>
             {doctors.map(d => (
-              <option key={d.Doctor_id} value={d.Doctor_id}>{d.name} — {d.specialty_name}</option>
+              <option key={d.doctor_id} value={d.doctor_id}>{d.name} — {d.specialty_name}</option>
             ))}
           </select>
           {doctorsLoadError && <div className="form-error">{doctorsLoadError}</div>}
@@ -442,7 +491,7 @@ export default function PatientPortal({ onLogout }) {
             <select className="form-input" value={selectedLocation || ''} onChange={(e) => setSelectedLocation(Number(e.target.value))}>
             <option value="">Select office</option>
             {offices.map(o => (
-              <option key={o.Office_ID} value={o.Office_ID}>{o.Name} — {o.address}</option>
+              <option key={o.office_id} value={o.office_id}>{o.name} — {o.full_address}</option>
             ))}
           </select>
           {officesLoadError && <div className="form-error">{officesLoadError}</div>}

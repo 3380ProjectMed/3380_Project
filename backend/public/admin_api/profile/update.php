@@ -57,7 +57,7 @@ try {
         throw new Exception('No updatable fields provided');
     }
 
-    $sql = 'UPDATE Doctor SET ' . implode(', ', $updates) . ' WHERE Doctor_id = ?';
+    $sql = 'UPDATE doctor SET ' . implode(', ', $updates) . ' WHERE doctor_id = ?';
     $params[] = $doctor_id;
     $types .= 'i';
 

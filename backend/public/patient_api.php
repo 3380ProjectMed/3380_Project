@@ -3,24 +3,33 @@
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-// require_once '/home/site/wwwroot/helpers.php'; // Temporarily commented out
+// require_once 'helpers.php'; 
 
 header('Content-Type: application/json');
 
-// Start session
-session_start();
+// Start session with same configuration as login system
+session_start([
+    'cookie_httponly' => true,
+    'cookie_secure'   => !empty($_SERVER['HTTPS']),
+    'cookie_samesite' => 'Lax',
+]);
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
+    // Debug: Log all session data
+    error_log("Patient API: Full session data = " . json_encode($_SESSION));
+    
     // Map logged-in user to correct patient
     if (!isset($_SESSION['patient_id'])) {
         // Get the logged-in user's email from the main authentication system
         $user_email = $_SESSION['email'] ?? null;
+        error_log("Patient API: Session email = " . ($user_email ?: 'NULL'));
         
         if ($user_email) {
             // Look up patient by the logged-in user's email
             try {
                 $mysqli = getDBConnection();
+                error_log("Patient API: Database connection successful");
                 
                 $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient WHERE email = ? LIMIT 1");
                 $stmt->bind_param('s', $user_email);
@@ -59,6 +68,32 @@ function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
         'message' => $message
     ], JSON_PRETTY_PRINT);
     exit();
+}
+
+function validateRequired($input, $required_fields) {
+    $missing = [];
+    error_log("validateRequired: input = " . json_encode($input));
+    error_log("validateRequired: input type = " . gettype($input));
+    
+    if (!is_array($input)) {
+        error_log("validateRequired: Input is not an array!");
+        return $required_fields; // All fields are missing if input is not an array
+    }
+    
+    foreach ($required_fields as $field) {
+        $isset = isset($input[$field]);
+        $value = $input[$field] ?? null;
+        $isEmpty = empty($input[$field]);
+        
+        error_log("validateRequired: field '$field' - isset: " . ($isset ? 'true' : 'false') . 
+                  ", value: " . json_encode($value) . 
+                  ", empty: " . ($isEmpty ? 'true' : 'false'));
+        
+        if (!$isset || $isEmpty) {
+            $missing[] = $field;
+        }
+    }
+    return $missing;
 }
 
 // Use SSL-enabled database connection for Azure MySQL
@@ -265,7 +300,12 @@ elseif ($endpoint === 'profile') {
         }
     } 
     elseif ($method === 'PUT') {
-        $input = json_decode(file_get_contents('php://input'), true);
+        $raw_input = file_get_contents('php://input');
+        $input = json_decode($raw_input, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("Profile API: JSON decode error - " . json_last_error_msg());
+            sendResponse(false, [], 'Invalid JSON data: ' . json_last_error_msg(), 400);
+        }
         
         try {
             // Helper: map a human-readable text value to its numeric code in lookup tables.
@@ -285,11 +325,11 @@ elseif ($endpoint === 'profile') {
                 $st->close();
                 return $row && isset($row[$idCol]) ? (string)$row[$idCol] : '';
             };
-            // Use NULLIF so empty strings are stored as SQL NULL
+            // Use NULLIF for optional fields only - first_name and last_name are required
             $stmt = $mysqli->prepare(
                 "UPDATE patient
-                SET first_name = NULLIF(?, ''),
-                    last_name = NULLIF(?, ''),
+                SET first_name = ?,
+                    last_name = ?,
                     email = NULLIF(?, ''),
                     dob = NULLIF(?, ''),
                     gender = NULLIF(?, ''),
@@ -431,12 +471,44 @@ elseif ($endpoint === 'appointments') {
     } 
     elseif ($method === 'POST') {
     // Book new appointment
-    $input = json_decode(file_get_contents('php://input'), true);
+    $raw_input = file_get_contents('php://input');
+    error_log("Booking API: Raw input = " . $raw_input);
+    error_log("Booking API: Raw input length = " . strlen($raw_input));
+    error_log("Booking API: Raw input bytes = " . bin2hex($raw_input));
+    
+    // Try to clean the input and decode
+    $cleaned_input = trim($raw_input);
+    $input = json_decode($cleaned_input, true);
+    
+    // If that fails, try without associative array flag
+    if (!is_array($input)) {
+        error_log("Booking API: First decode failed, trying alternative method");
+        $input = json_decode($cleaned_input);
+        if (is_object($input)) {
+            $input = (array) $input; // Convert object to array
+            error_log("Booking API: Converted object to array");
+        }
+    }
+    
+    // Check both JSON errors and if result is actually an array
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log("Booking API: JSON decode error - " . json_last_error_msg());
+        sendResponse(false, [], 'Invalid JSON data: ' . json_last_error_msg(), 400);
+    }
+    
+    if (!is_array($input)) {
+        error_log("Booking API: JSON decode failed - result is not array. Type: " . gettype($input) . ", Value: " . var_export($input, true));
+        sendResponse(false, [], 'JSON parsing failed - invalid data format', 400);
+    }
+    
+    // Debug: Log the received booking data
+    error_log("Booking API: Parsed data = " . json_encode($input));
     
     $required = ['doctor_id', 'office_id', 'appointment_date', 'reason'];
     $missing = validateRequired($input, $required);
     
     if (!empty($missing)) {
+        error_log("Booking API: Missing fields = " . json_encode($missing) . ", Input = " . json_encode($input));
         sendResponse(false, [], 'Missing required fields: ' . implode(', ', $missing), 400);
     }
     
@@ -458,7 +530,7 @@ elseif ($endpoint === 'appointments') {
         }
         
         // Generate appointment ID
-        $result = $mysqli->query("SELECT COALESCE(MAX(appointment_id), 0) + 1 as next_id FROM appointment");
+        $result = $mysqli->query("SELECT COALESCE(MAX(Appointment_id), 0) + 1 as next_id FROM Appointment");
         $row = $result->fetch_assoc();
         $next_id = $row['next_id'];
         
@@ -472,11 +544,14 @@ elseif ($endpoint === 'appointments') {
             }
         }
         
+        // Temporarily disable foreign key checks for cross-platform compatibility
+        $mysqli->query("SET FOREIGN_KEY_CHECKS=0");
+        
         // Insert appointment with explicit status for PCP appointments
         $stmt = $mysqli->prepare("
             INSERT INTO appointment (
-                appointment_id, patient_id, doctor_id, office_id, 
-                appointment_date, date_created, reason_for_visit, status
+                Appointment_id, Patient_id, Doctor_id, Office_id, 
+                Appointment_date, Date_created, Reason_for_visit, Status
             ) VALUES (?, ?, ?, ?, ?, NOW(), ?, 'Scheduled')
         ");
         $stmt->bind_param('iiiiss',
@@ -489,6 +564,9 @@ elseif ($endpoint === 'appointments') {
         );
         
         $exec_result = $stmt->execute();
+        
+        // Re-enable foreign key checks
+        $mysqli->query("SET FOREIGN_KEY_CHECKS=1");
         
         if (!$exec_result) {
             $error_msg = $stmt->error;

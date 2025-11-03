@@ -49,7 +49,7 @@ try {
                 p.last_name,
                 p.dob,
                 p.email,
-                p.emergency_contact,
+                p.emergency_contact_id,
                 p.blood_type,
                 ca.allergies_text as allergies,
                 cg.gender_text as gender,
@@ -61,7 +61,7 @@ try {
             LEFT JOIN appointment a ON p.patient_id = a.Patient_id
             WHERE p.primary_doctor = ?
             GROUP BY p.patient_id, p.first_name, p.last_name, p.dob, p.email, 
-                     p.emergency_contact, p.blood_type, ca.allergies_text, cg.gender_text
+                     p.emergency_contact_id, p.blood_type, ca.allergies_text, cg.gender_text
             ORDER BY p.last_name, p.first_name";
     
     $patients = executeQuery($conn, $sql, 'i', [$doctor_id]);

@@ -150,7 +150,7 @@ try {
         CONCAT(p.first_name, ' ', p.last_name) as patient_name,
         p.patient_id as patient_id,
         p.dob as patient_dob,
-        p.emergency_contact as patient_phone,
+        p.emergency_contact_id as patient_ec_id,
         CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
         d.doctor_id as doctor_id,
         s.specialty_name as doctor_specialty,

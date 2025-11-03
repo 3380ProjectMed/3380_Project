@@ -3,22 +3,15 @@ import { Mail, Lock, User, Phone, Calendar, MapPin, UserPlus } from 'lucide-reac
 import './SignUp.css';
 
 export default function SignUp() {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    dateOfBirth: '',
-    phone: '',
-    gender: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    emergencyContact: '',
-    emergencyPhone: ''
-  });
+const [formData, setFormData] = useState({
+  firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
+  dateOfBirth: '', phone: '', gender: '',
+  address: '', city: '', state: '', zipCode: '',
+  emergencyContactfn: '',
+  emergencyContactln: '',
+  emergencyContactrl: '',
+  emergencyPhone: ''
+});
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,17 +59,39 @@ export default function SignUp() {
       }));
     }
   };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
     
-    setTimeout(() => {
-      console.log('Form submitted:', formData);
-      alert('Account created successfully!');
+    try {
+      const response = await fetch('/api/signup.php', {  // Adjust path as needed
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('Account created successfully!');
+        // Redirect to login or dashboard
+        window.location.href = '/login';
+      } else {
+        // Display server-side errors
+        if (data.errors) {
+          setErrors(data.errors);
+        }
+        alert(data.message || 'Registration failed');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -284,14 +299,36 @@ export default function SignUp() {
               
               <div className="signup-grid">
                 <div className="signup-field">
-                  <label htmlFor="emergencyContact" className="signup-label">
-                    Contact Name
+                  <label htmlFor="emergencyContactfn" className="signup-label">
+                    Contact First Name
                   </label>
                   <input
                     type="text"
-                    id="emergencyContact"
-                    name="emergencyContact"
-                    value={formData.emergencyContact}
+                    id="emergencyContactfn"
+                    name="emergencyContactfn"
+                    value={formData.emergencyContactfn}
+                    onChange={handleChange}
+                    className="signup-input"
+                  />
+                  <label htmlFor="emergencyContactln" className="signup-label">
+                    Contact Last Name
+                  </label>
+                  <input
+                    type="text"
+                    id="emergencyContactln"
+                    name="emergencyContactln"
+                    value={formData.emergencyContactln}
+                    onChange={handleChange}
+                    className="signup-input"
+                  />
+                  <label htmlFor="emergencyContactrl" className="signup-label">
+                    Contact Relation to Patient
+                  </label>
+                  <input
+                    type="text"
+                    id="emergencyContactrl"
+                    name="emergencyContactrl"
+                    value={formData.emergencyContactrl}
                     onChange={handleChange}
                     className="signup-input"
                   />

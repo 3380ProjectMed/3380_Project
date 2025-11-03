@@ -25,7 +25,7 @@ try {
     $stats['total_nurses'] = $result[0]['count'];
     
     // Total patients
-    $result = executeQuery($conn, 'SELECT COUNT(*) as count FROM Patient');
+    $result = executeQuery($conn, 'SELECT COUNT(*) as count FROM patient');
     $stats['total_patients'] = $result[0]['count'];
     
     // Total appointments (this month)
@@ -52,7 +52,7 @@ try {
     
     // Revenue today (from PatientVisit)
     $result = executeQuery($conn, 
-        'SELECT COALESCE(SUM(Payment), 0) as total FROM PatientVisit WHERE DATE(Date) = CURRENT_DATE'
+        'SELECT COALESCE(SUM(Payment), 0) as total FROM patient_visit WHERE DATE(Date) = CURRENT_DATE'
     );
     $stats['revenue_today'] = floatval($result[0]['total']);
     

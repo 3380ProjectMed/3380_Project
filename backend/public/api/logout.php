@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 // Ensure CORS headers are present for cross-origin logout requests
-require_once __DIR__ . '/../../cors.php';
+require_once '/home/site/wwwroot/cors.php';
 session_start();
 $_SESSION = [];
 if (ini_get('session.use_cookies')) {
