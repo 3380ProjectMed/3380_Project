@@ -24,10 +24,10 @@ session_start([
 
 header('Content-Type: application/json');
 
-$host = getenv('AZURE_MYSQL_HOST') ?: '';
-$user = getenv('AZURE_MYSQL_USERNAME') ?: '';
-$pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
-$db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
+$host = getenv('AZURE_MYSQL_HOST') ?: 'medconnect-db.mysql.database.azure.com';
+$user = getenv('AZURE_MYSQL_USERNAME') ?: 'aad_mysql_medapp';
+$pass = getenv('AZURE_MYSQL_PASSWORD') ?: 'QuinnRocks!';
+$db   = getenv('AZURE_MYSQL_DBNAME') ?: 'med-app-db';
 $port = (int)(getenv('AZURE_MYSQL_PORT') ?: '3306');
 
 // Test environment variables
