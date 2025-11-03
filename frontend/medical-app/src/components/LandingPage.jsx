@@ -287,8 +287,8 @@ export default function LandingPage() {
         <div className="landing-container">
           <div className="hero-content">
             <h1 className="hero-title">
-              Modern Healthcare,{" "}
-              <span className="highlight">Simplified</span>
+              This website is for educational demonstration only.{" "}
+              <span className="highlight">No real patient data is collected.</span>
             </h1>
             <p className="hero-description">
               At MedConnect your health is our priority. We're a community-focused medical clinic offering primary care, urgent care, preventive screenings, and chronic-condition management — all delivered by an experienced team of physicians, nurses, and care coordinators. We believe medicine should be straightforward, respectful, and centered on you.
