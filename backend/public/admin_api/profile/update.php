@@ -4,8 +4,9 @@
  * Expects JSON body with fields: firstName, lastName, email, phone, licenseNumber
  */
 
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
+
 
 try {
     session_start();
@@ -31,7 +32,7 @@ try {
         $doctor_id = intval($_GET['doctor_id']);
     } else {
         $user_id = (int)$_SESSION['uid'];
-        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
         if (empty($rows)) {
             closeDBConnection($conn);
             http_response_code(403);
