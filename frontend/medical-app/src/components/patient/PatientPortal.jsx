@@ -383,18 +383,25 @@ export default function PatientPortal({ onLogout }) {
       // Extract user-friendly message from API error response
       let errorMessage = 'Failed to book appointment';
       if (err.message) {
+        console.log('Full error message:', err.message);
+        
         // Try to extract JSON from error message (format: "HTTP 400 Bad Request - {json}")
         const jsonMatch = err.message.match(/- (\{.*\})$/);
+        console.log('JSON match result:', jsonMatch);
+        
         if (jsonMatch) {
           try {
             const errorData = JSON.parse(jsonMatch[1]);
+            console.log('Parsed error data:', errorData);
             errorMessage = errorData.message || errorMessage;
           } catch (parseErr) {
             console.log('Failed to parse error JSON:', parseErr);
+            console.log('Attempted to parse:', jsonMatch[1]);
             // If JSON parsing fails, use the original error message
             errorMessage = err.message;
           }
         } else {
+          console.log('No JSON pattern matched in error message');
           // If no JSON match found, use the original error message
           errorMessage = err.message;
         }
