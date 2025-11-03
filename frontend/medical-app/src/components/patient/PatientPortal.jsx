@@ -423,26 +423,7 @@ export default function PatientPortal({ onLogout }) {
       }
     } catch (err) {
       console.error('Cancel appointment error', err);
-      
-      // Extract user-friendly message from API error response
-      let errorMessage = 'Failed to cancel appointment';
-      if (err.message) {
-        // Try to extract JSON from error message (format: "HTTP 400 Bad Request - {json}")
-        const jsonMatch = err.message.match(/- ({.*})$/);
-        if (jsonMatch) {
-          try {
-            const errorData = JSON.parse(jsonMatch[1]);
-            errorMessage = errorData.message || errorMessage;
-          } catch (parseErr) {
-            // If JSON parsing fails, use the original error message
-            errorMessage = err.message;
-          }
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      
-      setToast({ message: errorMessage, type: 'error' });
+      setToast({ message: 'Failed to cancel appointment', type: 'error' });
     } finally {
       setShowCancelModal(false);
       setAppointmentToCancel(null);
