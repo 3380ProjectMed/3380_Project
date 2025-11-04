@@ -599,10 +599,13 @@ export default function PatientPortal({ onLogout }) {
 
   // --- Main render ---
   const portalProps = {
-    dashboard,
+    displayName,
+    loading,
     profile,
     upcomingAppointments,
     appointmentHistory,
+    pcp,
+    recentActivity,
     doctors,
     offices,
     vitalsHistory,
