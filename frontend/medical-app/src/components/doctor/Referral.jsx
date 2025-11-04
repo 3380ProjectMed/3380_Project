@@ -147,17 +147,19 @@ function Referral() {
    * Format date for display
    */
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch {
-      return dateString;
-    }
-  };
+  if (!dateString) return 'N/A';
+  try {
+    const [year, month, day] = dateString.split('T')[0].split('-');
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch {
+    return dateString;
+  }
+};
 
   return (
     <div className="referral-page">
@@ -196,8 +198,7 @@ function Referral() {
                         <span>Patient</span>
                       </div>
                       <div className="section-content">
-                        <strong>{r.patient_name}</strong>
-                        <span className="text-muted">ID: {r.patient_id || r.Patient_ID}</span>
+                        <p className="referral-patient-info"><strong>{r.patient_name}</strong> <span className="text-muted">ID: {r.patient_id || r.Patient_ID}</span></p>
                       </div>
                     </div>
 
