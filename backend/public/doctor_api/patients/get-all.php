@@ -90,7 +90,7 @@ try {
             'age' => $age,
             'gender' => $patient['gender'] ?: 'Not Specified',
             'email' => $patient['email'] ?: 'No email',
-            'phone' => $patient['emergency_contact'] ?: 'No phone',
+            // 'phone' => $patient['emergency_contact'] ?: 'No phone',
             'allergies' => $patient['allergies'] ?: 'No Known Allergies',
             'bloodType' => $patient['blood_type'] ?: 'Unknown',
             'lastVisit' => $patient['last_visit'] ? date('Y-m-d', strtotime($patient['last_visit'])) : 'No visits yet',
