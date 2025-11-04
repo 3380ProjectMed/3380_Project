@@ -11,13 +11,15 @@ import './PatientList.css';
  * - Patient details sidebar on row click
  * - Allergy highlighting (red for allergies, green for none)
  * - Recent activity and appointment history
+ * - View Full Chart button navigates to clinical workspace
  * 
  * Props:
  * @param {Function} onPatientClick - Handler when patient is clicked (optional)
  * @param {Object} selectedPatient - Currently selected patient (optional)
  * @param {Function} setSelectedPatient - Set selected patient (optional)
+ * @param {Function} setCurrentPage - Function to change page (from parent, e.g., DoctorPortal)
  */
-function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient, setSelectedPatient: externalSetSelectedPatient }) {
+function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient, setSelectedPatient: externalSetSelectedPatient, setCurrentPage }) {
   const auth = useAuth();
   // Local state for search and selected patient
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,8 +92,8 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       setLoading(true);
       setError(null);
       try {
-  // query patient by id using proxy-relative URL
-  const res = await fetch(`/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(q)}`, { credentials: 'include' });
+        // query patient by id using proxy-relative URL
+        const res = await fetch(`/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(q)}`, { credentials: 'include' });
         const payload = await res.json();
         if (payload.success) {
           setPatients([payload.patient]);
@@ -138,12 +140,14 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
         const merged = {
           // keep existing values but prefer backend details
           id: formattedId,
+          patient_id: numericId, // Add numeric ID for navigation
           name: p.name || patient.name,
           dob: p.dob || patient.dob,
           age: p.age || patient.age,
           bloodType: p.blood_type || patient.bloodType || patient.bloodType,
           email: patient.email || '',
           phone: patient.phone || '',
+          gender: p.gender || patient.gender || 'Not Specified',
           allergies: p.allergies || patient.allergies || 'No Known Allergies',
           medicalHistory: p.medicalHistory || [],
           medicationHistory: p.medicationHistory || [],
@@ -161,6 +165,9 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
         const fallback = await fetch(`/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`, { credentials: 'include' });
         const fbPayload = await fallback.json();
         if (fbPayload.success && fbPayload.patient) {
+          // Add numeric patient_id
+          const numericId = parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
+          fbPayload.patient.patient_id = numericId;
           setSelectedPatient(fbPayload.patient);
           if (onPatientClick) onPatientClick(fbPayload.patient);
         } else {
@@ -172,6 +179,26 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       setError(err.message || String(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Handle View Full Chart button click
+   * Navigates to clinical workspace with patient data
+   */
+  const handleViewFullChart = () => {
+    if (!selectedPatient) return;
+    
+    // If setCurrentPage is provided (from parent DoctorPortal), use it to navigate
+    if (setCurrentPage && onPatientClick) {
+      // Pass patient to parent to set up clinical workspace
+      onPatientClick(selectedPatient);
+      // Navigate to clinical page
+      setCurrentPage('clinical');
+    } else {
+      // Fallback: alert user (shouldn't happen if properly integrated)
+      console.log('View Full Chart clicked for patient:', selectedPatient);
+      alert('Clinical workspace navigation not configured. Please ensure setCurrentPage is passed as a prop.');
     }
   };
 
@@ -275,11 +302,11 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
                 <div className="patient-list__name">{patient.name}</div>
                 <div className="patient-list__dob">{patient.dob}</div>
                 <div className={`patient-list__allergies ${
-                  patient.allergies === 'None' 
+                  patient.allergies === 'None' || patient.allergies === 'No Known Allergies'
                     ? 'patient-list__allergies--none' 
                     : 'patient-list__allergies--has'
                 }`}>
-                  {patient.allergies === 'None' ? (
+                  {patient.allergies === 'None' || patient.allergies === 'No Known Allergies' ? (
                     <span>✓ None</span>
                   ) : (
                     <span>
@@ -357,7 +384,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
               Allergies
             </h3>
             <div className="patient-summary__allergies-box">
-              {selectedPatient.allergies === 'None' ? (
+              {selectedPatient.allergies === 'None' || selectedPatient.allergies === 'No Known Allergies' ? (
                 <p className="patient-summary__allergies--none">No known allergies</p>
               ) : (
                 <p className="patient-summary__allergies--has">
@@ -366,18 +393,62 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
               )}
             </div>
 
+            {/* Chronic Conditions */}
+            {selectedPatient.chronicConditions && selectedPatient.chronicConditions.length > 0 && (
+              <>
+                <h3 className="patient-summary__section-title">
+                  <FileText size={20} style={{ display: 'inline', marginRight: '8px' }} />
+                  Chronic Conditions
+                </h3>
+                <div className="patient-summary__medical-history">
+                  {selectedPatient.chronicConditions.map((condition, index) => (
+                    <span key={index} className="medical-history-tag">
+                      {condition}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Current Medications */}
+            {selectedPatient.currentMedications && selectedPatient.currentMedications.length > 0 && (
+              <>
+                <h3 className="patient-summary__section-title">
+                  <FileText size={20} style={{ display: 'inline', marginRight: '8px' }} />
+                  Current Medications
+                </h3>
+                <div className="patient-summary__medications">
+                  {selectedPatient.currentMedications.map((med, index) => (
+                    <div key={index} className="medication-item">
+                      <strong>{med.name}</strong>
+                      {med.frequency && <span> - {med.frequency}</span>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
             {/* Medical History */}
-            <h3 className="patient-summary__section-title">
-              <FileText size={20} style={{ display: 'inline', marginRight: '8px' }} />
-              Medical History
-            </h3>
-            <div className="patient-summary__medical-history">
-              {(selectedPatient.medicalHistory || []).map((condition, index) => (
-                <span key={index} className="medical-history-tag">
-                  {condition}
-                </span>
-              ))}
-            </div>
+            {selectedPatient.medicalHistory && selectedPatient.medicalHistory.length > 0 && (
+              <>
+                <h3 className="patient-summary__section-title">
+                  <FileText size={20} style={{ display: 'inline', marginRight: '8px' }} />
+                  Medical History
+                </h3>
+                <div className="patient-summary__medical-history">
+                  {selectedPatient.medicalHistory.map((item, index) => (
+                    <div key={index} className="history-item">
+                      {typeof item === 'string' ? item : (
+                        <>
+                          <strong>{item.condition}</strong>
+                          {item.diagnosis_date && <span> - {formatDate(item.diagnosis_date)}</span>}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* Recent Activity */}
             <h3 className="patient-summary__section-title">
@@ -390,7 +461,9 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
                 <span className="patient-summary__visit-label">Last Visit</span>
                 <span className="patient-summary__visit-date">{formatDate(selectedPatient.lastVisit)}</span>
               </div>
-              <p className="patient-summary__note">{selectedPatient.notes}</p>
+              {selectedPatient.notes && (
+                <p className="patient-summary__note">{selectedPatient.notes}</p>
+              )}
             </div>
             
             <div className="patient-summary__visit patient-summary__visit--upcoming">
@@ -402,7 +475,10 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
 
             {/* Action Buttons */}
             <div className="patient-summary__actions">
-              <button className="btn-action btn-primary">
+              <button 
+                className="btn-action btn-primary"
+                onClick={handleViewFullChart}
+              >
                 <FileText size={18} />
                 View Full Chart
               </button>

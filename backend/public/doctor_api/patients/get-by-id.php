@@ -28,10 +28,12 @@ try {
                 p.emergency_contact_id,
                 p.blood_type,
                 ca.allergies_text as allergies,
-                cg.gender_text as gender
+                cg.gender_text as gender,
+                mh.condition_name as condition
             FROM patient p
             LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
+            LEFT JOIN medical_history mh ON p.patient_id = mh.patient_id
             WHERE p.patient_id = ?
             LIMIT 1";
 
@@ -61,10 +63,10 @@ try {
         'age' => $age,
         'gender' => $p['gender'] ?: 'Not Specified',
         'email' => $p['email'] ?: 'No email',
-        'phone' => $p['emergency_contact_id'] ?: 'No phone',
+        // 'phone' => $p['emergency_contact_id'] ?: 'No phone',
         'allergies' => $p['allergies'] ?: 'No Known Allergies',
         'bloodType' => $p['blood_type'] ?: 'Unknown',
-        'medicalHistory' => [],
+        'medicalHistory' => $p['condition'] ?: 'No Known Conditions',
         'currentMedications' => []
     ];
 
