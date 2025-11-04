@@ -105,6 +105,7 @@ function DoctorPortal() {
             onPatientClick={handlePatientClick}
             selectedPatient={selectedPatient}
             setSelectedPatient={setSelectedPatient}
+            setCurrentPage={setCurrentPage}  
           />
         )}
 
