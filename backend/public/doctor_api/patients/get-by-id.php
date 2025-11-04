@@ -2,6 +2,7 @@
 /**
  * Get patient by id
  * Accepts `patient_id` (numeric) or `id` like 'P001'
+ * FIXED: Uses lowercase table/column names throughout
  */
 
 require_once '/home/site/wwwroot/cors.php';
@@ -19,6 +20,7 @@ try {
     $numeric = intval(preg_replace('/[^0-9]/', '', $raw));
     if ($numeric <= 0) throw new Exception('Invalid patient id');
 
+    // Get patient basic info - all lowercase table and column names
     $sql = "SELECT 
                 p.patient_id,
                 p.first_name,
@@ -28,12 +30,10 @@ try {
                 p.emergency_contact_id,
                 p.blood_type,
                 ca.allergies_text as allergies,
-                cg.gender_text as gender,
-                mh.condition_name as condition
+                cg.gender_text as gender
             FROM patient p
             LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
-            LEFT JOIN medical_history mh ON p.patient_id = mh.patient_id
             WHERE p.patient_id = ?
             LIMIT 1";
 
@@ -58,17 +58,46 @@ try {
 
     $patient = [
         'id' => 'P' . str_pad($p['patient_id'], 3, '0', STR_PAD_LEFT),
+        'patient_id' => (int)$p['patient_id'],
         'name' => $p['first_name'] . ' ' . $p['last_name'],
         'dob' => $p['dob'],
         'age' => $age,
         'gender' => $p['gender'] ?: 'Not Specified',
         'email' => $p['email'] ?: 'No email',
-        // 'phone' => $p['emergency_contact_id'] ?: 'No phone',
+        'phone' => '', // Will be populated from emergency_contact if needed
         'allergies' => $p['allergies'] ?: 'No Known Allergies',
         'bloodType' => $p['blood_type'] ?: 'Unknown',
-        'medicalHistory' => $p['condition'] ?: 'No Known Conditions',
+        'medicalHistory' => [],
+        'chronicConditions' => [],
         'currentMedications' => []
     ];
+
+    // Fetch medical conditions (chronic conditions)
+    try {
+        $conditions_sql = "SELECT 
+                            mc.medical_condition_id,
+                            mc.condition_name,
+                            mc.diagnosis_date
+                          FROM medical_condition mc
+                          WHERE mc.patient_id = ?
+                          ORDER BY mc.diagnosis_date DESC";
+        
+        $conditions = executeQuery($conn, $conditions_sql, 'i', [$numeric]);
+        if (is_array($conditions) && count($conditions) > 0) {
+            $patient['chronicConditions'] = array_map(function($c) {
+                return $c['condition_name'] ?? '';
+            }, $conditions);
+            
+            $patient['medicalHistory'] = array_map(function($c) {
+                return [
+                    'condition' => $c['condition_name'] ?? '',
+                    'diagnosis_date' => $c['diagnosis_date'] ?? null
+                ];
+            }, $conditions);
+        }
+    } catch (Exception $e) {
+        error_log("Error fetching medical conditions: " . $e->getMessage());
+    }
 
     // Fetch current prescriptions
     try {
@@ -123,8 +152,9 @@ try {
                        LIMIT 50";
 
         $visits = executeQuery($conn, $visits_sql, 'i', [$numeric]);
-        if (is_array($visits)) {
-            $patient['medicalHistory'] = array_map(function($v) {
+        if (is_array($visits) && count($visits) > 0) {
+            // If we have visits, append them to medical history
+            $visitHistory = array_map(function($v) {
                 return [
                     'visit_id' => $v['visit_id'] ?? null,
                     'appointment_id' => $v['appointment_id'] ?? null,
@@ -137,6 +167,9 @@ try {
                     'temperature' => $v['temperature'] ?? null
                 ];
             }, $visits);
+            
+            // Merge visits with chronic conditions in medicalHistory
+            $patient['medicalHistory'] = array_merge($patient['medicalHistory'], $visitHistory);
         }
     } catch (Exception $e) {
         error_log("Error fetching medical history: " . $e->getMessage());
@@ -146,6 +179,7 @@ try {
     echo json_encode(['success' => true, 'patient' => $patient]);
 
 } catch (Exception $e) {
+    error_log("Error in get-by-id.php: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
