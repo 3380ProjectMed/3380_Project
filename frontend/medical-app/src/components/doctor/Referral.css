@@ -123,6 +123,14 @@
   color: #6b7280;
   font-size: 0.875rem;
 }
+.referral-patient-info{
+  display: flex;
+  justify-content: space-between;
+  width: 100%; 
+  margin: 0; 
+  padding: 0; 
+
+}
 
 .specialty-badge {
   display: inline-block;
