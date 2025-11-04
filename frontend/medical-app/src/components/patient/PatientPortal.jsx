@@ -113,6 +113,9 @@ export default function PatientPortal({ onLogout }) {
         dob: r.data.dob || '',
         email: r.data.email || '',
         emergency_contact: r.data.emergency_contact || '',
+        emergency_contact_first_name: r.data.emergency_contact_first_name || '',
+        emergency_contact_last_name: r.data.emergency_contact_last_name || '',
+        emergency_contact_relationship: r.data.emergency_contact_relationship || '',
         primary_doctor: r.data.pcp_id || '',
         // prefer human-readable labels returned by the API
         gender: r.data.Gender_Text ?? r.data.gender ?? fd.gender,
@@ -214,6 +217,9 @@ export default function PatientPortal({ onLogout }) {
         email: formData.email,
         dob: formData.dob,
         emergency_contact: formData.emergency_contact,
+        emergency_contact_first_name: formData.emergency_contact_first_name,
+        emergency_contact_last_name: formData.emergency_contact_last_name,
+        emergency_contact_relationship: formData.emergency_contact_relationship,
         primary_doctor: formData.primary_doctor,
         // include demographics
         gender: formData.gender,
@@ -490,6 +496,9 @@ export default function PatientPortal({ onLogout }) {
     dob: '',
     email: '',
     emergency_contact: '',
+    emergency_contact_first_name: '',
+    emergency_contact_last_name: '',
+    emergency_contact_relationship: '',
     primary_doctor: '',
   });
 
