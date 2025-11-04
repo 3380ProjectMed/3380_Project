@@ -181,7 +181,7 @@ function AdminPortal({ preview = false }) {
     <div>
       <AdminSidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
 
-      <main>
+      <main className='main-content'>
         <div className="report-container">
           {/* Render selected admin page */}
           {currentPage === 'dashboard' && <AdminDashboard />}
