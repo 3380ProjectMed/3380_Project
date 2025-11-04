@@ -38,13 +38,133 @@
 }
 
 /* Received Referrals List */
-.pending-list {
+.referral-cards-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   max-height: 70vh;
   overflow-y: auto;
   padding-right: 0.5rem;
+}
+
+/* Beautiful Referral Cards */
+.received-referral-card {
+  background: white;
+  border: 2px solid var(--fifth-color);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 119, 182, 0.08);
+}
+
+.received-referral-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 119, 182, 0.15);
+  border-color: var(--third-color);
+}
+
+.referral-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--fifth-color);
+}
+
+.referral-id-badge {
+  background: linear-gradient(135deg, var(--secondary-color), var(--third-color));
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.referral-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.referral-section {
+  margin-bottom: 1rem;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--secondary-color);
+  font-size: 0.813rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-left: 1.5rem;
+}
+
+.section-content strong {
+  color: var(--primary-color);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.text-muted {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.specialty-badge {
+  display: inline-block;
+  background: var(--fifth-color);
+  color: var(--secondary-color);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.813rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.referral-reason-text {
+  color: #374151;
+  line-height: 1.6;
+  margin: 0;
+  font-size: 0.938rem;
+}
+
+
+/* Loading and Empty States */
+.loading-state {
+  padding: 3rem;
+  text-align: center;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 .referral-card {
