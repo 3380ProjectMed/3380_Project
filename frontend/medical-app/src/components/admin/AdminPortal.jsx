@@ -33,14 +33,149 @@ function UsersView() {
 }
 
 function ProfileView() {
+  const [staffId, setStaffId] = useState('');
+  const [profile, setProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null);
+  const [errorProfile, setErrorProfile] = useState(null);
+
+  const loadProfile = async () => {
+    if (!staffId) {
+      setErrorProfile('Please enter a staff_id to load');
+      return;
+    }
+    setLoadingProfile(true);
+    setErrorProfile(null);
+    setMessage(null);
+    try {
+      const res = await fetch(`/admin_api/profile/get.php?staff_id=${encodeURIComponent(staffId)}`, {
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Server returned ${res.status}: ${txt}`);
+      }
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load profile');
+      }
+      setProfile(data.profile || {});
+    } catch (err) {
+      console.error('Load profile error', err);
+      setErrorProfile(err.message || String(err));
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!profile) return;
+    setSaving(true);
+    setMessage(null);
+    setErrorProfile(null);
+    try {
+      const payload = {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+        phone: profile.phone,
+        licenseNumber: profile.licenseNumber
+      };
+
+      // If editing another staff member, allow doctor_id override
+      if (profile.doctor_id) payload.doctor_id = profile.doctor_id;
+
+      const res = await fetch(`/admin_api/profile/update.php${staffId ? `?staff_id=${encodeURIComponent(staffId)}` : ''}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to save profile');
+      }
+      setMessage('Profile saved successfully');
+    } catch (err) {
+      console.error('Save profile error', err);
+      setErrorProfile(err.message || String(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div>
       <div className="dashboard-header">
-        <h1>Profile</h1>
-        <p>Admin profile and settings</p>
+        <h1>Admin — Staff Profile</h1>
+        <p>Load and update staff (doctor) profiles. Provide a staff_id to load a specific staff member.</p>
       </div>
+
       <div className="report-section">
-        <p>Profile editing controls will be implemented here (stub view).</p>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+          <input
+            type="number"
+            placeholder="staff_id"
+            value={staffId}
+            onChange={(e) => setStaffId(e.target.value)}
+            style={{ width: 140 }}
+          />
+          <button className="btn-primary" onClick={loadProfile} disabled={loadingProfile}>
+            {loadingProfile ? 'Loading…' : 'Load Profile'}
+          </button>
+          <button className="btn-secondary" onClick={() => { setProfile(null); setMessage(null); setErrorProfile(null); }}>
+            Clear
+          </button>
+        </div>
+
+        {errorProfile && (
+          <div style={{ color: '#b91c1c', marginBottom: 12 }}>
+            <strong>Error:</strong> {errorProfile}
+          </div>
+        )}
+
+        {message && (
+          <div style={{ color: '#064e3b', marginBottom: 12 }}>
+            {message}
+          </div>
+        )}
+
+        {profile ? (
+          <div className="profile-form">
+            <div className="form-row">
+              <label>First name</label>
+              <input value={profile.firstName || ''} onChange={(e) => setProfile({ ...profile, firstName: e.target.value })} />
+            </div>
+            <div className="form-row">
+              <label>Last name</label>
+              <input value={profile.lastName || ''} onChange={(e) => setProfile({ ...profile, lastName: e.target.value })} />
+            </div>
+            <div className="form-row">
+              <label>Email</label>
+              <input value={profile.email || ''} onChange={(e) => setProfile({ ...profile, email: e.target.value })} />
+            </div>
+            <div className="form-row">
+              <label>Phone</label>
+              <input value={profile.phone || ''} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} />
+            </div>
+            <div className="form-row">
+              <label>License #</label>
+              <input value={profile.licenseNumber || ''} onChange={(e) => setProfile({ ...profile, licenseNumber: e.target.value })} />
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <button className="btn-save" onClick={saveProfile} disabled={saving}>
+                {saving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p>Enter a staff_id above and click "Load Profile" to fetch a staff member's record from the backend.</p>
+          </div>
+        )}
       </div>
     </div>
   );
