@@ -12,15 +12,20 @@ export default function Profile(props) {
     genderAtBirthOptions = [],
     ethnicityOptions = [],
     raceOptions = [],
+    doctors = [],
     pcp = null,
-    profileErrors = {}
+    profileErrors = {},
+    editingProfile = false,
+    startEditProfile,
+    cancelEditProfile,
+    saveProfile
   } = props;
 
   return (
     <div className="portal-content">
       <div className="profile-header">
         <h1 className="page-title">Profile</h1>
-        {props.editingProfile ? (
+        {editingProfile ? (
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               className="btn"
@@ -32,6 +37,8 @@ export default function Profile(props) {
                   last_name: profile?.last_name || '',
                   dob: profile?.dob || '',
                   email: profile?.email || '',
+                  emergency_contact: profile?.emergency_contact || '',
+                  primary_doctor: profile?.pcp_id || '',
                   gender: profile?.gender ?? fd.gender,
                   genderAtBirth: profile?.assigned_at_birth_gender ?? fd.genderAtBirth,
                   ethnicity: profile?.ethnicity ?? fd.ethnicity,
@@ -41,13 +48,13 @@ export default function Profile(props) {
             >
               Reset
             </button>
-            <button className="btn" onClick={() => (props.cancelEditProfile ? props.cancelEditProfile() : null)}>Cancel</button>
-            <button className="btn btn-primary" onClick={() => (props.saveProfile ? props.saveProfile() : console.log('saveProfile not provided'))} disabled={Object.keys(profileErrors).length > 0}>
+            <button className="btn" onClick={() => (cancelEditProfile ? cancelEditProfile() : null)}>Cancel</button>
+            <button className="btn btn-primary" onClick={() => (saveProfile ? saveProfile() : console.log('saveProfile not provided'))} disabled={Object.keys(profileErrors).length > 0}>
               Save Changes
             </button>
           </div>
         ) : (
-          <button className="btn" onClick={() => (props.startEditProfile ? props.startEditProfile() : null)}>
+          <button className="btn" onClick={() => (startEditProfile ? startEditProfile() : null)}>
             Edit Profile
           </button>
         )}
@@ -57,7 +64,7 @@ export default function Profile(props) {
       ) : (
         <div className="profile-grid">
           {/* Static read-only view when not editing */}
-          {!props.editingProfile ? (
+          {!editingProfile ? (
             <>
                 <div className="profile-section">
                   <h2>Personal Information</h2>
@@ -174,21 +181,64 @@ export default function Profile(props) {
             </>
           )}
 
-          {pcp && (
-            <div className="profile-section full-width">
-              <h2>Primary Care Physician</h2>
-              <div className="pcp-card">
-                <div className="pcp-avatar large"><Stethoscope /></div>
-                <div className="pcp-details">
-                  <h3>{pcp.pcp_name || pcp.name}</h3>
-                  <p><strong>Specialty:</strong> {pcp.pcp_specialty || pcp.specialty_name}</p>
-                  <p><MapPin className="small-icon" /> {pcp.pcp_office || pcp.office_name}</p>
-                  <p><Phone className="small-icon" /> {pcp.pcp_phone || pcp.Phone}</p>
-                  <p><Mail className="small-icon" /> {pcp.pcp_email || pcp.Email}</p>
+          {/* Emergency Contact Section */}
+          <div className="profile-section full-width">
+            <h2>Emergency Contact</h2>
+            {!editingProfile ? (
+              <div className="info-display">
+                <div className="info-row">
+                  <span className="info-label">Phone Number:</span>
+                  <span className="info-value">{profile.emergency_contact || 'Not provided'}</span>
                 </div>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="form-group">
+                <label>Emergency Contact Phone Number</label>
+                <input
+                  type="tel"
+                  className="form-input"
+                  placeholder="Enter emergency contact phone number"
+                  value={formData.emergency_contact}
+                  onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Primary Care Physician Section */}
+          <div className="profile-section full-width">
+            <h2>Primary Care Physician</h2>
+            {!editingProfile ? (
+              pcp && (
+                <div className="pcp-card">
+                  <div className="pcp-avatar large"><Stethoscope /></div>
+                  <div className="pcp-details">
+                    <h3>{pcp.pcp_name || pcp.name}</h3>
+                    <p><strong>Specialty:</strong> {pcp.pcp_specialty || pcp.specialty_name}</p>
+                    <p><MapPin className="small-icon" /> {pcp.pcp_office || pcp.office_name}</p>
+                    <p><Phone className="small-icon" /> {pcp.pcp_phone || pcp.Phone}</p>
+                    <p><Mail className="small-icon" /> {pcp.pcp_email || pcp.Email}</p>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="form-group">
+                <label>Select Primary Care Physician</label>
+                <select 
+                  className="form-input" 
+                  value={formData.primary_doctor} 
+                  onChange={(e) => setFormData({ ...formData, primary_doctor: e.target.value })}
+                >
+                  <option value="">Select a Primary Care Physician</option>
+                  {doctors.map((doctor) => (
+                    <option key={doctor.doctor_id} value={doctor.doctor_id}>
+                      {doctor.name} - {doctor.specialty_name} ({doctor.office_name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

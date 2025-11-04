@@ -244,6 +244,7 @@ elseif ($endpoint === 'profile') {
                     p.last_name,
                     p.dob,
                     p.email,
+                    p.emergencycontact as emergency_contact,
                     p.assigned_at_birth_gender,
                     p.gender,
                     p.ethnicity,
@@ -318,6 +319,7 @@ elseif ($endpoint === 'profile') {
                     last_name = ?,
                     email = NULLIF(?, ''),
                     dob = NULLIF(?, ''),
+                    emergencycontact = NULLIF(?, ''),
                     gender = NULLIF(?, ''),
                     assigned_at_birth_gender = NULLIF(?, ''),
                     ethnicity = NULLIF(?, ''),
@@ -329,12 +331,13 @@ elseif ($endpoint === 'profile') {
                 // Prepare failed — return a helpful message for devs and log the DB error
                 sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
             }
-            // Expecting keys: first_name, last_name, email, dob (YYYY-MM-DD),
+            // Expecting keys: first_name, last_name, email, dob (YYYY-MM-DD), emergency_contact,
             // gender, genderAtBirth, ethnicity, race, primary_doctor
             $first = $input['first_name'] ?? '';
             $last = $input['last_name'] ?? '';
             $email = $input['email'] ?? '';
             $dob = $input['dob'] ?? '';
+            $emergencyContact = $input['emergency_contact'] ?? '';
             $gender = $input['gender'] ?? '';
             $genderAtBirth = $input['genderAtBirth'] ?? '';
             $ethnicity = $input['ethnicity'] ?? '';
@@ -350,11 +353,12 @@ elseif ($endpoint === 'profile') {
             $primaryDoctor = isset($input['primary_doctor']) ? trim((string)$input['primary_doctor']) : '';
 
             // Bind all parameters as strings except the final patient_id (int).
-            $stmt->bind_param('sssssssssi', 
+            $stmt->bind_param('ssssssssssi', 
                 $first,
                 $last,
                 $email,
                 $dob,
+                $emergencyContact,
                 $gender,
                 $genderAtBirth,
                 $ethnicity,

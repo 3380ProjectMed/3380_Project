@@ -67,7 +67,12 @@ export default function PatientPortal({ onLogout }) {
       try {
         switch (currentPage) {
           case 'dashboard': await loadDashboard(); break;
-          case 'profile': await loadProfile(); break;
+          case 'profile': 
+            await loadProfile(); 
+            // Load doctors for PCP selection dropdown
+            const d = await api.appointments.getDoctors();
+            if (d.success) setDoctors(d.data ?? []);
+            break;
           case 'appointments': await loadAppointments(); break;
           case 'records': await loadMedicalRecords(); break;
           case 'insurance': await loadInsurance(); break;
@@ -107,6 +112,8 @@ export default function PatientPortal({ onLogout }) {
         last_name: r.data.last_name || '',
         dob: r.data.dob || '',
         email: r.data.email || '',
+        emergency_contact: r.data.emergency_contact || '',
+        primary_doctor: r.data.pcp_id || '',
         // prefer human-readable labels returned by the API
         gender: r.data.Gender_Text ?? r.data.gender ?? fd.gender,
         genderAtBirth: r.data.AssignedAtBirth_Gender_Text ?? r.data.assigned_at_birth_gender ?? fd.genderAtBirth,
@@ -206,6 +213,8 @@ export default function PatientPortal({ onLogout }) {
         last_name: formData.last_name,
         email: formData.email,
         dob: formData.dob,
+        emergency_contact: formData.emergency_contact,
+        primary_doctor: formData.primary_doctor,
         // include demographics
         gender: formData.gender,
         genderAtBirth: formData.genderAtBirth,
@@ -480,6 +489,8 @@ export default function PatientPortal({ onLogout }) {
     last_name: '',
     dob: '',
     email: '',
+    emergency_contact: '',
+    primary_doctor: '',
   });
 
   const genderOptions = ['Male', 'Female', 'Non-Binary', 'Prefer to Self-Describe', 'Prefer not to say', 'Other'];
@@ -588,12 +599,10 @@ export default function PatientPortal({ onLogout }) {
 
   // --- Main render ---
   const portalProps = {
-    displayName,
-    loading,
+    dashboard,
+    profile,
     upcomingAppointments,
     appointmentHistory,
-    pcp,
-    recentActivity,
     doctors,
     offices,
     vitalsHistory,
@@ -610,7 +619,6 @@ export default function PatientPortal({ onLogout }) {
     handleBookingBack,
     handleBookingSubmit,
     handleCancelAppointment,
-    profile,
     formData,
     setFormData,
     profileErrors,
@@ -624,9 +632,7 @@ export default function PatientPortal({ onLogout }) {
     raceOptions,
     saveProfile: handleSaveProfile,
     processPayment: api.billing.processPayment,
-  };
-
-  return (
+  };  return (
     <div className="patient-portal-root">
       {/* Sidebar (fixed on the left) */}
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
