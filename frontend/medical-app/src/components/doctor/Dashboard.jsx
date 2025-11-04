@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { Calendar, Users, Clock, FileText, Search, Filter, CheckCircle, XCircle, PlayCircle } from 'lucide-react';
 import './Dashboard.css';
+import { WelcomeHeader } from '../shared';
 
 function Dashboard({ setCurrentPage, onAppointmentClick }) {
   const auth = useAuth();
@@ -211,21 +212,18 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
   return (
     <div className="dashboard">
       {/* ===== WELCOME HEADER ===== */}
-      <div className="dashboard-header">
-        <div className="welcome-section">
-          <h1>Welcome Back, Dr. {doctorProfile ? doctorProfile.lastName : 'Lastname'}</h1>
-          <p className="office-info">
-            <Calendar size={18} style={{display: 'inline', marginRight: '8px', verticalAlign: 'middle'}} />
-            {getCurrentDate()} {' '}
-            <a href="#" onClick={(e) => {
-              e.preventDefault(); 
-              setCurrentPage('schedule');
-            }}>
+      <WelcomeHeader
+        title={`Welcome Back, Dr. ${doctorProfile ? doctorProfile.lastName : 'Lastname'}`}
+        subtitle={
+          <>
+            <Calendar size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+            {getCurrentDate()}{' '}
+            <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('schedule'); }}>
               {doctorProfile ? doctorProfile.workLocation : 'WorkLocation'}
             </a>
-          </p>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Loading State */}
       {loading && (

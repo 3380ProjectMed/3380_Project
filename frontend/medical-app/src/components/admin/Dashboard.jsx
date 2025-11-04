@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Calendar, Activity, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
 import '../doctor/Dashboard.css';
+import { WelcomeHeader, StatCard, StatsGrid } from '../shared';
 
 function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -47,93 +48,19 @@ function AdminDashboard() {
 
   return (
     <div className="dashboard">
-      <div className="dashboard-header">
-        <h1>Admin Dashboard</h1>
-        <p>System Overview</p>
-      </div>
+      <WelcomeHeader title="Admin Dashboard" subtitle="System Overview" />
 
-      {/* Stats Grid */}
-      <div className="stats-grid">
-        <div className="stat-card stat-primary">
-          <div className="stat-icon">
-            <Users size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.total_doctors}</div>
-            <div className="stat-label">Total Doctors</div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-info">
-          <div className="stat-icon">
-            <Activity size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.total_nurses}</div>
-            <div className="stat-label">Total Nurses</div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-success">
-          <div className="stat-icon">
-            <Users size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.total_patients}</div>
-            <div className="stat-label">Total Patients</div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-warning">
-          <div className="stat-icon">
-            <Calendar size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.appointments_this_month}</div>
-            <div className="stat-label">Appointments This Month</div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-info">
-          <div className="stat-icon">
-            <Activity size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.active_users}</div>
-            <div className="stat-label">Active Users</div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-warning">
-          <div className="stat-icon">
-            <Calendar size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.pending_appointments}</div>
-            <div className="stat-label">Pending Today</div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-success">
-          <div className="stat-icon">
-            <TrendingUp size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.completed_today}</div>
-            <div className="stat-label">Completed Today</div>
-          </div>
-        </div>
-
-        <div className="stat-card stat-primary">
-          <div className="stat-icon">
-            <DollarSign size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">${stats.revenue_today.toFixed(2)}</div>
-            <div className="stat-label">Revenue Today</div>
-          </div>
-        </div>
-      </div>
+      {/* Stats Grid (use shared StatCard components) */}
+      <StatsGrid>
+        <StatCard icon={Users} value={stats.total_doctors} label="Total Doctors" variant="stat-primary" />
+        <StatCard icon={Activity} value={stats.total_nurses} label="Total Nurses" variant="stat-info" />
+        <StatCard icon={Users} value={stats.total_patients} label="Total Patients" variant="stat-success" />
+        <StatCard icon={Calendar} value={stats.appointments_this_month} label="Appointments This Month" variant="stat-warning" />
+        <StatCard icon={Activity} value={stats.active_users} label="Active Users" variant="stat-info" />
+        <StatCard icon={Calendar} value={stats.pending_appointments} label="Pending Today" variant="stat-warning" />
+        <StatCard icon={TrendingUp} value={stats.completed_today} label="Completed Today" variant="stat-success" />
+        <StatCard icon={DollarSign} value={`$${stats.revenue_today.toFixed(2)}`} label="Revenue Today" variant="stat-primary" />
+      </StatsGrid>
 
       {/* Quick Actions */}
       <div className="quick-actions">
