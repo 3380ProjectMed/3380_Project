@@ -1,6 +1,7 @@
 <?php
 /**
  * Get all doctors (for admin or dropdowns)
+ * FIXED: Excludes the logged-in doctor from the list
  */
 
 require_once '/home/site/wwwroot/cors.php';
@@ -17,6 +18,16 @@ try {
     }
     
     $conn = getDBConnection();
+    
+    // Get the current logged-in doctor's ID to exclude them from the list
+    $current_doctor_id = null;
+    $user_id = isset($_SESSION['uid']) ? intval($_SESSION['uid']) : null;
+    if ($user_id) {
+        $currentDoctorRows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        if (is_array($currentDoctorRows) && count($currentDoctorRows) > 0) {
+            $current_doctor_id = (int)$currentDoctorRows[0]['doctor_id'];
+        }
+    }
     
     // Get all doctors with their specialty (all lowercase for Azure)
     $sql = "SELECT 
@@ -35,18 +46,28 @@ try {
     
     $doctors = executeQuery($conn, $sql, '', []);
     
-    // Format response
+    // Format response - exclude the current logged-in doctor
     $formatted_doctors = [];
     foreach ($doctors as $doc) {
+        $doc_id = (int)$doc['doctor_id'];
+        
+        // Skip the current logged-in doctor
+        if ($current_doctor_id && $doc_id === $current_doctor_id) {
+            continue;
+        }
+        
         $formatted_doctors[] = [
-            'doctor_id' => (int)$doc['doctor_id'],
+            'doctor_id' => $doc_id,
+            'id' => $doc_id, // Add 'id' field for frontend compatibility
             'firstName' => $doc['first_name'],
             'lastName' => $doc['last_name'],
+            'name' => $doc['first_name'] . ' ' . $doc['last_name'], // Add 'name' field for dropdown
             'fullName' => $doc['first_name'] . ' ' . $doc['last_name'],
             'email' => $doc['email'],
             'phone' => $doc['phone'] ?: 'Not provided',
             'licenseNumber' => $doc['license_number'],
             'specialty' => $doc['specialty_name'],
+            'specialty_name' => $doc['specialty_name'], // Add for consistency
             'gender' => $doc['gender']
         ];
     }
