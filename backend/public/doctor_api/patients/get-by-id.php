@@ -19,14 +19,13 @@ try {
     $numeric = intval(preg_replace('/[^0-9]/', '', $raw));
     if ($numeric <= 0) throw new Exception('Invalid patient id');
 
-    // All lowercase for Azure database
     $sql = "SELECT 
                 p.patient_id,
                 p.first_name,
                 p.last_name,
                 p.dob,
                 p.email,
-                p.emergency_contact,
+                p.emergency_contact_id,
                 p.blood_type,
                 ca.allergies_text as allergies,
                 cg.gender_text as gender
@@ -62,7 +61,7 @@ try {
         'age' => $age,
         'gender' => $p['gender'] ?: 'Not Specified',
         'email' => $p['email'] ?: 'No email',
-        'phone' => $p['emergency_contact'] ?: 'No phone',
+        'phone' => $p['emergency_contact_id'] ?: 'No phone',
         'allergies' => $p['allergies'] ?: 'No Known Allergies',
         'bloodType' => $p['blood_type'] ?: 'Unknown',
         'medicalHistory' => [],

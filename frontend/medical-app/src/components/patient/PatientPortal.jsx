@@ -383,14 +383,14 @@ export default function PatientPortal({ onLogout }) {
       // Extract user-friendly message from API error response
       let errorMessage = 'Failed to book appointment';
       if (err.message) {
-        // Try to extract JSON from error message (format: "HTTP 400 Bad Request - {json}")
-        const jsonMatch = err.message.match(/- (\{.*\})$/);
+        // Try to extract JSON from error message (handles multiline JSON)
+        const jsonMatch = err.message.match(/- (\{[\s\S]*\})$/);
+        
         if (jsonMatch) {
           try {
             const errorData = JSON.parse(jsonMatch[1]);
             errorMessage = errorData.message || errorMessage;
           } catch (parseErr) {
-            console.log('Failed to parse error JSON:', parseErr);
             // If JSON parsing fails, use the original error message
             errorMessage = err.message;
           }
@@ -429,14 +429,13 @@ export default function PatientPortal({ onLogout }) {
       // Extract user-friendly message from API error response
       let errorMessage = 'Failed to cancel appointment';
       if (err.message) {
-        // Try to extract JSON from error message (format: "HTTP 400 Bad Request - {json}")
-        const jsonMatch = err.message.match(/- (\{.*\})$/);
+        // Try to extract JSON from error message (handles multiline JSON)
+        const jsonMatch = err.message.match(/- (\{[\s\S]*\})$/);
         if (jsonMatch) {
           try {
             const errorData = JSON.parse(jsonMatch[1]);
             errorMessage = errorData.message || errorMessage;
           } catch (parseErr) {
-            console.log('Failed to parse cancel error JSON:', parseErr);
             // If JSON parsing fails, use the original error message
             errorMessage = err.message;
           }
