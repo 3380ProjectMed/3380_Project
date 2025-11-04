@@ -110,10 +110,11 @@
 }
 
 .report-section {
-	background: white;
+	/* Slightly translucent card so main page background is visible */
+	background: rgba(255,255,255,0.90);
 	border-radius: 0.75rem;
 	padding: 1rem;
-	box-shadow: 0 4px 12px rgba(0,119,182,0.06);
+	box-shadow: 0 6px 18px rgba(0,119,182,0.06);
 	margin-bottom: 1rem;
 }
 
