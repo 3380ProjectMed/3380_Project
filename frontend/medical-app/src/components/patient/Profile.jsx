@@ -186,10 +186,22 @@ export default function Profile(props) {
             <h2>Emergency Contact</h2>
             {!editingProfile ? (
               <div className="info-display">
+                {profile?.emergency_contact_first_name && (
+                  <div className="info-row">
+                    <span className="info-label">Name:</span>
+                    <span className="info-value">{profile.emergency_contact_first_name} {profile.emergency_contact_last_name}</span>
+                  </div>
+                )}
                 <div className="info-row">
                   <span className="info-label">Phone Number:</span>
-                  <span className="info-value">{profile.emergency_contact || 'Not provided'}</span>
+                  <span className="info-value">{profile?.emergency_contact || 'Not provided'}</span>
                 </div>
+                {profile?.emergency_contact_relationship && (
+                  <div className="info-row">
+                    <span className="info-label">Relationship:</span>
+                    <span className="info-value">{profile.emergency_contact_relationship}</span>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="form-group">
