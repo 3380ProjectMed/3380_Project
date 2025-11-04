@@ -17,11 +17,11 @@ try {
     $stats = [];
     
     // Total doctors
-    $result = executeQuery($conn, 'SELECT COUNT(*) as count FROM Doctor');
+    $result = executeQuery($conn, 'SELECT COUNT(*) as count FROM doctor');
     $stats['total_doctors'] = $result[0]['count'];
     
     // Total nurses
-    $result = executeQuery($conn, 'SELECT COUNT(*) as count FROM Nurse');
+    $result = executeQuery($conn, 'SELECT COUNT(*) as count FROM nurse');
     $stats['total_nurses'] = $result[0]['count'];
     
     // Total patients
@@ -30,7 +30,7 @@ try {
     
     // Total appointments (this month)
     $result = executeQuery($conn, 
-        'SELECT COUNT(*) as count FROM Appointment WHERE MONTH(Appointment_date) = MONTH(CURRENT_DATE) AND YEAR(Appointment_date) = YEAR(CURRENT_DATE)'
+        'SELECT COUNT(*) as count FROM appointment WHERE MONTH(Appointment_date) = MONTH(CURRENT_DATE) AND YEAR(Appointment_date) = YEAR(CURRENT_DATE)'
     );
     $stats['appointments_this_month'] = $result[0]['count'];
     
@@ -40,19 +40,19 @@ try {
     
     // Pending appointments (today)
     $result = executeQuery($conn, 
-        "SELECT COUNT(*) as count FROM Appointment WHERE DATE(Appointment_date) = CURRENT_DATE AND Status IN ('Scheduled', 'Waiting')"
+        "SELECT COUNT(*) as count FROM appointment WHERE DATE(Appointment_date) = CURRENT_DATE AND Status IN ('Scheduled', 'Waiting')"
     );
     $stats['pending_appointments'] = $result[0]['count'];
     
     // Completed today
     $result = executeQuery($conn, 
-        "SELECT COUNT(*) as count FROM Appointment WHERE DATE(Appointment_date) = CURRENT_DATE AND Status = 'Completed'"
+        "SELECT COUNT(*) as count FROM appointment WHERE DATE(Appointment_date) = CURRENT_DATE AND Status = 'Completed'"
     );
     $stats['completed_today'] = $result[0]['count'];
     
     // Revenue today (from PatientVisit)
     $result = executeQuery($conn, 
-        'SELECT COALESCE(SUM(Payment), 0) as total FROM patient_visit WHERE DATE(Date) = CURRENT_DATE'
+        'SELECT COALESCE(SUM(payment), 0) as total FROM patient_visit WHERE DATE(Date) = CURRENT_DATE'
     );
     $stats['revenue_today'] = floatval($result[0]['total']);
     
