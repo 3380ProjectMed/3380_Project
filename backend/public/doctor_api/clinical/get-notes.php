@@ -1,6 +1,10 @@
+
 <?php
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
+/**
+ * get-notes.php
+ */
 
 try {
     $patient_id = isset($_GET['patient_id']) ? intval($_GET['patient_id']) : 0;
