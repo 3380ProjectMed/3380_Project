@@ -188,68 +188,66 @@ export default function Profile(props) {
           <div className="profile-section full-width">
             <h2>Emergency Contact</h2>
             {!editingProfile ? (
-              <div className="info-display">
+              <>
                 {profile?.emergency_contact_first_name && (
-                  <div className="info-row">
-                    <span className="info-label">Name:</span>
-                    <span className="info-value">{profile.emergency_contact_first_name} {profile.emergency_contact_last_name}</span>
-                  </div>
+                  <div className="static-field"><strong>Name:</strong> {profile.emergency_contact_first_name} {profile.emergency_contact_last_name}</div>
                 )}
-                <div className="info-row">
-                  <span className="info-label">Phone Number:</span>
-                  <span className="info-value">{profile?.emergency_contact || 'Not provided'}</span>
-                </div>
+                <div className="static-field"><strong>Phone Number:</strong> {profile?.emergency_contact || 'Not provided'}</div>
                 {profile?.emergency_contact_relationship && (
-                  <div className="info-row">
-                    <span className="info-label">Relationship:</span>
-                    <span className="info-value">{profile.emergency_contact_relationship}</span>
-                  </div>
+                  <div className="static-field"><strong>Relationship:</strong> {profile.emergency_contact_relationship}</div>
                 )}
-              </div>
+              </>
             ) : (
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>First Name</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Emergency contact first name"
-                    value={formData.emergency_contact_first_name || ''}
-                    onChange={(e) => setFormData({ ...formData, emergency_contact_first_name: e.target.value })}
-                  />
+              <div className="emergency-contact-form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>First Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Emergency contact first name"
+                      value={formData.emergency_contact_first_name || ''}
+                      onChange={(e) => setFormData({ ...formData, emergency_contact_first_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Last Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Emergency contact last name"
+                      value={formData.emergency_contact_last_name || ''}
+                      onChange={(e) => setFormData({ ...formData, emergency_contact_last_name: e.target.value })}
+                    />
+                  </div>
                 </div>
-                
-                <div className="form-group">
-                  <label>Last Name</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Emergency contact last name"
-                    value={formData.emergency_contact_last_name || ''}
-                    onChange={(e) => setFormData({ ...formData, emergency_contact_last_name: e.target.value })}
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Phone Number</label>
-                  <input
-                    type="tel"
-                    className="form-input"
-                    placeholder="Emergency contact phone number"
-                    value={formData.emergency_contact || ''}
-                    onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Relationship</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Relationship (e.g., Spouse, Parent, Friend)"
-                    value={formData.emergency_contact_relationship || ''}
-                    onChange={(e) => setFormData({ ...formData, emergency_contact_relationship: e.target.value })}
-                  />
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Phone Number</label>
+                    <input
+                      type="tel"
+                      className="form-input"
+                      placeholder="Emergency Contact Phone Number"
+                      value={formData.emergency_contact || ''}
+                      onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Relationship</label>
+                    <select
+                      className="form-input"
+                      value={formData.emergency_contact_relationship || ''}
+                      onChange={(e) => setFormData({ ...formData, emergency_contact_relationship: e.target.value })}
+                    >
+                      <option value="">Select relationship</option>
+                      <option value="Spouse">Spouse</option>
+                      <option value="Parent">Parent</option>
+                      <option value="Child">Child</option>
+                      <option value="Sibling">Sibling</option>
+                      <option value="Friend">Friend</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             )}
@@ -280,7 +278,7 @@ export default function Profile(props) {
                   onChange={(e) => setFormData({ ...formData, primary_doctor: e.target.value })}
                 >
                   <option value="">Select a Primary Care Physician</option>
-                  {doctors.filter(doctor => doctor.specialty_name === 'Internal Medicine').map((doctor) => (
+                  {doctors.filter((doctor) => doctor.specialty_name === 'Internal Medicine').map((doctor) => (
                     <option key={doctor.doctor_id} value={doctor.doctor_id}>
                       {doctor.name} - {doctor.specialty_name} ({doctor.office_name})
                     </option>
