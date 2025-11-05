@@ -16,7 +16,7 @@ import AdminSidebar from './Sidebar.jsx';
 import AdminDashboard from './Dashboard.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider.jsx';
-
+import UserManagement from './UserManagement.jsx';
 // --- Simple stub pages used by the admin sidebar ---
 function UsersView() {
   return (
@@ -181,11 +181,11 @@ function AdminPortal({ preview = false }) {
     <div>
       <AdminSidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
 
-      <main>
+      <main className='main-content'>
         <div className="report-container">
           {/* Render selected admin page */}
           {currentPage === 'dashboard' && <AdminDashboard />}
-          {currentPage === 'users' && <UsersView />}
+          {currentPage === 'users' && <UserManagement />}
           {currentPage === 'reports' && (
             <>
               {/* Header */}

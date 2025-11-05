@@ -14,7 +14,7 @@ import './Schedule.css';
  * - Weekend highlighting based on work schedule
  */
 function Schedule({ onAppointmentClick }) {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 9, 1)); // October 2025
+  const [currentDate, setCurrentDate] = useState(new Date()); 
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [workSchedule, setWorkSchedule] = useState([]);
   const [appointments, setAppointments] = useState([]);

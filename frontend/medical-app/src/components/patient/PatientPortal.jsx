@@ -67,7 +67,12 @@ export default function PatientPortal({ onLogout }) {
       try {
         switch (currentPage) {
           case 'dashboard': await loadDashboard(); break;
-          case 'profile': await loadProfile(); break;
+          case 'profile': 
+            await loadProfile(); 
+            // Load doctors for PCP selection dropdown
+            const d = await api.appointments.getDoctors();
+            if (d.success) setDoctors(d.data ?? []);
+            break;
           case 'appointments': await loadAppointments(); break;
           case 'records': await loadMedicalRecords(); break;
           case 'insurance': await loadInsurance(); break;
@@ -107,6 +112,8 @@ export default function PatientPortal({ onLogout }) {
         last_name: r.data.last_name || '',
         dob: r.data.dob || '',
         email: r.data.email || '',
+        emergency_contact: r.data.emergency_contact || '',
+        primary_doctor: r.data.pcp_id || '',
         // prefer human-readable labels returned by the API
         gender: r.data.Gender_Text ?? r.data.gender ?? fd.gender,
         genderAtBirth: r.data.AssignedAtBirth_Gender_Text ?? r.data.assigned_at_birth_gender ?? fd.genderAtBirth,
@@ -206,6 +213,8 @@ export default function PatientPortal({ onLogout }) {
         last_name: formData.last_name,
         email: formData.email,
         dob: formData.dob,
+        emergency_contact: formData.emergency_contact,
+        primary_doctor: formData.primary_doctor,
         // include demographics
         gender: formData.gender,
         genderAtBirth: formData.genderAtBirth,
@@ -250,7 +259,26 @@ export default function PatientPortal({ onLogout }) {
 
   // --- Booking helpers ---
   const timeSlots = ['9:00 AM','10:00 AM','11:00 AM','2:00 PM','3:00 PM','4:00 PM'];
-  const handleBookingNext = () => setBookingStep(s => Math.min(4, s + 1));
+  
+  const handleBookingNext = () => {
+    // Validate each step before proceeding
+    if (bookingStep === 1 && !selectedDoctor) {
+      setBookingError('Please select a doctor before proceeding');
+      return;
+    }
+    if (bookingStep === 2 && !selectedLocation) {
+      setBookingError('Please select an office location before proceeding');
+      return;
+    }
+    if (bookingStep === 3 && (!selectedDate || !selectedTime)) {
+      setBookingError('Please select both date and time before proceeding');
+      return;
+    }
+    
+    setBookingError(null); // Clear any previous errors
+    setBookingStep(s => Math.min(4, s + 1));
+  };
+  
   const handleBookingBack = () => setBookingStep(s => Math.max(1, s - 1));
 
   // Ensure doctors/offices are loaded when booking modal opens
@@ -300,12 +328,42 @@ export default function PatientPortal({ onLogout }) {
     console.log('Submitting booking...', { selectedDoctor, selectedLocation, selectedDate, selectedTime });
     setBookingLoading(true);
     setBookingError(null);
+    
+    // Validate all required fields before submitting
+    if (!selectedDoctor?.doctor_id) {
+      setBookingError('Please select a doctor');
+      setBookingLoading(false);
+      return;
+    }
+    if (!selectedLocation) {
+      setBookingError('Please select an office location');
+      setBookingLoading(false);
+      return;
+    }
+    if (!selectedDate) {
+      setBookingError('Please select a date');
+      setBookingLoading(false);
+      return;
+    }
+    if (!selectedTime) {
+      setBookingError('Please select a time');
+      setBookingLoading(false);
+      return;
+    }
+    if (!appointmentReason?.trim()) {
+      setBookingError('Please provide a reason for the appointment');
+      setBookingLoading(false);
+      return;
+    }
+    
     const appointmentData = {
-      doctor_id: selectedDoctor?.doctor_id,
+      doctor_id: selectedDoctor.doctor_id,
       office_id: selectedLocation,
       appointment_date: `${selectedDate} ${selectedTime}`,
-      reason: appointmentReason,
+      reason: appointmentReason.trim(),
     };
+    
+    console.log('Appointment data being sent:', appointmentData);
     try {
       const r = await api.appointments.bookAppointment(appointmentData);
       console.log('Booking API response:', r);
@@ -330,7 +388,28 @@ export default function PatientPortal({ onLogout }) {
       }
     } catch (err) {
       console.error('Booking error', err);
-      setBookingError(err.message || 'Failed to book appointment');
+      
+      // Extract user-friendly message from API error response
+      let errorMessage = 'Failed to book appointment';
+      if (err.message) {
+        // Try to extract JSON from error message (handles multiline JSON)
+        const jsonMatch = err.message.match(/- (\{[\s\S]*\})$/);
+        
+        if (jsonMatch) {
+          try {
+            const errorData = JSON.parse(jsonMatch[1]);
+            errorMessage = errorData.message || errorMessage;
+          } catch (parseErr) {
+            // If JSON parsing fails, use the original error message
+            errorMessage = err.message;
+          }
+        } else {
+          // If no JSON match found, use the original error message
+          errorMessage = err.message;
+        }
+      }
+      
+      setBookingError(errorMessage);
       setBookingLoading(false);
     }
   }
@@ -355,7 +434,27 @@ export default function PatientPortal({ onLogout }) {
       }
     } catch (err) {
       console.error('Cancel appointment error', err);
-      setToast({ message: 'Failed to cancel appointment', type: 'error' });
+      
+      // Extract user-friendly message from API error response
+      let errorMessage = 'Failed to cancel appointment';
+      if (err.message) {
+        // Try to extract JSON from error message (handles multiline JSON)
+        const jsonMatch = err.message.match(/- (\{[\s\S]*\})$/);
+        if (jsonMatch) {
+          try {
+            const errorData = JSON.parse(jsonMatch[1]);
+            errorMessage = errorData.message || errorMessage;
+          } catch (parseErr) {
+            // If JSON parsing fails, use the original error message
+            errorMessage = err.message;
+          }
+        } else {
+          // If no JSON match found, use the original error message
+          errorMessage = err.message;
+        }
+      }
+      
+      setToast({ message: errorMessage, type: 'error' });
     } finally {
       setShowCancelModal(false);
       setAppointmentToCancel(null);
@@ -364,8 +463,6 @@ export default function PatientPortal({ onLogout }) {
 
   // --- Logout handler (uses context if no prop provided) ---
   async function handleLogout() {
-    const ok = window.confirm('Are you sure you want to log out?');
-    if (!ok) return;
     try {
       if (onLogout) {
         await onLogout();
@@ -390,6 +487,8 @@ export default function PatientPortal({ onLogout }) {
     last_name: '',
     dob: '',
     email: '',
+    emergency_contact: '',
+    primary_doctor: '',
   });
 
   const genderOptions = ['Male', 'Female', 'Non-Binary', 'Prefer to Self-Describe', 'Prefer not to say', 'Other'];
@@ -500,6 +599,7 @@ export default function PatientPortal({ onLogout }) {
   const portalProps = {
     displayName,
     loading,
+    profile,
     upcomingAppointments,
     appointmentHistory,
     pcp,
@@ -520,7 +620,6 @@ export default function PatientPortal({ onLogout }) {
     handleBookingBack,
     handleBookingSubmit,
     handleCancelAppointment,
-    profile,
     formData,
     setFormData,
     profileErrors,
@@ -534,9 +633,7 @@ export default function PatientPortal({ onLogout }) {
     raceOptions,
     saveProfile: handleSaveProfile,
     processPayment: api.billing.processPayment,
-  };
-
-  return (
+  };  return (
     <div className="patient-portal-root">
       {/* Sidebar (fixed on the left) */}
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />

@@ -59,20 +59,21 @@
 }
 
 .stat-card {
-  background: white;
+  /* Slight translucency so background shows through while keeping contrast */
+  background: rgba(255,255,255,0.92);
   border-radius: 1rem;
   padding: 1.5rem;
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  box-shadow: 0 6px 18px rgba(0, 119, 182, 0.08);
   border: 2px solid transparent;
   transition: all 0.3s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 119, 182, 0.15);
+  box-shadow: 0 10px 28px rgba(0, 119, 182, 0.15);
 }
 
 .stat-icon {

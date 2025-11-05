@@ -5,7 +5,7 @@
 	max-width: 1400px;
 	margin: 0 auto;
 	/* leave room for fixed sidebar (sidebar width is 16rem) */
-	margin-left: 16rem;
+	/* margin-left: 16rem; */
 	box-sizing: border-box;
 	/* match site font */
 	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -110,10 +110,14 @@
 }
 
 .report-section {
-	background: white;
+	/* Slightly more translucent + backdrop blur so the main page background shows through similarly to doctor portal */
+	background: rgba(255,255,255,0.75);
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
 	border-radius: 0.75rem;
 	padding: 1rem;
-	box-shadow: 0 4px 12px rgba(0,119,182,0.06);
+	box-shadow: 0 6px 18px rgba(0,119,182,0.06);
+	border: 1px solid rgba(226,238,248,0.6);
 	margin-bottom: 1rem;
 }
 

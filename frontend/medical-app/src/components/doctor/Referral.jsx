@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
+import { User, Stethoscope, FileText, Calendar, AlertCircle } from 'lucide-react';
 import './Referral.css';
 
 function Referral() {
@@ -142,33 +143,100 @@ function Referral() {
     setTimeout(() => setStatus(null), 4000);
   };
 
+  /**
+   * Format date for display
+   */
+  const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  try {
+    const [year, month, day] = dateString.split('T')[0].split('-');
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch {
+    return dateString;
+  }
+};
+
   return (
     <div className="referral-page">
       <h2 className="page-title">Referrals</h2>
       <div className="referral-grid">
+        {/* ===== RECEIVED REFERRALS ===== */}
         <div className="referral-column">
           <h3>Received Referrals</h3>
-          {loading ? <div>Loading...</div> : (
-            <ul className="referral-list">
-              {referrals.length === 0 && <li className="empty">No referrals received</li>}
-              {referrals.map(r => (
-                <li key={r.Referral_ID} className="referral-item">
-                  <div className="referral-meta">
-                    <strong>Referral #{r.Referral_ID}</strong>
-                    <span>Patient: {r.patient_name} (ID: {r.Patient_ID})</span>
-                    <span>Specialist: {r.specialist_name}{r.specialty_name ? ` — ${r.specialty_name}` : ''}</span>
-                    <span>Reason: {r.Reason}</span>
-                    {r.Date_of_approval && <span className="approved-date">Received: {r.Date_of_approval}</span>}
-                    <span className={`status-badge status-${r.Status?.toLowerCase()}`}>
-                      {r.Status}
-                    </span>
+          {loading ? (
+            <div className="loading-state">Loading referrals...</div>
+          ) : (
+            <div className="referral-cards-list">
+              {referrals.length === 0 ? (
+                <div className="empty-state">
+                  <FileText size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                  <p>No referrals received yet</p>
+                </div>
+              ) : (
+                referrals.map(r => (
+                  <div key={r.referral_id || r.Referral_ID} className="received-referral-card">
+                    {/* Card Header */}
+                    <div className="referral-card-header">
+                      <div className="referral-id-badge">
+                        Referral #{r.referral_id || r.Referral_ID}
+                      </div>
+                      <div className="referral-date">
+                        <Calendar size={14} />
+                        {formatDate(r.date_of_approval || r.Date_of_approval)}
+                      </div>
+                    </div>
+
+                    {/* Patient Info */}
+                    <div className="referral-section">
+                      <div className="section-label">
+                        <User size={16} />
+                        <span>Patient</span>
+                      </div>
+                      <div className="section-content">
+                        <p className="referral-patient-info"><strong>{r.patient_name}</strong> <span className="text-muted">ID: {r.patient_id || r.Patient_ID}</span></p>
+                      </div>
+                    </div>
+
+                    {/* Specialist Info */}
+                    <div className="referral-section">
+                      <div className="section-label">
+                        <Stethoscope size={16} />
+                        <span>Specialist</span>
+                      </div>
+                      <div className="section-content">
+                        <strong>{r.specialist_name || 'Not specified'}</strong>
+                        {r.specialty_name && (
+                          <span className="specialty-badge">{r.specialty_name}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Reason */}
+                    <div className="referral-section">
+                      <div className="section-label">
+                        <AlertCircle size={16} />
+                        <span>Reason for Referral</span>
+                      </div>
+                      <div className="section-content">
+                        <p className="referral-reason-text">
+                          {r.reason || r.Reason || 'No reason provided'}
+                        </p>
+                      </div>
+                    </div>
+
                   </div>
-                </li>
-              ))}
-            </ul>
+                ))
+              )}
+            </div>
           )}
         </div>
 
+        {/* ===== CREATE REFERRAL FORM ===== */}
         <div className="referral-column">
           <h3>Create Referral</h3>
           <form className="referral-form" onSubmit={handleCreate}>

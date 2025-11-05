@@ -21,12 +21,12 @@ export default function Dashboard(props) {
                 <p className="text-gray">No upcoming appointments</p>
               ) : (
                 upcomingAppointments.map(apt => (
-                  <div key={apt.Appointment_id} className="appointment-item">
+                  <div key={apt.appointment_id} className="appointment-item">
                     <div className="appointment-info">
                       <h3>{apt.doctor_name}</h3>
                       <p>{apt.specialty_name}</p>
                       <p className="appointment-details">
-                        <Clock className="small-icon" /> {new Date(apt.Appointment_date).toLocaleString()}
+                        <Clock className="small-icon" /> {new Date(apt.appointment_date).toLocaleString()}
                       </p>
                       <p className="appointment-details">
                         <MapPin className="small-icon" /> {apt.office_name}
@@ -78,9 +78,9 @@ export default function Dashboard(props) {
                     <div key={idx} className="activity-item">
                       <Check className="activity-icon success" />
                       <div>
-                        <p><strong>{activity.Status}</strong></p>
+                        <p><strong>{activity.status}</strong></p>
                         <p className="text-small">
-                          {activity.doctor_name} — {new Date(activity.Date).toLocaleDateString()}
+                          {activity.doctor_name} — {new Date(activity.date).toLocaleDateString()}
                         </p>
                       </div>
                     </div>

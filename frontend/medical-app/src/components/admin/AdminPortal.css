@@ -12,15 +12,20 @@ main, .report-container, .profile-page, .dashboard, .sidebar {
   width: 100%;
   min-height: 100vh;
 }
-
-/* main content area (right of fixed sidebar) */
-main {
-  flex: 1 1 auto;
-  padding: 2rem;
-  margin-left: 0; /* Report.css handles report-container margin-left for sidebar */
-  box-sizing: border-box;
+.main-content {
+  flex: 1;
+  margin-left: 16rem; /* 256px - matches sidebar width */
+  min-height: 100vh;
   background: transparent;
+  padding: 2rem 3rem;
+  width: calc(100% - 16rem);
+  max-width: calc(100% - 16rem);
+  box-sizing: border-box;
+  overflow-x: hidden;
+  transition: margin-left 0.3s ease;
 }
+/* main content area (right of fixed sidebar) */
+
 
 .admin-toolbar {
   display: flex;

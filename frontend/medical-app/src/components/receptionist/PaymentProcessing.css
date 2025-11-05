@@ -1,0 +1,607 @@
+/* ========== PAYMENT PROCESSING PAGE ========== */
+.payment-processing-page {
+  padding: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* ===== HEADER ===== */
+.payment-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* ===== PAYMENT CONTENT ===== */
+.payment-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* ===== PAYMENT SUMMARY CARD ===== */
+.payment-summary-card {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border: 2px solid #0077b6;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.15);
+}
+
+.summary-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0077b6;
+  margin: 0 0 1.5rem 0;
+}
+
+.summary-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.summary-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.summary-item svg {
+  color: #0077b6;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 0.25rem 0;
+}
+
+.summary-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.amount-display {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+  border: 2px solid #00b4d8;
+}
+
+.amount-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin: 0 0 0.5rem 0;
+}
+
+.amount-value {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #0077b6;
+  margin: 0;
+  line-height: 1;
+}
+
+/* ===== PAYMENT METHOD SELECTION ===== */
+.payment-method-section {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  border: 2px solid #e5e7eb;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #03045e;
+  margin: 0 0 1.5rem 0;
+}
+
+.method-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.method-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.75rem 1.25rem;
+  background: white;
+  border: 3px solid #e5e7eb;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.method-option:hover {
+  border-color: #00b4d8;
+  background: #f0f9ff;
+}
+
+.method-option.selected {
+  border-color: #0077b6;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
+}
+
+.method-option svg {
+  color: #6b7280;
+}
+
+.method-option.selected svg {
+  color: #0077b6;
+}
+
+.method-option span {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 1rem;
+  text-align: center;
+}
+
+/* ===== PAYMENT DETAILS SECTION ===== */
+.payment-details-section {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  border: 2px solid #e5e7eb;
+}
+
+.payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.form-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #03045e;
+  margin: 0 0 1rem 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1rem;
+  color: #6b7280;
+  pointer-events: none;
+}
+
+.input-with-icon .form-input {
+  padding-left: 2.75rem;
+}
+
+/* ===== CASH CALCULATOR ===== */
+.cash-calculator {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.change-display {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  border: 2px solid #10b981;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.change-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #065f46;
+  margin: 0 0 0.5rem 0;
+}
+
+.change-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #059669;
+  margin: 0;
+  line-height: 1;
+}
+
+.quick-amounts {
+  padding-top: 1rem;
+  border-top: 2px solid #f3f4f6;
+}
+
+.quick-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin: 0 0 0.75rem 0;
+}
+
+.quick-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.quick-btn {
+  padding: 0.75rem;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  color: #1f2937;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-btn:hover {
+  border-color: #10b981;
+  background: #d1fae5;
+  color: #059669;
+}
+
+/* ===== RECEIPT OPTION ===== */
+.receipt-option {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+.checkbox-group label svg {
+  color: #0077b6;
+}
+
+/* ===== PAYMENT ACTIONS ===== */
+.payment-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e5e7eb;
+}
+
+/* ===== RECEIPT VIEW ===== */
+.receipt-view {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.receipt-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.success-icon {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1.5rem auto 0;
+  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
+}
+
+.success-icon svg {
+  color: white;
+}
+
+/* ===== RECEIPT CARD ===== */
+.receipt-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 2.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.receipt-header-info {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.clinic-name {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0077b6;
+  margin: 0 0 0.5rem 0;
+}
+
+.clinic-address,
+.clinic-phone {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: 0.25rem 0;
+}
+
+.receipt-divider {
+  height: 2px;
+  background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+  margin: 1.5rem 0;
+}
+
+.receipt-details {
+  margin-bottom: 2rem;
+}
+
+.receipt-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #03045e;
+  text-align: center;
+  margin: 0 0 1.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.receipt-row.total-row {
+  border-top: 2px solid #e5e7eb;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 1rem 0;
+  margin-top: 0.5rem;
+}
+
+.receipt-label {
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.receipt-value {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.total-row .receipt-label,
+.total-row .receipt-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0077b6;
+}
+
+.receipt-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.notes-text {
+  background: #f9fafb;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  color: #1f2937;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.receipt-footer {
+  text-align: center;
+  padding-top: 2rem;
+  border-top: 2px solid #f3f4f6;
+}
+
+.thank-you-message {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #059669;
+  margin: 0 0 0.5rem 0;
+}
+
+.footer-note {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+  font-style: italic;
+}
+
+/* ===== EMAIL CONFIRMATION ===== */
+.email-confirmation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #d1fae5, #ffffff);
+  border: 2px solid #10b981;
+  border-radius: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.email-confirmation svg {
+  color: #059669;
+  flex-shrink: 0;
+}
+
+.email-confirmation p {
+  margin: 0;
+  color: #1f2937;
+  font-size: 0.95rem;
+}
+
+.email-confirmation strong {
+  color: #059669;
+}
+
+/* ===== RECEIPT ACTIONS ===== */
+.receipt-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  .payment-header,
+  .receipt-actions,
+  .email-confirmation,
+  .btn-back {
+    display: none !important;
+  }
+
+  .receipt-card {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .success-icon {
+    display: none;
+  }
+
+  .page-title {
+    display: none;
+  }
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 1024px) {
+  .method-options {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .payment-processing-page {
+    padding: 1rem;
+  }
+
+  .payment-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .payment-summary-card,
+  .payment-method-section,
+  .payment-details-section {
+    padding: 1.5rem;
+  }
+
+  .amount-value {
+    font-size: 2.5rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .payment-actions,
+  .receipt-actions {
+    flex-direction: column;
+  }
+
+  .receipt-card {
+    padding: 1.5rem;
+  }
+
+  .success-icon {
+    width: 80px;
+    height: 80px;
+  }
+
+  .success-icon svg {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .amount-value {
+    font-size: 2rem;
+  }
+
+  .change-value {
+    font-size: 2rem;
+  }
+
+  .method-option {
+    padding: 1.25rem 1rem;
+  }
+
+  .clinic-name {
+    font-size: 1.5rem;
+  }
+
+  .receipt-row {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .receipt-value {
+    text-align: left;
+  }
+}

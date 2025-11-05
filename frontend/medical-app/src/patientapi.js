@@ -17,8 +17,7 @@ export const profileAPI = {
   updateProfile: (profileData) => 
   j(`${PATIENT_API_BASE}/patient_api.php?endpoint=profile`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(profileData)
+      body: profileData
     })
 };
 
@@ -33,8 +32,7 @@ export const appointmentsAPI = {
   bookAppointment: (appointmentData) => 
     j(`${PATIENT_API_BASE}/patient_api.php?endpoint=appointments`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(appointmentData)
+      body: appointmentData
     }),
 
   cancelAppointment: (appointmentId) => 
@@ -42,7 +40,6 @@ export const appointmentsAPI = {
       method: 'DELETE'
     }),
 
-  // FIXED: Use PATIENT_API_BASE and j() helper like other endpoints
   getDoctors: (specialty = null) => {
     const url = specialty 
       ? `${PATIENT_API_BASE}/patient_api.php?endpoint=doctors&specialty=${encodeURIComponent(specialty)}`
@@ -80,15 +77,13 @@ export const insuranceAPI = {
   addInsurance: (insuranceData) => 
   j(`${PATIENT_API_BASE}/patient_api.php?endpoint=insurance`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(insuranceData)
+      body: insuranceData
     }),
 
   updateInsurance: (insuranceId, insuranceData) => 
   j(`${PATIENT_API_BASE}/patient_api.php?endpoint=insurance&id=${insuranceId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(insuranceData)
+      body: insuranceData
     }),
 
   removeInsurance: (insuranceId) => 
@@ -105,11 +100,10 @@ export const billingAPI = {
   getStatements: () => 
     j(`${PATIENT_API_BASE}/patient_api.php?endpoint=billing&type=statements`),
 
-  processPayment: (paymentData) => 
+  makePayment: (paymentData) => 
     j(`${PATIENT_API_BASE}/patient_api.php?endpoint=billing`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(paymentData)
+      body: paymentData
     })
 };
 

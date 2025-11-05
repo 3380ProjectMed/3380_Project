@@ -1,55 +1,453 @@
+/* ========== REFERRAL COMPONENT ========== */
+
+/* Universal box-sizing to prevent overflow issues */
+.referral-page *,
+.referral-page *::before,
+.referral-page *::after {
+  box-sizing: border-box;
+}
+
 .referral-page {
-  padding: 0 6px 12px; /* main-content already provides larger padding */
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.referral-grid{
+.referral-grid {
   display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 18px;
+  grid-template-columns: 1fr 420px;
+  gap: 1.5rem;
 }
 
-.referral-column{
+.referral-column {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 2px solid var(--fifth-color);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  box-sizing: border-box; /* Ensure padding doesn't cause overflow */
+  overflow: hidden; /* Prevent child elements from overflowing */
+}
+
+.referral-column h3 {
+  color: var(--primary-color);
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* Received Referrals List */
+.referral-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* Beautiful Referral Cards */
+.received-referral-card {
+  background: white;
+  border: 2px solid var(--fifth-color);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 119, 182, 0.08);
+}
+
+.received-referral-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 119, 182, 0.15);
+  border-color: var(--third-color);
+}
+
+.referral-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--fifth-color);
+}
+
+.referral-id-badge {
+  background: linear-gradient(135deg, var(--secondary-color), var(--third-color));
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.referral-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.referral-section {
+  margin-bottom: 1rem;
+}
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--secondary-color);
+  font-size: 0.813rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-left: 1.5rem;
+}
+
+.section-content strong {
+  color: var(--primary-color);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.text-muted {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+.referral-patient-info{
+  display: flex;
+  justify-content: space-between;
+  width: 100%; 
+  margin: 0; 
+  padding: 0; 
+
+}
+
+.specialty-badge {
+  display: inline-block;
+  background: var(--fifth-color);
+  color: var(--secondary-color);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.813rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.referral-reason-text {
+  color: #374151;
+  line-height: 1.6;
+  margin: 0;
+  font-size: 0.938rem;
+}
+
+
+/* Loading and Empty States */
+.loading-state {
+  padding: 3rem;
+  text-align: center;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.referral-card {
   background: linear-gradient(135deg, var(--fifth-color), white);
   border-radius: 0.75rem;
-  padding: 14px;
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 10px rgba(2,6,23,0.04);
+  padding: 1.25rem;
+  border: 2px solid var(--forth-color);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: all 0.2s ease;
 }
 
-.referral-column h3{ color: var(--primary-color); margin-top:0; margin-bottom:8px }
+.referral-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 119, 182, 0.12);
+  border-color: var(--third-color);
+}
 
-.pending-list{ display:flex; flex-direction:column; gap:12px; max-height:70vh; overflow:auto; padding-right:6px }
+.referral-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
 
-.referral-card{ background: #fff; border-radius:0.5rem; padding:12px; border:1px solid var(--border); display:flex; justify-content:space-between; gap:12px }
-.referral-card:hover{ box-shadow: 0 8px 24px rgba(2,6,23,0.06); transform: translateY(-2px); }
+.referral-meta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
 
-.referral-info{ display:flex; flex-direction:column; gap:6px }
-.referral-reason{ font-weight:600; color:var(--dark) }
-.referral-meta-row{ display:flex; gap:12px; color:var(--muted-foreground); font-size:0.92rem; flex-wrap:wrap }
-.referral-notes{ color:var(--muted-foreground); font-size:0.92rem }
-.approved-date{ color:var(--muted-foreground); font-size:0.85rem }
+.referral-meta-row > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
 
-.referral-actions{ display:flex; gap:8px; align-items:center }
+.referral-meta-row > div strong {
+  font-weight: 600;
+  color: var(--primary-color);
+  min-width: 80px;
+}
 
-.referral-form{ display:flex; flex-direction:column; gap:10px }
-.form-row{ display:flex; gap:10px }
-.form-row .field{ flex:1 }
-.referral-form label{ font-size:0.95rem; color:var(--dark) }
-.referral-form input, .referral-form textarea, .referral-form select{ width:100%; padding:10px; border:1px solid var(--border); border-radius:0.5rem; background: #fff }
-.referral-form textarea{ min-height:100px; resize:vertical }
+.referral-reason {
+  font-weight: 700;
+  color: var(--primary-color);
+  font-size: 1.05rem;
+}
 
-.patient-select{ position:relative }
-.patient-list-dropdown{ position:absolute; left:0; right:0; top:calc(100% + 8px); background:#fff; border:1px solid var(--border); border-radius:0.5rem; box-shadow:0 8px 24px rgba(2,6,23,0.06); max-height:220px; overflow:auto; z-index:30; display:none }
-.patient-list-dropdown.open{ display:block }
-.patient-list-item{ padding:8px 10px; display:flex; justify-content:space-between; gap:8px; cursor:pointer }
-.patient-list-item:hover{ background:var(--fifth-color) }
-.patient-list-item-name{ font-weight:600 }
-.patient-list-item-id{ color:var(--muted-foreground); font-size:0.9rem }
+.referral-notes {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
 
-.alert{ margin-top:8px; padding:10px; border-radius:8px; font-weight:600 }
-.alert.success{ color:var(--success); background:#ecfdf5 }
-.alert.error{ color:var(--error); background:#fff1f2 }
-.empty{ color:var(--muted-foreground); padding:12px; text-align:center }
+.approved-date {
+  color: var(--success);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
 
-@media (max-width: 900px){ .referral-grid{ grid-template-columns: 1fr } }
+.referral-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-shrink: 0;
+}
 
+/* Form Styles */
+.referral-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-sizing: border-box; /* Ensure form respects container boundaries */
+}
+
+.referral-form label {
+  font-size: 0.95rem;
+  color: var(--primary-color);
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-sizing: border-box; /* Ensure labels respect boundaries */
+}
+
+.referral-form input,
+.referral-form textarea,
+.referral-form select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--fifth-color);
+  border-radius: 0.5rem;
+  background: white;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box; /* Ensure padding is included in width */
+}
+
+.referral-form input:focus,
+.referral-form textarea:focus,
+.referral-form select:focus {
+  outline: none;
+  border-color: var(--third-color);
+}
+
+.referral-form textarea {
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+/* Patient Select Dropdown */
+.patient-select {
+  position: relative;
+  box-sizing: border-box; /* Ensure proper sizing */
+  width: 100%; /* Explicitly set width */
+}
+
+.patient-list-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  background: white;
+  border: 2px solid var(--fifth-color);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 119, 182, 0.15);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 50;
+  display: none;
+}
+
+.patient-list-dropdown.open {
+  display: block;
+}
+
+.patient-list-item {
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid var(--fifth-color);
+}
+
+.patient-list-item:last-child {
+  border-bottom: none;
+}
+
+.patient-list-item:hover {
+  background: var(--fifth-color);
+}
+
+.patient-list-item-name {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.patient-list-item-id {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.patient-list-empty {
+  padding: 1rem;
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Buttons */
+.btn {
+  background: var(--secondary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background: var(--third-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--secondary-color), var(--third-color));
+}
+
+.btn-primary:hover {
+  transform: scale(1.02);
+}
+
+/* Alerts */
+.alert {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.alert-success {
+  color: #065f46;
+  background: #d1fae5;
+  border: 2px solid #6ee7b7;
+}
+
+.alert-error {
+  color: #dc2626;
+  background: #fee2e2;
+  border: 2px solid #fca5a5;
+}
+
+.empty {
+  color: #6b7280;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .referral-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .referral-column {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .referral-page {
+    padding: 1rem;
+  }
+  
+  .referral-card {
+    flex-direction: column;
+  }
+  
+  .referral-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .pending-list {
+    max-height: 60vh;
+  }
+}
+
+@media (max-width: 640px) {
+  .referral-column {
+    padding: 1rem;
+  }
+  
+  .referral-card {
+    padding: 1rem;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

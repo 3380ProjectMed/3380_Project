@@ -24,7 +24,7 @@ export default function Appointments(props) {
             ) : (
               <div className="appointments-list">
                 {upcomingAppointments.map(apt => (
-                  <div key={apt.Appointment_id} className="appointment-card">
+                  <div key={apt.appointment_id} className="appointment-card">
                     <div className="appointment-header">
                       <div>
                         <h3>{apt.doctor_name}</h3>
@@ -35,12 +35,12 @@ export default function Appointments(props) {
                       </span>
                     </div>
                     <div className="appointment-body">
-                      <p><Calendar className="small-icon" /> {new Date(apt.Appointment_date).toLocaleDateString()}</p>
-                      <p><Clock className="small-icon" /> {new Date(apt.Appointment_date).toLocaleTimeString()}</p>
+                      <p><Calendar className="small-icon" /> {new Date(apt.appointment_date).toLocaleDateString()}</p>
+                      <p><Clock className="small-icon" /> {new Date(apt.appointment_date).toLocaleTimeString()}</p>
                       <p><MapPin className="small-icon" /> {apt.office_name}</p>
                     </div>
                     <div className="appointment-footer">
-                      <button className="btn btn-danger btn-small" onClick={() => handleCancelAppointment(apt.Appointment_id)}>
+                      <button className="btn btn-danger btn-small" onClick={() => handleCancelAppointment(apt.appointment_id)}>
                         Cancel
                       </button>
                     </div>
@@ -57,10 +57,10 @@ export default function Appointments(props) {
             ) : (
               <div className="history-list">
                 {appointmentHistory.map(apt => (
-                  <div key={apt.Visit_id} className="history-item">
+                  <div key={apt.id} className="history-item">
                     <div>
                       <h4>{apt.doctor_name}</h4>
-                      <p>{new Date(apt.Date).toLocaleDateString()} — {apt.Reason_for_Visit}</p>
+                      <p>{new Date(apt.date).toLocaleDateString()} — {apt.reason}</p>
                     </div>
                     <button className="btn btn-link">View Summary <ChevronRight className="small-icon" /></button>
                   </div>
