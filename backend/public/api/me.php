@@ -10,7 +10,24 @@ function debug_log($message) {
 
 debug_log('=== ME.PHP START ===');
 
+
+// Log to a file we can check
+$logFile = '/home/site/wwwroot/me_debug.log';
+function debug_log($message) {
+    global $logFile;
+    file_put_contents($logFile, date('Y-m-d H:i:s') . ' - ' . $message . PHP_EOL, FILE_APPEND);
+}
+
+debug_log('=== ME.PHP START ===');
+
 // Ensure CORS headers for cross-origin requests from the dev server
+if (file_exists(__DIR__ . '/../cors.php')) {
+    require_once __DIR__ . '/../cors.php';
+} else {
+    require_once '/home/site/wwwroot/cors.php';
+}
+debug_log('CORS loaded');
+
 if (file_exists(__DIR__ . '/../cors.php')) {
     require_once __DIR__ . '/../cors.php';
 } else {
@@ -25,11 +42,14 @@ ini_set('html_errors', '0');
 error_reporting(E_ALL & ~E_DEPRECATED);
 
 // Start output buffering so we can control any accidental output
+// Start output buffering so we can control any accidental output
 ob_start();
 register_shutdown_function(function () {
   global $logFile;
+  global $logFile;
   $err = error_get_last();
   if ($err !== null) {
+    debug_log('FATAL ERROR: ' . json_encode($err));
     debug_log('FATAL ERROR: ' . json_encode($err));
     if (ob_get_length()) {
       @ob_clean();
@@ -47,6 +67,7 @@ register_shutdown_function(function () {
 });
 
 debug_log('Starting session');
+debug_log('Starting session');
 session_start([
   'cookie_httponly' => true,
   'cookie_secure'   => !empty($_SERVER['HTTPS']),
@@ -56,7 +77,10 @@ header('Content-Type: application/json');
 
 debug_log('Session UID: ' . ($_SESSION['uid'] ?? 'NOT SET'));
 
+debug_log('Session UID: ' . ($_SESSION['uid'] ?? 'NOT SET'));
+
 if (empty($_SESSION['uid'])) {
+  debug_log('No UID in session - returning 401');
   debug_log('No UID in session - returning 401');
   http_response_code(401);
   echo json_encode(['error' => 'Not authenticated']);
@@ -103,17 +127,23 @@ if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, NULL, MYSQLI_CLIENT
 }
 
 debug_log('Connected successfully');
+
+debug_log('Connected successfully');
 $mysqli->set_charset('utf8mb4');
 
+// Prepare query
 // Prepare query
 $sql = 'SELECT ua.user_id, ua.username, ua.email, ua.role, d.Doctor_id AS doctor_id
   FROM user_account ua
   LEFT JOIN Doctor d ON ua.email = d.Email AND ua.role = "DOCTOR"
+  LEFT JOIN Doctor d ON ua.email = d.Email AND ua.role = "DOCTOR"
   WHERE ua.user_id = ?';
 
 debug_log('Preparing statement');
+debug_log('Preparing statement');
 $stmt = $mysqli->prepare($sql);
 if ($stmt === false) {
+  debug_log('Prepare failed: ' . $mysqli->error);
   debug_log('Prepare failed: ' . $mysqli->error);
   http_response_code(500);
   echo json_encode(['success' => false, 'error' => 'Failed to prepare statement', 'detail' => $mysqli->error]);
@@ -122,8 +152,10 @@ if ($stmt === false) {
 }
 
 debug_log('Binding and executing');
+debug_log('Binding and executing');
 $stmt->bind_param('i', $_SESSION['uid']);
 if (!$stmt->execute()) {
+  debug_log('Execute failed: ' . $stmt->error);
   debug_log('Execute failed: ' . $stmt->error);
   http_response_code(500);
   echo json_encode(['success' => false, 'error' => 'Failed to execute query', 'detail' => $stmt->error]);
@@ -133,10 +165,12 @@ if (!$stmt->execute()) {
 }
 
 debug_log('Fetching results');
+debug_log('Fetching results');
 $user = null;
 if (method_exists($stmt, 'get_result')) {
   $res = $stmt->get_result();
   if ($res === false) {
+    debug_log('get_result failed: ' . $stmt->error);
     debug_log('get_result failed: ' . $stmt->error);
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Failed to fetch query results', 'detail' => $stmt->error]);
@@ -146,11 +180,15 @@ if (method_exists($stmt, 'get_result')) {
   }
   $user = $res->fetch_assoc();
   debug_log('User fetched: ' . ($user ? json_encode($user) : 'NULL'));
+  debug_log('User fetched: ' . ($user ? json_encode($user) : 'NULL'));
 } else {
+  debug_log('Using bind_result fallback');
+  // bind_result fallback
   debug_log('Using bind_result fallback');
   // bind_result fallback
   $bound = $stmt->bind_result($user_id, $username, $email, $role, $doctor_id);
   if ($bound === false) {
+    debug_log('bind_result failed: ' . $stmt->error);
     debug_log('bind_result failed: ' . $stmt->error);
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Failed to bind results', 'detail' => $stmt->error]);
@@ -162,6 +200,7 @@ if (method_exists($stmt, 'get_result')) {
   $fetched = $stmt->fetch();
   if ($fetched === false) {
     debug_log('fetch failed: ' . $stmt->error);
+    debug_log('fetch failed: ' . $stmt->error);
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Failed to fetch bound results', 'detail' => $stmt->error]);
     $stmt->close();
@@ -170,6 +209,7 @@ if (method_exists($stmt, 'get_result')) {
   }
 
   if ($fetched === null || $user_id === null) {
+    debug_log('No user found for uid: ' . $_SESSION['uid']);
     debug_log('No user found for uid: ' . $_SESSION['uid']);
     session_destroy();
     http_response_code(401);
@@ -187,8 +227,11 @@ if (method_exists($stmt, 'get_result')) {
     'doctor_id' => $doctor_id === null ? null : (is_numeric($doctor_id) ? (int)$doctor_id : $doctor_id),
   ];
   debug_log('User built from bind_result: ' . json_encode($user));
+  debug_log('User built from bind_result: ' . json_encode($user));
 }
 
+if (!$user) {
+  debug_log('User is null after fetch');
 if (!$user) {
   debug_log('User is null after fetch');
   session_destroy();
@@ -200,9 +243,11 @@ if (!$user) {
 }
 
 debug_log('Returning user successfully');
+debug_log('Returning user successfully');
 echo json_encode($user);
 
 $stmt->close();
 $mysqli->close();
+debug_log('=== ME.PHP END SUCCESS ===');
 debug_log('=== ME.PHP END SUCCESS ===');
 exit;

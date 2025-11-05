@@ -13,6 +13,8 @@ $allowedOrigins = [
 ];
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+// Only send CORS headers if there's an Origin header (cross-origin request)
 if ($origin && in_array($origin, $allowedOrigins, true)) {
     header("Access-Control-Allow-Origin: {$origin}");
     header('Vary: Origin');
