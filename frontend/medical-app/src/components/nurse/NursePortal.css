@@ -1,0 +1,40 @@
+:root {
+  /* Match doctor sidebar width; check doctor/Sidebar.css (usually 260–264px) */
+  --nurse-sidebar-w: 264px;
+  --page-max-w: 1200px;
+  --shell-bg-top: #e6f7ff;
+  --shell-bg-bottom: #ffffff;
+}
+
+.nurse-portal {
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--shell-bg-top), var(--shell-bg-bottom));
+}
+
+/* Main content should never sit under the sidebar */
+.nurse-main {
+  margin-left: var(--nurse-sidebar-w);
+  padding: 24px;
+}
+
+@media (max-width: 1024px) {
+  .nurse-main {
+    margin-left: 0;
+    padding: 18px;
+  }
+}
+
+/* A shared inner container like doctor pages */
+.nurse-page {
+  max-width: var(--page-max-w);
+  margin: 0 auto;
+}
+
+/* Doctor-like section header spacing */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}

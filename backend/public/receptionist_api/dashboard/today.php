@@ -1,13 +1,13 @@
 <?php
 /**
- * Get today's appointments for receptionist's office with intelligent status calculation
- * Uses session-based authentication like doctor API
+ * Get appointments for receptionist's office with intelligent status calculation
+ * IMPROVED VERSION: Incorporates best practices from get-today.php and get-by-month.php
  */
 require_once __DIR__ . '/../../../cors.php';
 require_once __DIR__ . '/../../../database.php';
 
 try {
-    // Start session and require that the user is logged in
+    // Start session and require authentication
     session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
@@ -22,9 +22,10 @@ try {
     
     try {
         $rows = executeQuery($conn, '
-            SELECT s.Work_Location as office_id
+            SELECT s.Work_Location as office_id, o.Name as office_name
             FROM Staff s
             JOIN user_account ua ON ua.email = s.Staff_Email
+            LEFT JOIN Office o ON s.Work_Location = o.Office_ID
             WHERE ua.user_id = ?', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
@@ -39,25 +40,49 @@ try {
     }
     
     $office_id = (int)$rows[0]['office_id'];
+    $office_name = $rows[0]['office_name'] ?? 'Unknown Office';
     
-    // Use America/Chicago timezone for all comparisons
+    // Use America/Chicago timezone for all date/time operations
     $tz = new DateTimeZone('America/Chicago');
-    $dt = new DateTime('now', $tz);
-    $today = $dt->format('Y-m-d');
-    
-    // Current time in Chicago for status calculation
     $currentDateTime = new DateTime('now', $tz);
     
+    // Determine date filter
+    $dateFilter = '';
+    $queryParams = [$office_id];
+    $queryTypes = 'i';
+    
+    if (isset($_GET['date'])) {
+        // Filter by specific date
+        $targetDate = $_GET['date'];
+        $dateFilter = 'AND DATE(a.Appointment_date) = ?';
+        $queryParams[] = $targetDate;
+        $queryTypes .= 's';
+    } elseif (!isset($_GET['show_all']) || $_GET['show_all'] !== 'true') {
+        // Default: show today's appointments only
+        $today = $currentDateTime->format('Y-m-d');
+        $dateFilter = 'AND DATE(a.Appointment_date) = ?';
+        $queryParams[] = $today;
+        $queryTypes .= 's';
+    }
+    // else: no date filter - show all appointments for this office
+    
+    // Query appointments with all necessary joins
     $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
                 a.Reason_for_visit,
                 a.Status,
+                a.Patient_id,
+                a.Doctor_id,
                 CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name,
-                p.Patient_ID as patient_id,
+                p.First_Name as patient_first,
+                p.Last_Name as patient_last,
                 p.EmergencyContact,
+                p.Allergies as allergy_code,
+                ca.Allergies_Text as allergies,
                 CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
-                d.Doctor_id as doctor_id,
+                d.First_Name as doctor_first,
+                d.Last_Name as doctor_last,
                 pv.Visit_id,
                 pv.Status as visit_status,
                 pv.Start_at as check_in_time,
@@ -68,59 +93,135 @@ try {
             INNER JOIN Doctor d ON a.Doctor_id = d.Doctor_id
             LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
             LEFT JOIN patient_insurance pi ON p.InsuranceID = pi.id AND pi.is_primary = 1
-            WHERE a.Office_id = ?
-            AND DATE(a.Appointment_date) = ?
+            LEFT JOIN CodesAllergies ca ON p.Allergies = ca.AllergiesCode
+            WHERE a.Office_id = ? $dateFilter
             ORDER BY a.Appointment_date ASC";
     
-    $appointments = executeQuery($conn, $sql, 'is', [$office_id, $today]);
+    $appointments = executeQuery($conn, $sql, $queryTypes, $queryParams);
     
-    $formatted_appointments = [];
+    // Initialize statistics counters
     $stats = [
         'total' => 0,
         'scheduled' => 0,
+        'upcoming' => 0,
+        'waiting' => 0,
         'checked_in' => 0,
+        'in_progress' => 0,
         'completed' => 0,
-        'cancelled' => 0
+        'cancelled' => 0,
+        'no_show' => 0
     ];
     
+    $formatted_appointments = [];
+    
     foreach ($appointments as $apt) {
-        // Parse appointment datetime
+        // Parse appointment datetime and normalize to Chicago timezone
         $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
         $dbStatus = $apt['Status'] ?? 'Scheduled';
-        $visitStatus = $apt['visit_status'] ?? null;
         
-        // Determine display status
+        // Determine display status based on time and database status
         $displayStatus = $dbStatus;
-        if ($apt['completion_time']) {
-            $displayStatus = 'Completed';
+        $waitingTime = 0;
+        
+        if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
+            // Keep the database status
+            $displayStatus = $dbStatus;
+        } else {
+            // Calculate time difference in minutes
+            $timeDiff = ($currentDateTime->getTimestamp() - $appointmentDateTime->getTimestamp()) / 60;
+            
+            if ($timeDiff < -15) {
+                // Appointment is more than 15 minutes in the future
+                $displayStatus = 'Upcoming';
+                $stats['upcoming']++;
+            } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
+                // Appointment time is now (within 15 min window)
+                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
+            } elseif ($timeDiff > 15) {
+                // Appointment time has passed by more than 15 minutes
+                if ($dbStatus === 'Scheduled') {
+                    $displayStatus = 'Waiting';
+                    $waitingTime = round($timeDiff);
+                    $stats['waiting']++;
+                } elseif ($dbStatus === 'In Progress') {
+                    $displayStatus = 'In Progress';
+                }
+            }
+        }
+        
+        // Count completed
+        if ($displayStatus === 'Completed') {
             $stats['completed']++;
-        } elseif ($apt['check_in_time']) {
+        }
+        
+        // Count cancelled
+        if ($displayStatus === 'Cancelled') {
+            $stats['cancelled']++;
+        }
+        
+        // Count no-show
+        if ($displayStatus === 'No-Show') {
+            $stats['no_show']++;
+        }
+        
+        // Count checked in (based on PatientVisit records)
+        if ($apt['check_in_time'] && !$apt['completion_time'] && $displayStatus !== 'In Progress') {
             $displayStatus = 'Checked In';
             $stats['checked_in']++;
-        } elseif ($dbStatus === 'Cancelled') {
-            $displayStatus = 'Cancelled';
-            $stats['cancelled']++;
-        } else {
-            $displayStatus = 'Scheduled';
+        }
+        
+        // Count in progress
+        if ($displayStatus === 'In Progress') {
+            $stats['in_progress']++;
+        }
+        
+        // Count scheduled (appointments not yet upcoming/waiting/completed/cancelled)
+        if ($displayStatus === 'Ready' || $displayStatus === 'Scheduled') {
             $stats['scheduled']++;
         }
         
+        // Format appointment data
         $formatted_appointments[] = [
+            // ID fields (multiple formats for compatibility)
             'id' => $apt['Appointment_id'],
+            'Appointment_id' => $apt['Appointment_id'],
             'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
-            'patientId' => $apt['patient_id'],
-            'patientIdFormatted' => 'P' . str_pad($apt['patient_id'], 3, '0', STR_PAD_LEFT),
+            
+            // Patient fields
+            'patientId' => $apt['Patient_id'],
+            'Patient_id' => $apt['Patient_id'],
+            'patientIdFormatted' => 'P' . str_pad($apt['Patient_id'], 3, '0', STR_PAD_LEFT),
             'patientName' => $apt['patient_name'],
-            'doctorId' => $apt['doctor_id'],
+            'Patient_First' => $apt['patient_first'],
+            'Patient_Last' => $apt['patient_last'],
+            
+            // Doctor fields
+            'doctorId' => $apt['Doctor_id'],
+            'Doctor_id' => $apt['Doctor_id'],
             'doctorName' => $apt['doctor_name'],
+            'Doctor_First' => $apt['doctor_first'],
+            'Doctor_Last' => $apt['doctor_last'],
+            
+            // Time fields
             'time' => date('g:i A', strtotime($apt['Appointment_date'])),
             'appointmentDateTime' => $apt['Appointment_date'],
-            'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
+            'Appointment_date' => $apt['Appointment_date'],
+            
+            // Status fields
             'status' => $displayStatus,
+            'Status' => $displayStatus,
             'dbStatus' => $dbStatus,
+            'waitingMinutes' => $waitingTime,
+            
+            // Other fields
+            'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
+            'Reason_for_visit' => $apt['Reason_for_visit'] ?: 'General Visit',
             'emergencyContact' => $apt['EmergencyContact'],
+            'allergies' => $apt['allergies'] ?: 'No Known Allergies',
             'checkInTime' => $apt['check_in_time'],
-            'copay' => $apt['copay'] ? number_format($apt['copay'], 2) : '0.00'
+            'completionTime' => $apt['completion_time'],
+            'copay' => $apt['copay'] ? floatval($apt['copay']) : 0.00,
+            'visitId' => $apt['Visit_id']
         ];
     }
     
@@ -133,8 +234,15 @@ try {
         'appointments' => $formatted_appointments,
         'stats' => $stats,
         'count' => count($formatted_appointments),
+        'office' => [
+            'id' => $office_id,
+            'name' => $office_name
+        ],
         'currentTime' => $currentDateTime->format('Y-m-d H:i:s'),
-        'office_id' => $office_id
+        'timezone' => 'America/Chicago',
+        'filters' => [
+            'date' => isset($_GET['date']) ? $_GET['date'] : (isset($_GET['show_all']) && $_GET['show_all'] === 'true' ? 'all' : $currentDateTime->format('Y-m-d'))
+        ]
     ]);
     
 } catch (Exception $e) {

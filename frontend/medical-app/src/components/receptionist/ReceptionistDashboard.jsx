@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Users, Clock, Check, AlertCircle, DollarSign, Plus, Phone, ChevronLeft, ChevronRight, Filter, User, Edit, X } from 'lucide-react';
-import * as API from '../../api/receptionistApi';
 import './ReceptionistDashboard.css';
 
 /**
  * ReceptionistDashboard Component (Backend Integrated)
  * 
  * Main dashboard with monthly calendar and today's appointments
- * Pulls real data from backend APIs
+ * Fetches real data from backend APIs including doctors list
  */
 function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, officeName }) {
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -18,22 +17,23 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   // State for API data
   const [stats, setStats] = useState(null);
   const [todayAppointments, setTodayAppointments] = useState([]);
-  const [calendarAppointments, setCalendarAppointments] = useState([]);
+  const [calendarAppointments, setCalendarAppointments] = useState({});
+  const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Doctors list
-  const doctors = [
-    { Doctor_id: 1, First_Name: 'Emily', Last_Name: 'Chen', specialty_name: 'Internal Medicine', color: '#3b82f6' },
-    { Doctor_id: 2, First_Name: 'James', Last_Name: 'Rodriguez', specialty_name: 'Cardiology', color: '#10b981' },
-    { Doctor_id: 3, First_Name: 'Susan', Last_Name: 'Lee', specialty_name: 'Pediatrics', color: '#f59e0b' },
-    { Doctor_id: 4, First_Name: 'Richard', Last_Name: 'Patel', specialty_name: 'Orthopedics', color: '#8b5cf6' },
+  // Doctor colors palette for calendar visualization
+  const doctorColors = [
+    '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', 
+    '#ef4444', '#06b6d4', '#84cc16', '#f97316',
+    '#ec4899', '#14b8a6'
   ];
 
   /**
    * Load dashboard data on mount
    */
   useEffect(() => {
+    loadDoctors();
     loadDashboardData();
   }, [officeId]);
 
@@ -41,25 +41,54 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
    * Load calendar when month changes
    */
   useEffect(() => {
-    loadCalendarData();
-  }, [currentDate, officeId]);
+    if (doctors.length > 0) {
+      loadCalendarData();
+    }
+  }, [currentDate, officeId, doctors]);
 
+  /**
+   * Fetch doctors from the database
+   */
+  const loadDoctors = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/receptionist_api/doctors/get-all.php');
+      const data = await response.json();
+      
+      if (data.success) {
+        // Assign colors to doctors
+        const doctorsWithColors = (data.doctors || []).map((doc, index) => ({
+          ...doc,
+          color: doctorColors[index % doctorColors.length]
+        }));
+        setDoctors(doctorsWithColors);
+      }
+    } catch (err) {
+      console.error('Failed to load doctors:', err);
+    }
+  };
+
+  /**
+   * Load dashboard statistics and today's appointments
+   */
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const today = API.formatDateForAPI(new Date());
+      const today = new Date().toISOString().split('T')[0];
       
-      const [statsResult, appointmentsResult] = await Promise.all([
-        API.getDashboardStats(officeId, today),
-        API.getTodayAppointments(officeId)
+      const [statsResponse, appointmentsResponse] = await Promise.all([
+        fetch(`http://localhost:8080/receptionist_api/dashboard/stats.php?date=${today}`),
+        fetch('http://localhost:8080/receptionist_api/dashboard/today.php')
       ]);
 
-      if (statsResult.success) {
-        setStats(statsResult.stats);
+      const statsData = await statsResponse.json();
+      const appointmentsData = await appointmentsResponse.json();
+
+      if (statsData.success) {
+        setStats(statsData.stats);
       }
       
-      if (appointmentsResult.success) {
-        setTodayAppointments(appointmentsResult.appointments || []);
+      if (appointmentsData.success) {
+        setTodayAppointments(appointmentsData.appointments || []);
       }
       
       setError(null);
@@ -71,18 +100,30 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     }
   };
 
+  /**
+   * Load calendar appointments for the current month
+   */
   const loadCalendarData = async () => {
     try {
-      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
       
-      const startDate = API.formatDateForAPI(startOfMonth);
-      const endDate = API.formatDateForAPI(endOfMonth);
+      const response = await fetch(
+        `http://localhost:8080/receptionist_api/appointments/get-by-month.php?year=${year}&month=${month}`
+      );
+      const data = await response.json();
       
-      const result = await API.getAppointmentsByOffice(officeId, startDate, endDate);
-      
-      if (result.success) {
-        setCalendarAppointments(result.appointments || []);
+      if (data.success) {
+        // Group appointments by date
+        const groupedAppointments = {};
+        (data.appointments || []).forEach(apt => {
+          const date = apt.Appointment_date.split(' ')[0]; // Get YYYY-MM-DD
+          if (!groupedAppointments[date]) {
+            groupedAppointments[date] = [];
+          }
+          groupedAppointments[date].push(apt);
+        });
+        setCalendarAppointments(groupedAppointments);
       }
     } catch (err) {
       console.error('Failed to load calendar:', err);
@@ -90,11 +131,13 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   };
 
   const dashStats = stats || {
-    total_appointments: 0,
+    total: 0,
     scheduled: 0,
     checked_in: 0,
     completed: 0,
-    revenue_collected: 0
+    payment: {
+      total_collected: '0.00'
+    }
   };
 
   /**
@@ -135,10 +178,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const getAppointmentsForDay = (day) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     
-    let dayAppointments = calendarAppointments.filter(apt => {
-      const aptDate = apt.Appointment_date.split(' ')[0];
-      return aptDate === dateStr;
-    });
+    let dayAppointments = calendarAppointments[dateStr] || [];
 
     if (selectedDoctor !== 'all') {
       dayAppointments = dayAppointments.filter(apt => apt.Doctor_id === parseInt(selectedDoctor));
@@ -152,7 +192,12 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   };
 
   const formatTime = (datetime) => {
-    return API.parseTime(datetime);
+    const date = new Date(datetime);
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
   };
 
   const getFilteredAppointments = () => {
@@ -161,25 +206,31 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     const statusMap = {
       'scheduled': 'Scheduled',
       'completed': 'Completed',
-      'canceled': 'Canceled'
+      'canceled': 'Cancelled'
     };
     
-    return todayAppointments.filter(apt => 
-      (apt.Status || 'Scheduled') === statusMap[selectedFilter]
-    );
+    return todayAppointments.filter(apt => {
+      const aptStatus = (apt.status || apt.Status || 'Scheduled').toLowerCase();
+      return aptStatus === selectedFilter || aptStatus === statusMap[selectedFilter]?.toLowerCase();
+    });
   };
 
   const filteredAppointments = getFilteredAppointments();
 
   const getStatusClass = (status) => {
+    const normalizedStatus = (status || 'scheduled').toLowerCase();
     const statusMap = {
       'scheduled': 'status-scheduled',
-      'completed': 'status-completed',
-      'canceled': 'status-cancelled',
+      'ready': 'status-ready',
+      'waiting': 'status-waiting',
       'checked in': 'status-checked-in',
+      'in progress': 'status-in-progress',
+      'completed': 'status-completed',
+      'cancelled': 'status-cancelled',
+      'canceled': 'status-cancelled',
       'no-show': 'status-noshow'
     };
-    return statusMap[status?.toLowerCase()] || 'status-scheduled';
+    return statusMap[normalizedStatus] || 'status-scheduled';
   };
 
   const getCurrentDate = () => {
@@ -219,7 +270,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
           </div>
           <div className="stat-content">
             <div className="stat-value">
-              {loading ? '...' : dashStats.total_appointments}
+              {loading ? '...' : dashStats.total}
             </div>
             <div className="stat-label">Total Appointments</div>
           </div>
@@ -255,7 +306,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
           </div>
           <div className="stat-content">
             <div className="stat-value">
-              {loading ? '...' : `$${dashStats.revenue_collected.toFixed(2)}`}
+              {loading ? '...' : `$${dashStats.payment?.total_collected || '0.00'}`}
             </div>
             <div className="stat-label">Collected Today</div>
           </div>
@@ -363,60 +414,69 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             ) : filteredAppointments.length > 0 ? (
               filteredAppointments.map((appointment) => (
                 <div 
-                  key={appointment.Appointment_id} 
+                  key={appointment.Appointment_id || appointment.id} 
                   className="appointment-card"
                 >
                   <div className="appointment-time">
                     <Clock size={20} />
-                    <span>{formatTime(appointment.Appointment_date)}</span>
+                    <span>{appointment.time || formatTime(appointment.Appointment_date || appointment.appointmentDateTime)}</span>
                   </div>
 
                   <div className="appointment-patient">
                     <h3 className="patient-name">
-                      {appointment.Patient_First} {appointment.Patient_Last}
+                      {appointment.patientName || `${appointment.Patient_First} ${appointment.Patient_Last}`}
                     </h3>
                     <div className="patient-meta">
-                      <span className="patient-id">ID: {appointment.Patient_id}</span>
-                      {appointment.EmergencyContact && (
+                      <span className="patient-id">
+                        ID: {appointment.patientIdFormatted || appointment.Patient_id || appointment.patientId}
+                      </span>
+                      {appointment.emergencyContact && (
                         <span className="patient-phone">
                           <Phone size={14} />
-                          {appointment.EmergencyContact}
+                          {appointment.emergencyContact}
                         </span>
                       )}
                     </div>
                   </div>
 
                   <div className="appointment-details">
-                    <p className="appointment-reason">{appointment.Reason_for_visit}</p>
+                    <p className="appointment-reason">
+                      {appointment.reason || appointment.Reason_for_visit}
+                    </p>
                     <p className="appointment-doctor">
-                      Dr. {appointment.Doctor_First} {appointment.Doctor_Last}
+                      {appointment.doctorName || `Dr. ${appointment.Doctor_First} ${appointment.Doctor_Last}`}
                     </p>
                   </div>
 
                   <div className="appointment-status">
-                    <span className={`status-badge ${getStatusClass(appointment.Status)}`}>
-                      {appointment.Status || 'Scheduled'}
+                    <span className={`status-badge ${getStatusClass(appointment.status || appointment.Status)}`}>
+                      {appointment.status || appointment.Status || 'Scheduled'}
                     </span>
+                    {appointment.waitingMinutes > 0 && (
+                      <span className="waiting-time">
+                        {appointment.waitingMinutes} min
+                      </span>
+                    )}
                   </div>
 
                   <div className="appointment-actions">
-                    {appointment.Status === 'Scheduled' && (
+                    {(appointment.status || appointment.Status) === 'Scheduled' && (
                       <button className="btn-check-in">
                         <Check size={16} />
                         Check In
                       </button>
                     )}
-                    {appointment.Status === 'Completed' && appointment.copay && (
+                    {(appointment.status || appointment.Status) === 'Completed' && appointment.copay && (
                       <button 
                         className="btn-payment"
                         onClick={() => onProcessPayment({
-                          id: appointment.Appointment_id,
-                          patientId: appointment.Patient_id,
-                          patientName: `${appointment.Patient_First} ${appointment.Patient_Last}`,
-                          doctor: `Dr. ${appointment.Doctor_First} ${appointment.Doctor_Last}`,
+                          id: appointment.Appointment_id || appointment.id,
+                          patientId: appointment.Patient_id || appointment.patientId,
+                          patientName: appointment.patientName || `${appointment.Patient_First} ${appointment.Patient_Last}`,
+                          doctor: appointment.doctorName || `Dr. ${appointment.Doctor_First} ${appointment.Doctor_Last}`,
                           copay: appointment.copay,
-                          reason: appointment.Reason_for_visit,
-                          time: formatTime(appointment.Appointment_date)
+                          reason: appointment.reason || appointment.Reason_for_visit,
+                          time: appointment.time || formatTime(appointment.Appointment_date)
                         })}
                       >
                         <DollarSign size={16} />
@@ -468,17 +528,19 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             </div>
           </div>
 
-          <div className="doctor-legend">
-            {doctors.map(doc => (
-              <div key={doc.Doctor_id} className="legend-item">
-                <div className="legend-color" style={{ backgroundColor: doc.color }}></div>
-                <div className="legend-info">
-                  <span className="legend-name">Dr. {doc.First_Name} {doc.Last_Name}</span>
-                  <span className="legend-specialty">{doc.specialty_name}</span>
+          {doctors.length > 0 && (
+            <div className="doctor-legend">
+              {doctors.map(doc => (
+                <div key={doc.Doctor_id} className="legend-item">
+                  <div className="legend-color" style={{ backgroundColor: doc.color }}></div>
+                  <div className="legend-info">
+                    <span className="legend-name">Dr. {doc.First_Name} {doc.Last_Name}</span>
+                    <span className="legend-specialty">{doc.specialty_name || doc.Specialty}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           <div className="calendar-container">
             <div className="calendar-grid">
@@ -517,15 +579,17 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                             <div
                               key={apt.Appointment_id}
                               className="appointment-item"
-                              style={{ borderLeftColor: doctor?.color }}
+                              style={{ borderLeftColor: doctor?.color || '#6b7280' }}
                               onClick={() => setSelectedAppointment(apt)}
                             >
-                              <div className="apt-time">{formatTime(apt.Appointment_date)}</div>
+                              <div className="apt-time">
+                                {formatTime(apt.Appointment_date)}
+                              </div>
                               <div className="apt-patient">
                                 {apt.Patient_First} {apt.Patient_Last}
                               </div>
-                              <div className="apt-doctor" style={{ color: doctor?.color }}>
-                                Dr. {doctor?.Last_Name}
+                              <div className="apt-doctor" style={{ color: doctor?.color || '#6b7280' }}>
+                                Dr. {doctor?.Last_Name || 'Unknown'}
                               </div>
                             </div>
                           );
@@ -585,7 +649,23 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     Date & Time
                   </label>
                   <p className="detail-value">
-                    {formatTime(selectedAppointment.Appointment_date)}
+                    {new Date(selectedAppointment.Appointment_date).toLocaleString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+
+                <div className="detail-section">
+                  <label className="detail-label">Status</label>
+                  <p className="detail-value">
+                    <span className={`status-badge ${getStatusClass(selectedAppointment.Status)}`}>
+                      {selectedAppointment.Status || 'Scheduled'}
+                    </span>
                   </p>
                 </div>
 

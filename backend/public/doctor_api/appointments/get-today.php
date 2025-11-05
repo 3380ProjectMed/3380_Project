@@ -1,64 +1,129 @@
 <?php
 /**
- * Get today's appointments for a doctor
+ * Get today's appointments for a doctor with intelligent status calculation
  */
-
-// ✅ CORRECT PATHS - Two levels up from api/appointments/
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
+    session_start();
+    if (empty($_SESSION['uid'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit;
+    }
+
     $conn = getDBConnection();
     
-    // Get doctor_id from query parameter
-    $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 202;
+    // Determine doctor_id
+    if (isset($_GET['doctor_id'])) {
+        $doctor_id = intval($_GET['doctor_id']);
+    } else {
+        $user_id = (int)$_SESSION['uid'];
+        $rows = executeQuery($conn, '
+            SELECT d.doctor_id
+            FROM doctor d
+            JOIN user_account ua ON ua.email = d.email
+            WHERE ua.user_id = ?', 'i', [$user_id]);
+        
+        if (empty($rows)) {
+            closeDBConnection($conn);
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'No doctor account associated with the logged-in user']);
+            exit;
+        }
+        
+        $doctor_id = (int)$rows[0]['doctor_id'];
+    }
     
-    // Get today's date
-    $today = date('Y-m-d');
+    // Use America/Chicago timezone
+    $tz = new DateTimeZone('America/Chicago');
+    $dt = new DateTime('now', $tz);
+    $today = $dt->format('Y-m-d');
+    $currentDateTime = new DateTime('now', $tz);
     
-    // SQL query
-    $sql = "SELECT 
+    // appointment has mixed case, patient/office/codes are lowercase
+    $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
                 a.Reason_for_visit,
                 a.Office_id,
-                CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name,
-                p.Patient_ID as patient_id,
-                p.Allergies as allergy_code,
-                ca.Allergies_Text as allergies,
-                o.Name as office_name
-            FROM Appointment a
-            INNER JOIN Patient p ON a.Patient_id = p.Patient_ID
-            LEFT JOIN CodesAllergies ca ON p.Allergies = ca.AllergiesCode
-            LEFT JOIN Office o ON a.Office_id = o.Office_ID
+                a.Status,
+                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                p.patient_id,
+                p.allergies as allergy_code,
+                ca.allergies_text as allergies,
+                o.name as office_name
+            FROM appointment a
+            INNER JOIN patient p ON a.Patient_id = p.patient_id
+            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            LEFT JOIN office o ON a.Office_id = o.office_id
             WHERE a.Doctor_id = ?
             AND DATE(a.Appointment_date) = ?
             ORDER BY a.Appointment_date";
     
     $appointments = executeQuery($conn, $sql, 'is', [$doctor_id, $today]);
     
-    // Format response
     $formatted_appointments = [];
-    foreach ($appointments as $apt) {
-        $formatted_appointments[] = [
-            'id' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
-            'patientId' => 'P' . str_pad($apt['patient_id'], 3, '0', STR_PAD_LEFT),
-            'patientName' => $apt['patient_name'],
-            'time' => date('g:i A', strtotime($apt['Appointment_date'])),
-            'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
-            'status' => 'Scheduled',
-            'location' => $apt['office_name'],
-            'allergies' => $apt['allergies'] ?: 'No Known Allergies'
-        ];
-    }
-    
-    // Calculate stats
     $stats = [
-        'total' => count($formatted_appointments),
-        'scheduled' => count($formatted_appointments),
+        'total' => 0,
+        'upcoming' => 0,
         'waiting' => 0,
         'completed' => 0
     ];
+    
+    foreach ($appointments as $apt) {
+        $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
+        $dbStatus = $apt['Status'] ?? 'Scheduled';
+        
+        // Determine display status
+        $displayStatus = $dbStatus;
+        $waitingTime = 0;
+        
+        if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
+            $displayStatus = $dbStatus;
+        } else {
+            $timeDiff = ($currentDateTime->getTimestamp() - $appointmentDateTime->getTimestamp()) / 60;
+            
+            if ($timeDiff < -15) {
+                $displayStatus = 'Upcoming';
+                $stats['upcoming']++;
+            } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
+                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
+            } elseif ($timeDiff > 15) {
+                if ($dbStatus === 'Scheduled') {
+                    $displayStatus = 'Waiting';
+                    $waitingTime = round($timeDiff);
+                    $stats['waiting']++;
+                } elseif ($dbStatus === 'In Progress') {
+                    $displayStatus = 'In Progress';
+                }
+            }
+        }
+        
+        if ($displayStatus === 'Completed') {
+            $stats['completed']++;
+        }
+        
+        $formatted_appointments[] = [
+            'id' => $apt['Appointment_id'],
+            'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
+            'patientId' => $apt['patient_id'],
+            'patientIdFormatted' => 'P' . str_pad($apt['patient_id'], 3, '0', STR_PAD_LEFT),
+            'patientName' => $apt['patient_name'],
+            'time' => date('g:i A', strtotime($apt['Appointment_date'])),
+            'appointmentDateTime' => $apt['Appointment_date'],
+            'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
+            'status' => $displayStatus,
+            'dbStatus' => $dbStatus,
+            'location' => $apt['office_name'],
+            'allergies' => $apt['allergies'] ?: 'No Known Allergies',
+            'waitingMinutes' => $waitingTime
+        ];
+    }
+    
+    $stats['total'] = count($formatted_appointments);
+    $stats['pending'] = $stats['upcoming'];
     
     closeDBConnection($conn);
     
@@ -66,7 +131,8 @@ try {
         'success' => true,
         'appointments' => $formatted_appointments,
         'stats' => $stats,
-        'count' => count($formatted_appointments)
+        'count' => count($formatted_appointments),
+        'currentTime' => $currentDateTime->format('Y-m-d H:i:s')
     ]);
     
 } catch (Exception $e) {

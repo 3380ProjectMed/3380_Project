@@ -1,13 +1,27 @@
 <?php
 /**
  * Get dashboard statistics for receptionist's office
- * Uses session-based authentication like doctor API
+ * IMPROVED VERSION: Uses intelligent time-based status calculation
+ * 
+ * DATABASE SCHEMA NOTES:
+ * - Staff.Work_Location -> Office.Office_ID (receptionist's office)
+ * - Appointment.Patient_id -> Patient.Patient_ID (case-sensitive join)
+ * - Appointment.Doctor_id -> Doctor.Doctor_id
+ * - Appointment.Office_id -> Office.Office_ID
+ * - PatientVisit.Start_at = check-in time
+ * - PatientVisit.End_at = completion time
+ * - PatientVisit.Payment = payment amount
+ * 
+ * TEST DATA DATES (for Office 3 - Memorial Park Healthcare):
+ * - 2024-01-16: Has appointment 1007 (Patient 4, Doctor 4)
+ * - Most other appointments are at Office 1, 2, or 4
+ * - To test with data, use date parameter: ?date=2024-01-16
  */
 require_once __DIR__ . '/../../../cors.php';
 require_once __DIR__ . '/../../../database.php';
 
 try {
-    // Start session and require that the user is logged in
+    // Start session and require authentication
     session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
@@ -22,7 +36,7 @@ try {
     
     try {
         $rows = executeQuery($conn, '
-            SELECT s.Work_Location as office_id, o.Name as office_name
+            SELECT s.Work_Location as office_id, o.Name as office_name, o.Address, o.Phone
             FROM Staff s
             JOIN user_account ua ON ua.email = s.Staff_Email
             JOIN Office o ON s.Work_Location = o.Office_ID
@@ -41,53 +55,201 @@ try {
     
     $office_id = (int)$rows[0]['office_id'];
     $office_name = $rows[0]['office_name'];
+    $office_address = $rows[0]['Address'] ?? null;
+    $office_phone = $rows[0]['Phone'] ?? null;
+    
+    // Use America/Chicago timezone
+    $tz = new DateTimeZone('America/Chicago');
+    $currentDateTime = new DateTime('now', $tz);
     
     // Get date parameter or use today
-    $date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
+    $date = isset($_GET['date']) ? $_GET['date'] : $currentDateTime->format('Y-m-d');
     
-    // Get appointment and payment statistics
-    $statsSql = "SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN a.Status = 'Scheduled' AND pv.Visit_id IS NULL THEN 1 ELSE 0 END) as scheduled,
-                    SUM(CASE WHEN pv.Visit_id IS NOT NULL AND pv.End_at IS NULL THEN 1 ELSE 0 END) as checked_in,
-                    SUM(CASE WHEN pv.Visit_id IS NOT NULL AND pv.End_at IS NOT NULL THEN 1 ELSE 0 END) as completed,
-                    SUM(CASE WHEN a.Status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled,
-                    COUNT(pv.Payment) as payment_count,
-                    COALESCE(SUM(pv.Payment), 0) as total_collected
-                 FROM Appointment a
-                 LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
-                 WHERE a.Office_id = ? AND DATE(a.Appointment_date) = ?";
+    // Validate date format
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid date format. Use YYYY-MM-DD']);
+        exit;
+    }
     
-    $statsResult = executeQuery($conn, $statsSql, 'is', [$office_id, $date]);
-    $stats = $statsResult[0] ?? [
+    // Get all appointments for the date
+    // Schema notes: Appointment.Patient_id joins to Patient.Patient_ID (case difference)
+    // PatientVisit uses Start_at and End_at for check-in and completion times
+    $appointmentsSql = "SELECT
+                            a.Appointment_id,
+                            a.Appointment_date,
+                            a.Status,
+                            a.Reason_for_visit,
+                            a.Patient_id,
+                            pv.Visit_id,
+                            pv.Start_at as check_in_time,
+                            pv.End_at as completion_time,
+                            pv.Payment,
+                            d.Doctor_id,
+                            CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
+                            CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name
+                        FROM Appointment a
+                        INNER JOIN Patient p ON a.Patient_id = p.Patient_ID
+                        INNER JOIN Doctor d ON a.Doctor_id = d.Doctor_id
+                        LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
+                        WHERE a.Office_id = ?
+                        ORDER BY a.Appointment_date";
+    
+    $appointments = executeQuery($conn, $appointmentsSql, 'is', [$office_id, $date]);
+    
+    // Initialize statistics counters
+    $stats = [
         'total' => 0,
         'scheduled' => 0,
+        'upcoming' => 0,
+        'waiting' => 0,
         'checked_in' => 0,
+        'in_progress' => 0,
         'completed' => 0,
         'cancelled' => 0,
-        'payment_count' => 0,
-        'total_collected' => 0
+        'no_show' => 0
     ];
+    
+    $payment_count = 0;
+    $total_collected = 0.0;
+    $doctor_stats = [];
+    
+    // Process each appointment
+    foreach ($appointments as $apt) {
+        // Parse appointment datetime and normalize to Chicago timezone
+        $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
+        $dbStatus = $apt['Status'] ?? 'Scheduled';
+        
+        // Determine display status based on time and database status
+        $displayStatus = $dbStatus;
+        $waitingTime = 0;
+        
+        if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
+            // Keep the database status
+            $displayStatus = $dbStatus;
+        } else {
+            // Calculate time difference in minutes
+            $timeDiff = ($currentDateTime->getTimestamp() - $appointmentDateTime->getTimestamp()) / 60;
+            
+            if ($timeDiff < -15) {
+                // Appointment is more than 15 minutes in the future
+                $displayStatus = 'Upcoming';
+                $stats['upcoming']++;
+            } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
+                // Appointment time is now (within 15 min window)
+                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
+            } elseif ($timeDiff > 15) {
+                // Appointment time has passed by more than 15 minutes
+                if ($dbStatus === 'Scheduled') {
+                    $displayStatus = 'Waiting';
+                    $waitingTime = round($timeDiff);
+                    $stats['waiting']++;
+                } elseif ($dbStatus === 'In Progress') {
+                    $displayStatus = 'In Progress';
+                }
+            }
+        }
+        
+        // Count completed
+        if ($displayStatus === 'Completed') {
+            $stats['completed']++;
+        }
+        
+        // Count cancelled
+        if ($displayStatus === 'Cancelled') {
+            $stats['cancelled']++;
+        }
+        
+        // Count no-show
+        if ($displayStatus === 'No-Show') {
+            $stats['no_show']++;
+        }
+        
+        // Count checked in (based on PatientVisit records)
+        if ($apt['check_in_time'] && !$apt['completion_time'] && $displayStatus !== 'In Progress') {
+            $displayStatus = 'Checked In';
+            $stats['checked_in']++;
+        }
+        
+        // Count in progress
+        if ($displayStatus === 'In Progress') {
+            $stats['in_progress']++;
+        }
+        
+        // Count scheduled (appointments not yet upcoming/waiting/completed/cancelled)
+        if ($displayStatus === 'Ready' || $displayStatus === 'Scheduled') {
+            $stats['scheduled']++;
+        }
+        
+        // Track payment statistics
+        if ($apt['Payment'] && $apt['Payment'] > 0) {
+            $payment_count++;
+            $total_collected += (float)$apt['Payment'];
+        }
+        
+        // Track doctor statistics
+        if ($apt['Doctor_id']) {
+            $doctor_id = $apt['Doctor_id'];
+            if (!isset($doctor_stats[$doctor_id])) {
+                $doctor_stats[$doctor_id] = [
+                    'id' => $doctor_id,
+                    'name' => $apt['doctor_name'],
+                    'appointments' => 0,
+                    'completed' => 0
+                ];
+            }
+            $doctor_stats[$doctor_id]['appointments']++;
+            if ($displayStatus === 'Completed') {
+                $doctor_stats[$doctor_id]['completed']++;
+            }
+        }
+    }
+    
+    $stats['total'] = count($appointments);
+    
+    // Calculate completion rate
+    $active_appointments = $stats['total'] - $stats['cancelled'] - $stats['no_show'];
+    $completion_rate = $active_appointments > 0 ? round(($stats['completed'] / $active_appointments) * 100, 1) : 0;
     
     closeDBConnection($conn);
     
-    echo json_encode([
+    // Format response
+    $response = [
         'success' => true,
         'stats' => [
-            'total' => (int)$stats['total'],
-            'scheduled' => (int)$stats['scheduled'],
-            'checked_in' => (int)$stats['checked_in'],
-            'completed' => (int)$stats['completed'],
-            'cancelled' => (int)$stats['cancelled'],
-            'payment_count' => (int)$stats['payment_count'],
-            'total_collected' => number_format($stats['total_collected'], 2)
+            'total' => $stats['total'],
+            'scheduled' => $stats['scheduled'],
+            'upcoming' => $stats['upcoming'],
+            'checked_in' => $stats['checked_in'],
+            'waiting' => $stats['waiting'],
+            'in_progress' => $stats['in_progress'],
+            'completed' => $stats['completed'],
+            'cancelled' => $stats['cancelled'],
+            'no_show' => $stats['no_show'],
+            'completion_rate' => $completion_rate,
+            'payment' => [
+                'count' => $payment_count,
+                'total_collected' => number_format($total_collected, 2),
+                'total_collected_raw' => $total_collected
+            ]
         ],
         'office' => [
             'id' => $office_id,
-            'name' => $office_name
+            'name' => $office_name,
+            'address' => $office_address,
+            'phone' => $office_phone
         ],
-        'date' => $date
-    ]);
+        'date' => $date,
+        'currentTime' => $currentDateTime->format('Y-m-d H:i:s'),
+        'timezone' => 'America/Chicago'
+    ];
+    
+    // Add doctor statistics if available
+    if (!empty($doctor_stats)) {
+        $response['doctors'] = array_values($doctor_stats);
+    }
+    
+    echo json_encode($response);
     
 } catch (Exception $e) {
     http_response_code(500);

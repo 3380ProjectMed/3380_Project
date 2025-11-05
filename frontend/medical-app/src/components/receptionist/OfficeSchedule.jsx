@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Clock, User, Check } from 'lucide-react';
-import * as API from '../../api/receptionistApi';
+// Removed API import as we'll use fetch directly
 import './OfficeSchedule.css';
 
 /**
@@ -29,7 +29,11 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
       setLoading(true);
       
       // Get doctors for this office
-      const doctorsResult = await API.getDoctorsByOffice(officeId);
+      const doctorsResponse = await fetch(
+        `http://localhost:8080/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`,
+        { credentials: 'include' }
+      );
+      const doctorsResult = await doctorsResponse.json();
       
       if (doctorsResult.success) {
         // Add colors and working hours to doctors
@@ -47,8 +51,12 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
       }
       
       // Get appointments for selected date
-      const dateStr = API.formatDateForAPI(selectedDate);
-      const appointmentsResult = await API.getAppointmentsByDate(dateStr, officeId);
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const appointmentsResponse = await fetch(
+        `http://localhost:8080/receptionist_api/appointments/get-by-date.php?date=${dateStr}`,
+        { credentials: 'include' }
+      );
+      const appointmentsResult = await appointmentsResponse.json();
       
       if (appointmentsResult.success) {
         // Convert appointments to booked slots lookup
@@ -177,7 +185,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
    * Check if time slot is booked (from backend data)
    */
   const isSlotBooked = (doctorId, hour, minute) => {
-    const dateStr = API.formatDateForAPI(selectedDate);
+    const dateStr = selectedDate.toISOString().split('T')[0];
     const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
     const key = `${doctorId}-${dateStr} ${timeStr}`;
     return bookedSlots[key] === true;

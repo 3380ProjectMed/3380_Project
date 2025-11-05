@@ -59,20 +59,21 @@
 }
 
 .stat-card {
-  background: white;
+  /* Slight translucency so background shows through while keeping contrast */
+  background: rgba(255,255,255,0.92);
   border-radius: 1rem;
   padding: 1.5rem;
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  box-shadow: 0 6px 18px rgba(0, 119, 182, 0.08);
   border: 2px solid transparent;
   transition: all 0.3s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 119, 182, 0.15);
+  box-shadow: 0 10px 28px rgba(0, 119, 182, 0.15);
 }
 
 .stat-icon {
@@ -224,9 +225,10 @@
   overflow-x: auto;
 }
 
-.table-header {
+.appointments-table .table-header {
   display: grid;
-  grid-template-columns: 120px 2fr 2fr 150px;
+  /* Evenly distribute the main columns (TIME, APPT ID, PATIENT, REASON, STATUS) and keep ACTIONS fixed */
+  grid-template-columns: repeat(5, 1fr) 120px;
   gap: 1.5rem;
   padding: 1rem 1.5rem;
   background: linear-gradient(135deg, #caf0f8, #ffffff);
@@ -239,15 +241,15 @@
   letter-spacing: 0.5px;
 }
 
-.table-body {
+.appointments-table .table-body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.table-row {
+.appointments-table .table-row {
   display: grid;
-  grid-template-columns: 120px 2fr 2fr 150px;
+  grid-template-columns: repeat(5, 1fr) 120px;
   gap: 1.5rem;
   padding: 1.25rem 1.5rem;
   background: #f8f9fa;
@@ -258,7 +260,7 @@
   border: 2px solid transparent;
 }
 
-.table-row:hover {
+.appointments-table .table-row:hover {
   background: #caf0f8;
   transform: translateX(4px);
   border-color: #00b4d8;
@@ -295,17 +297,21 @@
 
 .col-status {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center; /* keep the status badge centered and avoid left-aligned expansion */
 }
 
 /* Status Badges */
 .status-badge {
   display: inline-block;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem; /* slightly reduced padding */
   border-radius: 999px;
   font-size: 0.875rem;
   font-weight: 600;
   text-align: center;
+  /* prevent the badge from forcing the column to grow too wide */
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -384,9 +390,10 @@
     flex: 1;
   }
   
-  .table-header,
-  .table-row {
-    grid-template-columns: 100px 1.5fr 1.5fr 120px;
+  .appointments-table .table-header,
+  .appointments-table .table-row {
+    /* tablet: a mix of fixed and flexible columns */
+    grid-template-columns: 100px 80px 1fr 1fr 1fr 120px;
     gap: 1rem;
     padding: 1rem;
   }
@@ -400,9 +407,9 @@
     max-width: 100%;
   }
   
-  .table-header,
-  .table-row {
-    grid-template-columns: 80px 1.5fr 1.2fr 1.2fr;
+  .appointments-table .table-header,
+  .appointments-table .table-row {
+    grid-template-columns: 80px 70px 1fr 1fr 1fr 100px;
     gap: 1rem;
     padding: 1rem 1.5rem;
   }
@@ -418,9 +425,9 @@
     padding: 0.625rem 0.875rem;
   }
   
-  .table-header,
-  .table-row {
-    grid-template-columns: 70px 1fr 1fr 1fr;
+  .appointments-table .table-header,
+  .appointments-table .table-row {
+    grid-template-columns: 70px 60px 1fr 1fr 1fr 80px;
     gap: 0.75rem;
     padding: 0.875rem 1rem;
     font-size: 0.813rem;
@@ -444,4 +451,125 @@
     padding-right: 1.5rem;
     padding-bottom: 1.5rem;
   }
+}
+
+/* Status-specific colors */
+.status-upcoming {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.status-ready {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.status-waiting {
+  background-color: #fff9c4;
+  color: #f57f17;
+}
+
+.status-in-progress {
+  background-color: #e1f5fe;
+  color: #0288d1;
+}
+
+.status-completed {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+.status-cancelled {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+.status-no-show {
+  background-color: #fce4ec;
+  color: #c2185b;
+}
+
+/* Status actions */
+.col-actions {
+  flex: 0 0 120px;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.status-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.action-btn-small {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+}
+
+.action-btn-small:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-start {
+  background-color: #2196f3;
+  color: white;
+}
+
+.btn-start:hover {
+  background-color: #1976d2;
+}
+
+.btn-complete {
+  background-color: #4caf50;
+  color: white;
+}
+
+.btn-complete:hover {
+  background-color: #388e3c;
+}
+
+.btn-cancel {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background-color: #d32f2f;
+}
+
+/* Waiting time indicator */
+.waiting-time {
+  display: block;
+  font-size: 0.7rem;
+  color: #f57f17;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+/* Allergy badge */
+.allergy-badge {
+  display: inline-block;
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  margin-left: 0.5rem;
+  font-weight: 500;
+}
+
+/* Update table header to include actions column */
+.table-header .col-actions {
+  flex: 0 0 120px;
+  text-align: right;
 }

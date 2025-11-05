@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, DollarSign, User, Calendar, Clock, Check, Printer, CreditCard, FileText, Search, X, AlertCircle, Phone, Mail } from 'lucide-react';
-import * as API from '../../api/receptionistApi';
+// Removed API import as we'll use fetch directly
 import './PaymentProcessing.css';
 
 /**
@@ -41,7 +41,7 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
    * Generate transaction ID on mount
    */
   useEffect(() => {
-    setTransactionId(API.generateTransactionId());
+    setTransactionId('PAY' + Date.now().toString().slice(-8) + Math.random().toString(36).substr(2, 4).toUpperCase());
   }, []);
 
   /**
@@ -71,10 +71,14 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
   const handlePatientSearch = async () => {
     try {
       setSearchLoading(true);
-      const result = await API.searchPatients(searchTerm);
+      const response = await fetch(
+        `http://localhost:8080/receptionist_api/patients/get-all.php?q=${encodeURIComponent(searchTerm)}`,
+        { credentials: 'include' }
+      );
+      const data = await response.json();
       
-      if (result.success) {
-        setSearchResults(result.patients || []);
+      if (data.success) {
+        setSearchResults(data.patients || []);
       }
     } catch (err) {
       console.error('Patient search failed:', err);
@@ -92,7 +96,11 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
       setLoading(true);
       
       // Get full patient details with insurance
-      const detailsResult = await API.getPatientById(selectedPatient.Patient_ID);
+      const response = await fetch(
+        `http://localhost:8080/receptionist_api/patients/get-by-id.php?id=${selectedPatient.Patient_ID}`,
+        { credentials: 'include' }
+      );
+      const detailsResult = await response.json();
       
       if (detailsResult.success) {
         setPatientDetails(detailsResult);
@@ -203,7 +211,15 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
         notes: paymentNote
       };
 
-      const result = await API.recordPayment(paymentPayload);
+      const response = await fetch('http://localhost:8080/receptionist_api/payments/create.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(paymentPayload)
+      });
+      const result = await response.json();
 
       if (result.success) {
         setShowReceipt(true);

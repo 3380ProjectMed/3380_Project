@@ -1,0 +1,11 @@
+.nurse-schedule-page{padding:24px;max-width:1100px;margin:0 auto;}
+.nurse-schedule-page h1{margin:0 0 12px 0}
+.nurse-table .thead,.nurse-table .row{
+  display:grid;grid-template-columns:1.2fr 1fr 2fr 1.4fr 2fr;gap:12px;align-items:center;
+}
+.nurse-table .thead{
+  background:linear-gradient(135deg,#eaf6ff,#fff);
+  padding:12px;border-radius:10px;font-weight:800;color:#062a5a
+}
+.nurse-table .row{background:#f8fafc;padding:12px;border-radius:10px;margin-top:8px}
+.nurse-table .row:hover{background:#eaf6ff}

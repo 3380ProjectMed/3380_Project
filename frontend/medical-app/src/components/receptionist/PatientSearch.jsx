@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, User, Phone, Mail, Calendar, CreditCard, DollarSign } from 'lucide-react';
-import * as API from '../../api/receptionistApi';
+// Removed API import as we'll use fetch directly
 import './PatientSearch.css';
 
 /**
@@ -41,10 +41,14 @@ function PatientSearch({ onBookAppointment }) {
       setLoading(true);
       setError(null);
       
-      const result = await API.searchPatients(searchTerm);
+      const response = await fetch(
+        `http://localhost:8080/receptionist_api/patients/get-all.php?q=${encodeURIComponent(searchTerm)}`,
+        { credentials: 'include' }
+      );
+      const data = await response.json();
       
-      if (result.success) {
-        setPatients(result.patients || []);
+      if (data.success) {
+        setPatients(data.patients || []);
       } else {
         setError('Failed to search patients');
       }
@@ -72,13 +76,17 @@ function PatientSearch({ onBookAppointment }) {
       setLoading(true);
       
       // Get full patient details including insurance and appointments
-      const result = await API.getPatientById(patient.Patient_ID);
+      const response = await fetch(
+        `http://localhost:8080/receptionist_api/patients/get-by-id.php?id=${patient.Patient_ID}`,
+        { credentials: 'include' }
+      );
+      const data = await response.json();
       
-      if (result.success) {
+      if (data.success) {
         setSelectedPatient({
-          ...result.patient,
-          insurance: result.insurance,
-          recent_appointments: result.recent_appointments
+          ...data.patient,
+          insurance: data.insurance,
+          recent_appointments: data.recent_appointments
         });
         setShowModal(true);
       }

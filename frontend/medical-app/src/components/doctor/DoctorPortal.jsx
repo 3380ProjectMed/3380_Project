@@ -22,11 +22,8 @@ function DoctorPortal() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    const confirmed = window.confirm('Are you sure you want to log out?');
-    if (!confirmed) return;
-
     try {
-      await logout();           // calls /api/logout.php
+      await logout(); // calls /api/logout.php
     } catch (e) {
       console.warn('Logout failed (continuing to route home):', e);
     } finally {
@@ -34,9 +31,40 @@ function DoctorPortal() {
     }
   };
 
-  const handleAppointmentClick = (appointment) => {
+  const handleAppointmentClick = async (appointment) => {
+    // Immediately set selected appointment so UI navigates quickly
     setSelectedAppointment(appointment);
     setCurrentPage('clinical');
+
+    // Try to infer a patient identifier from common appointment fields
+    const rawPatientId = appointment?.patientId || appointment?.Patient_id || appointment?.patient_id || appointment?.PatientID || appointment?.patientID || appointment?.PatientID || appointment?.PatientId || appointment?.Patient || null;
+
+    // If a patient id-like value exists, request patient details from backend
+    if (rawPatientId) {
+      try {
+        // The backend accepts either numeric patient_id or an id like 'P001' via `id`.
+        // Prefer sending `id` when the raw value contains non-digits, otherwise send `patient_id`.
+        const numericMatch = String(rawPatientId).match(/(\d+)/);
+        const useIdParam = /\D/.test(String(rawPatientId));
+        const param = useIdParam ? `id=${encodeURIComponent(String(rawPatientId))}` : `patient_id=${encodeURIComponent(numericMatch ? numericMatch[0] : String(rawPatientId))}`;
+
+        const res = await fetch(`/doctor_api/patients/get-by-id.php?${param}`, { credentials: 'include' });
+        const json = await res.json();
+        if (json && json.success) {
+          setSelectedPatient(json.patient);
+        } else {
+          // If patient not found, clear or leave as null
+          console.warn('Patient fetch failed', json?.error);
+          setSelectedPatient(null);
+        }
+      } catch (e) {
+        console.error('Failed to fetch patient for appointment', e);
+        setSelectedPatient(null);
+      }
+    } else {
+      // No patient identifier available on the appointment object
+      setSelectedPatient(null);
+    }
   };
 
   const handlePatientClick = (patient) => {
@@ -61,10 +89,7 @@ function DoctorPortal() {
         {currentPage === 'dashboard' && (
           <Dashboard
             setCurrentPage={setCurrentPage}
-            onAppointmentClick={(apt) => {
-              setSelectedAppointment(apt);
-              setCurrentPage('clinical');
-            }}
+            onAppointmentClick={handleAppointmentClick}
           />
         )}
 
@@ -77,19 +102,11 @@ function DoctorPortal() {
             onPatientClick={handlePatientClick}
             selectedPatient={selectedPatient}
             setSelectedPatient={setSelectedPatient}
+            setCurrentPage={setCurrentPage}  
           />
         )}
 
         {currentPage === 'clinical' && (
-          <ClinicalWorkSpace
-            appointment={selectedAppointment}
-            onBack={handleBackToDashboard}
-            selectedTab={selectedClinicalTab}
-            setSelectedTab={setSelectedClinicalTab}
-          />
-        )}
-
-        {currentPage === 'report' && (
           <ClinicalWorkSpace
             appointment={selectedAppointment}
             patient={selectedPatient}
@@ -98,6 +115,10 @@ function DoctorPortal() {
             setSelectedTab={setSelectedClinicalTab}
           />
         )}
+
+        {currentPage === 'reports' && <Reports />}  
+  {currentPage === 'referrals' && <Referral />}
+  {currentPage === 'profile' && <Profile />}  
       </main>
     </div>
   );

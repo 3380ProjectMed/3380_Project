@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, Calendar, Clock, Phone, Globe, Search, Check, AlertCircle } from 'lucide-react';
-import * as API from '../../api/receptionistApi';
+// Removed API import as we'll use fetch directly
 import './AppointmentBooking.css';
 
 /**
@@ -57,10 +57,11 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
   const loadDoctors = async () => {
     try {
       setDoctorsLoading(true);
-      const result = await API.getDoctorsByOffice(officeId);
+      const response = await fetch(`http://localhost:8080/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`);
+      const data = await response.json();
       
-      if (result.success) {
-        setDoctors(result.doctors || []);
+      if (data.success) {
+        setDoctors(data.doctors || []);
       }
     } catch (err) {
       console.error('Failed to load doctors:', err);
@@ -75,10 +76,11 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
   const handlePatientSearch = async () => {
     try {
       setSearchLoading(true);
-      const result = await API.searchPatients(searchTerm);
+      const response = await fetch(`http://localhost:8080/receptionist_api/patients/get-all.php?q=${encodeURIComponent(searchTerm)}`);
+      const data = await response.json();
       
-      if (result.success) {
-        setSearchResults(result.patients || []);
+      if (data.success) {
+        setSearchResults(data.patients || []);
       }
     } catch (err) {
       console.error('Patient search failed:', err);
@@ -154,11 +156,8 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
       const [hours, minutes] = appointmentTime.split(':');
       
       // Format datetime for API
-      const appointmentDateTime = API.formatDateTimeForAPI(
-        new Date(appointmentDate),
-        parseInt(hours),
-        parseInt(minutes)
-      );
+      const date = new Date(appointmentDate);
+      const appointmentDateTime = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
 
       const appointmentData = {
         Patient_id: selectedPatient.Patient_ID,
@@ -169,7 +168,15 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
         booking_channel: bookingChannel
       };
 
-      const result = await API.createAppointment(appointmentData);
+      const response = await fetch('http://localhost:8080/receptionist_api/appointments/create.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(appointmentData)
+      });
+      const result = await response.json();
       
       if (result.success) {
         // Success! Navigate back

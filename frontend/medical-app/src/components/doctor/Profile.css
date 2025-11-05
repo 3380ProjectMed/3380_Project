@@ -1,24 +1,65 @@
 /* ========== PROFILE COMPONENT ========== */
 .profile-page {
-  padding: 2rem;
+  padding: 1.5rem;
   max-width: 1200px;
   margin: 0 auto;
+  /* keep font consistent with other pages */
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Enhanced Profile Header */
 .profile-header {
+  background: linear-gradient(135deg, var(--fifth-color), white);
+  border: 2px solid var(--forth-color);
+  border-radius: 1rem;
+  padding: 2rem 2.5rem;
   margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative element */
+.profile-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(0, 119, 182, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .profile-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 2.25rem;
+  font-weight: 800;
   color: var(--primary-color);
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+}
+
+.profile-header h1::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 2.25rem;
+  background: linear-gradient(180deg, var(--secondary-color), var(--third-color));
+  border-radius: 999px;
 }
 
 .profile-header p {
   color: #6b7280;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
+  margin: 0;
+  padding-left: calc(0.75rem + 6px);
+  position: relative;
 }
 
 /* Profile Tabs */
@@ -29,7 +70,8 @@
   background: white;
   padding: 0.5rem;
   border-radius: 0.75rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 119, 182, 0.08);
+  border: 2px solid var(--fifth-color);
 }
 
 .profile-tab {
@@ -66,6 +108,7 @@
   border-radius: 1rem;
   padding: 2rem;
   box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  border: 2px solid var(--fifth-color);
 }
 
 .profile-section h2 {
@@ -100,7 +143,9 @@
   align-items: center;
   justify-content: center;
   color: var(--secondary-color);
-  margin-bottom: 1rem;
+  margin: 0 auto 1rem;
+  border: 4px solid white;
+  box-shadow: 0 8px 24px rgba(0, 119, 182, 0.15);
 }
 
 .photo-upload-btn {
@@ -120,12 +165,14 @@
 .photo-upload-btn:hover {
   background: var(--third-color);
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
 }
 
 /* Form Elements */
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
   margin-bottom: 1.5rem;
 }
@@ -157,7 +204,8 @@
   border-radius: 0.5rem;
   font-size: 0.95rem;
   color: var(--primary-color);
-  transition: border-color 0.2s;
+  transition: all 0.2s;
+  background: white;
 }
 
 .form-group input:focus,
@@ -165,11 +213,13 @@
 .form-group select:focus {
   outline: none;
   border-color: var(--third-color);
+  box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
 }
 
 .form-group textarea {
   resize: vertical;
   font-family: inherit;
+  min-height: 100px;
 }
 
 /* Password Input */
@@ -198,6 +248,7 @@
   padding: 0.5rem;
   display: flex;
   align-items: center;
+  transition: color 0.2s;
 }
 
 .password-toggle:hover {
@@ -225,14 +276,17 @@
 
 .strength-fill.strength-weak {
   background: #dc2626;
+  width: 33%;
 }
 
 .strength-fill.strength-medium {
   background: #f59e0b;
+  width: 66%;
 }
 
 .strength-fill.strength-strong {
   background: #059669;
+  width: 100%;
 }
 
 .strength-text {
@@ -397,6 +451,12 @@
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  transition: all 0.2s;
+}
+
+.day-schedule:hover {
+  border-color: var(--third-color);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.1);
 }
 
 .day-toggle {
@@ -434,6 +494,12 @@
   font-weight: 600;
   color: var(--secondary-color);
   background: white;
+  transition: border-color 0.2s;
+}
+
+.time-inputs input[type="time"]:focus {
+  outline: none;
+  border-color: var(--third-color);
 }
 
 .time-inputs span {
@@ -485,6 +551,10 @@
   box-shadow: 0 8px 16px rgba(0, 119, 182, 0.3);
 }
 
+.btn-save:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .btn-save:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -499,6 +569,18 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .alert-success {
@@ -513,19 +595,19 @@
   border: 2px solid #fca5a5;
 }
 
+/* Loading State */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem;
+  color: var(--secondary-color);
+}
+
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 1024px) {
-  .reports-page,
   .profile-page {
     padding: 1rem;
-  }
-
-  .report-selector-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .charts-grid {
-    grid-template-columns: 1fr;
   }
 
   .form-grid {
@@ -539,55 +621,31 @@
   .profile-tab {
     justify-content: flex-start;
   }
-
-  .report-header {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .report-header-actions {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .date-range-select,
-  .btn-export {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .report-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .metrics-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 768px) {
-  .reports-dashboard h1,
-  .profile-header h1 {
-    font-size: 1.5rem;
+  .profile-header {
+    padding: 1.5rem;
   }
 
-  .report-header h2,
+  .profile-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .profile-header h1::before {
+    height: 1.75rem;
+  }
+
+  .profile-header p {
+    font-size: 1rem;
+  }
+
+  .profile-content {
+    padding: 1.5rem;
+  }
+
   .profile-section h2 {
     font-size: 1.5rem;
-  }
-
-  .report-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .table-header,
-  .table-row {
-    font-size: 0.813rem;
-    padding: 0.75rem 1rem;
-  }
-
-  .chart-container {
-    padding: 1rem;
   }
 
   .photo-placeholder {
@@ -610,5 +668,32 @@
 
   .password-form {
     max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-header {
+    padding: 1.25rem;
+  }
+
+  .profile-header h1 {
+    font-size: 1.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .profile-header h1::before {
+    width: 4px;
+    height: 1.5rem;
+  }
+
+  .profile-content {
+    padding: 1rem;
+  }
+
+  .btn-save {
+    width: 100%;
+    justify-content: center;
   }
 }

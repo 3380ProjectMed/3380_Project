@@ -13,7 +13,7 @@ import {
   LogIn,
   X
 } from "lucide-react";
-import "./landingpage.css";
+import "./LandingPage.css";
 import { pingDb, pingPhp }  from "../api/api.js";
 
 export default function LandingPage() {
@@ -42,6 +42,20 @@ export default function LandingPage() {
 
   return (
     <div className="landing-root">
+      <div style={{
+        background: '#fff3cd',
+        border: '2px solid #ffc107',
+        padding: '15px',
+        margin: '20px 0',
+        borderRadius: '8px',
+        textAlign: 'center'
+        }}>
+        <strong>⚠️ EDUCATIONAL PROJECT ONLY</strong>
+        <p style={{margin: '5px 0'}}>
+          This is a student project for learning purposes.
+          Not a real medical application. No real patient data is stored.
+        </p>
+      </div>
       
       {/* Header */}
       <header className="landing-header">
@@ -103,7 +117,7 @@ export default function LandingPage() {
           </nav>
           
           <div className="header-actions">
-            <button 
+            {/* <button 
               onClick={() => setShowTest(true)}
               style={{
                 padding: '8px 12px',
@@ -116,7 +130,7 @@ export default function LandingPage() {
               }}
             >
               Test Connection
-            </button>
+            </button> */}
             <a href="/login" className="btn btn-primary">
               <LogIn className="icon" />
               Log In
@@ -273,8 +287,8 @@ export default function LandingPage() {
         <div className="landing-container">
           <div className="hero-content">
             <h1 className="hero-title">
-              Modern Healthcare,{" "}
-              <span className="highlight">Simplified</span>
+              This website is for educational demonstration only.{" "}
+              <span className="highlight">No real patient data is collected.</span>
             </h1>
             <p className="hero-description">
               At MedConnect your health is our priority. We're a community-focused medical clinic offering primary care, urgent care, preventive screenings, and chronic-condition management — all delivered by an experienced team of physicians, nurses, and care coordinators. We believe medicine should be straightforward, respectful, and centered on you.

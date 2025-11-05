@@ -27,6 +27,19 @@ export function AuthProvider({ children }) {
   }
   useEffect(() => { refreshUser(); }, []);
 
+  const checkAuth = async () => {
+  try {
+    const response = await fetch('/api/me.php');
+    if (response.ok) {
+      const data = await response.json();
+      setUser(data.user); // Will be null if not authenticated
+    }
+  } catch (error) {
+    console.error('Auth check failed:', error);
+    setUser(null);
+  }
+};
+
   async function login(email, password) {
     const r = await fetch('/api/login.php', {
       method: 'POST',
@@ -38,10 +51,17 @@ export function AuthProvider({ children }) {
       const msg = (await r.json().catch(() => null))?.error || 'Login failed';
       throw new Error(msg);
     }
-    //await refreshUser();
     const data = await r.json(); // { user_id, username, email, role }
-    setUser(data);               // instant update (no extra roundtrip)
-    return data;                 // let caller decide where to navigate
+    setUser(data);               // quick optimistic update
+    // Now refresh the authoritative user record (includes doctor_id and other joined data)
+    // so components which depend on doctor_id will receive it.
+    try {
+      await refreshUser();
+    } catch (e) {
+      // If refresh fails, keep the optimistic user and let components handle missing fields.
+      console.warn('refreshUser after login failed:', e);
+    }
+    return data; // caller may navigate after login
   }
 
   async function logout() {
