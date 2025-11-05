@@ -755,7 +755,8 @@ elseif ($endpoint === 'medical-records') {
         try {
             switch ($type) {
                 case 'vitals':
-                    $stmt = $mysqli->prepare("                        SELECT 
+                    $stmt = $mysqli->prepare("
+                        SELECT 
                             DATE(date) as date,
                             blood_pressure as bp,
                             temperature as temp
@@ -775,16 +776,14 @@ elseif ($endpoint === 'medical-records') {
                 case 'medications':
                     $stmt = $mysqli->prepare("
                         SELECT 
-                            p.medication_name as name,
-                            CONCAT(p.dosage, ' - ', p.frequency) as frequency,
-                            CONCAT(d.first_name, ' ', d.last_name) as prescribed_by,
-                            p.start_date,
-                            p.end_date
-                        FROM prescription p
-                        LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
-                        WHERE p.patient_id = ?
-                        AND (p.end_date IS NULL OR p.end_date >= CURDATE())
-                        ORDER BY p.start_date DESC
+                            mh.drug_name as name,
+                            mh.duration_and_frequency_of_drug_use as frequency,
+                            'Patient History' as prescribed_by,
+                            NULL as start_date,
+                            NULL as end_date
+                        FROM medication_history mh
+                        WHERE mh.patient_id = ?
+                        ORDER BY mh.drug_id DESC
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
@@ -797,7 +796,7 @@ elseif ($endpoint === 'medical-records') {
                     $stmt = $mysqli->prepare("
                         SELECT ca.allergies_text as allergy
                         FROM patient p
-                        LEFT JOIN CodesAllergies ca ON p.allergies = ca.allergies_code
+                        LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
                         WHERE p.patient_id = ?
                     ");
                     $stmt->bind_param('i', $patient_id);
@@ -812,7 +811,7 @@ elseif ($endpoint === 'medical-records') {
                     // Get all available allergies for dropdown
                     $stmt = $mysqli->prepare("
                         SELECT allergies_code as code, allergies_text as text
-                        FROM CodesAllergies 
+                        FROM codes_allergies 
                         ORDER BY allergies_text
                     ");
                     $stmt->execute();
@@ -822,9 +821,10 @@ elseif ($endpoint === 'medical-records') {
                     break;
                     
                 case 'conditions':
-                    $stmt = $mysqli->prepare("                        SELECT 
+                    $stmt = $mysqli->prepare("
+                        SELECT 
                             condition_name as name,
-                            diagnosis_date
+                            diagnosis_date as diagnosis_date
                         FROM medical_condition
                         WHERE patient_id = ?
                         ORDER BY diagnosis_date DESC
@@ -837,15 +837,16 @@ elseif ($endpoint === 'medical-records') {
                     break;
                     
                 case 'visit-summaries':
-                    $stmt = $mysqli->prepare("                        SELECT 
-                            v.visit_id,
-                            v.date,
-                            v.reason_for_visit,
+                    $stmt = $mysqli->prepare("
+                        SELECT 
+                            v.visit_id as visit_id,
+                            v.date as date,
+                            v.reason_for_visit as reason_for_visit,
                             CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
-                            v.diagnosis,
-                            v.treatment,
-                            v.blood_pressure,
-                            v.temperature
+                            v.diagnosis as diagnosis,
+                            v.treatment as treatment,
+                            v.blood_pressure as blood_pressure,
+                            v.temperature as temperature
                         FROM patient_visit v
                         LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
                         WHERE v.patient_id = ?
@@ -875,40 +876,37 @@ elseif ($endpoint === 'medical-records') {
         try {
             switch ($type) {
                 case 'medications':
-                    // Add to prescription table
+                    // Add to medication_history table
+                    $drug_name = $input['medication_name'] ?? $input['drug_name'] ?? '';
+                    $duration_frequency = '';
+                    
+                    // Combine dosage and frequency into duration_and_frequency_of_drug_use
+                    if (!empty($input['dosage']) && !empty($input['frequency'])) {
+                        $duration_frequency = $input['dosage'] . ' - ' . $input['frequency'];
+                    } elseif (!empty($input['duration_frequency'])) {
+                        $duration_frequency = $input['duration_frequency'];
+                    } else {
+                        $duration_frequency = 'As directed';
+                    }
+                    
                     $stmt = $mysqli->prepare("
-                        INSERT INTO prescription (patient_id, medication_name, dosage, frequency, start_date)
-                        VALUES (?, ?, ?, ?, CURDATE())
+                        INSERT INTO medication_history (patient_id, drug_name, duration_and_frequency_of_drug_use)
+                        VALUES (?, ?, ?)
                     ");
-                    $stmt->bind_param('isss', 
-                        $patient_id, 
-                        $input['medication_name'], 
-                        $input['dosage'], 
-                        $input['frequency']
+                    $stmt->bind_param('iss',
+                        $patient_id,
+                        $drug_name,
+                        $duration_frequency
                     );
                     $stmt->execute();
-                    
-                    // Also add to medication_history if drug_name and duration provided
-                    if (!empty($input['drug_name']) && !empty($input['duration_frequency'])) {
-                        $stmt2 = $mysqli->prepare("
-                            INSERT INTO MedicationHistory (Patient_ID, Drug_name, DurationAndFrequencyOfDrugUse)
-                            VALUES (?, ?, ?)
-                        ");
-                        $stmt2->bind_param('iss',
-                            $patient_id,
-                            $input['drug_name'],
-                            $input['duration_frequency']
-                        );
-                        $stmt2->execute();
-                    }
                     
                     sendResponse(true, ['id' => $mysqli->insert_id], 'Medication added successfully');
                     break;
                     
                 case 'allergies':
-                    // Check if allergy exists in CodesAllergies
+                    // Check if allergy exists in codes_allergies
                     $stmt = $mysqli->prepare("
-                        SELECT allergies_code FROM CodesAllergies WHERE allergies_text = ?
+                        SELECT allergies_code FROM codes_allergies WHERE allergies_text = ?
                     ");
                     $stmt->bind_param('s', $input['allergy_text']);
                     $stmt->execute();
@@ -919,9 +917,9 @@ elseif ($endpoint === 'medical-records') {
                         // Use existing allergy code
                         $allergy_code = $existing_allergy['allergies_code'];
                     } else {
-                        // Add new allergy to CodesAllergies
+                        // Add new allergy to codes_allergies
                         $stmt2 = $mysqli->prepare("
-                            INSERT INTO CodesAllergies (allergies_text) VALUES (?)
+                            INSERT INTO codes_allergies (allergies_text) VALUES (?)
                         ");
                         $stmt2->bind_param('s', $input['allergy_text']);
                         $stmt2->execute();
