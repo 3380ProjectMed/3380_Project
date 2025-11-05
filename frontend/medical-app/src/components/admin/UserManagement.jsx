@@ -7,7 +7,9 @@ import {
   X,
   AlertCircle,
   CheckCircle,
-  Loader
+  Loader,
+  User,
+  Phone
 } from 'lucide-react';
 import './UserManagement.css';
 
@@ -15,11 +17,13 @@ function UserManagement() {
   const [activeTab, setActiveTab] = useState('doctors');
   const [doctors, setDoctors] = useState([]);
   const [nurses, setNurses] = useState([]);
+  const [patients, setPatients] = useState([]);
+  const [receptionists, setReceptionists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalType, setModalType] = useState('doctor'); // 'doctor' or 'nurse'
+  const [modalType, setModalType] = useState('doctor'); // 'doctor', 'nurse', 'patient', or 'receptionist'
 
   useEffect(() => {
     loadUsers();
@@ -29,9 +33,16 @@ function UserManagement() {
     setLoading(true);
     setError('');
     try {
-      const endpoint = activeTab === 'doctors' 
-        ? '/admin_api/users/get-doctors.php'
-        : '/admin_api/users/get-nurses.php';
+      let endpoint;
+      if (activeTab === 'doctors') {
+        endpoint = '/admin_api/users/get-doctors.php';
+      } else if (activeTab === 'nurses') {
+        endpoint = '/admin_api/users/get-nurses.php';
+      } else if (activeTab === 'patients') {
+        endpoint = '/admin_api/users/get-patients.php';
+      } else if (activeTab === 'receptionists') {
+        endpoint = '/admin_api/users/get-receptionists.php';
+      }
       
       const response = await fetch(endpoint, {
         credentials: 'include'
@@ -46,8 +57,12 @@ function UserManagement() {
       if (data.success) {
         if (activeTab === 'doctors') {
           setDoctors(data.doctors || []);
-        } else {
+        } else if (activeTab === 'nurses') {
           setNurses(data.nurses || []);
+        } else if (activeTab === 'patients') {
+          setPatients(data.patients || []);
+        } else if (activeTab === 'receptionists') {
+          setReceptionists(data.receptionists || []);
         }
       } else {
         setError(data.error || 'Failed to load users');
@@ -65,31 +80,54 @@ function UserManagement() {
     setShowAddModal(true);
   };
 
-  const currentUsers = activeTab === 'doctors' ? doctors : nurses;
+  const getCurrentUsers = () => {
+    if (activeTab === 'doctors') return doctors;
+    if (activeTab === 'nurses') return nurses;
+    if (activeTab === 'patients') return patients;
+    if (activeTab === 'receptionists') return receptionists;
+    return [];
+  };
+
+  const currentUsers = getCurrentUsers();
+  
   const filteredUsers = currentUsers.filter(user => {
     const searchLower = searchTerm.toLowerCase();
     const name = `${user.first_name} ${user.last_name}`.toLowerCase();
     const email = (user.email || '').toLowerCase();
-    const specialization = (user.Specialization || user.specialization || '').toLowerCase();
+    const specialization = (user.specialization || '').toLowerCase();
+    const department = (user.department || '').toLowerCase();
+    const insuranceCompany = (user.insurance_company || '').toLowerCase();
+    const workLocation = (user.work_location_name || '').toLowerCase();
     
     return name.includes(searchLower) || 
            email.includes(searchLower) || 
-           specialization.includes(searchLower);
+           specialization.includes(searchLower) ||
+           department.includes(searchLower) ||
+           insuranceCompany.includes(searchLower) ||
+           workLocation.includes(searchLower);
   });
+
+  const getAddButtonText = () => {
+    if (activeTab === 'doctors') return 'Doctor';
+    if (activeTab === 'nurses') return 'Nurse';
+    if (activeTab === 'patients') return 'Patient';
+    if (activeTab === 'receptionists') return 'Receptionist';
+    return '';
+  };
 
   return (
     <div className="user-management">
       <div className="page-header">
         <div>
           <h1>User Management</h1>
-          <p>Manage doctors and nurses in the system</p>
+          <p>Manage doctors, nurses, receptionists, and patients in the system</p>
         </div>
         <button 
           className="btn btn-primary"
-          onClick={() => handleAddUser(activeTab === 'doctors' ? 'doctor' : 'nurse')}
+          onClick={() => handleAddUser(activeTab === 'doctors' ? 'doctor' : activeTab === 'nurses' ? 'nurse' : activeTab === 'receptionists' ? 'receptionist' : 'patient')}
         >
           <UserPlus size={20} />
-          Add {activeTab === 'doctors' ? 'Doctor' : 'Nurse'}
+          Add {getAddButtonText()}
         </button>
       </div>
 
@@ -108,6 +146,20 @@ function UserManagement() {
         >
           <Users size={20} />
           Nurses
+        </button>
+        <button
+          className={`tab ${activeTab === 'receptionists' ? 'active' : ''}`}
+          onClick={() => setActiveTab('receptionists')}
+        >
+          <Phone size={20} />
+          Receptionists
+        </button>
+        <button
+          className={`tab ${activeTab === 'patients' ? 'active' : ''}`}
+          onClick={() => setActiveTab('patients')}
+        >
+          <User size={20} />
+          Patients
         </button>
       </div>
 
@@ -148,8 +200,10 @@ function UserManagement() {
                   <th>SSN</th>
                   {activeTab === 'doctors' && <th>Specialization</th>}
                   {activeTab === 'nurses' && <th>Department</th>}
-                  <th>License</th>
-                  <th>Work Location</th>
+                  {activeTab === 'patients' && <th>DOB</th>}
+                  {activeTab === 'patients' && <th>Insurance</th>}
+                  {(activeTab === 'doctors' || activeTab === 'nurses' || activeTab === 'receptionists') && <th>License</th>}
+                  {(activeTab === 'doctors' || activeTab === 'nurses' || activeTab === 'receptionists') && <th>Work Location</th>}
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -157,13 +211,13 @@ function UserManagement() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="no-data">
+                    <td colSpan={9} className="no-data">
                       {searchTerm ? `No ${activeTab} found matching "${searchTerm}"` : `No ${activeTab} found`}
                     </td>
                   </tr>
                 ) : (
                   filteredUsers.map((user) => (
-                    <tr key={user.doctor_id || user.nurse_id}>
+                    <tr key={user.doctor_id || user.nurse_id || user.patient_id || user.staff_id}>
                       <td>
                         <div className="user-info">
                           <div className="user-avatar">
@@ -179,14 +233,29 @@ function UserManagement() {
                         </div>
                       </td>
                       <td>{user.ssn || 'N/A'}</td>
-                      <td>
-                        {activeTab === 'doctors' 
-                          ? user.Specialization || 'N/A'
-                          : user.department || 'N/A'
-                        }
-                      </td>
-                      <td>{user.license_number || 'N/A'}</td>
-                      <td>Location {user.work_location || 'N/A'}</td>
+                      
+                      {activeTab === 'doctors' && (
+                        <td>{user.specialization || 'N/A'}</td>
+                      )}
+                      
+                      {activeTab === 'nurses' && (
+                        <td>{user.department || 'N/A'}</td>
+                      )}
+                      
+                      {activeTab === 'patients' && (
+                        <>
+                          <td>{user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : 'N/A'}</td>
+                          <td>{user.insurance_company || 'Self-Pay'}</td>
+                        </>
+                      )}
+                      
+                      {(activeTab === 'doctors' || activeTab === 'nurses' || activeTab === 'receptionists') && (
+                        <>
+                          <td>{user.license_number || 'N/A'}</td>
+                          <td>{user.work_location_name || user.work_location || 'N/A'}</td>
+                        </>
+                      )}
+                      
                       <td>
                         <span className={`status-badge ${user.is_active ? 'active' : 'inactive'}`}>
                           {user.is_active ? 'Active' : 'Inactive'}
@@ -252,13 +321,13 @@ function AddUserModal({ type, onClose, onSuccess }) {
     email: '',
     password: '',
     ssn: '',
-    gender: '1', // 1 = Male, 2 = Female
+    gender: '1',
     phoneNumber: '',
     workLocation: '1',
     workSchedule: '1',
     licenseNumber: '',
-    specialization: '', // for doctors
-    department: '',     // for nurses
+    specialization: '',
+    department: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -272,7 +341,11 @@ function AddUserModal({ type, onClose, onSuccess }) {
     try {
       const endpoint = type === 'doctor'
         ? '/admin_api/users/add-doctor.php'
-        : '/admin_api/users/add-nurse.php';
+        : type === 'nurse'
+        ? '/admin_api/users/add-nurse.php'
+        : type === 'receptionist'
+        ? '/admin_api/users/add-receptionist.php'
+        : '/admin_api/users/add-patient.php';
 
       const payload = {
         first_name: formData.firstName,
@@ -289,7 +362,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
 
       if (type === 'doctor') {
         payload.specialization = formData.specialization;
-      } else {
+      } else if (type === 'nurse') {
         payload.department = formData.department;
       }
 
@@ -327,11 +400,42 @@ function AddUserModal({ type, onClose, onSuccess }) {
     }));
   };
 
+  // Show info message for patients
+  if (type === 'patient') {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2>Add Patient</h2>
+            <button className="close-btn" onClick={onClose}>
+              <X size={24} />
+            </button>
+          </div>
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <AlertCircle size={48} style={{ margin: '0 auto 1rem' }} />
+            <p>Patient registration is not available through admin portal.</p>
+            <p>Patients must register through the patient registration page.</p>
+            <button className="btn btn-secondary" onClick={onClose} style={{ marginTop: '1rem' }}>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const getModalTitle = () => {
+    if (type === 'doctor') return 'Doctor';
+    if (type === 'nurse') return 'Nurse';
+    if (type === 'receptionist') return 'Receptionist';
+    return '';
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Add New {type === 'doctor' ? 'Doctor' : 'Nurse'}</h2>
+          <h2>Add New {getModalTitle()}</h2>
           <button className="close-btn" onClick={onClose}>
             <X size={24} />
           </button>
@@ -340,7 +444,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
         {success ? (
           <div className="success-message">
             <CheckCircle size={48} />
-            <h3>{type === 'doctor' ? 'Doctor' : 'Nurse'} added successfully!</h3>
+            <h3>{getModalTitle()} added successfully!</h3>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -490,7 +594,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
               />
             </div>
 
-            {type === 'doctor' ? (
+            {type === 'doctor' && (
               <div className="form-group">
                 <label htmlFor="specialization">Specialization *</label>
                 <input
@@ -503,7 +607,9 @@ function AddUserModal({ type, onClose, onSuccess }) {
                   required
                 />
               </div>
-            ) : (
+            )}
+
+            {type === 'nurse' && (
               <div className="form-group">
                 <label htmlFor="department">Department *</label>
                 <select
@@ -545,7 +651,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
                 ) : (
                   <>
                     <UserPlus size={16} />
-                    Add {type === 'doctor' ? 'Doctor' : 'Nurse'}
+                    Add {getModalTitle()}
                   </>
                 )}
               </button>
