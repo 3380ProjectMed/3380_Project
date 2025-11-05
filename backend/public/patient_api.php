@@ -797,7 +797,7 @@ elseif ($endpoint === 'medical-records') {
                     $stmt = $mysqli->prepare("
                         SELECT ca.allergies_text as allergy
                         FROM patient p
-                        LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+                        LEFT JOIN CodesAllergies ca ON p.allergies = ca.allergies_code
                         WHERE p.patient_id = ?
                     ");
                     $stmt->bind_param('i', $patient_id);
@@ -806,6 +806,19 @@ elseif ($endpoint === 'medical-records') {
                     $allergy = $result->fetch_assoc();
                     $allergies = $allergy && $allergy['allergy'] ? [$allergy['allergy']] : [];
                     sendResponse(true, $allergies);
+                    break;
+                    
+                case 'all-allergies':
+                    // Get all available allergies for dropdown
+                    $stmt = $mysqli->prepare("
+                        SELECT allergies_code as code, allergies_text as text
+                        FROM CodesAllergies 
+                        ORDER BY allergies_text
+                    ");
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $all_allergies = $result->fetch_all(MYSQLI_ASSOC);
+                    sendResponse(true, $all_allergies);
                     break;
                     
                 case 'conditions':
@@ -854,6 +867,84 @@ elseif ($endpoint === 'medical-records') {
         } catch (Exception $e) {
             error_log("Medical records error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load medical records', 500);
+        }
+    } elseif ($method === 'POST') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $type = $_GET['type'] ?? '';
+        
+        try {
+            switch ($type) {
+                case 'medications':
+                    // Add to prescription table
+                    $stmt = $mysqli->prepare("
+                        INSERT INTO prescription (patient_id, medication_name, dosage, frequency, start_date)
+                        VALUES (?, ?, ?, ?, CURDATE())
+                    ");
+                    $stmt->bind_param('isss', 
+                        $patient_id, 
+                        $input['medication_name'], 
+                        $input['dosage'], 
+                        $input['frequency']
+                    );
+                    $stmt->execute();
+                    
+                    // Also add to medication_history if drug_name and duration provided
+                    if (!empty($input['drug_name']) && !empty($input['duration_frequency'])) {
+                        $stmt2 = $mysqli->prepare("
+                            INSERT INTO MedicationHistory (Patient_ID, Drug_name, DurationAndFrequencyOfDrugUse)
+                            VALUES (?, ?, ?)
+                        ");
+                        $stmt2->bind_param('iss',
+                            $patient_id,
+                            $input['drug_name'],
+                            $input['duration_frequency']
+                        );
+                        $stmt2->execute();
+                    }
+                    
+                    sendResponse(true, ['id' => $mysqli->insert_id], 'Medication added successfully');
+                    break;
+                    
+                case 'allergies':
+                    // Check if allergy exists in CodesAllergies
+                    $stmt = $mysqli->prepare("
+                        SELECT allergies_code FROM CodesAllergies WHERE allergies_text = ?
+                    ");
+                    $stmt->bind_param('s', $input['allergy_text']);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $existing_allergy = $result->fetch_assoc();
+                    
+                    if ($existing_allergy) {
+                        // Use existing allergy code
+                        $allergy_code = $existing_allergy['allergies_code'];
+                    } else {
+                        // Add new allergy to CodesAllergies
+                        $stmt2 = $mysqli->prepare("
+                            INSERT INTO CodesAllergies (allergies_text) VALUES (?)
+                        ");
+                        $stmt2->bind_param('s', $input['allergy_text']);
+                        $stmt2->execute();
+                        $allergy_code = $mysqli->insert_id;
+                    }
+                    
+                    // Update patient's allergies field
+                    $stmt3 = $mysqli->prepare("
+                        UPDATE patient SET allergies = ? WHERE patient_id = ?
+                    ");
+                    $stmt3->bind_param('ii', $allergy_code, $patient_id);
+                    $stmt3->execute();
+                    
+                    sendResponse(true, ['allergy_code' => $allergy_code], 'Allergy updated successfully');
+                    break;
+                    
+                default:
+                    sendResponse(false, [], 'Invalid medical record type for POST', 400);
+            }
+            
+        } catch (Exception $e) {
+            error_log("Medical records POST error: " . $e->getMessage());
+            sendResponse(false, [], 'Failed to update medical records', 500);
         }
     }
 }

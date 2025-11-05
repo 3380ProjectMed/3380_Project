@@ -23,7 +23,6 @@ export default function PatientPortal({ onLogout }) {
 
   // --- Auth/user comes from context (don't rely on a prop) ---
   const { user, logout: ctxLogout } = useAuth();
-  const displayName = user?.username ?? 'Patient';
 
   // --- UI state ---
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -505,6 +504,11 @@ export default function PatientPortal({ onLogout }) {
     primary_doctor: '',
   });
 
+  // Calculate display name based on patient's first and last name
+  const displayName = formData.first_name && formData.last_name 
+    ? `${formData.first_name} ${formData.last_name}` 
+    : user?.username ?? 'Patient';
+
   const genderOptions = ['Male', 'Female', 'Non-Binary', 'Prefer to Self-Describe', 'Prefer not to say', 'Other'];
   const genderAtBirthOptions = ['Male', 'Female', 'Intersex', 'Prefer not to say', 'Other'];
   // Keep these lists in sync with CodesEthnicity and CodesRace in the DB so
@@ -657,7 +661,7 @@ export default function PatientPortal({ onLogout }) {
         {currentPage === 'dashboard' && <Dashboard {...portalProps} />}
         {currentPage === 'profile' && <Profile {...portalProps} />}
         {currentPage === 'appointments' && <Appointments {...portalProps} />}
-        {currentPage === 'records' && <MedicalRecords {...portalProps} />}
+        {currentPage === 'records' && <MedicalRecords {...portalProps} onRefresh={loadMedicalRecords} />}
         {currentPage === 'insurance' && <Insurance {...portalProps} />}
         {currentPage === 'billing' && <Billing {...portalProps} />}
       </main>
