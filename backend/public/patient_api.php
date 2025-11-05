@@ -335,12 +335,16 @@ elseif ($endpoint === 'profile') {
                 sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
             }
             // Expecting keys: first_name, last_name, email, dob (YYYY-MM-DD), emergency_contact,
+            // emergency_contact_first_name, emergency_contact_last_name, emergency_contact_relationship,
             // gender, genderAtBirth, ethnicity, race, primary_doctor
             $first = $input['first_name'] ?? '';
             $last = $input['last_name'] ?? '';
             $email = $input['email'] ?? '';
             $dob = $input['dob'] ?? '';
             $emergencyContact = $input['emergency_contact'] ?? '';
+            $emergencyContactFirstName = $input['emergency_contact_first_name'] ?? '';
+            $emergencyContactLastName = $input['emergency_contact_last_name'] ?? '';
+            $emergencyContactRelationship = $input['emergency_contact_relationship'] ?? '';
             $gender = $input['gender'] ?? '';
             $genderAtBirth = $input['genderAtBirth'] ?? '';
             $ethnicity = $input['ethnicity'] ?? '';
@@ -374,8 +378,8 @@ elseif ($endpoint === 'profile') {
                 sendResponse(false, [], 'Database execute failed: ' . $stmt->error, 500);
             }
 
-            // Handle emergency contact update if provided
-            if (!empty($emergencyContact)) {
+            // Handle emergency contact update if any emergency contact field is provided
+            if (!empty($emergencyContact) || !empty($emergencyContactFirstName) || !empty($emergencyContactLastName) || !empty($emergencyContactRelationship)) {
                 // Check if patient already has an emergency contact
                 $checkStmt = $mysqli->prepare("SELECT emergency_contact_id FROM patient WHERE patient_id = ?");
                 $checkStmt->bind_param('i', $patient_id);
@@ -385,14 +389,14 @@ elseif ($endpoint === 'profile') {
                 $existingEcId = $patientData['emergency_contact_id'] ?? null;
 
                 if ($existingEcId) {
-                    // Update existing emergency contact
-                    $ecStmt = $mysqli->prepare("UPDATE emergency_contact SET ec_phone = ? WHERE emergency_contact_id = ?");
-                    $ecStmt->bind_param('si', $emergencyContact, $existingEcId);
+                    // Update existing emergency contact with all fields
+                    $ecStmt = $mysqli->prepare("UPDATE emergency_contact SET ec_first_name = NULLIF(?, ''), ec_last_name = NULLIF(?, ''), ec_phone = NULLIF(?, ''), relationship = NULLIF(?, '') WHERE emergency_contact_id = ?");
+                    $ecStmt->bind_param('ssssi', $emergencyContactFirstName, $emergencyContactLastName, $emergencyContact, $emergencyContactRelationship, $existingEcId);
                     $ecStmt->execute();
                 } else {
-                    // Create new emergency contact record
-                    $ecStmt = $mysqli->prepare("INSERT INTO emergency_contact (patient_id, ec_phone) VALUES (?, ?)");
-                    $ecStmt->bind_param('is', $patient_id, $emergencyContact);
+                    // Create new emergency contact record with all fields
+                    $ecStmt = $mysqli->prepare("INSERT INTO emergency_contact (patient_id, ec_first_name, ec_last_name, ec_phone, relationship) VALUES (?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''))");
+                    $ecStmt->bind_param('issss', $patient_id, $emergencyContactFirstName, $emergencyContactLastName, $emergencyContact, $emergencyContactRelationship);
                     $ecStmt->execute();
                     $newEcId = $mysqli->insert_id;
                     
