@@ -38,6 +38,9 @@ export default function Profile(props) {
                   dob: profile?.dob || '',
                   email: profile?.email || '',
                   emergency_contact: profile?.emergency_contact || '',
+                  emergency_contact_first_name: profile?.emergency_contact_first_name || '',
+                  emergency_contact_last_name: profile?.emergency_contact_last_name || '',
+                  emergency_contact_relationship: profile?.emergency_contact_relationship || '',
                   primary_doctor: profile?.pcp_id || '',
                   gender: profile?.gender ?? fd.gender,
                   genderAtBirth: profile?.assigned_at_birth_gender ?? fd.genderAtBirth,
@@ -204,15 +207,50 @@ export default function Profile(props) {
                 )}
               </div>
             ) : (
-              <div className="form-group">
-                <label>Emergency Contact Phone Number</label>
-                <input
-                  type="tel"
-                  className="form-input"
-                  placeholder="Enter emergency contact phone number"
-                  value={formData.emergency_contact}
-                  onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
-                />
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>First Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Emergency contact first name"
+                    value={formData.emergency_contact_first_name || ''}
+                    onChange={(e) => setFormData({ ...formData, emergency_contact_first_name: e.target.value })}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Last Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Emergency contact last name"
+                    value={formData.emergency_contact_last_name || ''}
+                    onChange={(e) => setFormData({ ...formData, emergency_contact_last_name: e.target.value })}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input
+                    type="tel"
+                    className="form-input"
+                    placeholder="Emergency contact phone number"
+                    value={formData.emergency_contact || ''}
+                    onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Relationship</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Relationship (e.g., Spouse, Parent, Friend)"
+                    value={formData.emergency_contact_relationship || ''}
+                    onChange={(e) => setFormData({ ...formData, emergency_contact_relationship: e.target.value })}
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -242,7 +280,7 @@ export default function Profile(props) {
                   onChange={(e) => setFormData({ ...formData, primary_doctor: e.target.value })}
                 >
                   <option value="">Select a Primary Care Physician</option>
-                  {doctors.map((doctor) => (
+                  {doctors.filter(doctor => doctor.specialty_name === 'Internal Medicine').map((doctor) => (
                     <option key={doctor.doctor_id} value={doctor.doctor_id}>
                       {doctor.name} - {doctor.specialty_name} ({doctor.office_name})
                     </option>
