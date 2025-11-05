@@ -19,24 +19,22 @@ try {
                 p.first_name,
                 p.last_name,
                 p.email,
-                p.phone,
-                p.date_of_birth,
+                p.dob as date_of_birth,
                 cg.gender_text as gender,
                 p.gender as gender_id,
-                p.address,
-                p.city,
-                p.state,
-                p.zip,
                 ip.plan_name as insurance_plan,
-                ip.company_name as insurance_company,
-                p.insurance_plan_id,
+                ip.plan_type,
+                pai.member_id as insurance_member_id,
+                pai.group_id as insurance_group_id,
+                p.insurance_id,
                 u.is_active
-              FROM patient p
-              LEFT JOIN user_account u ON p.email = u.email
-              LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
-              LEFT JOIN insurance_plan ip ON p.insurance_plan_id = ip.plan_id
-              WHERE (u.role = 'PATIENT' OR u.role IS NULL)
-              ORDER BY p.last_name, p.first_name";
+            FROM patient p
+            LEFT JOIN user_account u ON p.email = u.email
+            LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
+            LEFT JOIN patient_insurance pai ON p.insurance_id = pai.id
+            LEFT JOIN insurance_plan ip ON pai.plan_id = ip.plan_id
+            WHERE (u.role = 'PATIENT' OR u.role IS NULL)
+            ORDER BY p.last_name, p.first_name";
     
     $patients = executeQuery($conn, $query);
     
