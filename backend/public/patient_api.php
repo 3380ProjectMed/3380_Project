@@ -397,12 +397,16 @@ elseif ($endpoint === 'profile') {
                 sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
             }
             // Expecting keys: first_name, last_name, email, dob (YYYY-MM-DD), emergency_contact,
+            // emergency_contact_first_name, emergency_contact_last_name, emergency_contact_relationship,
             // gender, genderAtBirth, ethnicity, race, primary_doctor
             $first = $input['first_name'] ?? '';
             $last = $input['last_name'] ?? '';
             $email = $input['email'] ?? '';
             $dob = $input['dob'] ?? '';
             $emergencyContact = $input['emergency_contact'] ?? '';
+            $emergencyContactFirstName = $input['emergency_contact_first_name'] ?? '';
+            $emergencyContactLastName = $input['emergency_contact_last_name'] ?? '';
+            $emergencyContactRelationship = $input['emergency_contact_relationship'] ?? '';
             $gender = $input['gender'] ?? '';
             $genderAtBirth = $input['genderAtBirth'] ?? '';
             $ethnicity = $input['ethnicity'] ?? '';
@@ -436,8 +440,8 @@ elseif ($endpoint === 'profile') {
                 sendResponse(false, [], 'Database execute failed: ' . $stmt->error, 500);
             }
 
-            // Handle emergency contact update if provided
-            if (!empty($emergencyContact)) {
+            // Handle emergency contact update if any emergency contact field is provided
+            if (!empty($emergencyContact) || !empty($emergencyContactFirstName) || !empty($emergencyContactLastName) || !empty($emergencyContactRelationship)) {
                 // Check if patient already has an emergency contact
                 $checkStmt = $mysqli->prepare("SELECT emergency_contact_id FROM patient WHERE patient_id = ?");
                 $checkStmt->bind_param('i', $patient_id);
@@ -447,14 +451,14 @@ elseif ($endpoint === 'profile') {
                 $existingEcId = $patientData['emergency_contact_id'] ?? null;
 
                 if ($existingEcId) {
-                    // Update existing emergency contact
-                    $ecStmt = $mysqli->prepare("UPDATE emergency_contact SET ec_phone = ? WHERE emergency_contact_id = ?");
-                    $ecStmt->bind_param('si', $emergencyContact, $existingEcId);
+                    // Update existing emergency contact with all fields
+                    $ecStmt = $mysqli->prepare("UPDATE emergency_contact SET ec_first_name = NULLIF(?, ''), ec_last_name = NULLIF(?, ''), ec_phone = NULLIF(?, ''), relationship = NULLIF(?, '') WHERE emergency_contact_id = ?");
+                    $ecStmt->bind_param('ssssi', $emergencyContactFirstName, $emergencyContactLastName, $emergencyContact, $emergencyContactRelationship, $existingEcId);
                     $ecStmt->execute();
                 } else {
-                    // Create new emergency contact record
-                    $ecStmt = $mysqli->prepare("INSERT INTO emergency_contact (patient_id, ec_phone) VALUES (?, ?)");
-                    $ecStmt->bind_param('is', $patient_id, $emergencyContact);
+                    // Create new emergency contact record with all fields
+                    $ecStmt = $mysqli->prepare("INSERT INTO emergency_contact (patient_id, ec_first_name, ec_last_name, ec_phone, relationship) VALUES (?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''))");
+                    $ecStmt->bind_param('issss', $patient_id, $emergencyContactFirstName, $emergencyContactLastName, $emergencyContact, $emergencyContactRelationship);
                     $ecStmt->execute();
                     $newEcId = $mysqli->insert_id;
                     
@@ -983,6 +987,19 @@ elseif ($endpoint === 'medical-records') {
                     sendResponse(true, $allergies);
                     break;
                     
+                case 'all-allergies':
+                    // Get all available allergies for dropdown
+                    $stmt = $mysqli->prepare("
+                        SELECT allergies_code as code, allergies_text as text
+                        FROM codes_allergies 
+                        ORDER BY allergies_text
+                    ");
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $all_allergies = $result->fetch_all(MYSQLI_ASSOC);
+                    sendResponse(true, $all_allergies);
+                    break;
+                    
                 case 'conditions':
                     $stmt = $mysqli->prepare("                        SELECT 
                             condition_name as name,
@@ -992,7 +1009,7 @@ elseif ($endpoint === 'medical-records') {
                         ORDER BY diagnosis_date DESC
                     $stmt = $mysqli->prepare("                        SELECT 
                             condition_name as name,
-                            diagnosis_date
+                            diagnosis_date as diagnosis_date
                         FROM medical_condition
                         WHERE patient_id = ?
                         ORDER BY diagnosis_date DESC
@@ -1024,10 +1041,10 @@ elseif ($endpoint === 'medical-records') {
                             v.date,
                             v.reason_for_visit,
                             CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
-                            v.diagnosis,
-                            v.treatment,
-                            v.blood_pressure,
-                            v.temperature
+                            v.diagnosis as diagnosis,
+                            v.treatment as treatment,
+                            v.blood_pressure as blood_pressure,
+                            v.temperature as temperature
                         FROM patient_visit v
                         LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
                         WHERE v.patient_id = ?
@@ -1049,6 +1066,81 @@ elseif ($endpoint === 'medical-records') {
         } catch (Exception $e) {
             error_log("Medical records error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load medical records', 500);
+        }
+    } elseif ($method === 'POST') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $type = $_GET['type'] ?? '';
+        
+        try {
+            switch ($type) {
+                case 'medications':
+                    // Add to medication_history table
+                    $drug_name = $input['medication_name'] ?? $input['drug_name'] ?? '';
+                    $duration_frequency = '';
+                    
+                    // Combine dosage and frequency into duration_and_frequency_of_drug_use
+                    if (!empty($input['dosage']) && !empty($input['frequency'])) {
+                        $duration_frequency = $input['dosage'] . ' - ' . $input['frequency'];
+                    } elseif (!empty($input['duration_frequency'])) {
+                        $duration_frequency = $input['duration_frequency'];
+                    } else {
+                        $duration_frequency = 'As directed';
+                    }
+                    
+                    $stmt = $mysqli->prepare("
+                        INSERT INTO medication_history (patient_id, drug_name, duration_and_frequency_of_drug_use)
+                        VALUES (?, ?, ?)
+                    ");
+                    $stmt->bind_param('iss',
+                        $patient_id,
+                        $drug_name,
+                        $duration_frequency
+                    );
+                    $stmt->execute();
+                    
+                    sendResponse(true, ['id' => $mysqli->insert_id], 'Medication added successfully');
+                    break;
+                    
+                case 'allergies':
+                    // Check if allergy exists in codes_allergies
+                    $stmt = $mysqli->prepare("
+                        SELECT allergies_code FROM codes_allergies WHERE allergies_text = ?
+                    ");
+                    $stmt->bind_param('s', $input['allergy_text']);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $existing_allergy = $result->fetch_assoc();
+                    
+                    if ($existing_allergy) {
+                        // Use existing allergy code
+                        $allergy_code = $existing_allergy['allergies_code'];
+                    } else {
+                        // Add new allergy to codes_allergies
+                        $stmt2 = $mysqli->prepare("
+                            INSERT INTO codes_allergies (allergies_text) VALUES (?)
+                        ");
+                        $stmt2->bind_param('s', $input['allergy_text']);
+                        $stmt2->execute();
+                        $allergy_code = $mysqli->insert_id;
+                    }
+                    
+                    // Update patient's allergies field
+                    $stmt3 = $mysqli->prepare("
+                        UPDATE patient SET allergies = ? WHERE patient_id = ?
+                    ");
+                    $stmt3->bind_param('ii', $allergy_code, $patient_id);
+                    $stmt3->execute();
+                    
+                    sendResponse(true, ['allergy_code' => $allergy_code], 'Allergy updated successfully');
+                    break;
+                    
+                default:
+                    sendResponse(false, [], 'Invalid medical record type for POST', 400);
+            }
+            
+        } catch (Exception $e) {
+            error_log("Medical records POST error: " . $e->getMessage());
+            sendResponse(false, [], 'Failed to update medical records', 500);
         }
     }
 }
