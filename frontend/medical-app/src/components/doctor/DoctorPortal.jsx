@@ -22,11 +22,8 @@ function DoctorPortal() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    const confirmed = window.confirm('Are you sure you want to log out?');
-    if (!confirmed) return;
-
     try {
-      await logout();           // calls /api/logout.php
+      await logout(); // calls /api/logout.php
     } catch (e) {
       console.warn('Logout failed (continuing to route home):', e);
     } finally {
