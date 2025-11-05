@@ -4,8 +4,19 @@ import * as api from '../../patientapi.js';
 
 export default function MedicalRecords(props) {
   const { loading, vitalsHistory = [], medications = [], allergies = [], conditions = [], onRefresh } = props;
-  const [showMedicationForm, setShowMedicationForm] = useState(false);
-  const [showAllergyForm, setShowAllergyForm] = useState(false);
+  
+  // Debug logging
+  console.log('MedicalRecords props:', { 
+    loading, 
+    vitalsCount: vitalsHistory.length, 
+    medicationsCount: medications.length, 
+    allergiesCount: allergies.length, 
+    conditionsCount: conditions.length,
+    conditions,
+    allergies 
+  });
+  const [showMedicationModal, setShowMedicationModal] = useState(false);
+  const [showAllergyModal, setShowAllergyModal] = useState(false);
   const [allAvailableAllergies, setAllAvailableAllergies] = useState([]);
   const [medicationForm, setMedicationForm] = useState({
     medication_name: '',
@@ -23,9 +34,13 @@ export default function MedicalRecords(props) {
   useEffect(() => {
     const loadAvailableAllergies = async () => {
       try {
+        console.log('Loading available allergies...');
         const data = await api.medicalRecords.getAllAvailableAllergies();
+        console.log('Allergies API response:', data);
         if (data.success) {
           setAllAvailableAllergies(data.data);
+        } else {
+          console.error('Failed to load allergies:', data.message);
         }
       } catch (error) {
         console.error('Error loading allergies:', error);
@@ -47,7 +62,7 @@ export default function MedicalRecords(props) {
           drug_name: '',
           duration_frequency: ''
         });
-        setShowMedicationForm(false);
+        setShowMedicationModal(false);
         onRefresh && onRefresh(); // Refresh the medical records
       } else {
         alert('Error adding medication: ' + data.message);
@@ -68,7 +83,7 @@ export default function MedicalRecords(props) {
           allergy_text: '',
           selected_allergy: ''
         });
-        setShowAllergyForm(false);
+        setShowAllergyModal(false);
         onRefresh && onRefresh(); // Refresh the medical records
       } else {
         alert('Error updating allergy: ' + data.message);
@@ -96,61 +111,13 @@ export default function MedicalRecords(props) {
           </div>
 
           <div className="record-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3>Medications</h3>
-              <button 
-                className="btn btn-primary btn-sm"
-                onClick={() => setShowMedicationForm(!showMedicationForm)}
-              >
-                {showMedicationForm ? 'Cancel' : 'Add Medication'}
-              </button>
-            </div>
-            
-            {showMedicationForm && (
-              <form onSubmit={handleAddMedication} className="record-form">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Medication Name:</label>
-                    <input
-                      type="text"
-                      value={medicationForm.medication_name}
-                      onChange={(e) => setMedicationForm({...medicationForm, medication_name: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Dosage:</label>
-                    <input
-                      type="text"
-                      value={medicationForm.dosage}
-                      onChange={(e) => setMedicationForm({...medicationForm, dosage: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Frequency:</label>
-                    <input
-                      type="text"
-                      value={medicationForm.frequency}
-                      onChange={(e) => setMedicationForm({...medicationForm, frequency: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Duration & Frequency:</label>
-                    <input
-                      type="text"
-                      value={medicationForm.duration_frequency}
-                      onChange={(e) => setMedicationForm({...medicationForm, duration_frequency: e.target.value})}
-                      placeholder="Optional - for history tracking"
-                    />
-                  </div>
-                </div>
-                <button type="submit" className="btn btn-success">Add Medication</button>
-              </form>
-            )}
+            <h3>Medications</h3>
+            <button 
+              className="btn btn-primary btn-sm record-add-btn"
+              onClick={() => setShowMedicationModal(true)}
+            >
+              Add Medication
+            </button>
             
             {medications.length === 0 ? <p className="text-gray">No medications recorded</p> : (
               <ul>
@@ -160,56 +127,13 @@ export default function MedicalRecords(props) {
           </div>
 
           <div className="record-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3>Allergies</h3>
-              <button 
-                className="btn btn-primary btn-sm"
-                onClick={() => setShowAllergyForm(!showAllergyForm)}
-              >
-                {showAllergyForm ? 'Cancel' : 'Update Allergy'}
-              </button>
-            </div>
-            
-            {showAllergyForm && (
-              <form onSubmit={handleAddAllergy} className="record-form">
-                <div className="form-group">
-                  <label>Select from existing allergies:</label>
-                  <select
-                    value={allergyForm.selected_allergy}
-                    onChange={(e) => setAllergyForm({...allergyForm, selected_allergy: e.target.value, allergy_text: ''})}
-                  >
-                    <option value="">Choose an allergy...</option>
-                    {allAvailableAllergies.map((allergy) => (
-                      <option key={allergy.code} value={allergy.text}>
-                        {allergy.text}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div style={{ textAlign: 'center', margin: '10px 0', color: '#666' }}>
-                  — OR —
-                </div>
-                
-                <div className="form-group">
-                  <label>Enter new allergy:</label>
-                  <input
-                    type="text"
-                    value={allergyForm.allergy_text}
-                    onChange={(e) => setAllergyForm({...allergyForm, allergy_text: e.target.value, selected_allergy: ''})}
-                    placeholder="Type a new allergy"
-                  />
-                </div>
-                
-                <button 
-                  type="submit" 
-                  className="btn btn-success"
-                  disabled={!allergyForm.selected_allergy && !allergyForm.allergy_text.trim()}
-                >
-                  Update Allergy
-                </button>
-              </form>
-            )}
+            <h3>Allergies</h3>
+            <button 
+              className="btn btn-primary btn-sm record-add-btn"
+              onClick={() => setShowAllergyModal(true)}
+            >
+              Update Allergy
+            </button>
             
             {allergies.length === 0 ? <p className="text-gray">No allergies recorded</p> : (
               <ul>{allergies.map((a, i) => (<li key={i}>{typeof a === 'string' ? a : a.name}</li>))}</ul>
@@ -221,6 +145,143 @@ export default function MedicalRecords(props) {
             {conditions.length === 0 ? <p className="text-gray">No conditions recorded</p> : (
               <ul>{conditions.map((c, i) => (<li key={i}>{c.name}</li>))}</ul>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Medication Modal */}
+      {showMedicationModal && (
+        <div className="modal-overlay" onClick={() => setShowMedicationModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Add New Medication</h2>
+              <button 
+                className="modal-close" 
+                onClick={() => setShowMedicationModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleAddMedication} className="modal-form">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Medication Name</label>
+                  <input
+                    type="text"
+                    value={medicationForm.medication_name}
+                    onChange={(e) => setMedicationForm({...medicationForm, medication_name: e.target.value})}
+                    required
+                    placeholder="Enter medication name"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Dosage</label>
+                  <input
+                    type="text"
+                    value={medicationForm.dosage}
+                    onChange={(e) => setMedicationForm({...medicationForm, dosage: e.target.value})}
+                    required
+                    placeholder="e.g., 10mg, 1 tablet"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Frequency</label>
+                  <input
+                    type="text"
+                    value={medicationForm.frequency}
+                    onChange={(e) => setMedicationForm({...medicationForm, frequency: e.target.value})}
+                    required
+                    placeholder="e.g., Once daily, Twice a day"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Duration & Frequency (Optional)</label>
+                  <input
+                    type="text"
+                    value={medicationForm.duration_frequency}
+                    onChange={(e) => setMedicationForm({...medicationForm, duration_frequency: e.target.value})}
+                    placeholder="For history tracking"
+                  />
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShowMedicationModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Add Medication
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Allergy Modal */}
+      {showAllergyModal && (
+        <div className="modal-overlay" onClick={() => setShowAllergyModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Update Allergy Information</h2>
+              <button 
+                className="modal-close" 
+                onClick={() => setShowAllergyModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleAddAllergy} className="modal-form">
+              <div className="form-group">
+                <label>Select from existing allergies</label>
+                <select
+                  value={allergyForm.selected_allergy}
+                  onChange={(e) => setAllergyForm({...allergyForm, selected_allergy: e.target.value, allergy_text: ''})}
+                  className="form-select"
+                >
+                  <option value="">Choose an allergy...</option>
+                  {allAvailableAllergies.map((allergy) => (
+                    <option key={allergy.code} value={allergy.text}>
+                      {allergy.text}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="form-divider">
+                <span>OR</span>
+              </div>
+              
+              <div className="form-group">
+                <label>Enter new allergy</label>
+                <input
+                  type="text"
+                  value={allergyForm.allergy_text}
+                  onChange={(e) => setAllergyForm({...allergyForm, allergy_text: e.target.value, selected_allergy: ''})}
+                  placeholder="Type a new allergy"
+                />
+              </div>
+              
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShowAllergyModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={!allergyForm.selected_allergy && !allergyForm.allergy_text.trim()}
+                >
+                  Update Allergy
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
