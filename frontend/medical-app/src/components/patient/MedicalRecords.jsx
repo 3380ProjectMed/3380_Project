@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './MedicalRecords.css';
-import * as api from '../../patientapi.js';
+import { medicalRecordsAPI } from '../../patientapi.js';
 
 export default function MedicalRecords(props) {
   const { loading, vitalsHistory = [], medications = [], allergies = [], conditions = [], onRefresh } = props;
@@ -35,7 +35,7 @@ export default function MedicalRecords(props) {
     const loadAvailableAllergies = async () => {
       try {
         console.log('Loading available allergies...');
-        const data = await api.medicalRecords.getAllAvailableAllergies();
+        const data = await medicalRecordsAPI.getAllAvailableAllergies();
         console.log('Allergies API response:', data);
         if (data.success) {
           setAllAvailableAllergies(data.data);
@@ -53,7 +53,7 @@ export default function MedicalRecords(props) {
   const handleAddMedication = async (e) => {
     e.preventDefault();
     try {
-      const data = await api.medicalRecords.addMedication(medicationForm);
+      const data = await medicalRecordsAPI.addMedication(medicationForm);
       if (data.success) {
         setMedicationForm({
           medication_name: '',
@@ -77,7 +77,7 @@ export default function MedicalRecords(props) {
     e.preventDefault();
     try {
       const allergyText = allergyForm.selected_allergy || allergyForm.allergy_text;
-      const data = await api.medicalRecords.updateAllergy({ allergy_text: allergyText });
+      const data = await medicalRecordsAPI.updateAllergy({ allergy_text: allergyText });
       if (data.success) {
         setAllergyForm({
           allergy_text: '',
@@ -181,7 +181,7 @@ export default function MedicalRecords(props) {
                     value={medicationForm.dosage}
                     onChange={(e) => setMedicationForm({...medicationForm, dosage: e.target.value})}
                     required
-                    placeholder="e.g., 10mg, 1 tablet"
+                    placeholder="e.g., 10mg"
                   />
                 </div>
                 <div className="form-group">
@@ -195,12 +195,12 @@ export default function MedicalRecords(props) {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Duration & Frequency (Optional)</label>
+                  <label>Start Date</label>
                   <input
                     type="text"
                     value={medicationForm.duration_frequency}
                     onChange={(e) => setMedicationForm({...medicationForm, duration_frequency: e.target.value})}
-                    placeholder="For history tracking"
+                    placeholder="e.g. since 2020"
                   />
                 </div>
               </div>
