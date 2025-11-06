@@ -9,42 +9,47 @@ import {
   CheckCircle,
   Loader,
   User,
-  Phone
+  Phone,
+  Filter
 } from 'lucide-react';
 import './UserManagement.css';
 
 function UserManagement() {
-  const [activeTab, setActiveTab] = useState('doctors');
-  const [doctors, setDoctors] = useState([]);
-  const [nurses, setNurses] = useState([]);
-  const [patients, setPatients] = useState([]);
-  const [receptionists, setReceptionists] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [modalType, setModalType] = useState('doctor'); // 'doctor', 'nurse', 'patient', or 'receptionist'
+  const [modalType, setModalType] = useState('doctor');
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    role: 'all',
+    activeStatus: 'all',
+    workLocation: 'all',
+    department: 'all'
+  });
+  
+  // Filter options
+  const [locations, setLocations] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
     loadUsers();
-  }, [activeTab]);
+  }, [filters]);
 
   const loadUsers = async () => {
     setLoading(true);
     setError('');
     try {
-      let endpoint;
-      if (activeTab === 'doctors') {
-        endpoint = '/admin_api/users/get-doctors.php';
-      } else if (activeTab === 'nurses') {
-        endpoint = '/admin_api/users/get-nurses.php';
-      } else if (activeTab === 'patients') {
-        endpoint = '/admin_api/users/get-patients.php';
-      } else if (activeTab === 'receptionists') {
-        endpoint = '/admin_api/users/get-receptionists.php';
-      }
+      const params = new URLSearchParams({
+        role: filters.role,
+        active_status: filters.activeStatus,
+        work_location: filters.workLocation,
+        department: filters.department
+      });
       
-      const response = await fetch(endpoint, {
+      const response = await fetch(`/admin_api/users/get_user_accounts.php?${params}`, {
         credentials: 'include'
       });
 
@@ -55,14 +60,10 @@ function UserManagement() {
       const data = await response.json();
       
       if (data.success) {
-        if (activeTab === 'doctors') {
-          setDoctors(data.doctors || []);
-        } else if (activeTab === 'nurses') {
-          setNurses(data.nurses || []);
-        } else if (activeTab === 'patients') {
-          setPatients(data.patients || []);
-        } else if (activeTab === 'receptionists') {
-          setReceptionists(data.receptionists || []);
+        setUsers(data.users || []);
+        if (data.filters) {
+          setLocations(data.filters.locations || []);
+          setDepartments(data.filters.departments || []);
         }
       } else {
         setError(data.error || 'Failed to load users');
@@ -75,22 +76,19 @@ function UserManagement() {
     }
   };
 
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: value
+    }));
+  };
+
   const handleAddUser = (type) => {
     setModalType(type);
     setShowAddModal(true);
   };
 
-  const getCurrentUsers = () => {
-    if (activeTab === 'doctors') return doctors;
-    if (activeTab === 'nurses') return nurses;
-    if (activeTab === 'patients') return patients;
-    if (activeTab === 'receptionists') return receptionists;
-    return [];
-  };
-
-  const currentUsers = getCurrentUsers();
-  
-  const filteredUsers = currentUsers.filter(user => {
+  const filteredUsers = users.filter(user => {
     const searchLower = searchTerm.toLowerCase();
     const name = `${user.first_name} ${user.last_name}`.toLowerCase();
     const email = (user.email || '').toLowerCase();
@@ -107,60 +105,129 @@ function UserManagement() {
            workLocation.includes(searchLower);
   });
 
-  const getAddButtonText = () => {
-    if (activeTab === 'doctors') return 'Doctor';
-    if (activeTab === 'nurses') return 'Nurse';
-    if (activeTab === 'patients') return 'Patient';
-    if (activeTab === 'receptionists') return 'Receptionist';
-    return '';
+  const getRoleLabel = (userType) => {
+    const labels = {
+      'doctor': 'Doctor',
+      'nurse': 'Nurse',
+      'receptionist': 'Receptionist',
+      'patient': 'Patient'
+    };
+    return labels[userType] || userType;
   };
+
+  const clearFilters = () => {
+    setFilters({
+      role: 'all',
+      activeStatus: 'all',
+      workLocation: 'all',
+      department: 'all'
+    });
+  };
+
+  const hasActiveFilters = filters.role !== 'all' || 
+                           filters.activeStatus !== 'all' || 
+                           filters.workLocation !== 'all' || 
+                           filters.department !== 'all';
 
   return (
     <div className="user-management">
       <div className="page-header">
         <div>
           <h1>User Management</h1>
-          <p>Manage doctors, nurses, receptionists, and patients in the system</p>
+          <p>Manage all users in the system</p>
         </div>
         <button 
           className="btn btn-primary"
-          onClick={() => handleAddUser(activeTab === 'doctors' ? 'doctor' : activeTab === 'nurses' ? 'nurse' : activeTab === 'receptionists' ? 'receptionist' : 'patient')}
+          onClick={() => handleAddUser(filters.role !== 'all' && filters.role !== 'patient' ? filters.role : 'doctor')}
         >
           <UserPlus size={20} />
-          Add {getAddButtonText()}
+          Add User
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'doctors' ? 'active' : ''}`}
-          onClick={() => setActiveTab('doctors')}
-        >
-          <Users size={20} />
-          Doctors
-        </button>
-        <button
-          className={`tab ${activeTab === 'nurses' ? 'active' : ''}`}
-          onClick={() => setActiveTab('nurses')}
-        >
-          <Users size={20} />
-          Nurses
-        </button>
-        <button
-          className={`tab ${activeTab === 'receptionists' ? 'active' : ''}`}
-          onClick={() => setActiveTab('receptionists')}
-        >
-          <Phone size={20} />
-          Receptionists
-        </button>
-        <button
-          className={`tab ${activeTab === 'patients' ? 'active' : ''}`}
-          onClick={() => setActiveTab('patients')}
-        >
-          <User size={20} />
-          Patients
-        </button>
+      {/* Filters Section */}
+      <div className="filters-section">
+        <div className="filters-header">
+          <div className="filters-title">
+            <Filter size={20} />
+            <span>Filters</span>
+          </div>
+          {hasActiveFilters && (
+            <button className="btn-text" onClick={clearFilters}>
+              Clear All
+            </button>
+          )}
+        </div>
+        
+        <div className="filters-grid">
+          <div className="filter-group">
+            <label htmlFor="roleFilter">Role</label>
+            <select
+              id="roleFilter"
+              value={filters.role}
+              onChange={(e) => handleFilterChange('role', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">All Roles</option>
+              <option value="doctor">Doctors</option>
+              <option value="nurse">Nurses</option>
+              <option value="receptionist">Receptionists</option>
+              <option value="patient">Patients</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label htmlFor="activeFilter">Status</label>
+            <select
+              id="activeFilter"
+              value={filters.activeStatus}
+              onChange={(e) => handleFilterChange('activeStatus', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          {filters.role !== 'patient' && (
+            <div className="filter-group">
+              <label htmlFor="locationFilter">Work Location</label>
+              <select
+                id="locationFilter"
+                value={filters.workLocation}
+                onChange={(e) => handleFilterChange('workLocation', e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Locations</option>
+                {locations.map(loc => (
+                  <option key={loc.office_id} value={loc.office_id}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {(filters.role === 'nurse' || filters.role === 'all') && (
+            <div className="filter-group">
+              <label htmlFor="departmentFilter">Department</label>
+              <select
+                id="departmentFilter"
+                value={filters.department}
+                onChange={(e) => handleFilterChange('department', e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Departments</option>
+                {departments.map(dept => (
+                  <option key={dept.department} value={dept.department}>
+                    {dept.department}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -168,7 +235,7 @@ function UserManagement() {
         <Search size={20} />
         <input
           type="text"
-          placeholder={`Search ${activeTab}...`}
+          placeholder="Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -186,7 +253,7 @@ function UserManagement() {
       {loading ? (
         <div className="loading-container">
           <Loader className="spinner" size={40} />
-          <p>Loading {activeTab}...</p>
+          <p>Loading users...</p>
         </div>
       ) : (
         <>
@@ -195,15 +262,18 @@ function UserManagement() {
             <table className="users-table">
               <thead>
                 <tr>
+                  <th>Role</th>
                   <th>Name</th>
                   <th>Email</th>
                   <th>SSN</th>
-                  {activeTab === 'doctors' && <th>Specialization</th>}
-                  {activeTab === 'nurses' && <th>Department</th>}
-                  {activeTab === 'patients' && <th>DOB</th>}
-                  {activeTab === 'patients' && <th>Insurance</th>}
-                  {(activeTab === 'doctors' || activeTab === 'nurses' || activeTab === 'receptionists') && <th>License</th>}
-                  {(activeTab === 'doctors' || activeTab === 'nurses' || activeTab === 'receptionists') && <th>Work Location</th>}
+                  {filters.role === 'doctor' && <th>Specialization</th>}
+                  {filters.role === 'nurse' && <th>Department</th>}
+                  {filters.role === 'patient' && <th>DOB</th>}
+                  {filters.role === 'patient' && <th>Insurance</th>}
+                  {filters.role !== 'patient' && filters.role !== 'all' && <th>License</th>}
+                  {filters.role !== 'patient' && filters.role !== 'all' && <th>Work Location</th>}
+                  {filters.role === 'all' && <th>Specialization/Dept</th>}
+                  {filters.role === 'all' && <th>Work Location</th>}
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -211,13 +281,18 @@ function UserManagement() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="no-data">
-                      {searchTerm ? `No ${activeTab} found matching "${searchTerm}"` : `No ${activeTab} found`}
+                    <td colSpan={10} className="no-data">
+                      {searchTerm ? `No users found matching "${searchTerm}"` : 'No users found'}
                     </td>
                   </tr>
                 ) : (
                   filteredUsers.map((user) => (
-                    <tr key={user.doctor_id || user.nurse_id || user.patient_id || user.staff_id}>
+                    <tr key={`${user.user_type}-${user.id}`}>
+                      <td>
+                        <span className={`role-badge ${user.user_type}`}>
+                          {getRoleLabel(user.user_type)}
+                        </span>
+                      </td>
                       <td>
                         <div className="user-info">
                           <div className="user-avatar">
@@ -234,25 +309,34 @@ function UserManagement() {
                       </td>
                       <td>{user.ssn || 'N/A'}</td>
                       
-                      {activeTab === 'doctors' && (
+                      {/* Role-specific columns for filtered view */}
+                      {filters.role === 'doctor' && (
                         <td>{user.specialization || 'N/A'}</td>
                       )}
                       
-                      {activeTab === 'nurses' && (
+                      {filters.role === 'nurse' && (
                         <td>{user.department || 'N/A'}</td>
                       )}
                       
-                      {activeTab === 'patients' && (
+                      {filters.role === 'patient' && (
                         <>
                           <td>{user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : 'N/A'}</td>
                           <td>{user.insurance_company || 'Self-Pay'}</td>
                         </>
                       )}
                       
-                      {(activeTab === 'doctors' || activeTab === 'nurses' || activeTab === 'receptionists') && (
+                      {filters.role !== 'patient' && filters.role !== 'all' && (
                         <>
                           <td>{user.license_number || 'N/A'}</td>
-                          <td>{user.work_location_name || user.work_location || 'N/A'}</td>
+                          <td>{user.work_location_name || 'N/A'}</td>
+                        </>
+                      )}
+
+                      {/* Combined columns for 'all' view */}
+                      {filters.role === 'all' && (
+                        <>
+                          <td>{user.specialization || user.department || 'N/A'}</td>
+                          <td>{user.work_location_name || (user.user_type === 'patient' ? 'N/A' : 'N/A')}</td>
                         </>
                       )}
                       
@@ -279,19 +363,23 @@ function UserManagement() {
           {/* Stats Summary */}
           <div className="stats-summary">
             <div className="stat-item">
-              <span className="stat-label">Total {activeTab}:</span>
-              <span className="stat-value">{currentUsers.length}</span>
+              <span className="stat-label">Total Users:</span>
+              <span className="stat-value">{users.length}</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-label">Filtered Results:</span>
+              <span className="stat-value">{filteredUsers.length}</span>
             </div>
             <div className="stat-item">
               <span className="stat-label">Active:</span>
               <span className="stat-value">
-                {currentUsers.filter(u => u.is_active).length}
+                {users.filter(u => u.is_active).length}
               </span>
             </div>
             <div className="stat-item">
               <span className="stat-label">Inactive:</span>
               <span className="stat-value">
-                {currentUsers.filter(u => !u.is_active).length}
+                {users.filter(u => !u.is_active).length}
               </span>
             </div>
           </div>
@@ -313,7 +401,7 @@ function UserManagement() {
   );
 }
 
-// Add User Modal Component
+// Add User Modal Component (keeping the same as original)
 function AddUserModal({ type, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     firstName: '',
