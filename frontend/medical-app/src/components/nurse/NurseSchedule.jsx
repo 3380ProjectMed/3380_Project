@@ -3,50 +3,78 @@ import "./NurseSchedule.css";
 import { getNurseScheduleToday } from '../../api/nurse';
 
 export default function NurseSchedule() {
-  const [rows, setRows] = useState([]);
+  const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      setLoading(true);
-      try {
-        const today = new Date().toISOString().slice(0,10);
-  const data = await getNurseSchedule({ date: today }).catch(() => []);
-  // Log schedule data for debugging
-  try { console.log('Schedule data:', data); } catch (e) { /* noop in non-browser env */ }
-  if (mounted) setRows(Array.isArray(data) ? data : []);
-      } catch (e) {
-        if (mounted) setError(e.message || 'Failed to load schedule');
-      } finally { if (mounted) setLoading(false); }
+  const loadSchedule = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getNurseScheduleToday();
+      
+      console.log('Schedule data:', data);
+      
+      const scheduleData = data?.schedule || data || [];
+      setSchedule(Array.isArray(scheduleData) ? scheduleData : []);
+    } catch (e) {
+      console.error('Schedule error:', e);
+      setError(e.message || 'Failed to load schedule');
+      setSchedule([]);
+    } finally {
+      setLoading(false);
     }
-    load();
-    return () => { mounted = false; };
+  };
+
+  useEffect(() => {
+    loadSchedule();
   }, []);
 
   return (
     <div className="nurse-page">
       <div className="nurse-schedule-page">
         <h1>My Schedule</h1>
+        
+        {error && (
+          <div style={{ padding: '12px', marginBottom: '12px', backgroundColor: '#fee', borderRadius: '4px', color: '#c00' }}>
+            {error}
+          </div>
+        )}
+
         <div style={{ marginBottom: 12 }}>
-          <button onClick={() => loadSchedule()}>Retry</button>
+          <button onClick={loadSchedule} disabled={loading}>
+            {loading ? 'Loading...' : 'Refresh Schedule'}
+          </button>
         </div>
+
         <div className="nurse-table">
           <div className="thead">
-            <div>Date</div><div>Time</div><div>Patient</div><div>Location</div><div>Reason</div>
+            <div>Day</div>
+            <div>Time</div>
+            <div>Patient</div>
+            <div>Location</div>
+            <div>Reason</div>
           </div>
           <div className="tbody">
-            {rows.length ? rows.map((r, i) => (
-              <div key={i} className="row">
-                <div>{new Date(r.time).toLocaleDateString()}</div>
-                <div>{new Date(r.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                <div>{r.patientName}</div>
-                <div>{r.location || ''}</div>
-                <div>{r.reason}</div>
-              </div>
-            )) : (
-              <div className="empty">{loading ? 'Loading...' : (error || 'No schedule found for your location today')}</div>
+            {loading ? (
+              <div className="empty">Loading schedule...</div>
+            ) : schedule.length > 0 ? (
+              schedule.map((shift, i) => (
+                <div key={i} className="row">
+                  <div>{shift.day_of_week || 'N/A'}</div>
+                  <div>
+                    {shift.start_time || '??'} - {shift.end_time || '??'}
+                  </div>
+                  <div>-</div>
+                  <div>
+                    {shift.office_name || `Office ${shift.office_id || ''}`}
+                    {shift.address && ` - ${shift.address}, ${shift.city}, ${shift.state}`}
+                  </div>
+                  <div>Regular Shift</div>
+                </div>
+              ))
+            ) : (
+              <div className="empty">No schedule</div>
             )}
           </div>
         </div>

@@ -7,94 +7,108 @@ require_once __DIR__ . '/../../../database.php';
 header('Content-Type: application/json');
 
 try {
-    // Accept email from X-User-Email header or query param for flexibility
-    $email = $_SERVER['HTTP_X_USER_EMAIL'] ?? ($_GET['email'] ?? null);
-    $q = isset($_GET['q']) ? trim($_GET['q']) : '';
-    $limit = isset($_GET['limit']) ? intval($_GET['limit']) : 50;
-    $limit = max(1, min(200, $limit));
-
-    if (empty($email)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'MISSING_EMAIL', 'message' => 'Missing X-User-Email header or email query param']);
+    session_start();
+    if (empty($_SESSION['uid'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'UNAUTHENTICATED', 'message' => 'Please sign in']);
         exit;
     }
 
     $conn = getDBConnection();
 
-    // Resolve nurse record from user_account -> staff -> nurse
-    $sql = "SELECT n.nurse_id, s.staff_id, s.work_location AS office_id
-            FROM user_account u
-            JOIN staff s ON s.staff_email = u.email
-            JOIN nurse n ON n.staff_id = s.staff_id
-            WHERE u.email = ? AND u.role = 'NURSE' AND u.is_active = 1";
-
-    $rows = executeQuery($conn, $sql, 's', [$email]);
-    if (count($rows) === 0) {
-        http_response_code(404);
-        echo json_encode(['error' => 'NURSE_NOT_FOUND', 'message' => 'No nurse record is associated with this account.']);
+    // Resolve nurse_id from session email
+    $email = $_SESSION['email'] ?? '';
+    if (empty($email)) {
         closeDBConnection($conn);
+        http_response_code(401);
+        echo json_encode(['error' => 'UNAUTHENTICATED', 'message' => 'Please sign in']);
         exit;
     }
 
-    $n = $rows[0];
-    $nurse_id = (int)$n['nurse_id'];
-    $staff_id = (int)$n['staff_id'];
-    $office_id = (int)$n['office_id'];
-
-    // Build patient query: patients who have appointments at the nurse's office
-    // within a 7-day lookback and next 30 days window. Support optional search q.
-    $params = [$office_id];
-    $types = 'i';
-
-    $sql = "SELECT DISTINCT p.patient_id,
-                   CONCAT(p.first_name, ' ', p.last_name) AS name,
-                   DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob,
-                   ca.allergies_text AS allergies,
-                   MIN(a.appointment_date) AS upcoming
-            FROM patient p
-            LEFT JOIN codes_allergies ca ON ca.allergies_code = p.allergies
-            LEFT JOIN appointment a ON a.patient_id = p.patient_id
-            WHERE a.office_id = ?
-              AND a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-              AND a.appointment_date < DATE_ADD(CURDATE(), INTERVAL 30 DAY)";
-
-    if ($q !== '') {
-        $sql .= " AND (p.first_name LIKE CONCAT('%',?,'%') OR p.last_name LIKE CONCAT('%',?,'%') OR CAST(p.patient_id AS CHAR) LIKE CONCAT('%',?,'%') OR p.email LIKE CONCAT('%',?,'%'))";
-        $params[] = $q; $params[] = $q; $params[] = $q; $params[] = $q;
-        $types .= 'ssss';
+    $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
+    if (empty($rows)) {
+        closeDBConnection($conn);
+        http_response_code(404);
+        echo json_encode(['error' => 'NURSE_NOT_FOUND', 'message' => 'No nurse record found']);
+        exit;
     }
 
-    $sql .= " GROUP BY p.patient_id, name, p.dob, allergies
-              ORDER BY upcoming IS NULL, upcoming ASC
-              LIMIT ?";
-    $types .= 'i';
-    $params[] = $limit;
+    $nurse_id = (int)$rows[0]['nurse_id'];
+
+    // Get pagination and search params
+    $search = $_GET['q'] ?? '';
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $pageSize = max(1, min(100, (int)($_GET['limit'] ?? 10)));
+    $offset = ($page - 1) * $pageSize;
+
+    // Get patients assigned to this nurse via patient_visit
+    $sql = "SELECT DISTINCT
+                p.patient_id,
+                p.first_name,
+                p.last_name,
+                p.dob,
+                p.email,
+                ca.allergies_text as allergies,
+                MAX(pv.date) as last_visit_date
+            FROM patient_visit pv
+            JOIN patient p ON pv.patient_id = p.patient_id
+            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            WHERE pv.nurse_id = ?";
+    
+    $params = [$nurse_id];
+    $types = 'i';
+
+    // Add search filter if provided
+    if (!empty($search)) {
+        $sql .= " AND (p.first_name LIKE ? OR p.last_name LIKE ? OR p.email LIKE ?)";
+        $searchParam = "%{$search}%";
+        $params[] = $searchParam;
+        $params[] = $searchParam;
+        $params[] = $searchParam;
+        $types .= 'sss';
+    }
+
+    $sql .= " GROUP BY p.patient_id ORDER BY p.last_name, p.first_name LIMIT ? OFFSET ?";
+    $params[] = $pageSize;
+    $params[] = $offset;
+    $types .= 'ii';
 
     $patients = executeQuery($conn, $sql, $types, $params);
 
-    // Normalize results
-    foreach ($patients as &$p) {
-        if ($p['allergies'] === null) $p['allergies'] = 'None';
-        if (!empty($p['upcoming'])) {
-            // Convert to ISO 8601 for frontend convenience
-            $p['upcoming'] = date(DATE_ATOM, strtotime($p['upcoming']));
-        } else {
-            $p['upcoming'] = null;
-        }
-        $p['patient_id'] = (int)$p['patient_id'];
+    // Get total count
+    $countSql = "SELECT COUNT(DISTINCT p.patient_id) as total
+                 FROM patient_visit pv
+                 JOIN patient p ON pv.patient_id = p.patient_id
+                 WHERE pv.nurse_id = ?";
+    
+    $countParams = [$nurse_id];
+    $countTypes = 'i';
+
+    if (!empty($search)) {
+        $countSql .= " AND (p.first_name LIKE ? OR p.last_name LIKE ? OR p.email LIKE ?)";
+        $countParams[] = $searchParam;
+        $countParams[] = $searchParam;
+        $countParams[] = $searchParam;
+        $countTypes .= 'sss';
     }
 
-    $response = [
-        'nurse' => [ 'nurse_id' => $nurse_id, 'staff_id' => $staff_id, 'office_id' => $office_id ],
-        'patients' => $patients,
-    ];
+    $countResult = executeQuery($conn, $countSql, $countTypes, $countParams);
+    $total = (int)($countResult[0]['total'] ?? 0);
 
-    echo json_encode($response);
     closeDBConnection($conn);
+    
+    echo json_encode([
+        'success' => true,
+        'patients' => $patients,
+        'total' => $total,
+        'page' => $page,
+        'pageSize' => $pageSize
+    ]);
 
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['error' => 'DB_ERROR', 'message' => $e->getMessage()]);
     exit;
 }
+?>
 
