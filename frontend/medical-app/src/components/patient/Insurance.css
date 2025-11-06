@@ -2,7 +2,70 @@
 .insurance-list { display:grid; gap:1.5rem; }
 .insurance-card { background:white; border-radius:1rem; padding:2rem; box-shadow:0 4px 12px rgba(0,119,182,0.08); border:2px solid rgba(0,180,216,0.2); }
 .insurance-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; padding-bottom:1.5rem; border-bottom:2px solid #e5e7eb; }
-.insurance-header h3 { margin:0 0 0.5rem 0; font-size:0.875rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; }
-.insurance-header h2 { margin:0; font-size:1.75rem; font-weight:700; color:#03045e; }
+.insurance-header h2 { margin:0 0 0.5rem 0; font-size:1.75rem; font-weight:700; color:#03045e; }
+.plan-info { margin:0; font-size:0.9rem; color:#6b7280; }
+.insurance-actions { display:flex; align-items:center; gap:1rem; }
+.edit-btn { padding:0.5rem; color:#0077b6; transition:color 0.2s ease; }
+.edit-btn:hover { color:#03045e; }
 .insurance-icon { width:48px; height:48px; color:#0077b6; }
 .insurance-body { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:1.5rem; }
+
+/* Edit Insurance Modal */
+.edit-insurance-modal { 
+  max-width: 800px; 
+  width: 90vw; 
+}
+
+.form-grid { 
+  display: grid; 
+  gap: 1.5rem; 
+  grid-template-columns: 1fr; 
+}
+
+@media (min-width: 768px) {
+  .form-grid { 
+    grid-template-columns: 1fr 1fr; 
+  }
+}
+
+.form-group { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 0.5rem; 
+}
+
+.form-group label { 
+  font-weight: 600; 
+  color: #374151; 
+  font-size: 0.875rem; 
+}
+
+.form-input { 
+  padding: 0.75rem; 
+  border: 2px solid #e5e7eb; 
+  border-radius: 0.5rem; 
+  font-size: 0.875rem; 
+  transition: border-color 0.2s ease; 
+}
+
+.form-input:focus { 
+  outline: none; 
+  border-color: #0077b6; 
+}
+
+.form-input:required:invalid { 
+  border-color: #ef4444; 
+}
+
+.modal-footer { 
+  display: flex; 
+  justify-content: flex-end; 
+  gap: 1rem; 
+  padding-top: 1.5rem; 
+  border-top: 1px solid #e5e7eb; 
+}
+
+.small-icon { 
+  width: 16px; 
+  height: 16px; 
+}

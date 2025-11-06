@@ -1,4 +1,4 @@
-const BASE_URL = '/api/nurse_api';
+const BASE_URL = '/api/nurse';
 
 // Dashboard Stats
 export async function getNurseDashboardStats(date) {
