@@ -1,4 +1,3 @@
-
 <?php
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -8,7 +7,15 @@ require_once '/home/site/wwwroot/database.php';
 
 try {
     $patient_id = isset($_GET['patient_id']) ? intval($_GET['patient_id']) : 0;
-    $appointment_id = isset($_GET['appointment_id']) ? intval($_GET['appointment_id']) : 0;
+    
+    // Handle appointment IDs - strip "A" prefix if present (e.g., "A1002" -> 1002)
+    $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
+    $appointment_id = 0;
+    if (!empty($appointment_id_raw)) {
+        // Remove "A" prefix if present
+        $cleaned_id = preg_replace('/^A/i', '', $appointment_id_raw);
+        $appointment_id = intval($cleaned_id);
+    }
     
     if ($patient_id === 0 && $appointment_id === 0) {
         http_response_code(400);
@@ -26,7 +33,7 @@ try {
     $conn = getDBConnection();
     
     // If appointment_id provided, get patient_id
-    if ($appointment_id) {
+    if ($appointment_id > 0) {
         // appointment has mixed case columns
         $apptSql = "SELECT Patient_id FROM appointment WHERE Appointment_id = ?";
         $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
