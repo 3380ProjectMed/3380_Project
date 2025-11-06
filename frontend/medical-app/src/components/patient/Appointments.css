@@ -17,3 +17,74 @@
 .small-icon { width:16px; height:16px; color:#0077b6; }
 .status-badge { display:inline-block; padding:0.5rem 1rem; border-radius:999px; font-size:0.875rem; font-weight:600; text-transform:capitalize; white-space:nowrap; }
 .status-badge.scheduled { background:#dbeafe; color:#1e40af; }
+
+/* Item type badge */
+.item-type-badge { 
+  display: inline-block; 
+  padding: 0.25rem 0.5rem; 
+  background: #e0f2fe; 
+  color: #0277bd; 
+  border-radius: 0.375rem; 
+  font-size: 0.75rem; 
+  font-weight: 500; 
+  margin-top: 0.25rem; 
+}
+
+/* Visit Summary Modal */
+.visit-summary-modal { 
+  max-width: 700px; 
+  width: 90vw; 
+}
+
+.visit-info-grid { 
+  display: grid; 
+  gap: 1.5rem; 
+  grid-template-columns: 1fr; 
+}
+
+@media (min-width: 768px) {
+  .visit-info-grid { 
+    grid-template-columns: 1fr 1fr; 
+  }
+}
+
+.visit-info-item { 
+  padding: 1rem; 
+  background: #f8fafc; 
+  border-radius: 0.75rem; 
+  border-left: 4px solid #0077b6; 
+}
+
+.info-label { 
+  display: flex; 
+  align-items: center; 
+  gap: 0.5rem; 
+  font-weight: 600; 
+  color: #374151; 
+  margin-bottom: 0.5rem; 
+  font-size: 0.875rem; 
+}
+
+.info-value { 
+  color: #1f2937; 
+  font-weight: 500; 
+  line-height: 1.5; 
+}
+
+.specialty { 
+  font-size: 0.875rem; 
+  color: #6b7280; 
+  font-style: italic; 
+  margin-top: 0.25rem; 
+}
+
+.address { 
+  font-size: 0.875rem; 
+  color: #6b7280; 
+  margin-top: 0.25rem; 
+}
+
+.text-muted { 
+  color: #9ca3af; 
+  font-style: italic; 
+}

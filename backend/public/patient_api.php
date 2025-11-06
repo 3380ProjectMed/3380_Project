@@ -906,7 +906,53 @@ elseif ($endpoint === 'offices') {
         } catch (Exception $e) {
             error_log("Offices error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load offices: ' . $e->getMessage(), 500);
-            sendResponse(false, [], 'Failed to load offices: ' . $e->getMessage(), 500);
+        }
+    }
+}
+
+// ==================== VISIT DETAILS ====================
+elseif ($endpoint === 'visit') {
+    if ($method === 'GET') {
+        $visit_id = $_GET['id'] ?? null;
+        
+        if (!$visit_id) {
+            sendResponse(false, [], 'Visit ID is required', 400);
+        }
+        
+        try {
+            $stmt = $mysqli->prepare("
+                SELECT 
+                    v.visit_id,
+                    v.date,
+                    v.reason_for_visit,
+                    v.diagnosis,
+                    v.treatment,
+                    v.blood_pressure,
+                    v.temperature,
+                    CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                    s.specialty_name,
+                    o.name as office_name,
+                    CONCAT(o.address, ', ', o.city, ', ', o.state, ' ', o.zipcode) as office_address
+                FROM patient_visit v
+                LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
+                LEFT JOIN specialty s ON d.specialty = s.specialty_id
+                LEFT JOIN office o ON v.office_id = o.office_id
+                WHERE v.visit_id = ? AND v.patient_id = ?
+            ");
+            $stmt->bind_param('ii', $visit_id, $patient_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $visit = $result->fetch_assoc();
+            
+            if (!$visit) {
+                sendResponse(false, [], 'Visit not found', 404);
+            }
+            
+            sendResponse(true, $visit);
+            
+        } catch (Exception $e) {
+            error_log("Visit details error: " . $e->getMessage());
+            sendResponse(false, [], 'Failed to load visit details', 500);
         }
     }
 }
@@ -919,29 +965,22 @@ elseif ($endpoint === 'medical-records') {
         try {
             switch ($type) {
                 case 'vitals':
-                    $stmt = $mysqli->prepare("                        SELECT 
-                            DATE(date) as date,
-                            blood_pressure as bp,
-                            temperature as temp
-                        FROM patient_visit
+                    // Return vaccination history instead of vitals
+                    $stmt = $mysqli->prepare("
+                        SELECT 
+                            vaccination_name as vaccine,
+                            DATE(date_of_vaccination) as date_given,
+                            DATE(date_for_booster) as booster_due
+                        FROM vaccination_history
                         WHERE patient_id = ?
-                        AND blood_pressure IS NOT NULL
-                        ORDER BY date DESC
-                    $stmt = $mysqli->prepare("                        SELECT 
-                            DATE(date) as date,
-                            blood_pressure as bp,
-                            temperature as temp
-                        FROM patient_visit
-                        WHERE patient_id = ?
-                        AND blood_pressure IS NOT NULL
-                        ORDER BY date DESC
+                        ORDER BY date_of_vaccination DESC
                         LIMIT 10
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
                     $result = $stmt->get_result();
-                    $vitals = $result->fetch_all(MYSQLI_ASSOC);
-                    sendResponse(true, $vitals);
+                    $vaccinations = $result->fetch_all(MYSQLI_ASSOC);
+                    sendResponse(true, $vaccinations);
                     break;
                     
                 case 'medications':
@@ -1191,13 +1230,11 @@ elseif ($endpoint === 'billing') {
         try {
             switch ($type) {
                 case 'balance':
-                    $stmt = $mysqli->prepare("                        SELECT 
-                            COALESCE(SUM(total_due), 0) as outstanding_balance
-                        FROM patient_visit
-                        WHERE patient_id = ?
-                        AND total_due > 0
-                    $stmt = $mysqli->prepare("                        SELECT 
-                            COALESCE(SUM(total_due), 0) as outstanding_balance
+                    error_log("Billing balance query for patient_id: " . $patient_id);
+                    $stmt = $mysqli->prepare("
+                        SELECT 
+                            COALESCE(SUM(total_due), 0) as outstanding_balance,
+                            COUNT(*) as visit_count
                         FROM patient_visit
                         WHERE patient_id = ?
                         AND total_due > 0
@@ -1206,17 +1243,14 @@ elseif ($endpoint === 'billing') {
                     $stmt->execute();
                     $result = $stmt->get_result();
                     $balance = $result->fetch_assoc();
+                    error_log("Billing balance result: " . json_encode($balance));
                     sendResponse(true, $balance);
                     break;
                     
                 case 'statements':
-                    $stmt = $mysqli->prepare("                        SELECT 
-                            v.visit_id as id,
-                            DATE(v.date) as date,
-                            v.reason_for_visit as service,
-                            v.amount_due as amount,
-                            v.total_due as balance,
-                    $stmt = $mysqli->prepare("                        SELECT 
+                    error_log("Billing statements query for patient_id: " . $patient_id);
+                    $stmt = $mysqli->prepare("
+                        SELECT 
                             v.visit_id as id,
                             DATE(v.date) as date,
                             v.reason_for_visit as service,
@@ -1245,88 +1279,9 @@ elseif ($endpoint === 'billing') {
                     $stmt->execute();
                     $result = $stmt->get_result();
                     $statements = $result->fetch_all(MYSQLI_ASSOC);
+                    error_log("Billing statements result count: " . count($statements));
                     sendResponse(true, $statements);
                     break;
-                    
-                case 'POST':
-                    // Process a payment for a visit
-                    $input = json_decode(file_get_contents('php://input'), true);
-                    $visit_id = isset($input['visit_id']) ? (int)$input['visit_id'] : null;
-                    $amount = isset($input['amount']) ? floatval($input['amount']) : 0;
-
-                    if ($amount <= 0) {
-                        sendResponse(false, [], 'Invalid payment amount', 400);
-                    }
-
-                    try {
-                        if ($visit_id) {
-                            $stmt = $mysqli->prepare("SELECT total_due, payment FROM patient_visit WHERE visit_id = ? AND patient_id = ? LIMIT 1");
-                            $stmt->bind_param('ii', $visit_id, $patient_id);
-                            $stmt->execute();
-                            $res = $stmt->get_result();
-                            $row = $res->fetch_assoc();
-                            if (!$row) {
-                                sendResponse(false, [], 'Visit not found', 404);
-                            }
-
-                            $currentpayment = floatval($row['payment'] ?? 0);
-                            $currentDue = floatval($row['total_due'] ?? 0);
-                            $newpayment = $currentpayment + $amount;
-                            $newDue = max(0, $currentDue - $amount);
-
-                            $stmt = $mysqli->prepare("UPDATE patient_visit SET payment = ?, total_due = ? WHERE visit_id = ? AND patient_id = ?");
-                            $stmt->bind_param('ddii', $newpayment, $newDue, $visit_id, $patient_id);
-                            $stmt->execute();
-
-                            sendResponse(true, ['visit_id' => $visit_id, 'paid' => $amount, 'new_balance' => $newDue], 'payment processed');
-                        } else {
-                            // No visit specified: apply as credit (not implemented fully).
-                            sendResponse(false, [], 'Visit id required for payment', 400);
-                        }
-                    } catch (Exception $e) {
-                        error_log('payment error: ' . $e->getMessage());
-                        sendResponse(false, [], 'Failed to process payment', 500);
-                    }
-                    
-                case 'POST':
-                    // Process a payment for a visit
-                    $input = json_decode(file_get_contents('php://input'), true);
-                    $visit_id = isset($input['visit_id']) ? (int)$input['visit_id'] : null;
-                    $amount = isset($input['amount']) ? floatval($input['amount']) : 0;
-
-                    if ($amount <= 0) {
-                        sendResponse(false, [], 'Invalid payment amount', 400);
-                    }
-
-                    try {
-                        if ($visit_id) {
-                            $stmt = $mysqli->prepare("SELECT total_due, payment FROM patient_visit WHERE visit_id = ? AND patient_id = ? LIMIT 1");
-                            $stmt->bind_param('ii', $visit_id, $patient_id);
-                            $stmt->execute();
-                            $res = $stmt->get_result();
-                            $row = $res->fetch_assoc();
-                            if (!$row) {
-                                sendResponse(false, [], 'Visit not found', 404);
-                            }
-
-                            $currentpayment = floatval($row['payment'] ?? 0);
-                            $currentDue = floatval($row['total_due'] ?? 0);
-                            $newpayment = $currentpayment + $amount;
-                            $newDue = max(0, $currentDue - $amount);
-
-                            $stmt = $mysqli->prepare("UPDATE patient_visit SET payment = ?, total_due = ? WHERE visit_id = ? AND patient_id = ?");
-                            $stmt->bind_param('ddii', $newpayment, $newDue, $visit_id, $patient_id);
-                            $stmt->execute();
-
-                            sendResponse(true, ['visit_id' => $visit_id, 'paid' => $amount, 'new_balance' => $newDue], 'payment processed');
-                        } else {
-                            // No visit specified: apply as credit (not implemented fully).
-                            sendResponse(false, [], 'Visit id required for payment', 400);
-                        }
-                    } catch (Exception $e) {
-                        error_log('payment error: ' . $e->getMessage());
-                        sendResponse(false, [], 'Failed to process payment', 500);
-                    }
                     
                 default:
                     sendResponse(false, [], 'Invalid billing type', 400);
@@ -1335,6 +1290,48 @@ elseif ($endpoint === 'billing') {
         } catch (Exception $e) {
             error_log("Billing error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load billing information', 500);
+        }
+    } elseif ($method === 'POST') {
+        try {
+            // Process a payment for a visit
+            $input = json_decode(file_get_contents('php://input'), true);
+            $visit_id = isset($input['visit_id']) ? (int)$input['visit_id'] : null;
+            $amount = isset($input['amount']) ? floatval($input['amount']) : 0;
+
+            if ($amount <= 0) {
+                sendResponse(false, [], 'Invalid payment amount', 400);
+            }
+
+            if ($visit_id) {
+                $stmt = $mysqli->prepare("SELECT total_due, payment FROM patient_visit WHERE visit_id = ? AND patient_id = ? LIMIT 1");
+                $stmt->bind_param('ii', $visit_id, $patient_id);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                $row = $res->fetch_assoc();
+                if (!$row) {
+                    sendResponse(false, [], 'Visit not found', 404);
+                }
+
+                $currentpayment = floatval($row['payment'] ?? 0);
+                $currentDue = floatval($row['total_due'] ?? 0);
+                $newpayment = $currentpayment + $amount;
+                $newDue = max(0, $currentDue - $amount);
+
+                $stmt = $mysqli->prepare("UPDATE patient_visit SET payment = ?, total_due = ? WHERE visit_id = ? AND patient_id = ?");
+                $stmt->bind_param('ddii', $newpayment, $newDue, $visit_id, $patient_id);
+                $stmt->execute();
+
+                sendResponse(true, ['visit_id' => $visit_id, 'paid' => $amount, 'new_balance' => $newDue], 'payment processed');
+            } else {
+                // No visit specified: apply as credit (not implemented fully).
+                sendResponse(false, [], 'Visit id required for payment', 400);
+            }
+        } catch (Exception $e) {
+            error_log('payment error: ' . $e->getMessage());
+            sendResponse(false, [], 'Failed to process payment', 500);
+        } catch (Exception $e) {
+            error_log('payment error: ' . $e->getMessage());
+            sendResponse(false, [], 'Failed to process payment', 500);
         }
     }
 }

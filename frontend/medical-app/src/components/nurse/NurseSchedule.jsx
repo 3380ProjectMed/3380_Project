@@ -6,22 +6,22 @@ export default function NurseSchedule() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  async function loadSchedule() {
-    setLoading(true);
-    setError(null);
-    try {
-  const data = await getNurseScheduleToday().catch(() => []);
-  setRows(Array.isArray(data) ? data : []);
-    } catch (e) {
-      if (e?.status === 401) {
-        setError('Unauthorized — redirecting to login');
-      } else {
-        setError(e?.data?.error === 'NURSE_NOT_FOUND' ? 'No nurse record is associated with this account.' : (e?.message || 'Failed to load schedule'));
-      }
-    } finally { setLoading(false); }
-  }
 
-  useEffect(() => { loadSchedule(); }, []);
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      setLoading(true);
+      try {
+        const today = new Date().toISOString().slice(0,10);
+  const data = await getNurseSchedule({ date: today }).catch(() => []);
+  if (mounted) setRows(Array.isArray(data) ? data : []);
+      } catch (e) {
+        if (mounted) setError(e.message || 'Failed to load schedule');
+      } finally { if (mounted) setLoading(false); }
+    }
+    load();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="nurse-page">

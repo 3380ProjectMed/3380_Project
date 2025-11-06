@@ -24,8 +24,10 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
           setStats({ total: s.totalAppointments ?? 0, waiting: s.waitingCount ?? 0, pending: s.upcomingCount ?? 0, completed: s.completedCount ?? 0 });
         }
 
-        const appts = await getNurseScheduleToday().catch(() => []);
-        if (mounted) setAppointments(Array.isArray(appts) ? appts : []);
+        const appts = await getNurseSchedule({ date: new Date().toISOString().slice(0,10) }).catch(() => null);
+        if (mounted) {
+          setAppointments(Array.isArray(appts) ? appts : []);
+        }
       } catch (err) {
         if (mounted) setError(err?.message || 'Failed to load');
       } finally {
@@ -36,28 +38,24 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
     return () => { mounted = false; };
   }, []);
 
+  // Filtering (search + status)
   const filteredAppointments = (Array.isArray(appointments) ? appointments : []).filter((app) => {
-    const patientName = app?.patientName ?? '';
-    const reason = app?.reason ?? '';
-    const status = (app?.status || '').toString();
+    const patientName = (app?.patientName || '').toLowerCase();
+    const reason = (app?.reason || '').toLowerCase();
+    const status = String(app?.status || '').toLowerCase();
 
-    const matchesSearch = (
-      patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reason.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const matchesFilter = filterStatus === 'all' || status.toLowerCase().replace(/\s+/g, '-') === filterStatus;
+    const matchesSearch = patientName.includes(searchTerm.toLowerCase()) || reason.includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || status.replace(/\s+/g, '-') === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
   const getStatusClass = (status) => {
-    const s = (status || '').toLowerCase();
+    const s = String(status || '').toLowerCase();
     const statusMap = {
-      'scheduled': 'status-scheduled',
-      'waiting': 'status-waiting',
+      scheduled: 'status-scheduled',
       'in waiting': 'status-waiting',
       'in consultation': 'status-consultation',
-      'completed': 'status-completed'
+      completed: 'status-completed',
     };
     return statusMap[s] || '';
   };
