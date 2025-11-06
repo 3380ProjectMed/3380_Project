@@ -1,10 +1,12 @@
 <?php
-header('Content-Type: application/json');
 /**
  * Get patient visit details including vitals and notes
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
+
+// Set JSON content type header
+header('Content-Type: application/json');
 
 try {
     session_start();
