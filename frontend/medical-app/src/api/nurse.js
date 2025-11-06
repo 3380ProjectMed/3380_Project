@@ -1,6 +1,37 @@
 const BASE_URL = '/api/nurse_api';
 
-// Schedule
+// Dashboard Stats
+export async function getNurseDashboardStats(date) {
+  const response = await fetch(`${BASE_URL}/dashboard/get-stats.php?date=${date}`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+// Schedule - with date parameter
+export async function getNurseSchedule({ date }) {
+  const response = await fetch(`${BASE_URL}/schedule/get-by-date.php?date=${date}`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  
+  // Return appointments array directly (matching what NurseDashboard expects)
+  return data.appointments || data.data || [];
+}
+
+// Schedule - today (existing function)
 export async function getNurseScheduleToday() {
   const response = await fetch(`${BASE_URL}/schedule/get-today.php`, {
     credentials: 'include',
