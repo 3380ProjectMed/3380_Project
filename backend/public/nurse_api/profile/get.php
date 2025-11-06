@@ -1,22 +1,4 @@
 <?php
-// nurse_api/profile/get.php
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
-header('Content-Type: application/json');
-
-try {
-    session_start();
-    if (empty($_SESSION['uid'])) {
-        http_response_code(401);
-        echo json_encode(['error' => 'UNAUTHENTICATED', 'message' => 'Please sign in']);
-        exit;
-    }
-
-    $conn = getDBConnection();
-
-    // Prefer matching staff by the session email
-    $email = $_SESSION['email'] ?? '';
-    <?php
     require_once __DIR__ . '/../../../cors.php';
     require_once __DIR__ . '/../../../database.php';
     header('Content-Type: application/json');
@@ -71,4 +53,4 @@ try {
         echo json_encode(['error' => 'DB_ERROR', 'message' => $e->getMessage()]);
         exit;
     }
-    ?>
+?>

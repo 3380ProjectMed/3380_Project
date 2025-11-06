@@ -11,23 +11,7 @@ function debug_log($message) {
 debug_log('=== ME.PHP START ===');
 
 
-// Log to a file we can check
-$logFile = '/home/site/wwwroot/me_debug.log';
-function debug_log($message) {
-    global $logFile;
-    file_put_contents($logFile, date('Y-m-d H:i:s') . ' - ' . $message . PHP_EOL, FILE_APPEND);
-}
-
-debug_log('=== ME.PHP START ===');
-
 // Ensure CORS headers for cross-origin requests from the dev server
-if (file_exists(__DIR__ . '/../cors.php')) {
-    require_once __DIR__ . '/../cors.php';
-} else {
-    require_once '/home/site/wwwroot/cors.php';
-}
-debug_log('CORS loaded');
-
 if (file_exists(__DIR__ . '/../cors.php')) {
     require_once __DIR__ . '/../cors.php';
 } else {
@@ -41,7 +25,6 @@ ini_set('display_startup_errors', '0');
 ini_set('html_errors', '0');
 error_reporting(E_ALL & ~E_DEPRECATED);
 
-// Start output buffering so we can control any accidental output
 // Start output buffering so we can control any accidental output
 ob_start();
 register_shutdown_function(function () {
@@ -77,10 +60,8 @@ header('Content-Type: application/json');
 
 debug_log('Session UID: ' . ($_SESSION['uid'] ?? 'NOT SET'));
 
-debug_log('Session UID: ' . ($_SESSION['uid'] ?? 'NOT SET'));
 
 if (empty($_SESSION['uid'])) {
-  debug_log('No UID in session - returning 401');
   debug_log('No UID in session - returning 401');
   http_response_code(401);
   echo json_encode(['error' => 'Not authenticated']);
@@ -104,10 +85,10 @@ debug_log('SSL cert exists: ' . (file_exists($sslCertPath) ? 'YES' : 'NO'));
 
 if (file_exists($sslCertPath)) {
     $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);
-    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, true);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 1);
 } else {
     $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
-    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+    $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 0);
 }
 
 $host = getenv('AZURE_MYSQL_HOST') ?: '';
@@ -230,8 +211,7 @@ if (method_exists($stmt, 'get_result')) {
   debug_log('User built from bind_result: ' . json_encode($user));
 }
 
-if (!$user) {
-  debug_log('User is null after fetch');
+
 if (!$user) {
   debug_log('User is null after fetch');
   session_destroy();
@@ -248,6 +228,5 @@ echo json_encode($user);
 
 $stmt->close();
 $mysqli->close();
-debug_log('=== ME.PHP END SUCCESS ===');
-debug_log('=== ME.PHP END SUCCESS ===');
+
 exit;
