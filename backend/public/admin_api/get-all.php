@@ -1,10 +1,7 @@
 <?php
 /**
  * Admin API: Get all users
- * Admin API: Get all users
  */
-require_once '/home/site/wwwroot/cors.php';
-require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
@@ -14,13 +11,8 @@ try {
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-    
-    if (empty($_SESSION['uid'])) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
     
     $conn = getDBConnection();
     
@@ -46,27 +38,20 @@ try {
                 u.last_login_at,
                 u.mfa_enabled,
                 CASE 
-                    WHEN u.role = 'DOCTOR' THEN CONCAT(d.First_Name, ' ', d.Last_Name)
-                    WHEN u.role = 'PATIENT' THEN CONCAT(p.First_Name, ' ', p.Last_Name)
+                    WHEN u.role = 'DOCTOR' THEN CONCAT(d.first_Name, ' ', d.last_Name)
+                    WHEN u.role = 'PATIENT' THEN CONCAT(p.first_Name, ' ', p.last_Name)
                     ELSE u.username
                 END as full_name,
-                d.Doctor_id,
-                p.Patient_ID
+                d.doctor_id,
+                p.patient_ID
             FROM user_account u
-            LEFT JOIN Doctor d ON u.email = d.Email AND u.role = 'DOCTOR'
-            LEFT JOIN Patient p ON u.email = p.Email AND u.role = 'PATIENT'
+            LEFT JOIN doctor d ON u.email = d.email AND u.role = 'DOCTOR'
+            LEFT JOIN patient p ON u.email = p.email AND u.role = 'PATIENT'
             ORDER BY u.created_at DESC";
     
     $users = executeQuery($conn, $sql);
     
     closeDBConnection($conn);
-    
-    echo json_encode([
-        'success' => true,
-        'users' => $users,
-        'count' => count($users)
-    ]);
-    
     
     echo json_encode([
         'success' => true,
