@@ -1,9 +1,9 @@
 <?php
-/**
- * Save/update clinical note in patient_visit.treatment field
- */
+// save-note.php
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
+// Set JSON content type header
+header('Content-Type: application/json');
 
 try {
     session_start();
