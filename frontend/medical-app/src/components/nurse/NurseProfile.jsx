@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./NurseProfile.css";
-import { getNurseProfileSession } from '../../api/nurse';
+import { getNurseProfileSession, updateNurseProfile } from '../../api/nurse';
 
 export default function NurseProfile() {
   const [user, setUser] = useState({ name: 'Nurse', title: '', email: '', phone: '' });
@@ -20,6 +20,23 @@ export default function NurseProfile() {
     load();
     return () => { mounted = false; };
   }, []);
+
+  async function handleUpdateProfile(updatedProfile) {
+    if (!user || !user.profile) {
+      console.error('User profile is undefined');
+      return;
+    }
+    try {
+      // forward to API and merge returned values if any
+      const res = await updateNurseProfile(updatedProfile).catch(() => null);
+      if (res) {
+        // merge minimal fields back into local state
+        setUser((prev) => ({ ...prev, ...res }));
+      }
+    } catch (e) {
+      console.error('Failed to update nurse profile', e);
+    }
+  }
 
   return (
     <div className="nurse-page">
