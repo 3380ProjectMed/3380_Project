@@ -1,7 +1,6 @@
 <?php
 /**
  * Get patient visit details including vitals and notes
- * FIXED: Now handles appointments that don't have patient_visit records yet
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -14,8 +13,18 @@ try {
         exit;
     }
 
+    // Handle IDs - strip any "A" prefix from appointment IDs before converting to int
     $visit_id = isset($_GET['visit_id']) ? intval($_GET['visit_id']) : 0;
-    $appointment_id = isset($_GET['appointment_id']) ? intval($_GET['appointment_id']) : 0;
+    
+    // For appointment_id, strip "A" prefix if present (e.g., "A1002" -> 1002)
+    $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
+    $appointment_id = 0;
+    if (!empty($appointment_id_raw)) {
+        // Remove "A" prefix if present
+        $cleaned_id = preg_replace('/^A/i', '', $appointment_id_raw);
+        $appointment_id = intval($cleaned_id);
+    }
+    
     $patient_id = isset($_GET['patient_id']) ? intval($_GET['patient_id']) : 0;
 
     if ($visit_id === 0 && $appointment_id === 0 && $patient_id === 0) {
@@ -109,7 +118,11 @@ try {
                 echo json_encode([
                     'success' => false, 
                     'error' => 'Appointment not found',
-                    'has_visit' => false
+                    'has_visit' => false,
+                    'debug' => [
+                        'appointment_id_searched' => $appointment_id,
+                        'query' => 'appointment table'
+                    ]
                 ]);
                 closeDBConnection($conn);
                 exit;
