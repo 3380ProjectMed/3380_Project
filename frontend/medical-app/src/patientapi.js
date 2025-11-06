@@ -66,7 +66,28 @@ export const medicalRecordsAPI = {
   j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=conditions`),
 
   getVisitSummaries: () => 
-  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=visit-summaries`)
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=visit-summaries`),
+
+  addMedication: (medicationData) =>
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=medications`, {
+    method: 'POST',
+    body: medicationData
+  }),
+
+  updateAllergy: (allergyData) =>
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=allergies`, {
+    method: 'POST',
+    body: allergyData
+  }),
+
+  getAllAvailableAllergies: () =>
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=all-allergies`)
+};
+
+// ==================== VISITS ====================
+export const visitAPI = {
+  getVisitById: (visitId) => 
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=visit&id=${visitId}`)
 };
 
 // ==================== INSURANCE ====================
@@ -113,6 +134,7 @@ export default {
   profile: profileAPI,
   appointments: appointmentsAPI,
   medicalRecords: medicalRecordsAPI,
+  visits: visitAPI,
   insurance: insuranceAPI,
   billing: billingAPI
 };

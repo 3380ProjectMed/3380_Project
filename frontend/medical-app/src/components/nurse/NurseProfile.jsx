@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./NurseProfile.css";
-import { getNurseProfile } from '../../api/nurse';
+import { getNurseProfile, updateNurseProfile } from '../../api/nurse';
 
 export default function NurseProfile() {
   const [user, setUser] = useState({ name: 'Nurse', title: '', email: '', phone: '' });
@@ -9,17 +9,35 @@ export default function NurseProfile() {
     let mounted = true;
     async function load() {
       try {
-        const p = await getNurseProfile().catch(() => null);
+        const p = await getNurseProfileSession().catch(() => null);
         if (p && mounted) {
-          setUser({ name: (p.firstName || '') + ' ' + (p.lastName || ''), title: '', email: p.email || '', phone: p.phone || '' });
+          setUser({ name: ((p.firstName || '') + ' ' + (p.lastName || '')).trim() || 'Nurse', title: '', email: p.email || '', phone: p.phone || '' });
         }
       } catch (e) {
-        // ignore
+        // ignore but keep defaults
       }
     }
     load();
     return () => { mounted = false; };
   }, []);
+
+  // Safe update handler for profile edits. If other code calls an "onUpdateProfile"
+  // ensure it checks that user.profile exists before attempting to read it.
+  async function handleUpdateProfile(updatedProfile) {
+    if (!user?.profile) {
+      console.error('User profile is undefined');
+      return;
+    }
+    try {
+      // forward to API and merge returned values if any
+      const res = await updateNurseProfile(updatedProfile).catch(() => null);
+      if (res) {
+        setUser((prev) => ({ ...prev, ...res }));
+      }
+    } catch (e) {
+      console.error('Failed to update nurse profile', e);
+    }
+  }
 
   return (
     <div className="nurse-page">

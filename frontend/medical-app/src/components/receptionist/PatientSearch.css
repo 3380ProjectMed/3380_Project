@@ -1,0 +1,540 @@
+/* ========== PATIENT SEARCH PAGE ========== */
+.patient-search-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ===== PAGE HEADER ===== */
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #03045e;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: 1.1rem;
+  color: #6b7280;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* ===== SEARCH SECTION ===== */
+.search-section {
+  margin-bottom: 2rem;
+}
+
+.search-box-container {
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.search-icon-left {
+  position: absolute;
+  left: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.search-input-main {
+  width: 100%;
+  padding: 1rem 3.5rem 1rem 3.5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  color: #1f2937;
+  background: white;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.search-input-main:focus {
+  outline: none;
+  border-color: #00b4d8;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.search-input-main::placeholder {
+  color: #9ca3af;
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-clear-btn:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.search-results-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 600;
+  padding-left: 0.5rem;
+}
+
+/* ===== PATIENTS GRID ===== */
+.patients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.patient-result-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.patient-result-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 119, 182, 0.15);
+  border-color: #00b4d8;
+}
+
+/* Patient Avatar */
+.patient-avatar-large {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  border: 3px solid #00b4d8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0077b6;
+  flex-shrink: 0;
+}
+
+/* Patient Info */
+.patient-info-main {
+  flex: 1;
+}
+
+.patient-name-large {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.2;
+}
+
+.patient-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-item svg {
+  color: #6b7280;
+  margin-bottom: 0.125rem;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.detail-email {
+  color: #0077b6;
+  word-break: break-all;
+}
+
+/* Insurance Badge */
+.patient-insurance-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border: 2px solid #bae6fd;
+  border-radius: 0.75rem;
+}
+
+.patient-insurance-badge svg {
+  color: #0077b6;
+  flex-shrink: 0;
+}
+
+.insurance-name {
+  font-weight: 700;
+  color: #0077b6;
+  margin: 0 0 0.125rem 0;
+  font-size: 0.95rem;
+}
+
+.insurance-policy {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+/* Balance Alert */
+.balance-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #fef3c7;
+  border: 2px solid #fcd34d;
+  border-radius: 0.5rem;
+  color: #92400e;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state-search {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 1rem;
+  border: 2px dashed #e5e7eb;
+}
+
+.empty-state-search svg {
+  color: #d1d5db;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state-search h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state-search p {
+  font-size: 1.1rem;
+  color: #6b7280;
+  margin: 0 0 1.5rem 0;
+}
+
+/* ===== MODAL STYLES ===== */
+.modal-large {
+  max-width: 900px;
+}
+
+/* Info Sections */
+.info-section {
+  margin-bottom: 2rem;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #03045e;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+.info-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.info-field-full {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.field-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.link-phone,
+.link-email {
+  color: #0077b6;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.link-phone:hover,
+.link-email:hover {
+  color: #00b4d8;
+  text-decoration: underline;
+}
+
+/* Insurance Card Display */
+.insurance-card-display {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border: 2px solid #0077b6;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.1);
+}
+
+.insurance-provider-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0077b6;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #bae6fd;
+}
+
+.insurance-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.insurance-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.insurance-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.insurance-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  font-family: 'Courier New', monospace;
+}
+
+.insurance-copay {
+  font-size: 1.25rem;
+  color: #0077b6;
+  font-weight: 800;
+}
+
+/* Visit History */
+.visit-history-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.visit-card {
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.visit-card-upcoming {
+  background: linear-gradient(135deg, #d1fae5, #ffffff);
+  border-color: #6ee7b7;
+}
+
+.visit-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.visit-date {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.visit-card-upcoming .visit-date {
+  color: #059669;
+}
+
+/* Alert Message */
+.alert-message {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 1200px) {
+  .patients-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .patient-search-page {
+    padding: 1.5rem;
+  }
+
+  .page-title {
+    font-size: 2rem;
+  }
+
+  .patients-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .insurance-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .visit-history-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .patient-search-page {
+    padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.75rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .search-input-main {
+    padding: 0.875rem 3rem 0.875rem 3rem;
+    font-size: 0.95rem;
+  }
+
+  .patient-result-card {
+    padding: 1.25rem;
+  }
+
+  .patient-avatar-large {
+    width: 56px;
+    height: 56px;
+  }
+
+  .patient-name-large {
+    font-size: 1.25rem;
+  }
+
+  .patient-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-large {
+    max-width: 95%;
+  }
+
+  .insurance-provider-name {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .search-input-main {
+    padding: 0.75rem 2.75rem 0.75rem 2.75rem;
+    font-size: 0.875rem;
+  }
+
+  .search-icon-left {
+    left: 1rem;
+  }
+
+  .search-clear-btn {
+    right: 0.75rem;
+  }
+
+  .patient-result-card {
+    padding: 1rem;
+  }
+
+  .patient-avatar-large {
+    width: 48px;
+    height: 48px;
+  }
+
+  .patient-name-large {
+    font-size: 1.125rem;
+  }
+
+  .section-heading {
+    font-size: 1.125rem;
+  }
+
+  .insurance-provider-name {
+    font-size: 1.125rem;
+  }
+}

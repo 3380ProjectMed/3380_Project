@@ -23,7 +23,6 @@ export default function PatientPortal({ onLogout }) {
 
   // --- Auth/user comes from context (don't rely on a prop) ---
   const { user, logout: ctxLogout } = useAuth();
-  const displayName = user?.username ?? 'Patient';
 
   // --- UI state ---
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -67,7 +66,12 @@ export default function PatientPortal({ onLogout }) {
       try {
         switch (currentPage) {
           case 'dashboard': await loadDashboard(); break;
-          case 'profile': await loadProfile(); break;
+          case 'profile': 
+            await loadProfile(); 
+            // Load doctors for PCP selection dropdown
+            const d = await api.appointments.getDoctors();
+            if (d.success) setDoctors(d.data ?? []);
+            break;
           case 'appointments': await loadAppointments(); break;
           case 'records': await loadMedicalRecords(); break;
           case 'insurance': await loadInsurance(); break;
@@ -107,6 +111,11 @@ export default function PatientPortal({ onLogout }) {
         last_name: r.data.last_name || '',
         dob: r.data.dob || '',
         email: r.data.email || '',
+        emergency_contact: r.data.emergency_contact || '',
+        emergency_contact_first_name: r.data.emergency_contact_first_name || '',
+        emergency_contact_last_name: r.data.emergency_contact_last_name || '',
+        emergency_contact_relationship: r.data.emergency_contact_relationship || '',
+        primary_doctor: r.data.pcp_id || '',
         // prefer human-readable labels returned by the API
         gender: r.data.Gender_Text ?? r.data.gender ?? fd.gender,
         genderAtBirth: r.data.AssignedAtBirth_Gender_Text ?? r.data.assigned_at_birth_gender ?? fd.genderAtBirth,
@@ -151,12 +160,19 @@ export default function PatientPortal({ onLogout }) {
   }
 
   async function loadBilling() {
-    const [b, s] = await Promise.all([
-      api.billing.getBalance(),
-      api.billing.getStatements(),
-    ]);
-    if (b.success) setBillingBalance(b.data?.outstanding_balance ?? 0);
-    if (s.success) setBillingStatements(s.data ?? []);
+    console.log('loadBilling called');
+    try {
+      const [b, s] = await Promise.all([
+        api.billing.getBalance(),
+        api.billing.getStatements(),
+      ]);
+      console.log('Billing balance response:', b);
+      console.log('Billing statements response:', s);
+      if (b.success) setBillingBalance(b.data?.outstanding_balance ?? 0);
+      if (s.success) setBillingStatements(s.data ?? []);
+    } catch (error) {
+      console.error('Error loading billing:', error);
+    }
   }
 
   // Save profile changes (personal fields + demographics)
@@ -206,6 +222,11 @@ export default function PatientPortal({ onLogout }) {
         last_name: formData.last_name,
         email: formData.email,
         dob: formData.dob,
+        emergency_contact: formData.emergency_contact,
+        emergency_contact_first_name: formData.emergency_contact_first_name,
+        emergency_contact_last_name: formData.emergency_contact_last_name,
+        emergency_contact_relationship: formData.emergency_contact_relationship,
+        primary_doctor: formData.primary_doctor,
         // include demographics
         gender: formData.gender,
         genderAtBirth: formData.genderAtBirth,
@@ -239,6 +260,11 @@ export default function PatientPortal({ onLogout }) {
       last_name: profile?.last_name || '',
       dob: profile?.dob || '',
       email: profile?.email || '',
+      emergency_contact: profile?.emergency_contact || '',
+      emergency_contact_first_name: profile?.emergency_contact_first_name || '',
+      emergency_contact_last_name: profile?.emergency_contact_last_name || '',
+      emergency_contact_relationship: profile?.emergency_contact_relationship || '',
+      primary_doctor: profile?.pcp_id || '',
       gender: profile?.gender ?? fd.gender,
       genderAtBirth: profile?.assigned_at_birth_gender ?? fd.genderAtBirth,
       ethnicity: profile?.ethnicity ?? fd.ethnicity,
@@ -383,8 +409,9 @@ export default function PatientPortal({ onLogout }) {
       // Extract user-friendly message from API error response
       let errorMessage = 'Failed to book appointment';
       if (err.message) {
-        // Try to extract JSON from error message (format: "HTTP 400 Bad Request - {json}")
-        const jsonMatch = err.message.match(/- ({.*})$/);
+        // Try to extract JSON from error message (handles multiline JSON)
+        const jsonMatch = err.message.match(/- (\{[\s\S]*\})$/);
+        
         if (jsonMatch) {
           try {
             const errorData = JSON.parse(jsonMatch[1]);
@@ -394,6 +421,7 @@ export default function PatientPortal({ onLogout }) {
             errorMessage = err.message;
           }
         } else {
+          // If no JSON match found, use the original error message
           errorMessage = err.message;
         }
       }
@@ -427,8 +455,8 @@ export default function PatientPortal({ onLogout }) {
       // Extract user-friendly message from API error response
       let errorMessage = 'Failed to cancel appointment';
       if (err.message) {
-        // Try to extract JSON from error message (format: "HTTP 400 Bad Request - {json}")
-        const jsonMatch = err.message.match(/- ({.*})$/);
+        // Try to extract JSON from error message (handles multiline JSON)
+        const jsonMatch = err.message.match(/- (\{[\s\S]*\})$/);
         if (jsonMatch) {
           try {
             const errorData = JSON.parse(jsonMatch[1]);
@@ -438,6 +466,7 @@ export default function PatientPortal({ onLogout }) {
             errorMessage = err.message;
           }
         } else {
+          // If no JSON match found, use the original error message
           errorMessage = err.message;
         }
       }
@@ -475,7 +504,17 @@ export default function PatientPortal({ onLogout }) {
     last_name: '',
     dob: '',
     email: '',
+    emergency_contact: '',
+    emergency_contact_first_name: '',
+    emergency_contact_last_name: '',
+    emergency_contact_relationship: '',
+    primary_doctor: '',
   });
+
+  // Calculate display name based on patient's first and last name
+  const displayName = formData.first_name && formData.last_name 
+    ? `${formData.first_name} ${formData.last_name}` 
+    : user?.username ?? 'Patient';
 
   const genderOptions = ['Male', 'Female', 'Non-Binary', 'Prefer to Self-Describe', 'Prefer not to say', 'Other'];
   const genderAtBirthOptions = ['Male', 'Female', 'Intersex', 'Prefer not to say', 'Other'];
@@ -585,6 +624,7 @@ export default function PatientPortal({ onLogout }) {
   const portalProps = {
     displayName,
     loading,
+    profile,
     upcomingAppointments,
     appointmentHistory,
     pcp,
@@ -605,7 +645,6 @@ export default function PatientPortal({ onLogout }) {
     handleBookingBack,
     handleBookingSubmit,
     handleCancelAppointment,
-    profile,
     formData,
     setFormData,
     profileErrors,
@@ -618,10 +657,8 @@ export default function PatientPortal({ onLogout }) {
     ethnicityOptions,
     raceOptions,
     saveProfile: handleSaveProfile,
-    processPayment: api.billing.processPayment,
-  };
-
-  return (
+    processPayment: api.billing.makePayment,
+  };  return (
     <div className="patient-portal-root">
       {/* Sidebar (fixed on the left) */}
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
@@ -631,7 +668,7 @@ export default function PatientPortal({ onLogout }) {
         {currentPage === 'dashboard' && <Dashboard {...portalProps} />}
         {currentPage === 'profile' && <Profile {...portalProps} />}
         {currentPage === 'appointments' && <Appointments {...portalProps} />}
-        {currentPage === 'records' && <MedicalRecords {...portalProps} />}
+        {currentPage === 'records' && <MedicalRecords {...portalProps} onRefresh={loadMedicalRecords} />}
         {currentPage === 'insurance' && <Insurance {...portalProps} />}
         {currentPage === 'billing' && <Billing {...portalProps} />}
       </main>

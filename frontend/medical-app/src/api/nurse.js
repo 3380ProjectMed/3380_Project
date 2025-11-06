@@ -37,12 +37,21 @@ const USE_MOCKS = String(import.meta.env.VITE_USE_MOCKS || '') === 'true';
 export function getToken() {
   try {
     // stored value sometimes double-quoted
-    const raw = localStorage.getItem('auth.token');
-    if (!raw) return '';
-    const parsed = JSON.parse(raw);
-    return typeof parsed === 'string' ? parsed : raw;
+    const keysToTry = ['auth.token', 'authToken', 'auth', 'token', 'access_token'];
+    for (const k of keysToTry) {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'string' && parsed.length) return parsed;
+      } catch (e) {
+        // not JSON — use raw if non-empty
+        if (raw && raw.length) return raw;
+      }
+    }
+    return '';
   } catch (e) {
-    return localStorage.getItem('auth.token') || '';
+    return localStorage.getItem('auth.token') || localStorage.getItem('token') || '';
   }
 }
 
@@ -82,6 +91,15 @@ export async function request(method, path, body, init = {}) {
   }
 
   if (!res.ok) {
+    // If the server returned 401, redirect to the login page so the app can re-authenticate.
+    if (res.status === 401) {
+      try {
+        // best-effort redirect (will be a no-op in some test contexts)
+        window.location.href = '/login';
+      } catch (e) {
+        // ignore
+      }
+    }
     throw new ApiError((data && data.message) || res.statusText || 'Request failed', res.status, data);
   }
   return /** @type {T} */ (data);
@@ -191,6 +209,36 @@ export async function searchNursePatients(email, q, page, pageSize) {
   const path = `/nurse_api/patients/get-all.php${qs.toString() ? `?${qs.toString()}` : ''}`;
   // attach X-User-Email header so backend can resolve the nurse record
   return request('GET', path, undefined, { headers: { 'X-User-Email': String(email || '') } });
+}
+
+/**
+ * Get nurse profile (session-authenticated)
+ * GET /nurse_api/profile/get.php
+ */
+export async function getNurseProfileSession() {
+  if (USE_MOCKS) return { nurseId: 1, staffId: 101, officeId: 1, firstName: 'Mock', lastName: 'Nurse' };
+  return request('GET', '/nurse_api/profile/get.php');
+}
+
+/**
+ * Get today's schedule for the nurse (session-authenticated)
+ * GET /nurse_api/schedule/get-today.php
+ */
+export async function getNurseScheduleToday() {
+  if (USE_MOCKS) return mockSchedule();
+  return request('GET', '/nurse_api/schedule/get-today.php');
+}
+
+/**
+ * Get upcoming patients for the nurse's location (session-authenticated)
+ * GET /nurse_api/patients/get-upcoming.php?q=
+ */
+export async function getNursePatientsUpcoming(q) {
+  if (USE_MOCKS) return (await mockPatients()).items;
+  const qs = new URLSearchParams();
+  if (q) qs.set('q', q);
+  const path = `/nurse_api/patients/get-upcoming.php${qs.toString() ? `?${qs.toString()}` : ''}`;
+  return request('GET', path);
 }
 
 /**

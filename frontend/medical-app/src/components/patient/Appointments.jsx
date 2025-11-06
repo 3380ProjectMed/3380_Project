@@ -1,9 +1,33 @@
-import React from 'react';
-import { Plus, Calendar, Clock, MapPin, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Calendar, Clock, MapPin, ChevronRight, X, User, FileText, Thermometer, Activity } from 'lucide-react';
 import './Appointments.css';
+import api from '../../patientapi.js';
 
 export default function Appointments(props) {
   const { loading, upcomingAppointments = [], appointmentHistory = [], setShowBookingModal, handleCancelAppointment } = props;
+  const [showVisitSummary, setShowVisitSummary] = useState(false);
+  const [visitDetails, setVisitDetails] = useState(null);
+  const [visitLoading, setVisitLoading] = useState(false);
+
+  const handleViewSummary = async (appointment) => {
+    // Only show summary for completed visits
+    if (appointment.item_type !== 'Visit') {
+      return;
+    }
+
+    setVisitLoading(true);
+    try {
+      const response = await api.visits.getVisitById(appointment.id);
+      if (response.success) {
+        setVisitDetails(response.data);
+        setShowVisitSummary(true);
+      }
+    } catch (error) {
+      console.error('Error fetching visit details:', error);
+    } finally {
+      setVisitLoading(false);
+    }
+  };
 
   return (
     <div className="portal-content">
@@ -61,14 +85,113 @@ export default function Appointments(props) {
                     <div>
                       <h4>{apt.doctor_name}</h4>
                       <p>{new Date(apt.date).toLocaleDateString()} — {apt.reason}</p>
+                      {apt.item_type && <span className="item-type-badge">{apt.item_type}</span>}
                     </div>
-                    <button className="btn btn-link">View Summary <ChevronRight className="small-icon" /></button>
+                    {apt.item_type === 'Visit' ? (
+                      <button 
+                        className="btn btn-link" 
+                        onClick={() => handleViewSummary(apt)}
+                        disabled={visitLoading}
+                      >
+                        {visitLoading ? 'Loading...' : 'View Summary'} <ChevronRight className="small-icon" />
+                      </button>
+                    ) : (
+                      <span className="text-muted">No summary available</span>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
         </>
+      )}
+
+      {/* Visit Summary Modal */}
+      {showVisitSummary && visitDetails && (
+        <div className="modal-overlay" onClick={() => setShowVisitSummary(false)}>
+          <div className="modal-content visit-summary-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Visit Summary</h2>
+              <button className="modal-close" onClick={() => setShowVisitSummary(false)}>
+                <X className="icon" />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="visit-info-grid">
+                <div className="visit-info-item">
+                  <div className="info-label">
+                    <Calendar className="small-icon" /> Date
+                  </div>
+                  <div className="info-value">
+                    {new Date(visitDetails.date).toLocaleDateString()}
+                  </div>
+                </div>
+
+                <div className="visit-info-item">
+                  <div className="info-label">
+                    <User className="small-icon" /> Doctor
+                  </div>
+                  <div className="info-value">
+                    {visitDetails.doctor_name}
+                    {visitDetails.specialty_name && (
+                      <div className="specialty">{visitDetails.specialty_name}</div>
+                    )}
+                  </div>
+                </div>
+
+                {visitDetails.office_name && (
+                  <div className="visit-info-item">
+                    <div className="info-label">
+                      <MapPin className="small-icon" /> Office
+                    </div>
+                    <div className="info-value">
+                      {visitDetails.office_name}
+                      {visitDetails.office_address && (
+                        <div className="address">{visitDetails.office_address}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {visitDetails.diagnosis && (
+                  <div className="visit-info-item">
+                    <div className="info-label">
+                      <FileText className="small-icon" /> Diagnosis
+                    </div>
+                    <div className="info-value">{visitDetails.diagnosis}</div>
+                  </div>
+                )}
+
+                {visitDetails.treatment && (
+                  <div className="visit-info-item">
+                    <div className="info-label">
+                      <FileText className="small-icon" /> Treatment
+                    </div>
+                    <div className="info-value">{visitDetails.treatment}</div>
+                  </div>
+                )}
+
+                {visitDetails.temperature && (
+                  <div className="visit-info-item">
+                    <div className="info-label">
+                      <Thermometer className="small-icon" /> Temperature
+                    </div>
+                    <div className="info-value">{visitDetails.temperature}°F</div>
+                  </div>
+                )}
+
+                {visitDetails.blood_pressure && (
+                  <div className="visit-info-item">
+                    <div className="info-label">
+                      <Activity className="small-icon" /> Blood Pressure
+                    </div>
+                    <div className="info-value">{visitDetails.blood_pressure} mmHg</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
