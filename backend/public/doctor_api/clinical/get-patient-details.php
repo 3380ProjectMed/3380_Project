@@ -17,7 +17,7 @@ try {
 
     // Handle IDs - strip any "A" prefix from appointment IDs before converting to int
     $visit_id = isset($_GET['visit_id']) ? intval($_GET['visit_id']) : 0;
-    
+
     // For appointment_id, strip "A" prefix if present (e.g., "A1002" -> 1002)
     $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
     $appointment_id = 0;
@@ -29,7 +29,7 @@ try {
         }
         $appointment_id = intval($cleaned_id);
     }
-    
+
     $patient_id = isset($_GET['patient_id']) ? intval($_GET['patient_id']) : 0;
 
     if ($visit_id === 0 && $appointment_id === 0 && $patient_id === 0) {
@@ -71,7 +71,7 @@ try {
                 CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
                 CONCAT(s.first_name, ' ', s.last_name) as nurse_name,
                 o.name as office_name";
-    
+
     $baseFrom = " FROM patient_visit pv
                 LEFT JOIN patient p ON pv.patient_id = p.patient_id
                 LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
@@ -82,17 +82,17 @@ try {
                 LEFT JOIN office o ON pv.office_id = o.office_id";
 
     $rows = [];
-    
+
     if ($appointment_id > 0) {
         // First try to find an existing patient_visit for this appointment
         $sql = $baseSelect . ", a.Appointment_date, a.Reason_for_visit as appointment_reason"
-             . $baseFrom
-             . " LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
+            . $baseFrom
+            . " LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
                 WHERE pv.appointment_id = ?
                 ORDER BY pv.date DESC
                 LIMIT 1";
         $rows = executeQuery($conn, $sql, 'i', [$appointment_id]);
-        
+
         // If no patient_visit exists, get appointment and patient data
         if (empty($rows)) {
             $apptSql = "SELECT 
@@ -117,11 +117,11 @@ try {
                     LEFT JOIN office o ON a.Office_ID = o.office_id
                     WHERE a.Appointment_id = ?";
             $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
-            
+
             if (empty($apptRows)) {
                 http_response_code(404);
                 echo json_encode([
-                    'success' => false, 
+                    'success' => false,
                     'error' => 'Appointment not found',
                     'has_visit' => false,
                     'debug' => [
@@ -132,10 +132,10 @@ try {
                 closeDBConnection($conn);
                 exit;
             }
-            
+
             $appt = $apptRows[0];
             $patient_id = $appt['Patient_id'];
-            
+
             // Calculate age
             $age = null;
             if (!empty($appt['dob'])) {
@@ -147,7 +147,7 @@ try {
                     // Keep age as null
                 }
             }
-            
+
             // Return appointment data without patient_visit
             $response = [
                 'success' => true,
@@ -201,10 +201,10 @@ try {
                     'currentMedications' => []
                 ]
             ];
-            
+
             // Fetch additional patient data
             fetchPatientData($conn, $patient_id, $response);
-            
+
             closeDBConnection($conn);
             echo json_encode($response);
             exit;
@@ -213,8 +213,8 @@ try {
         $sql = $baseSelect . $baseFrom . " WHERE pv.visit_id = ?";
         $rows = executeQuery($conn, $sql, 'i', [$visit_id]);
     } else {
-        $sql = $baseSelect . $baseFrom 
-             . " WHERE pv.patient_id = ?
+        $sql = $baseSelect . $baseFrom
+            . " WHERE pv.patient_id = ?
                 ORDER BY pv.date DESC
                 LIMIT 1";
         $rows = executeQuery($conn, $sql, 'i', [$patient_id]);
@@ -223,7 +223,7 @@ try {
     if (empty($rows)) {
         http_response_code(404);
         echo json_encode([
-            'success' => false, 
+            'success' => false,
             'error' => 'No patient visit found. Patient may not have checked in yet.',
             'has_visit' => false
         ]);
@@ -296,6 +296,8 @@ try {
     echo json_encode($response);
 
 } catch (Exception $e) {
+    // Log full exception to PHP error log for debugging
+    error_log("Error in get-patient-details.php: " . $e->getMessage() . "\n" . $e->getTraceAsString());
     http_response_code(500);
     echo json_encode([
         'success' => false,
@@ -306,16 +308,17 @@ try {
 /**
  * Helper function to fetch patient medical data
  */
-function fetchPatientData($conn, $patient_id, &$response) {
+function fetchPatientData($conn, $patient_id, &$response)
+{
     // Fetch medical conditions (chronic conditions)
     try {
         $mc_sql = "SELECT condition_name, diagnosis_date FROM medical_condition WHERE patient_id = ? ORDER BY diagnosis_date DESC";
         $mcs = executeQuery($conn, $mc_sql, 'i', [$patient_id]);
         if (is_array($mcs)) {
-            $response['patient']['chronicConditions'] = array_map(function($r){
+            $response['patient']['chronicConditions'] = array_map(function ($r) {
                 return $r['condition_name'] ?? '';
             }, $mcs);
-            $response['patient']['medicalHistory'] = array_map(function($r){
+            $response['patient']['medicalHistory'] = array_map(function ($r) {
                 return [
                     'condition' => $r['condition_name'] ?? '',
                     'diagnosis_date' => $r['diagnosis_date'] ?? null
@@ -331,7 +334,7 @@ function fetchPatientData($conn, $patient_id, &$response) {
         $medhist_sql = "SELECT drug_name, duration_and_frequency_of_drug_use FROM medication_history WHERE patient_id = ?";
         $meds_h = executeQuery($conn, $medhist_sql, 'i', [$patient_id]);
         if (is_array($meds_h)) {
-            $response['patient']['medicationHistory'] = array_map(function($r){
+            $response['patient']['medicationHistory'] = array_map(function ($r) {
                 return [
                     'drug' => $r['drug_name'] ?? '',
                     'notes' => $r['duration_and_frequency_of_drug_use'] ?? ''
@@ -359,7 +362,7 @@ function fetchPatientData($conn, $patient_id, &$response) {
                    ORDER BY p.start_date DESC";
         $rxs = executeQuery($conn, $rx_sql, 'i', [$patient_id]);
         if (is_array($rxs)) {
-            $response['patient']['currentMedications'] = array_map(function($m){
+            $response['patient']['currentMedications'] = array_map(function ($m) {
                 return [
                     'id' => $m['prescription_id'] ?? null,
                     'name' => $m['name'] ?? '',
