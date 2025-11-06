@@ -166,12 +166,13 @@ try {
                     NULL as work_location_id,
                     NULL as work_location_address,
                     NULL as work_schedule,
-                    p.date_of_birth,
+                    p.dob,
                     p.insurance_company,
                     COALESCE(u.is_active, 0) as is_active
                 FROM patient p
                 LEFT JOIN user_account u ON p.email = u.email
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
+                LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id
                 WHERE 1=1";
         
         // Apply filters for patients
