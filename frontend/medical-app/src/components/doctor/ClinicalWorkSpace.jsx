@@ -47,14 +47,20 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('Non-JSON response:', text);
-        throw new Error('Server returned non-JSON response');
+      // attempt to parse JSON even if server omitted Content-Type
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseErr) {
+        // fallback: try to read raw text and JSON.parse it (some PHP backends omit Content-Type)
+        const raw = await response.text();
+        try {
+          data = JSON.parse(raw);
+        } catch (rawErr) {
+          console.error('Failed to parse JSON response. Raw output:', raw);
+          throw new Error('Server returned invalid JSON');
+        }
       }
-
-      const data = await response.json();
       
       if (data.success) {
         setPatientData(data);
@@ -167,7 +173,19 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
         { credentials: 'include' }
       );
       
-      const data = await response.json();
+      // tolerant JSON parsing for notes endpoint as well
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseErr) {
+        const raw = await response.text();
+        try {
+          data = JSON.parse(raw);
+        } catch (rawErr) {
+          console.error('Failed to parse notes JSON. Raw output:', raw);
+          throw rawErr;
+        }
+      }
       
       if (data.success) {
         setNotes(data.notes || []);
