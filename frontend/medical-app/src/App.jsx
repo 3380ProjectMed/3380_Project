@@ -20,7 +20,7 @@ import AdminPortal from "./components/admin/AdminPortal.jsx";
 // Receptionist module
 import ReceptionistPortal from "./components/receptionist/ReceptionistPortal.jsx";
 import ReceptionistDashboard from "./components/receptionist/ReceptionistDashboard.jsx";
-import CheckIn from "./components/receptionist/CheckIn.jsx";
+
 
 import "./App.css";
 
@@ -82,7 +82,6 @@ export default function App() {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<ReceptionistDashboard />} />
-        <Route path="check-in" element={<CheckIn />} />
       </Route>
 
       {/* Neutral entry that bounces users to their role home */}
