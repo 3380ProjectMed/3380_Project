@@ -21,7 +21,7 @@ function homeFor(role) {
     case 'ADMIN':        return '/admin';
     case 'DOCTOR':       return '/doctor';
     case 'NURSE':        return '/nurse';
-    case 'RECEPTIONIST': return '/reception';
+    case 'RECEPTIONIST': return '/receptionist';
     case 'PATIENT':
     default:             return '/patientportal';
   }
