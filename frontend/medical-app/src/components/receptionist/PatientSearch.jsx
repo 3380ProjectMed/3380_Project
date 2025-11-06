@@ -40,9 +40,8 @@ function PatientSearch({ onBookAppointment }) {
     try {
       setLoading(true);
       setError(null);
-      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
       const response = await fetch(
-        `${API_BASE}/receptionist_api/patients/get-all.php?q=${encodeURIComponent(searchTerm)}`,
+        `/receptionist_api/patients/get-all.php?q=${encodeURIComponent(searchTerm)}`,
         { credentials: 'include' }
       );
       const data = await response.json();
@@ -77,7 +76,7 @@ function PatientSearch({ onBookAppointment }) {
       
       // Get full patient details including insurance and appointments
       const response = await fetch(
-        `${API_BASE}/receptionist_api/patients/get-by-id.php?id=${patient.Patient_ID}`,
+        `/receptionist_api/patients/get-by-id.php?id=${patient.Patient_ID}`,
         { credentials: 'include' }
       );
       const data = await response.json();

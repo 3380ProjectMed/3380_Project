@@ -57,8 +57,7 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
   const loadDoctors = async () => {
     try {
       setDoctorsLoading(true);
-      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
-      const response = await fetch(`${API_BASE}/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`);
+      const response = await fetch(`/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success) {
@@ -77,7 +76,7 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
   const handlePatientSearch = async () => {
     try {
       setSearchLoading(true);
-      const response = await fetch(`${API_BASE}/receptionist_api/patients/get-all.php?q=${encodeURIComponent(searchTerm)}`);
+      const response = await fetch(`/receptionist_api/patients/get-all.php?q=${encodeURIComponent(searchTerm)}`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success) {
@@ -169,7 +168,7 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
         booking_channel: bookingChannel
       };
 
-      const response = await fetch(`${API_BASE}/receptionist_api/appointments/create.php`, {
+      const response = await fetch(`/receptionist_api/appointments/create.php`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
