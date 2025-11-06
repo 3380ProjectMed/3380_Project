@@ -75,7 +75,7 @@ try {
     // Fetch medical conditions (chronic conditions)
     try {
         $conditions_sql = "SELECT 
-                            mc.medical_condition_id,
+                            mc.condition_id,
                             mc.condition_name,
                             mc.diagnosis_date
                           FROM medical_condition mc
