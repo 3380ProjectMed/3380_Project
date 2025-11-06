@@ -3,8 +3,8 @@
  * Get appointments for receptionist's office with intelligent status calculation
  * IMPROVED VERSION: Incorporates best practices from get-today.php and get-by-month.php
  */
-require_once __DIR__ . '/home/site/wwwroot/cors.php';
-require_once __DIR__ . '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
     // Start session and require authentication

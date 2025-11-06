@@ -17,8 +17,8 @@
  * - Most other appointments are at Office 1, 2, or 4
  * - To test with data, use date parameter: ?date=2024-01-16
  */
-require_once __DIR__ . '/home/site/wwwroot/cors.php';
-require_once __DIR__ . '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
     // Start session and require authentication
