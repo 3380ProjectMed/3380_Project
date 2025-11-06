@@ -1,8 +1,13 @@
 <?php
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
+
+// Set JSON content type header  
+header('Content-Type: application/json');
+
 /**
  * get-notes.php
+ * FIXED: Now handles string appointment IDs like "A1002"
  */
 
 try {
