@@ -37,7 +37,16 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
     
     $visit_id = isset($input['visit_id']) ? intval($input['visit_id']) : 0;
-    $appointment_id = isset($input['appointment_id']) ? intval($input['appointment_id']) : 0;
+    
+    // Handle appointment IDs - strip "A" prefix if present (e.g., "A1002" -> 1002)
+    $appointment_id_raw = isset($input['appointment_id']) ? trim($input['appointment_id']) : '';
+    $appointment_id = 0;
+    if (!empty($appointment_id_raw)) {
+        // Remove "A" prefix if present
+        $cleaned_id = preg_replace('/^A/i', '', $appointment_id_raw);
+        $appointment_id = intval($cleaned_id);
+    }
+    
     $note_text = isset($input['note_text']) ? trim($input['note_text']) : '';
     $diagnosis = isset($input['diagnosis']) ? trim($input['diagnosis']) : null;
     
