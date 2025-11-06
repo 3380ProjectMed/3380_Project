@@ -7,7 +7,9 @@
 
 .nurse-portal {
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--shell-bg-top), var(--shell-bg-bottom));
+  display: flex;
+  background: linear-gradient(180deg, var(--fifth-color), #ffffff);
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
 .nurse-main {

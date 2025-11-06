@@ -1,9 +1,12 @@
 <?php
 /**
- * Save/update clinical note in patient_visit.treatment field
+    * save-note.php
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
+
+// Set JSON content type header
+header('Content-Type: application/json');
 
 try {
     session_start();
@@ -42,8 +45,11 @@ try {
     $appointment_id_raw = isset($input['appointment_id']) ? trim($input['appointment_id']) : '';
     $appointment_id = 0;
     if (!empty($appointment_id_raw)) {
-        // Remove "A" prefix if present
-        $cleaned_id = preg_replace('/^A/i', '', $appointment_id_raw);
+        // Remove "A" prefix if present (case-insensitive)
+        $cleaned_id = $appointment_id_raw;
+        if (strtoupper(substr($cleaned_id, 0, 1)) === 'A') {
+            $cleaned_id = substr($cleaned_id, 1);
+        }
         $appointment_id = intval($cleaned_id);
     }
     

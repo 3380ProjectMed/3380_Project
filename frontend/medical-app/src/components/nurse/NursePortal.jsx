@@ -10,7 +10,6 @@ import "./NursePortal.css";
 
 export default function NursePortal() {
   const [currentPage, setCurrentPage] = useState("dashboard");
-
   const handleLogout = () => {
     if (confirm("Log out of Nurse Portal?")) {
       window.location.href = "/login";
@@ -19,11 +18,7 @@ export default function NursePortal() {
 
   return (
     <div className="nurse-portal">
-      <NurseSidebar
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        onLogout={handleLogout}
-      />
+      <NurseSidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
 
       <main className="nurse-main">
         {currentPage === "dashboard" && <NurseDashboard setCurrentPage={setCurrentPage} />}
@@ -31,7 +26,7 @@ export default function NursePortal() {
         {currentPage === "patients" && <NursePatients />}
         {currentPage === "clinical" && <NurseClinicalWorkSpace />}
         {currentPage === "profile" && <NurseProfile />}
-  {currentPage === "reports" && <NurseReport />}
+        {currentPage === "reports" && <NurseReport />}
       </main>
     </div>
   );
