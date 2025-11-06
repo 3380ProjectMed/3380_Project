@@ -1,5 +1,4 @@
 :root {
-  /* Match doctor sidebar width; check doctor/Sidebar.css (usually 260–264px) */
   --nurse-sidebar-w: 264px;
   --page-max-w: 1200px;
   --shell-bg-top: #e6f7ff;
@@ -11,7 +10,6 @@
   background: linear-gradient(180deg, var(--shell-bg-top), var(--shell-bg-bottom));
 }
 
-/* Main content should never sit under the sidebar */
 .nurse-main {
   margin-left: var(--nurse-sidebar-w);
   padding: 24px;
@@ -24,13 +22,11 @@
   }
 }
 
-/* A shared inner container like doctor pages */
 .nurse-page {
   max-width: var(--page-max-w);
   margin: 0 auto;
 }
-
-/* Doctor-like section header spacing */
+/* page header*/
 .section-header {
   display: flex;
   align-items: center;

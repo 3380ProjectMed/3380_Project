@@ -41,8 +41,8 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
         }
 
         const appts = await getNurseSchedule({ date: new Date().toISOString().slice(0,10) }).catch(() => null);
-        if (appts && mounted) {
-          setAppointments(appts);
+        if (mounted) {
+          setAppointments(Array.isArray(appts) ? appts : []);
         }
       } catch (err) {
         setError(err?.message || 'Failed to load');
@@ -55,27 +55,26 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
   }, []);
 
   // Filtering (search + status)
-  const filteredAppointments = (appointments || []).filter(app => {
-    const matchesSearch =
-      app.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.reason.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredAppointments = (Array.isArray(appointments) ? appointments : []).filter((app) => {
+    const patientName = (app?.patientName || '').toLowerCase();
+    const reason = (app?.reason || '').toLowerCase();
+    const status = String(app?.status || '').toLowerCase();
 
-    const matchesFilter =
-      filterStatus === 'all' ||
-      app.status.toLowerCase().replace(' ', '-') === filterStatus;
-
+    const matchesSearch = patientName.includes(searchTerm.toLowerCase()) || reason.includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || status.replace(/\s+/g, '-') === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
   // Status badge color map (same as doctor)
   const getStatusClass = (status) => {
+    const s = String(status || '').toLowerCase();
     const statusMap = {
-      'scheduled': 'status-scheduled',
+      scheduled: 'status-scheduled',
       'in waiting': 'status-waiting',
       'in consultation': 'status-consultation',
-      'completed': 'status-completed'
+      completed: 'status-completed',
     };
-    return statusMap[status.toLowerCase()] || '';
+    return statusMap[s] || '';
   };
 
   // Row click -> Nurse intake / Clinical flow

@@ -71,8 +71,9 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
   const handlePatientSearch = async () => {
     try {
       setSearchLoading(true);
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
       const response = await fetch(
-        `http://localhost:8080/receptionist_api/patients/get-all.php?q=${encodeURIComponent(searchTerm)}`,
+        `${API_BASE}/receptionist_api/patients/get-all.php?q=${encodeURIComponent(searchTerm)}`,
         { credentials: 'include' }
       );
       const data = await response.json();
@@ -97,7 +98,7 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
       
       // Get full patient details with insurance
       const response = await fetch(
-        `http://localhost:8080/receptionist_api/patients/get-by-id.php?id=${selectedPatient.Patient_ID}`,
+        `${API_BASE}/receptionist_api/patients/get-by-id.php?id=${selectedPatient.Patient_ID}`,
         { credentials: 'include' }
       );
       const detailsResult = await response.json();
@@ -211,7 +212,7 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
         notes: paymentNote
       };
 
-      const response = await fetch('http://localhost:8080/receptionist_api/payments/create.php', {
+      const response = await fetch(`${API_BASE}/receptionist_api/payments/create.php`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
