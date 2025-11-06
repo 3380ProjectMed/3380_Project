@@ -155,7 +155,6 @@ try {
                     p.first_name,
                     p.last_name,
                     p.email,
-                    p.phone_number as phone,
                     p.ssn,
                     NULL as license_number,
                     cg.gender_text as gender,
