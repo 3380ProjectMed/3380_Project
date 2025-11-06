@@ -95,9 +95,6 @@ export const insuranceAPI = {
   getInsurance: () => 
     j(`${PATIENT_API_BASE}/patient_api.php?endpoint=insurance`),
 
-  getInsurancePayers: () =>
-    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=insurance&type=payers`),
-
   addInsurance: (insuranceData) => 
   j(`${PATIENT_API_BASE}/patient_api.php?endpoint=insurance`, {
       method: 'POST',
