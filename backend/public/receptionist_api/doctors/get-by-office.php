@@ -5,8 +5,8 @@
  * ==========================================
  * Get all doctors assigned to an office
  */
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
+require_once __DIR__ . '/home/site/wwwroot/cors.php';
+require_once __DIR__ . '/home/site/wwwroot/database.php';
 
 try {
     $officeId = isset($_GET['office_id']) ? (int)$_GET['office_id'] : 0;

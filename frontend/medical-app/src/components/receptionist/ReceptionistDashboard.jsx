@@ -51,7 +51,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
    */
   const loadDoctors = async () => {
     try {
-      const response = await fetch('http://localhost:8080/receptionist_api/doctors/get-all.php');
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      const response = await fetch('${API_BASE}/receptionist_api/doctors/get-all.php');
       const data = await response.json();
       
       if (data.success) {
@@ -76,8 +77,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       const today = new Date().toISOString().split('T')[0];
       
       const [statsResponse, appointmentsResponse] = await Promise.all([
-        fetch(`http://localhost:8080/receptionist_api/dashboard/stats.php?date=${today}`),
-        fetch('http://localhost:8080/receptionist_api/dashboard/today.php')
+        fetch(`${API_BASE}/receptionist_api/dashboard/stats.php?date=${today}`),
+        fetch('${API_BASE}/receptionist_api/dashboard/today.php')
       ]);
 
       const statsData = await statsResponse.json();
@@ -109,7 +110,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       const month = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
       
       const response = await fetch(
-        `http://localhost:8080/receptionist_api/appointments/get-by-month.php?year=${year}&month=${month}`
+        `${API_BASE}/receptionist_api/appointments/get-by-month.php?year=${year}&month=${month}`
       );
       const data = await response.json();
       

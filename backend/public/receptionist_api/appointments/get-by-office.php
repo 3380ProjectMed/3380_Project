@@ -4,8 +4,8 @@
  * NEW FILE: This is a GET endpoint for fetching appointments
  * (The old get-by-office.php was actually an UPDATE endpoint - rename it to update.php)
  */
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
+require_once __DIR__ . '/home/site/wwwroot/cors.php';
+require_once __DIR__ . '/home/site/wwwroot/database.php';
 
 try {
     // Start session and require that the user is logged in
