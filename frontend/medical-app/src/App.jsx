@@ -20,7 +20,7 @@ import AdminPortal from "./components/admin/AdminPortal.jsx";
 // Receptionist module
 import ReceptionistPortal from "./components/receptionist/ReceptionistPortal.jsx";
 import ReceptionistDashboard from "./components/receptionist/ReceptionistDashboard.jsx";
-
+import CheckIn from "./components/receptionist/CheckIn.jsx";
 
 import "./App.css";
 
