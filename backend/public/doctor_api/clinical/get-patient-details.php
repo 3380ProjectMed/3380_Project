@@ -22,8 +22,11 @@ try {
     $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
     $appointment_id = 0;
     if (!empty($appointment_id_raw)) {
-        // Remove "A" prefix if present
-        $cleaned_id = preg_replace('/^A/i', '', $appointment_id_raw);
+        // Remove "A" prefix if present (case-insensitive)
+        $cleaned_id = $appointment_id_raw;
+        if (strtoupper(substr($cleaned_id, 0, 1)) === 'A') {
+            $cleaned_id = substr($cleaned_id, 1);
+        }
         $appointment_id = intval($cleaned_id);
     }
     
