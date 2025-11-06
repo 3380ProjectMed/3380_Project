@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./NurseProfile.css";
-import { getNurseProfileSession, updateNurseProfile } from '../../api/nurse';
+import { getNurseProfile, updateNurseProfile } from '../../api/nurse';
 
 export default function NurseProfile() {
   const [user, setUser] = useState({ name: 'Nurse', title: '', email: '', phone: '' });
@@ -21,8 +21,10 @@ export default function NurseProfile() {
     return () => { mounted = false; };
   }, []);
 
+  // Safe update handler for profile edits. If other code calls an "onUpdateProfile"
+  // ensure it checks that user.profile exists before attempting to read it.
   async function handleUpdateProfile(updatedProfile) {
-    if (!user || !user.profile) {
+    if (!user?.profile) {
       console.error('User profile is undefined');
       return;
     }
@@ -30,7 +32,6 @@ export default function NurseProfile() {
       // forward to API and merge returned values if any
       const res = await updateNurseProfile(updatedProfile).catch(() => null);
       if (res) {
-        // merge minimal fields back into local state
         setUser((prev) => ({ ...prev, ...res }));
       }
     } catch (e) {

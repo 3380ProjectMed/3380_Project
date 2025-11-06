@@ -1,4 +1,9 @@
-/* src/components/nurse/NursePortal.css */
+:root {
+  --nurse-sidebar-w: 264px;
+  --page-max-w: 1200px;
+  --shell-bg-top: #e6f7ff;
+  --shell-bg-bottom: #ffffff;
+}
 
 .nurse-portal {
   min-height: 100vh;
@@ -7,18 +12,27 @@
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
-.main-content {
-  flex: 1;
-  margin-left: 0;
-  transition: all 0.3s ease;
-  background: transparent;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
+.nurse-main {
+  margin-left: var(--nurse-sidebar-w);
+  padding: 24px;
 }
 
-@media (min-width: 1024px) {
-  .main-content {
-    margin-left: 16rem; /* Same width as sidebar */
-    padding: 2rem 3rem;
+@media (max-width: 1024px) {
+  .nurse-main {
+    margin-left: 0;
+    padding: 18px;
   }
+}
+
+.nurse-page {
+  max-width: var(--page-max-w);
+  margin: 0 auto;
+}
+/* page header*/
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
