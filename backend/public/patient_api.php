@@ -998,36 +998,113 @@ elseif ($endpoint === 'medical-records') {
 // ==================== INSURANCE ====================
 elseif ($endpoint === 'insurance') {
     if ($method === 'GET') {
+        $type = $_GET['type'] ?? '';
+        
         try {
-            $stmt = $mysqli->prepare("                SELECT 
-                    pi.id,
-                    pi.member_id,
-                    pi.group_id,
-                    pi.effective_date,
-                    pi.expiration_date,
-                    pi.is_primary,
-                    pi.copay,
-                    pi.deductible_individ,
-                    pi.coinsurance_rate_pct,
-                    ip.NAME as provider_name,
-                    ipl.plan_name,
-                    ipl.plan_type
-                FROM patient_insurance pi
-                LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
-                LEFT JOIN insurance_payer ip ON ipl.payer_id = ip.payer_id
-                WHERE pi.patient_id = ?
-                ORDER BY pi.is_primary DESC, pi.effective_date DESC
-            ");
-            $stmt->bind_param('i', $patient_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $insurance = $result->fetch_all(MYSQLI_ASSOC);
-            
-            sendResponse(true, $insurance);
+            switch ($type) {
+                case 'payers':
+                    // Get all available insurance payers for dropdown
+                    $result = $mysqli->query("
+                        SELECT payer_id, name 
+                        FROM insurance_payer 
+                        ORDER BY name
+                    ");
+                    $payers = $result->fetch_all(MYSQLI_ASSOC);
+                    sendResponse(true, $payers);
+                    break;
+                    
+                default:
+                    // Get patient's insurance information
+                    $stmt = $mysqli->prepare("
+                        SELECT 
+                            pi.id,
+                            pi.member_id,
+                            pi.group_id,
+                            pi.effective_date,
+                            pi.expiration_date,
+                            pi.payer_id,
+                            ip.name as provider_name,
+                            ipl.plan_id,
+                            ipl.plan_name,
+                            ipl.plan_type
+                        FROM patient_insurance pi
+                        LEFT JOIN insurance_payer ip ON pi.payer_id = ip.payer_id
+                        LEFT JOIN insurance_plan ipl ON pi.payer_id = ipl.payer_id
+                        WHERE pi.patient_id = ?
+                        ORDER BY pi.effective_date DESC
+                    ");
+                    $stmt->bind_param('i', $patient_id);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $insurance = $result->fetch_all(MYSQLI_ASSOC);
+                    
+                    sendResponse(true, $insurance);
+                    break;
+            }
             
         } catch (Exception $e) {
             error_log("Insurance error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load insurance', 500);
+        }
+    } 
+    elseif ($method === 'PUT') {
+        // Update insurance
+        $insurance_id = $_GET['id'] ?? null;
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!$insurance_id) {
+            sendResponse(false, [], 'Insurance ID is required', 400);
+        }
+        
+        try {
+            // Validate required fields
+            $required_fields = ['member_id', 'group_id', 'effective_date', 'payer_id'];
+            $missing = validateRequired($input, $required_fields);
+            if (!empty($missing)) {
+                sendResponse(false, [], 'Missing required fields: ' . implode(', ', $missing), 400);
+            }
+            
+            // Update patient_insurance
+            $stmt = $mysqli->prepare("
+                UPDATE patient_insurance 
+                SET member_id = ?, group_id = ?, effective_date = ?, 
+                    expiration_date = ?, payer_id = ?
+                WHERE id = ? AND patient_id = ?
+            ");
+            $stmt->bind_param('sssssii', 
+                $input['member_id'],
+                $input['group_id'], 
+                $input['effective_date'],
+                $input['expiration_date'],
+                $input['payer_id'],
+                $insurance_id,
+                $patient_id
+            );
+            
+            if (!$stmt->execute()) {
+                sendResponse(false, [], 'Failed to update insurance', 500);
+            }
+            
+            // Update insurance_plan if plan info is provided
+            if (isset($input['plan_name']) || isset($input['plan_type'])) {
+                $plan_stmt = $mysqli->prepare("
+                    UPDATE insurance_plan 
+                    SET plan_name = ?, plan_type = ?
+                    WHERE payer_id = ?
+                ");
+                $plan_stmt->bind_param('ssi',
+                    $input['plan_name'],
+                    $input['plan_type'],
+                    $input['payer_id']
+                );
+                $plan_stmt->execute();
+            }
+            
+            sendResponse(true, [], 'Insurance updated successfully');
+            
+        } catch (Exception $e) {
+            error_log("Insurance update error: " . $e->getMessage());
+            sendResponse(false, [], 'Failed to update insurance', 500);
         }
     }
 }
