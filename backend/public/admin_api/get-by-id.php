@@ -1,29 +1,16 @@
 <?php
 require_once __DIR__ . '/../../../cors.php';
 require_once __DIR__ . '/../../../database.php';
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
 
 try {
     session_start();
-    
-    if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
-    
+        
     if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Admin access required']);
         echo json_encode(['success' => false, 'error' => 'Admin access required']);
         exit;
     }
-    
-    $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
-    
-    if ($user_id === 0) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'user_id is required']);
-        exit;
-    }
-    
     
     $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
     
@@ -78,11 +65,6 @@ try {
         'user' => $result[0]
     ]);
     
-    
-    echo json_encode([
-        'success' => true,
-        'user' => $result[0]
-    ]);
     
 } catch (Exception $e) {
     http_response_code(500);

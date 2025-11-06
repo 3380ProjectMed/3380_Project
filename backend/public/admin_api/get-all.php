@@ -1,10 +1,7 @@
 <?php
 /**
  * Admin API: Get all users
- * Admin API: Get all users
  */
-require_once '/home/site/wwwroot/cors.php';
-require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
@@ -14,13 +11,8 @@ try {
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-    
-    if (empty($_SESSION['uid'])) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
     
     $conn = getDBConnection();
     
@@ -68,14 +60,8 @@ try {
     ]);
     
     
-    echo json_encode([
-        'success' => true,
-        'users' => $users,
-        'count' => count($users)
-    ]);
-    
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-}
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
 ?>
