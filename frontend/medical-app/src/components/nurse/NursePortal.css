@@ -1,40 +1,24 @@
-:root {
-  /* Match doctor sidebar width; check doctor/Sidebar.css (usually 260–264px) */
-  --nurse-sidebar-w: 264px;
-  --page-max-w: 1200px;
-  --shell-bg-top: #e6f7ff;
-  --shell-bg-bottom: #ffffff;
-}
+/* src/components/nurse/NursePortal.css */
 
 .nurse-portal {
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--shell-bg-top), var(--shell-bg-bottom));
-}
-
-/* Main content should never sit under the sidebar */
-.nurse-main {
-  margin-left: var(--nurse-sidebar-w);
-  padding: 24px;
-}
-
-@media (max-width: 1024px) {
-  .nurse-main {
-    margin-left: 0;
-    padding: 18px;
-  }
-}
-
-/* A shared inner container like doctor pages */
-.nurse-page {
-  max-width: var(--page-max-w);
-  margin: 0 auto;
-}
-
-/* Doctor-like section header spacing */
-.section-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
+  background: linear-gradient(180deg, var(--fifth-color), #ffffff);
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
+
+.main-content {
+  flex: 1;
+  margin-left: 0;
+  transition: all 0.3s ease;
+  background: transparent;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .main-content {
+    margin-left: 16rem; /* Same width as sidebar */
+    padding: 2rem 3rem;
+  }
