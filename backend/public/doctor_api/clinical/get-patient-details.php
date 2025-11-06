@@ -1,4 +1,5 @@
 <?php
+header('Content-Type: application/json');
 /**
  * Get patient visit details including vitals and notes
  */
