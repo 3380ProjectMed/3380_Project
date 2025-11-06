@@ -1,3 +1,4 @@
+
 <?php
 // patient_api.php - Patient Portal API Endpoints (cleaned and fixed)
 
