@@ -8,18 +8,10 @@ ini_set('error_log', __DIR__ . '/../../error.log');
 
 require_once __DIR__ . '/../cors.php';
 
-// Azure App Service HTTPS detection
-// Azure terminates SSL at the load balancer, so check for proxy headers
-$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-    || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-    || (!empty($_SERVER['HTTP_X_ARR_SSL'])) // Azure-specific header
-    || $_SERVER['SERVER_PORT'] == 443;
-
 session_start([
   'cookie_httponly' => true,
-  'cookie_secure'   => $isHttps,  // ← Use proper HTTPS detection
+  'cookie_secure'   => !empty($_SERVER['HTTPS']),
   'cookie_samesite' => 'Lax',
-  'cookie_path'     => '/',
 ]);
 
 header('Content-Type: application/json');
@@ -104,15 +96,7 @@ if (!$result || $result->num_rows === 0) {
 $user = $result->fetch_assoc();
 $stmt->close();
 
-// Check if account is active
-if (!$user['is_active']) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Account is disabled']);
-    $mysqli->close();
-    exit;
-}
-
-// Check if account is locked (password_hash is NULL due to trigger)
+// Check if account is locked (password_hash is null means locked)
 if ($user['password_hash'] === null) {
     http_response_code(403);
     echo json_encode([
@@ -122,40 +106,81 @@ if ($user['password_hash'] === null) {
     exit;
 }
 
-// Verify password - FIXED: use password_verify() instead of hash_equals()
-if (!password_verify($password, $user['password_hash'])) {
-    // Password is incorrect - increment failed_login_count
-    $updateStmt = $mysqli->prepare(
-        "UPDATE user_account 
-         SET failed_login_count = failed_login_count + 1 
-         WHERE user_id = ?"
-    );
-    $updateStmt->bind_param('i', $user['user_id']);
-    $updateStmt->execute();
-    $updateStmt->close();
-    
-    http_response_code(401);
-    echo json_encode(['error' => 'Invalid credentials']);
+// Check if account is active
+if ($user['is_active'] == 0) {
+    http_response_code(403);
+    echo json_encode([
+        'error' => 'Account is inactive. Please contact an administrator.'
+    ]);
     $mysqli->close();
     exit;
 }
 
-// Password is correct - reset failed_login_count and update last_login_at
-$updateStmt = $mysqli->prepare(
-    "UPDATE user_account 
-     SET failed_login_count = 0, 
-         last_login_at = CURRENT_TIMESTAMP 
-     WHERE user_id = ?"
-);
-$updateStmt->bind_param('i', $user['user_id']);
-$updateStmt->execute();
-$updateStmt->close();
+// Verify password
+if (!password_verify($password, $user['password_hash'])) {
+    // Password is incorrect - increment failed_login_count
+    $failedCount = intval($user['failed_login_count']) + 1;
+    
+    // Lock account after 5 failed attempts
+    if ($failedCount >= 5) {
+        $updateStmt = $mysqli->prepare(
+            "UPDATE user_account 
+             SET failed_login_count = ?, 
+                 password_hash = NULL, 
+                 updated_at = NOW() 
+             WHERE user_id = ?"
+        );
+        $updateStmt->bind_param('ii', $failedCount, $user['user_id']);
+        $updateStmt->execute();
+        $updateStmt->close();
+        
+        http_response_code(403);
+        echo json_encode([
+            'error' => 'Account locked due to too many failed login attempts. Please reset your password.'
+        ]);
+    } else {
+        // Just increment the counter
+        $updateStmt = $mysqli->prepare(
+            "UPDATE user_account 
+             SET failed_login_count = ?, 
+                 updated_at = NOW() 
+             WHERE user_id = ?"
+        );
+        $updateStmt->bind_param('ii', $failedCount, $user['user_id']);
+        $updateStmt->execute();
+        $updateStmt->close();
+        
+        http_response_code(401);
+        echo json_encode([
+            'error' => 'Invalid credentials',
+            'attemptsRemaining' => 5 - $failedCount
+        ]);
+    }
+    
+    $mysqli->close();
+    exit;
+}
+
+// Password is correct - reset failed_login_count
+if ($user['failed_login_count'] > 0) {
+    $resetStmt = $mysqli->prepare(
+        "UPDATE user_account 
+         SET failed_login_count = 0, 
+             updated_at = NOW() 
+         WHERE user_id = ?"
+    );
+    $resetStmt->bind_param('i', $user['user_id']);
+    $resetStmt->execute();
+    $resetStmt->close();
+}
 
 // Set session
 $_SESSION['uid'] = $user['user_id'];
 $_SESSION['email'] = $user['email'];
 $_SESSION['role'] = $user['role'];
 $_SESSION['username'] = $user['username'];
+
+$mysqli->close();
 
 // Return success
 http_response_code(200);
@@ -168,5 +193,4 @@ echo json_encode([
         'role' => $user['role']
     ]
 ]);
-
-$mysqli->close();
+?>

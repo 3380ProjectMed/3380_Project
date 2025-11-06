@@ -82,7 +82,6 @@ export default function App() {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<ReceptionistDashboard />} />
-        <Route path="check-in" element={<CheckIn />} />
       </Route>
 
       {/* Neutral entry that bounces users to their role home */}

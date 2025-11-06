@@ -25,7 +25,7 @@ try {
     $stats['total_nurses'] = $result[0]['count'];
     
     // Total patients
-    $result = executeQuery($conn, 'SELECT COUNT(*) as count FROM patient');
+    $result = executeQuery($conn, 'SELECT COUNT(*) as count FROM Patient');
     $stats['total_patients'] = $result[0]['count'];
     
     // Total appointments (this month)

@@ -1,3 +1,4 @@
+
 <?php
 // patient_api.php - Patient Portal API Endpoints (cleaned and fixed)
 
@@ -747,6 +748,53 @@ elseif ($endpoint === 'offices') {
     }
 }
 
+// ==================== VISIT DETAILS ====================
+elseif ($endpoint === 'visit') {
+    if ($method === 'GET') {
+        $visit_id = $_GET['id'] ?? null;
+        
+        if (!$visit_id) {
+            sendResponse(false, [], 'Visit ID is required', 400);
+        }
+        
+        try {
+            $stmt = $mysqli->prepare("
+                SELECT 
+                    v.visit_id,
+                    v.date,
+                    v.reason_for_visit,
+                    v.diagnosis,
+                    v.treatment,
+                    v.blood_pressure,
+                    v.temperature,
+                    CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                    s.specialty_name,
+                    o.name as office_name,
+                    CONCAT(o.address, ', ', o.city, ', ', o.state, ' ', o.zipcode) as office_address
+                FROM patient_visit v
+                LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
+                LEFT JOIN specialty s ON d.specialty = s.specialty_id
+                LEFT JOIN office o ON v.office_id = o.office_id
+                WHERE v.visit_id = ? AND v.patient_id = ?
+            ");
+            $stmt->bind_param('ii', $visit_id, $patient_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $visit = $result->fetch_assoc();
+            
+            if (!$visit) {
+                sendResponse(false, [], 'Visit not found', 404);
+            }
+            
+            sendResponse(true, $visit);
+            
+        } catch (Exception $e) {
+            error_log("Visit details error: " . $e->getMessage());
+            sendResponse(false, [], 'Failed to load visit details', 500);
+        }
+    }
+}
+
 // ==================== MEDICAL RECORDS ====================
 elseif ($endpoint === 'medical-records') {
     $type = $_GET['type'] ?? '';
@@ -755,22 +803,22 @@ elseif ($endpoint === 'medical-records') {
         try {
             switch ($type) {
                 case 'vitals':
+                    // Return vaccination history instead of vitals
                     $stmt = $mysqli->prepare("
                         SELECT 
-                            DATE(date) as date,
-                            blood_pressure as bp,
-                            temperature as temp
-                        FROM patient_visit
+                            vaccination_name as vaccine,
+                            DATE(date_of_vaccination) as date_given,
+                            DATE(date_for_booster) as booster_due
+                        FROM vaccination_history
                         WHERE patient_id = ?
-                        AND blood_pressure IS NOT NULL
-                        ORDER BY date DESC
+                        ORDER BY date_of_vaccination DESC
                         LIMIT 10
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
                     $result = $stmt->get_result();
-                    $vitals = $result->fetch_all(MYSQLI_ASSOC);
-                    sendResponse(true, $vitals);
+                    $vaccinations = $result->fetch_all(MYSQLI_ASSOC);
+                    sendResponse(true, $vaccinations);
                     break;
                     
                 case 'medications':

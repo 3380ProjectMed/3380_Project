@@ -27,10 +27,9 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
   const loadScheduleData = async () => {
     try {
       setLoading(true);
-      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
       // Get doctors for this office
       const doctorsResponse = await fetch(
-        `${API_BASE}/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`,
+        `/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`,
         { credentials: 'include' }
       );
       const doctorsResult = await doctorsResponse.json();
@@ -53,7 +52,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
       // Get appointments for selected date
       const dateStr = selectedDate.toISOString().split('T')[0];
       const appointmentsResponse = await fetch(
-        `${API_BASE}/receptionist_api/appointments/get-by-date.php?date=${dateStr}`,
+        `/receptionist_api/appointments/get-by-date.php?date=${dateStr}`,
         { credentials: 'include' }
       );
       const appointmentsResult = await appointmentsResponse.json();
