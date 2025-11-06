@@ -160,12 +160,19 @@ export default function PatientPortal({ onLogout }) {
   }
 
   async function loadBilling() {
-    const [b, s] = await Promise.all([
-      api.billing.getBalance(),
-      api.billing.getStatements(),
-    ]);
-    if (b.success) setBillingBalance(b.data?.outstanding_balance ?? 0);
-    if (s.success) setBillingStatements(s.data ?? []);
+    console.log('loadBilling called');
+    try {
+      const [b, s] = await Promise.all([
+        api.billing.getBalance(),
+        api.billing.getStatements(),
+      ]);
+      console.log('Billing balance response:', b);
+      console.log('Billing statements response:', s);
+      if (b.success) setBillingBalance(b.data?.outstanding_balance ?? 0);
+      if (s.success) setBillingStatements(s.data ?? []);
+    } catch (error) {
+      console.error('Error loading billing:', error);
+    }
   }
 
   // Save profile changes (personal fields + demographics)
@@ -650,7 +657,7 @@ export default function PatientPortal({ onLogout }) {
     ethnicityOptions,
     raceOptions,
     saveProfile: handleSaveProfile,
-    processPayment: api.billing.processPayment,
+    processPayment: api.billing.makePayment,
   };  return (
     <div className="patient-portal-root">
       {/* Sidebar (fixed on the left) */}

@@ -84,6 +84,12 @@ export const medicalRecordsAPI = {
   j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=all-allergies`)
 };
 
+// ==================== VISITS ====================
+export const visitAPI = {
+  getVisitById: (visitId) => 
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=visit&id=${visitId}`)
+};
+
 // ==================== INSURANCE ====================
 export const insuranceAPI = {
   getInsurance: () => 
@@ -128,6 +134,7 @@ export default {
   profile: profileAPI,
   appointments: appointmentsAPI,
   medicalRecords: medicalRecordsAPI,
+  visits: visitAPI,
   insurance: insuranceAPI,
   billing: billingAPI
 };
