@@ -102,10 +102,15 @@ export default function MedicalRecords(props) {
       ) : (
         <div className="records-grid">
           <div className="record-card">
-            <h3>Vitals</h3>
-            {vitalsHistory.length === 0 ? <p className="text-gray">No vitals on file</p> : (
+            <h3>Vaccinations</h3>
+            {vitalsHistory.length === 0 ? <p className="text-gray">No vaccinations on file</p> : (
               <ul>
-                {vitalsHistory.map((v, i) => (<li key={i}>{v.label}: {v.value}</li>))}
+                {vitalsHistory.map((v, i) => (
+                  <li key={i}>
+                    <strong>{v.vaccine}</strong> - Given: {v.date_given}
+                    {v.booster_due && <span> | Booster Due: {v.booster_due}</span>}
+                  </li>
+                ))}
               </ul>
             )}
           </div>
