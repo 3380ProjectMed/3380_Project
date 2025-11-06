@@ -78,3 +78,43 @@ export async function getNursePatients(query = '', page = 1, pageSize = 10) {
 
   return response.json();
 }
+
+// Clinical - Save Nurse Note
+export async function saveNurseNote(appointmentId, noteBody) {
+  const response = await fetch(`${BASE_URL}/clinical/save-note.php?apptId=${appointmentId}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      body: noteBody,
+    }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+// Clinical - Save Nurse Vitals
+export async function saveNurseVitals(appointmentId, vitals) {
+  const response = await fetch(`${BASE_URL}/clinical/save-vitals.php?apptId=${appointmentId}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(vitals),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
