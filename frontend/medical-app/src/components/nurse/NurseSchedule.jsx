@@ -13,8 +13,8 @@ export default function NurseSchedule() {
       setLoading(true);
       try {
         const today = new Date().toISOString().slice(0,10);
-        const data = await getNurseSchedule({ date: today }).catch(() => []);
-        if (mounted) setRows(data || []);
+  const data = await getNurseSchedule({ date: today }).catch(() => []);
+  if (mounted) setRows(Array.isArray(data) ? data : []);
       } catch (e) {
         if (mounted) setError(e.message || 'Failed to load schedule');
       } finally { if (mounted) setLoading(false); }

@@ -36,15 +36,17 @@ export default function NursePatients() {
       }
       const r = await searchNursePatients(email, query || undefined, pg, pageSize);
       // backend returns { nurse: {...}, patients: [...] }
-      setPatients(r.patients || []);
-      setTotal(Array.isArray(r.patients) ? r.patients.length : 0);
+  setPatients(Array.isArray(r.patients) ? r.patients : []);
+  setTotal(Array.isArray(r.patients) ? r.patients.length : 0);
     } catch (e) {
       // Handle nurse-not-found specially
-      const msg = (e && e.data && e.data.error) ? e.data.error : (e.message || 'Failed to load');
+      const msg = e?.data?.error ? e.data.error : (e?.message || 'Failed to load');
       if (msg === 'NURSE_NOT_FOUND') {
         setError('No nurse record is associated with this account.');
+      } else if (e?.status === 401) {
+        setError('Unauthorized — redirecting to login');
       } else {
-        setError(e.message || 'Failed to load');
+        setError(e?.message || 'Failed to load');
       }
     } finally {
       setLoading(false);
