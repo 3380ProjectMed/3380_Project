@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, Users, Clock, FileText, Search, Filter } from 'lucide-react';
 import './NurseDashboard.css';
-import { getNurseDashboardStats, getNurseScheduleToday } from '../../api/nurse';
+import { getNurseDashboardStats, getNurseSchedule } from '../../api/nurse';
 
 export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
   const [searchTerm, setSearchTerm] = useState('');
