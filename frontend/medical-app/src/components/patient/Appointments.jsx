@@ -59,9 +59,9 @@ export default function Appointments(props) {
                       </span>
                     </div>
                     <div className="appointment-body">
-                      <p><Calendar className="small-icon" /> {new Date(apt.appointment_date).toLocaleDateString()}</p>
-                      <p><Clock className="small-icon" /> {new Date(apt.appointment_date).toLocaleTimeString()}</p>
-                      <p><MapPin className="small-icon" /> {apt.office_name}</p>
+                      <p><Calendar className="appointments-small-icon" /> {new Date(apt.appointment_date).toLocaleDateString()}</p>
+                      <p><Clock className="appointments-small-icon" /> {new Date(apt.appointment_date).toLocaleTimeString()}</p>
+                      <p><MapPin className="appointments-small-icon" /> {apt.office_name}</p>
                     </div>
                     <div className="appointment-footer">
                       <button className="btn btn-danger btn-small" onClick={() => handleCancelAppointment(apt.appointment_id)}>
@@ -93,10 +93,10 @@ export default function Appointments(props) {
                         onClick={() => handleViewSummary(apt)}
                         disabled={visitLoading}
                       >
-                        {visitLoading ? 'Loading...' : 'View Summary'} <ChevronRight className="small-icon" />
+                        {visitLoading ? 'Loading...' : 'View Summary'} <ChevronRight className="appointments-small-icon" />
                       </button>
                     ) : (
-                      <span className="text-muted">No summary available</span>
+                      <span className="appointments-text-muted">No summary available</span>
                     )}
                   </div>
                 ))}
@@ -119,19 +119,19 @@ export default function Appointments(props) {
             <div className="modal-body">
               <div className="visit-info-grid">
                 <div className="visit-info-item">
-                  <div className="info-label">
-                    <Calendar className="small-icon" /> Date
+                  <div className="visit-info-label">
+                    <Calendar className="appointments-small-icon" /> Date
                   </div>
-                  <div className="info-value">
+                  <div className="visit-info-value">
                     {new Date(visitDetails.date).toLocaleDateString()}
                   </div>
                 </div>
 
                 <div className="visit-info-item">
-                  <div className="info-label">
-                    <User className="small-icon" /> Doctor
+                  <div className="visit-info-label">
+                    <User className="appointments-small-icon" /> Doctor
                   </div>
-                  <div className="info-value">
+                  <div className="visit-info-value">
                     {visitDetails.doctor_name}
                     {visitDetails.specialty_name && (
                       <div className="specialty">{visitDetails.specialty_name}</div>
@@ -141,10 +141,10 @@ export default function Appointments(props) {
 
                 {visitDetails.office_name && (
                   <div className="visit-info-item">
-                    <div className="info-label">
-                      <MapPin className="small-icon" /> Office
+                    <div className="visit-info-label">
+                      <MapPin className="appointments-small-icon" /> Office
                     </div>
-                    <div className="info-value">
+                    <div className="visit-info-value">
                       {visitDetails.office_name}
                       {visitDetails.office_address && (
                         <div className="address">{visitDetails.office_address}</div>
@@ -155,37 +155,37 @@ export default function Appointments(props) {
 
                 {visitDetails.diagnosis && (
                   <div className="visit-info-item">
-                    <div className="info-label">
-                      <FileText className="small-icon" /> Diagnosis
+                    <div className="visit-info-label">
+                      <FileText className="appointments-small-icon" /> Diagnosis
                     </div>
-                    <div className="info-value">{visitDetails.diagnosis}</div>
+                    <div className="visit-info-value">{visitDetails.diagnosis}</div>
                   </div>
                 )}
 
                 {visitDetails.treatment && (
                   <div className="visit-info-item">
-                    <div className="info-label">
-                      <FileText className="small-icon" /> Treatment
+                    <div className="visit-info-label">
+                      <FileText className="appointments-small-icon" /> Treatment
                     </div>
-                    <div className="info-value">{visitDetails.treatment}</div>
+                    <div className="visit-info-value">{visitDetails.treatment}</div>
                   </div>
                 )}
 
                 {visitDetails.temperature && (
                   <div className="visit-info-item">
-                    <div className="info-label">
-                      <Thermometer className="small-icon" /> Temperature
+                    <div className="visit-info-label">
+                      <Thermometer className="appointments-small-icon" /> Temperature
                     </div>
-                    <div className="info-value">{visitDetails.temperature}°F</div>
+                    <div className="visit-info-value">{visitDetails.temperature}°F</div>
                   </div>
                 )}
 
                 {visitDetails.blood_pressure && (
                   <div className="visit-info-item">
-                    <div className="info-label">
-                      <Activity className="small-icon" /> Blood Pressure
+                    <div className="visit-info-label">
+                      <Activity className="appointments-small-icon" /> Blood Pressure
                     </div>
-                    <div className="info-value">{visitDetails.blood_pressure} mmHg</div>
+                    <div className="visit-info-value">{visitDetails.blood_pressure} mmHg</div>
                   </div>
                 )}
               </div>

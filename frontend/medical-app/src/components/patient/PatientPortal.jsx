@@ -636,6 +636,7 @@ export default function PatientPortal({ onLogout }) {
     allergies,
     conditions,
     insurancePolicies,
+    onInsuranceUpdate: loadInsurance,
     billingBalance,
     billingStatements,
     timeSlots,
