@@ -34,8 +34,10 @@ export default function NursePatients() {
         setLoading(false);
         return;
       }
-      const r = await searchNursePatients(email, query || undefined, pg, pageSize);
-      // backend returns { nurse: {...}, patients: [...] }
+  const r = await searchNursePatients(email, query || undefined, pg, pageSize);
+  // Log patients response for debugging
+  try { console.log('Patients response:', r); } catch (e) { /* noop */ }
+  // backend returns { nurse: {...}, patients: [...] }
   setPatients(Array.isArray(r.patients) ? r.patients : []);
   setTotal(Array.isArray(r.patients) ? r.patients.length : 0);
     } catch (e) {

@@ -12,15 +12,18 @@ try {
         exit;
     }
 
-    $user_id = (int)$_SESSION['uid'];
     $conn = getDBConnection();
 
-    // resolve office for this nurse via user -> staff -> nurse
-    $rows = executeQuery($conn, "SELECT s.work_location AS office_id
-                                 FROM user_account u
-                                 JOIN staff s ON s.staff_email = u.email
-                                 JOIN nurse n ON n.staff_id = s.staff_id
-                                 WHERE u.user_id = ? AND u.is_active = 1 LIMIT 1", 'i', [$user_id]);
+    // resolve nurse_id from the logged-in session email
+    $email = $_SESSION['email'] ?? '';
+    if (empty($email)) {
+        closeDBConnection($conn);
+        http_response_code(401);
+        echo json_encode(['error' => 'UNAUTHENTICATED', 'message' => 'Please sign in']);
+        exit;
+    }
+
+    $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
     if (empty($rows)) {
         closeDBConnection($conn);
         http_response_code(404);
@@ -28,30 +31,23 @@ try {
         exit;
     }
 
-    $office_id = (int)$rows[0]['office_id'];
+    $nurse_id = (int)$rows[0]['nurse_id'];
 
-    $sql = "SELECT a.appointment_id AS appointmentId,
-                   DATE_FORMAT(a.appointment_date, '%Y-%m-%dT%H:%i:%s') AS time,
-                   CONCAT(p.first_name, ' ', p.last_name) AS patientName,
-                   a.reason_for_visit AS reason,
-                   a.status,
-                   CONCAT(d.first_name, ' ', d.last_name) AS doctorName
-            FROM appointment a
-            LEFT JOIN patient p ON p.patient_id = a.patient_id
-            LEFT JOIN doctor d ON d.doctor_id = a.doctor_id
-            WHERE DATE(a.appointment_date) = CURDATE()
-              AND a.office_id = ?
-            ORDER BY a.appointment_date ASC";
+    $sql = "SELECT schedule_id AS scheduleId, days AS date, day_of_week AS dayOfWeek, start_time AS startTime, end_time AS endTime, office_id
+            FROM work_schedule
+            WHERE nurse_id = ?
+            ORDER BY days, start_time";
 
-    $rows = executeQuery($conn, $sql, 'i', [$office_id]);
+    $schedules = executeQuery($conn, $sql, 'i', [$nurse_id]);
 
-    // normalize
-    foreach ($rows as &$r) {
-        $r['appointmentId'] = (int)$r['appointmentId'];
+    // normalize types
+    foreach ($schedules as &$s) {
+        $s['scheduleId'] = (int)$s['scheduleId'];
+        $s['officeId'] = isset($s['office_id']) ? (int)$s['office_id'] : null;
     }
 
     closeDBConnection($conn);
-    echo json_encode($rows);
+    echo json_encode($schedules);
 
 } catch (Throwable $e) {
     http_response_code(500);

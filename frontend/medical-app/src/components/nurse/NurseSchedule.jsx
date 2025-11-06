@@ -14,6 +14,8 @@ export default function NurseSchedule() {
       try {
         const today = new Date().toISOString().slice(0,10);
   const data = await getNurseSchedule({ date: today }).catch(() => []);
+  // Log schedule data for debugging
+  try { console.log('Schedule data:', data); } catch (e) { /* noop in non-browser env */ }
   if (mounted) setRows(Array.isArray(data) ? data : []);
       } catch (e) {
         if (mounted) setError(e.message || 'Failed to load schedule');

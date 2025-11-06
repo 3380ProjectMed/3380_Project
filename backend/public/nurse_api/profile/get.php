@@ -12,16 +12,23 @@ try {
         exit;
     }
 
-    $user_id = (int)$_SESSION['uid'];
     $conn = getDBConnection();
 
-    $sql = "SELECT n.nurse_id, s.staff_id, s.work_location AS office_id, s.first_name, s.last_name
-            FROM user_account u
-            JOIN staff s ON s.staff_email = u.email
-            JOIN nurse n ON n.staff_id = s.staff_id
-            WHERE u.user_id = ? AND u.is_active = 1 LIMIT 1";
+    // Prefer matching staff by the session email
+    $email = $_SESSION['email'] ?? '';
+    if (empty($email)) {
+        closeDBConnection($conn);
+        http_response_code(401);
+        echo json_encode(['error' => 'UNAUTHENTICATED', 'message' => 'Please sign in']);
+        exit;
+    }
 
-    $rows = executeQuery($conn, $sql, 'i', [$user_id]);
+    $sql = "SELECT n.nurse_id, s.first_name, s.last_name, s.staff_email AS email, n.department, s.license_number
+            FROM nurse n
+            JOIN staff s ON n.staff_id = s.staff_id
+            WHERE s.staff_email = ? LIMIT 1";
+
+    $rows = executeQuery($conn, $sql, 's', [$email]);
     if (empty($rows)) {
         closeDBConnection($conn);
         http_response_code(404);
@@ -32,10 +39,11 @@ try {
     $r = $rows[0];
     $profile = [
         'nurseId' => (int)$r['nurse_id'],
-        'staffId' => (int)$r['staff_id'],
-        'officeId' => (int)$r['office_id'],
         'firstName' => $r['first_name'] ?? '',
         'lastName' => $r['last_name'] ?? '',
+        'email' => $r['email'] ?? '',
+        'department' => $r['department'] ?? '',
+        'licenseNumber' => $r['license_number'] ?? ''
     ];
 
     closeDBConnection($conn);

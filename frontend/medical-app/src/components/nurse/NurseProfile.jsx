@@ -10,6 +10,8 @@ export default function NurseProfile() {
     async function load() {
       try {
         const p = await getNurseProfileSession().catch(() => null);
+        // Log profile data for debugging
+        try { console.log('Profile data:', p); } catch (e) { /* noop in non-browser */ }
         if (p && mounted) {
           setUser({ name: ((p.firstName || '') + ' ' + (p.lastName || '')).trim() || 'Nurse', title: '', email: p.email || '', phone: p.phone || '' });
         }
