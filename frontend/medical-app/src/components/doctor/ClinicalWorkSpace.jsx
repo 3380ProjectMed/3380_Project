@@ -1,20 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User, Calendar, Clock, AlertCircle, FileText, Activity,
-  Heart, Thermometer, Droplet, Pill, History, Save, X, ChevronDown, ChevronUp
+  Heart, Thermometer, Droplet, Pill, History, Save, X, ChevronDown, ChevronUp,
+  Plus, Trash2, Edit2
 } from 'lucide-react';
 import './ClinicalWorkSpace.css';
 
 export default function ClinicalWorkSpace({ appointmentId, onClose }) {
   const [patientData, setPatientData] = useState(null);
   const [notes, setNotes] = useState([]);
-  const [activeNote, setActiveNote] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
+  const [presentIllnesses, setPresentIllnesses] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Treatment management
+  const [treatmentCatalog, setTreatmentCatalog] = useState([]);
+  const [selectedTreatments, setSelectedTreatments] = useState([]);
+  const [showTreatmentSelector, setShowTreatmentSelector] = useState(false);
+  
+  // Prescription management
+  const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
+  const [editingPrescription, setEditingPrescription] = useState(null);
+  const [prescriptionForm, setPrescriptionForm] = useState({
+    medication_name: '',
+    dosage: '',
+    frequency: '',
+    route: 'Oral',
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: '',
+    refills_allowed: 0,
+    notes: ''
+  });
+  
   const [expandedSections, setExpandedSections] = useState({
     vitals: true,
+    treatments: true,
     currentMedications: true,
     chronicConditions: true,
     medicalHistory: false,
@@ -26,6 +48,7 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
     if (appointmentId) {
       fetchPatientDetails();
       fetchNotes();
+      fetchTreatmentCatalog();
     }
   }, [appointmentId]);
 
@@ -58,16 +81,20 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
       
       if (data.success) {
         setPatientData(data);
-        // Pre-populate diagnosis if exists
+        
+        // Pre-populate diagnosis and present illnesses
         if (data.visit && data.visit.diagnosis) {
           setDiagnosis(data.visit.diagnosis);
         }
-        // Pre-populate note if exists
-        if (data.visit && data.visit.treatment) {
-          setActiveNote(data.visit.treatment);
+        if (data.visit && data.visit.present_illnesses) {
+          setPresentIllnesses(data.visit.present_illnesses);
+        }
+        
+        // Load treatments
+        if (data.treatments && Array.isArray(data.treatments)) {
+          setSelectedTreatments(data.treatments);
         }
       } else if (data.has_visit === false) {
-        // Patient hasn't checked in yet - fetch basic patient info
         await fetchBasicPatientInfo();
       } else {
         throw new Error(data.error || 'Failed to load patient data');
@@ -80,16 +107,12 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
     }
   };
 
-  /**
-   * Fetch basic patient information when no visit exists yet
-   */
   const fetchBasicPatientInfo = async () => {
     try {
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
         ? import.meta.env.VITE_API_BASE 
         : '';
 
-      // First get patient_id from appointment
       const aptResponse = await fetch(
         `${API_BASE}/doctor_api/appointments/get.php?appointment_id=${appointmentId}`,
         { credentials: 'include' }
@@ -104,7 +127,6 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
       if (aptData.success && aptData.appointment) {
         const patientId = aptData.appointment.patient_id || aptData.appointment.Patient_id;
         
-        // Now fetch patient basic info
         const patResponse = await fetch(
           `${API_BASE}/doctor_api/patients/get-by-id.php?patient_id=${patientId}`,
           { credentials: 'include' }
@@ -117,7 +139,6 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
         const patData = await patResponse.json();
         
         if (patData.success && patData.patient) {
-          // Structure the data to match expected format
           setPatientData({
             success: true,
             has_visit: false,
@@ -126,14 +147,14 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
               patient_id: patientId,
               reason: aptData.appointment.reason || aptData.appointment.Reason_for_visit || '',
               status: null,
-              diagnosis: null,
-              treatment: null
+              diagnosis: null
             },
             vitals: {
               blood_pressure: null,
               temperature: null,
               recorded_by: null
             },
+            treatments: [],
             patient: {
               id: patientId,
               name: patData.patient.name,
@@ -177,9 +198,30 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
     }
   };
 
-  const handleSaveNote = async () => {
-    if (!activeNote.trim()) {
-      alert('Please enter a note before saving');
+  const fetchTreatmentCatalog = async () => {
+    try {
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+      
+      const response = await fetch(
+        `${API_BASE}/doctor_api/clinical/get-treatment-catalog.php`,
+        { credentials: 'include' }
+      );
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setTreatmentCatalog(data.treatments || []);
+      }
+    } catch (err) {
+      console.error('Error fetching treatment catalog:', err);
+    }
+  };
+
+  const handleSaveDiagnosis = async () => {
+    if (!diagnosis.trim()) {
+      alert('Please enter a diagnosis before saving');
       return;
     }
 
@@ -191,8 +233,8 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
       
       const payload = {
         appointment_id: appointmentId,
-        note_text: activeNote,
-        diagnosis: diagnosis || null
+        diagnosis: diagnosis,
+        present_illnesses: presentIllnesses || null
       };
 
       if (patientData?.visit?.visit_id) {
@@ -212,18 +254,196 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
       const data = await response.json();
       
       if (data.success) {
-        alert('Note saved successfully!');
+        alert('Diagnosis saved successfully!');
         fetchNotes();
         fetchPatientDetails();
       } else {
-        throw new Error(data.error || 'Failed to save note');
+        throw new Error(data.error || 'Failed to save diagnosis');
       }
     } catch (err) {
-      console.error('Error saving note:', err);
-      alert('Error saving note: ' + err.message);
+      console.error('Error saving diagnosis:', err);
+      alert('Error saving diagnosis: ' + err.message);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAddTreatment = (treatment) => {
+    const exists = selectedTreatments.find(t => t.treatment_id === treatment.treatment_id);
+    if (!exists) {
+      setSelectedTreatments([...selectedTreatments, {
+        treatment_id: treatment.treatment_id,
+        treatment_name: treatment.treatment_name,
+        description: treatment.description,
+        quantity: 1,
+        cost_each: treatment.default_cost,
+        notes: ''
+      }]);
+    }
+    setShowTreatmentSelector(false);
+  };
+
+  const handleRemoveTreatment = (index) => {
+    setSelectedTreatments(selectedTreatments.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateTreatment = (index, field, value) => {
+    const updated = [...selectedTreatments];
+    updated[index][field] = value;
+    setSelectedTreatments(updated);
+  };
+
+  const handleSaveTreatments = async () => {
+    if (!patientData?.visit?.visit_id) {
+      alert('Patient must check in before adding treatments');
+      return;
+    }
+
+    if (selectedTreatments.length === 0) {
+      alert('Please add at least one treatment');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+      
+      const response = await fetch(
+        `${API_BASE}/doctor_api/clinical/save-treatments.php`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            visit_id: patientData.visit.visit_id,
+            treatments: selectedTreatments
+          })
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('Treatments saved successfully!');
+        fetchPatientDetails();
+        fetchNotes();
+      } else {
+        throw new Error(data.error || 'Failed to save treatments');
+      }
+    } catch (err) {
+      console.error('Error saving treatments:', err);
+      alert('Error saving treatments: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSavePrescription = async () => {
+    if (!prescriptionForm.medication_name.trim()) {
+      alert('Please enter medication name');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+      
+      const payload = {
+        ...prescriptionForm,
+        patient_id: patientData.patient.id,
+        appointment_id: appointmentId,
+        prescription_id: editingPrescription?.id || 0
+      };
+
+      const response = await fetch(
+        `${API_BASE}/doctor_api/clinical/save-prescription.php`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('Prescription saved successfully!');
+        setShowPrescriptionForm(false);
+        setEditingPrescription(null);
+        setPrescriptionForm({
+          medication_name: '',
+          dosage: '',
+          frequency: '',
+          route: 'Oral',
+          start_date: new Date().toISOString().split('T')[0],
+          end_date: '',
+          refills_allowed: 0,
+          notes: ''
+        });
+        fetchPatientDetails();
+      } else {
+        throw new Error(data.error || 'Failed to save prescription');
+      }
+    } catch (err) {
+      console.error('Error saving prescription:', err);
+      alert('Error saving prescription: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeletePrescription = async (prescriptionId) => {
+    if (!confirm('Are you sure you want to delete this prescription?')) {
+      return;
+    }
+
+    try {
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+      
+      const response = await fetch(
+        `${API_BASE}/doctor_api/clinical/delete-prescription.php`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prescription_id: prescriptionId })
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('Prescription deleted successfully!');
+        fetchPatientDetails();
+      } else {
+        throw new Error(data.error || 'Failed to delete prescription');
+      }
+    } catch (err) {
+      console.error('Error deleting prescription:', err);
+      alert('Error deleting prescription: ' + err.message);
+    }
+  };
+
+  const handleEditPrescription = (med) => {
+    setEditingPrescription(med);
+    setPrescriptionForm({
+      medication_name: med.name,
+      dosage: med.frequency.split(' - ')[0] || '',
+      frequency: med.frequency.split(' - ')[1] || '',
+      route: med.route || 'Oral',
+      start_date: med.start_date,
+      end_date: med.end_date || '',
+      refills_allowed: med.refills_allowed || 0,
+      notes: med.instructions || ''
+    });
+    setShowPrescriptionForm(true);
   };
 
   const toggleSection = (section) => {
@@ -319,7 +539,7 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
             </div>
           </div>
 
-          {/* Vitals - Only show if patient has checked in */}
+          {/* Vitals */}
           {hasVisit && (
             <div className="info-card collapsible">
               <div className="card-header" onClick={() => toggleSection('vitals')}>
@@ -365,20 +585,37 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
               {expandedSections.currentMedications ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </div>
             {expandedSections.currentMedications && (
-              <div className="medications-list">
-                {patient?.currentMedications && patient.currentMedications.length > 0 ? (
-                  patient.currentMedications.map((med, idx) => (
-                    <div key={idx} className="medication-item">
-                      <div className="med-name">{med.name}</div>
-                      <div className="med-details">{med.frequency}</div>
-                      {med.prescribed_by && (
-                        <div className="med-prescriber">Prescribed by: {med.prescribed_by}</div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="empty-state">No current medications</p>
-                )}
+              <div>
+                <button 
+                  onClick={() => setShowPrescriptionForm(true)} 
+                  className="btn-add-small"
+                  style={{ marginBottom: '10px' }}
+                >
+                  <Plus size={16} /> Add Prescription
+                </button>
+                <div className="medications-list">
+                  {patient?.currentMedications && patient.currentMedications.length > 0 ? (
+                    patient.currentMedications.map((med, idx) => (
+                      <div key={idx} className="medication-item">
+                        <div className="med-name">{med.name}</div>
+                        <div className="med-details">{med.frequency}</div>
+                        {med.prescribed_by && (
+                          <div className="med-prescriber">Prescribed by: {med.prescribed_by}</div>
+                        )}
+                        <div className="med-actions">
+                          <button onClick={() => handleEditPrescription(med)} className="btn-icon">
+                            <Edit2 size={14} />
+                          </button>
+                          <button onClick={() => handleDeletePrescription(med.id)} className="btn-icon">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty-state">No current medications</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -449,7 +686,7 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
           </div>
         </div>
 
-        {/* Right Column - Clinical Notes */}
+        {/* Right Column - Clinical Actions */}
         <div className="workspace-column right-column">
           
           {/* Diagnosis Section */}
@@ -463,6 +700,27 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
               rows={2}
               disabled={!hasVisit}
             />
+            
+            <h4 style={{ marginTop: '15px', marginBottom: '5px' }}>Present Illnesses</h4>
+            <textarea
+              className="diagnosis-input"
+              value={presentIllnesses}
+              onChange={(e) => setPresentIllnesses(e.target.value)}
+              placeholder="Enter present illnesses..."
+              rows={2}
+              disabled={!hasVisit}
+            />
+            
+            <div className="notes-actions">
+              <button 
+                onClick={handleSaveDiagnosis} 
+                className="btn-save"
+                disabled={saving || !diagnosis.trim() || !hasVisit}
+              >
+                <Save size={18} />
+                {saving ? 'Saving...' : 'Save Diagnosis'}
+              </button>
+            </div>
             {!hasVisit && (
               <p className="input-warning">
                 <AlertCircle size={14} /> Patient must check in before adding diagnosis
@@ -470,43 +728,217 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
             )}
           </div>
 
-          {/* Clinical Notes */}
+          {/* Treatments Section */}
           <div className="notes-card">
-            <h3><FileText size={20} /> Clinical Notes</h3>
-            <textarea
-              className="notes-textarea"
-              value={activeNote}
-              onChange={(e) => setActiveNote(e.target.value)}
-              placeholder="Enter your clinical notes here..."
-              rows={12}
-              disabled={!hasVisit}
-            />
-            <div className="notes-actions">
+            <div className="card-header-with-action">
+              <h3><Activity size={20} /> Treatments</h3>
               <button 
-                onClick={handleSaveNote} 
-                className="btn-save"
-                disabled={saving || !activeNote.trim() || !hasVisit}
-              >
-                <Save size={18} />
-                {saving ? 'Saving...' : 'Save Note'}
-              </button>
-              <button 
-                onClick={() => {
-                  setActiveNote('');
-                  setDiagnosis('');
-                }} 
-                className="btn-clear"
+                onClick={() => setShowTreatmentSelector(!showTreatmentSelector)} 
+                className="btn-add-small"
                 disabled={!hasVisit}
               >
-                Clear
+                <Plus size={16} /> Add Treatment
               </button>
             </div>
+            
+            {showTreatmentSelector && (
+              <div className="treatment-selector">
+                <select 
+                  onChange={(e) => {
+                    const treatment = treatmentCatalog.find(t => t.treatment_id === parseInt(e.target.value));
+                    if (treatment) handleAddTreatment(treatment);
+                  }}
+                  defaultValue=""
+                >
+                  <option value="">Select a treatment...</option>
+                  {treatmentCatalog.map(t => (
+                    <option key={t.treatment_id} value={t.treatment_id}>
+                      {t.treatment_name} - ${t.default_cost}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            <div className="treatments-list">
+              {selectedTreatments.length > 0 ? (
+                selectedTreatments.map((treatment, idx) => (
+                  <div key={idx} className="treatment-item">
+                    <div className="treatment-header">
+                      <strong>{treatment.treatment_name}</strong>
+                      <button onClick={() => handleRemoveTreatment(idx)} className="btn-icon-danger">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                    <div className="treatment-controls">
+                      <div className="input-group">
+                        <label>Quantity:</label>
+                        <input 
+                          type="number" 
+                          min="1"
+                          value={treatment.quantity}
+                          onChange={(e) => handleUpdateTreatment(idx, 'quantity', parseInt(e.target.value))}
+                        />
+                      </div>
+                      <div className="input-group">
+                        <label>Cost Each:</label>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          value={treatment.cost_each}
+                          onChange={(e) => handleUpdateTreatment(idx, 'cost_each', parseFloat(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    <div className="input-group">
+                      <label>Notes:</label>
+                      <input 
+                        type="text"
+                        value={treatment.notes}
+                        onChange={(e) => handleUpdateTreatment(idx, 'notes', e.target.value)}
+                        placeholder="Optional notes..."
+                      />
+                    </div>
+                    <div className="treatment-total">
+                      Total: ${(treatment.quantity * treatment.cost_each).toFixed(2)}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="empty-state">No treatments selected</p>
+              )}
+            </div>
+            
+            {selectedTreatments.length > 0 && (
+              <div className="notes-actions">
+                <button 
+                  onClick={handleSaveTreatments} 
+                  className="btn-save"
+                  disabled={saving || !hasVisit}
+                >
+                  <Save size={18} />
+                  {saving ? 'Saving...' : 'Save Treatments'}
+                </button>
+              </div>
+            )}
+            
             {!hasVisit && (
               <p className="input-warning">
-                <AlertCircle size={14} /> Patient must check in before adding notes
+                <AlertCircle size={14} /> Patient must check in before adding treatments
               </p>
             )}
           </div>
+
+          {/* Prescription Form Modal */}
+          {showPrescriptionForm && (
+            <div className="modal-overlay" onClick={() => setShowPrescriptionForm(false)}>
+              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3>{editingPrescription ? 'Edit Prescription' : 'New Prescription'}</h3>
+                  <button onClick={() => {
+                    setShowPrescriptionForm(false);
+                    setEditingPrescription(null);
+                  }} className="btn-close">
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label>Medication Name *</label>
+                    <input 
+                      type="text"
+                      value={prescriptionForm.medication_name}
+                      onChange={(e) => setPrescriptionForm({...prescriptionForm, medication_name: e.target.value})}
+                      placeholder="Enter medication name"
+                    />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Dosage</label>
+                      <input 
+                        type="text"
+                        value={prescriptionForm.dosage}
+                        onChange={(e) => setPrescriptionForm({...prescriptionForm, dosage: e.target.value})}
+                        placeholder="e.g., 500mg"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Frequency</label>
+                      <input 
+                        type="text"
+                        value={prescriptionForm.frequency}
+                        onChange={(e) => setPrescriptionForm({...prescriptionForm, frequency: e.target.value})}
+                        placeholder="e.g., twice daily"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Route</label>
+                      <select 
+                        value={prescriptionForm.route}
+                        onChange={(e) => setPrescriptionForm({...prescriptionForm, route: e.target.value})}
+                      >
+                        <option value="Oral">Oral</option>
+                        <option value="IV">IV</option>
+                        <option value="IM">IM</option>
+                        <option value="Topical">Topical</option>
+                        <option value="Inhalation">Inhalation</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Refills Allowed</label>
+                      <input 
+                        type="number"
+                        min="0"
+                        value={prescriptionForm.refills_allowed}
+                        onChange={(e) => setPrescriptionForm({...prescriptionForm, refills_allowed: parseInt(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Start Date</label>
+                      <input 
+                        type="date"
+                        value={prescriptionForm.start_date}
+                        onChange={(e) => setPrescriptionForm({...prescriptionForm, start_date: e.target.value})}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>End Date</label>
+                      <input 
+                        type="date"
+                        value={prescriptionForm.end_date}
+                        onChange={(e) => setPrescriptionForm({...prescriptionForm, end_date: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Instructions/Notes</label>
+                    <textarea 
+                      rows={3}
+                      value={prescriptionForm.notes}
+                      onChange={(e) => setPrescriptionForm({...prescriptionForm, notes: e.target.value})}
+                      placeholder="Special instructions..."
+                    />
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button onClick={() => {
+                    setShowPrescriptionForm(false);
+                    setEditingPrescription(null);
+                  }} className="btn-secondary">
+                    Cancel
+                  </button>
+                  <button onClick={handleSavePrescription} className="btn-save" disabled={saving}>
+                    <Save size={18} />
+                    {saving ? 'Saving...' : 'Save Prescription'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Previous Notes */}
           <div className="notes-card collapsible">
@@ -530,7 +962,11 @@ export default function ClinicalWorkSpace({ appointmentId, onClose }) {
                           <strong>Diagnosis:</strong> {note.diagnosis}
                         </div>
                       )}
-                      <div className="note-text">{note.note_text || note.treatment || 'No notes'}</div>
+                      {note.note_text && (
+                        <div className="note-text">
+                          <strong>Treatments:</strong> {note.note_text}
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
