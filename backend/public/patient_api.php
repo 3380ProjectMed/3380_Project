@@ -2,6 +2,13 @@
 <?php
 // patient_api.php - Patient Portal API Endpoints (cleaned and fixed)
 
+// IMMEDIATE DEBUG - Check if this file is even being called
+error_log("=== PATIENT API ENTRY POINT ===");
+error_log("Request method: " . ($_SERVER['REQUEST_METHOD'] ?? 'NOT SET'));
+error_log("Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'NOT SET'));
+error_log("Query string: " . ($_SERVER['QUERY_STRING'] ?? 'NOT SET'));
+error_log("================================");
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 // require_once 'helpers.php'; 
