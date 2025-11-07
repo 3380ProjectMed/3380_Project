@@ -22,10 +22,10 @@ try {
     
     try {
         $rows = executeQuery($conn, '
-            SELECT s.Work_Location as office_id, o.Name as office_name
-            FROM Staff s
-            JOIN user_account ua ON ua.email = s.Staff_Email
-            LEFT JOIN Office o ON s.Work_Location = o.Office_ID
+            SELECT s.work_location as office_id, o.name as office_name
+            FROM staff s
+            JOIN user_account ua ON ua.email = s.staff_email
+            LEFT JOIN office o ON s.work_location = o.office_id
             WHERE ua.user_id = ?', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
@@ -74,26 +74,26 @@ try {
                 a.Status,
                 a.Patient_id,
                 a.Doctor_id,
-                CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name,
-                p.First_Name as patient_first,
-                p.Last_Name as patient_last,
-                p.EmergencyContact,
-                p.Allergies as allergy_code,
-                ca.Allergies_Text as allergies,
-                CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
-                d.First_Name as doctor_first,
-                d.Last_Name as doctor_last,
-                pv.Visit_id,
-                pv.Status as visit_status,
-                pv.Start_at as check_in_time,
-                pv.End_at as completion_time,
+                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                p.first_name as patient_first,
+                p.last_name as patient_last,
+                p.emergency_contact_id,
+                p.allergies as allergy_code,
+                ca.allergies_text as allergies,
+                CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                d.first_name as doctor_first,
+                d.last_name as doctor_last,
+                pv.visit_id,
+                pv.status as visit_status,
+                pv.start_at as check_in_time,
+                pv.end_at as completion_time,
                 pi.copay
-            FROM Appointment a
-            INNER JOIN Patient p ON a.Patient_id = p.Patient_ID
-            INNER JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-            LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
-            LEFT JOIN patient_insurance pi ON p.InsuranceID = pi.id AND pi.is_primary = 1
-            LEFT JOIN CodesAllergies ca ON p.Allergies = ca.AllergiesCode
+            FROM appointment a
+            INNER JOIN patient p ON a.Patient_id = p.patient_id
+            INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
+            LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
+            LEFT JOIN patient_insurance pi ON p.insuranceid = pi.id AND pi.is_primary = 1
+            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             WHERE a.Office_id = ? $dateFilter
             ORDER BY a.Appointment_date ASC";
     
@@ -216,12 +216,12 @@ try {
             // Other fields
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
             'Reason_for_visit' => $apt['Reason_for_visit'] ?: 'General Visit',
-            'emergencyContact' => $apt['EmergencyContact'],
+            'emergencyContact' => $apt['emergency_contact_id'],
             'allergies' => $apt['allergies'] ?: 'No Known Allergies',
             'checkInTime' => $apt['check_in_time'],
             'completionTime' => $apt['completion_time'],
             'copay' => $apt['copay'] ? floatval($apt['copay']) : 0.00,
-            'visitId' => $apt['Visit_id']
+            'visitId' => $apt['visit_id']
         ];
     }
     
