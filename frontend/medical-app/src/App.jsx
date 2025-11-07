@@ -7,6 +7,7 @@ import LandingPage from "./components/LandingPage.jsx";
 import PatientPortal from "./components/patient/PatientPortal.jsx";
 import DoctorPortal from "./components/doctor/DoctorPortal.jsx";
 import LoginPage from "./components/LoginPage.jsx";
+import PasswordReset from "./components/PasswordReset.jsx";
 import SignUp  from "./components/SignUp.jsx";
 
 // Nurse module
@@ -30,6 +31,7 @@ export default function App() {
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/passwordreset" element={<PasswordReset />} />
       <Route path="/admin" element={
         <RequireRole roles={["ADMIN"]}>
           <AdminPortal />
