@@ -54,83 +54,17 @@ if (!$input || !isset($input['action'])) {
 $action = $input['action'];
 
 // ==========================================
-// HANDLE PASSWORD RESET REQUEST
+// HANDLE PASSWORD RESET WITH SSN VERIFICATION
 // ==========================================
-if ($action === 'request') {
-    if (!isset($input['email'])) {
+if ($action === 'reset') {
+    if (!isset($input['email']) || !isset($input['ssn']) || !isset($input['password'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'Email required']);
+        echo json_encode(['error' => 'Email, SSN, and password required']);
         exit;
     }
 
     $email = $input['email'];
-
-    // Find user
-    $stmt = $mysqli->prepare("SELECT user_id, username, email FROM user_account WHERE email = ? LIMIT 1");
-    $stmt->bind_param('s', $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows === 0) {
-        // Don't reveal if email exists - security best practice
-        http_response_code(200);
-        echo json_encode(['success' => true, 'message' => 'If an account exists, reset email sent']);
-        $stmt->close();
-        $mysqli->close();
-        exit;
-    }
-
-    $user = $result->fetch_assoc();
-    $stmt->close();
-
-    // Generate secure reset token
-    $resetToken = bin2hex(random_bytes(32));
-    $tokenExpires = date('Y-m-d H:i:s', strtotime('+1 hour'));
-
-    // Store token in database
-    $updateStmt = $mysqli->prepare(
-        "UPDATE user_account 
-         SET reset_token = ?, 
-             reset_token_expires = ?, 
-             updated_at = NOW() 
-         WHERE user_id = ?"
-    );
-    $updateStmt->bind_param('ssi', $resetToken, $tokenExpires, $user['user_id']);
-    $updateStmt->execute();
-    $updateStmt->close();
-
-    // Generate reset link
-    $resetLink = "https://yourdomain.com/password-reset.html?token=" . $resetToken;
-    
-    // Log for testing (in production, send actual email)
-    error_log("Password reset link for {$email}: {$resetLink}");
-
-    // TODO: Send email in production
-    // mail($email, "Password Reset", "Click here to reset: $resetLink");
-
-    $mysqli->close();
-
-    http_response_code(200);
-    echo json_encode([
-        'success' => true, 
-        'message' => 'If an account exists, reset email sent',
-        // REMOVE THIS IN PRODUCTION - only for testing:
-        'debug_reset_link' => $resetLink
-    ]);
-    exit;
-}
-
-// ==========================================
-// HANDLE PASSWORD RESET
-// ==========================================
-if ($action === 'reset') {
-    if (!isset($input['token']) || !isset($input['password'])) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Token and password required']);
-        exit;
-    }
-
-    $token = $input['token'];
+    $ssn = $input['ssn'];
     $newPassword = $input['password'];
 
     // Validate password strength
@@ -140,46 +74,85 @@ if ($action === 'reset') {
         exit;
     }
 
-    // Find user with valid token
+    // Validate SSN format (9 digits)
+    if (!preg_match('/^\d{9}$/', $ssn)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid SSN format']);
+        exit;
+    }
+
+    // Verify SSN matches patient with this email
     $stmt = $mysqli->prepare(
-        "SELECT user_id, email 
-         FROM user_account 
-         WHERE reset_token = ? 
-         AND reset_token_expires > NOW() 
+        "SELECT p.patient_id, p.email 
+         FROM patient p
+         WHERE p.email = ? 
+         AND p.ssn = ? 
          LIMIT 1"
     );
-    $stmt->bind_param('s', $token);
+    $stmt->bind_param('ss', $email, $ssn);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result->num_rows === 0) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Invalid or expired reset token']);
+        // Don't reveal which field is wrong - security best practice
+        http_response_code(401);
+        echo json_encode(['error' => 'Invalid credentials. Email and SSN do not match our records.']);
         $stmt->close();
         $mysqli->close();
         exit;
     }
 
-    $user = $result->fetch_assoc();
+    $patient = $result->fetch_assoc();
     $stmt->close();
+
+    // Now find the user_account with this email
+    $userStmt = $mysqli->prepare(
+        "SELECT user_id 
+         FROM user_account 
+         WHERE email = ? 
+         LIMIT 1"
+    );
+    $userStmt->bind_param('s', $email);
+    $userStmt->execute();
+    $userResult = $userStmt->get_result();
+
+    if ($userResult->num_rows === 0) {
+        http_response_code(404);
+        echo json_encode(['error' => 'User account not found']);
+        $userStmt->close();
+        $mysqli->close();
+        exit;
+    }
+
+    $userAccount = $userResult->fetch_assoc();
+    $userStmt->close();
 
     // Hash new password
     $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
 
-    // Update password and clear reset token
-    // Also reset failed_login_count to unlock the account
+    // Update password and reset failed_login_count to unlock the account
     $updateStmt = $mysqli->prepare(
         "UPDATE user_account 
          SET password_hash = ?, 
-             reset_token = NULL, 
-             reset_token_expires = NULL,
              failed_login_count = 0,
              updated_at = NOW() 
          WHERE user_id = ?"
     );
-    $updateStmt->bind_param('si', $passwordHash, $user['user_id']);
+    $updateStmt->bind_param('si', $passwordHash, $userAccount['user_id']);
     $updateStmt->execute();
+    
+    if ($updateStmt->affected_rows === 0) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to update password']);
+        $updateStmt->close();
+        $mysqli->close();
+        exit;
+    }
+    
     $updateStmt->close();
+
+    // Log the password reset for security audit
+    error_log("Password reset successful for user: {$email}");
 
     $mysqli->close();
 
