@@ -1,7 +1,8 @@
 <?php
 /**
- * Get patient visit details including vitals and notes
- * PRODUCTION VERSION - Complete data fetching
+ * Get patient visit details - DATE-SPECIFIC VERSION
+ * Only shows patient_visit data if it matches the appointment date
+ * Nurse creates patient_visit on check-in, doctor sees it if same day
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -40,7 +41,7 @@ try {
 
     $conn = getDBConnection();
 
-    // Build base query for patient_visit data
+    // BASE QUERY for patient_visit data
     $baseSelect = "SELECT 
                 pv.visit_id,
                 pv.appointment_id,
@@ -83,55 +84,60 @@ try {
 
     $rows = [];
     
+    // MAIN LOGIC: If appointment_id provided, match by BOTH appointment_id AND date
     if ($appointment_id > 0) {
-        // Try to find an existing patient_visit for this appointment
-        $sql = $baseSelect . ", a.Appointment_date, a.Reason_for_visit as appointment_reason"
-             . $baseFrom
-             . " LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
-                WHERE pv.appointment_id = ?
-                ORDER BY pv.date DESC
-                LIMIT 1";
-        $rows = executeQuery($conn, $sql, 'i', [$appointment_id]);
+        // Step 1: Get appointment details first
+        $apptSql = "SELECT 
+                    a.Appointment_id,
+                    a.Patient_id,
+                    a.Appointment_date,
+                    a.Doctor_id,
+                    a.Reason_for_visit,
+                    a.Office_id,
+                    CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                    p.dob,
+                    p.blood_type,
+                    ca.allergies_text as allergies,
+                    cg.gender_text as gender,
+                    CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                    o.name as office_name
+                FROM appointment a
+                LEFT JOIN patient p ON a.Patient_id = p.patient_id
+                LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+                LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
+                LEFT JOIN doctor d ON a.Doctor_id = d.doctor_id
+                LEFT JOIN office o ON a.Office_id = o.office_id
+                WHERE a.Appointment_id = ?";
+        $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
         
-        // If no patient_visit exists, get appointment and patient data
+        if (empty($apptRows)) {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false, 
+                'error' => 'Appointment not found',
+                'has_visit' => false
+            ]);
+            closeDBConnection($conn);
+            exit;
+        }
+        
+        $appt = $apptRows[0];
+        $patient_id = $appt['Patient_id'];
+        $appointment_date = $appt['Appointment_date']; // e.g., "2024-11-05"
+        
+        // Step 2: Look for patient_visit that matches BOTH appointment_id AND date
+        // CRITICAL: Must match the appointment date exactly!
+        $visitSql = $baseSelect . ", a.Appointment_date, a.Reason_for_visit as appointment_reason"
+                 . $baseFrom
+                 . " LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
+                    WHERE pv.appointment_id = ? 
+                    AND DATE(pv.date) = DATE(?)
+                    ORDER BY pv.date DESC
+                    LIMIT 1";
+        $rows = executeQuery($conn, $visitSql, 'is', [$appointment_id, $appointment_date]);
+        
+        // Step 3: If no patient_visit found for this appointment date
         if (empty($rows)) {
-            $apptSql = "SELECT 
-                        a.Appointment_id,
-                        a.Patient_id,
-                        a.Appointment_date,
-                        a.Doctor_id,
-                        a.Reason_for_visit,
-                        a.Office_id,
-                        CONCAT(p.first_name, ' ', p.last_name) as patient_name,
-                        p.dob,
-                        p.blood_type,
-                        ca.allergies_text as allergies,
-                        cg.gender_text as gender,
-                        CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
-                        o.name as office_name
-                    FROM appointment a
-                    LEFT JOIN patient p ON a.Patient_id = p.patient_id
-                    LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
-                    LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
-                    LEFT JOIN doctor d ON a.Doctor_id = d.doctor_id
-                    LEFT JOIN office o ON a.Office_id = o.office_id
-                    WHERE a.Appointment_id = ?";
-            $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
-            
-            if (empty($apptRows)) {
-                http_response_code(404);
-                echo json_encode([
-                    'success' => false, 
-                    'error' => 'Appointment not found',
-                    'has_visit' => false
-                ]);
-                closeDBConnection($conn);
-                exit;
-            }
-            
-            $appt = $apptRows[0];
-            $patient_id = $appt['Patient_id'];
-            
             // Calculate age
             $age = null;
             if (!empty($appt['dob'])) {
@@ -144,10 +150,11 @@ try {
                 }
             }
             
-            // Return appointment data without patient_visit
+            // Return appointment data WITHOUT patient_visit (patient hasn't checked in)
             $response = [
                 'success' => true,
                 'has_visit' => false,
+                'message' => 'Patient has not checked in for this appointment yet',
                 'appointment' => [
                     'appointment_id' => $appt['Appointment_id'],
                     'patient_id' => $patient_id,
@@ -198,17 +205,23 @@ try {
                 ]
             ];
             
-            // Fetch additional patient data
+            // Still fetch patient historical data (chronic conditions, meds, etc.)
             fetchPatientData($conn, $patient_id, $response);
             
             closeDBConnection($conn);
             echo json_encode($response);
             exit;
         }
+        
+        // If we reach here, patient_visit EXISTS for this appointment date
+        // Fall through to normal processing below
+        
     } elseif ($visit_id > 0) {
+        // Direct visit_id lookup
         $sql = $baseSelect . $baseFrom . " WHERE pv.visit_id = ?";
         $rows = executeQuery($conn, $sql, 'i', [$visit_id]);
     } else {
+        // Patient_id only - get most recent visit
         $sql = $baseSelect . $baseFrom 
              . " WHERE pv.patient_id = ?
                 ORDER BY pv.date DESC
@@ -216,6 +229,7 @@ try {
         $rows = executeQuery($conn, $sql, 'i', [$patient_id]);
     }
 
+    // No visit found
     if (empty($rows)) {
         http_response_code(404);
         echo json_encode([
@@ -227,6 +241,7 @@ try {
         exit;
     }
 
+    // Patient visit EXISTS - return full data
     $visit = $rows[0];
 
     // Calculate age
@@ -285,8 +300,8 @@ try {
         ]
     ];
 
-    $patient_id = $visit['patient_id'];
-    fetchPatientData($conn, $patient_id, $response);
+    // Fetch additional patient data
+    fetchPatientData($conn, $visit['patient_id'], $response);
 
     closeDBConnection($conn);
     echo json_encode($response);
@@ -303,6 +318,7 @@ try {
 
 /**
  * Helper function to fetch patient medical data
+ * (Chronic conditions, medication history, current prescriptions)
  */
 function fetchPatientData($conn, $patient_id, &$response) {
     // Fetch medical conditions (chronic conditions)
