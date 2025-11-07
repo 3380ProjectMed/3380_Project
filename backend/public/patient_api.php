@@ -24,32 +24,33 @@ session_start([
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
-    // Comprehensive debugging
+    // Enhanced session debugging
     error_log("=== PATIENT API AUTH DEBUG ===");
-    error_log("Session ID: " . session_id());
-    error_log("Session save path: " . session_save_path());
+    error_log("Session ID: " . session_id());  
     error_log("Session name: " . session_name());
-    error_log("Session status: " . session_status());
-    error_log("All SERVER vars related to session: " . json_encode([
-        'HTTP_COOKIE' => $_SERVER['HTTP_COOKIE'] ?? 'NOT SET',
-        'COOKIE' => $_COOKIE,
-        'SESSION' => $_SESSION
-    ]));
+    error_log("Session save path: " . session_save_path());
+    error_log("Session data: " . json_encode($_SESSION));
+    error_log("All cookies: " . json_encode($_COOKIE));
+    error_log("HTTP_COOKIE header: " . ($_SERVER['HTTP_COOKIE'] ?? 'NOT SET'));
+    error_log("Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'NOT SET'));
+    error_log("HTTP_REFERER: " . ($_SERVER['HTTP_REFERER'] ?? 'NOT SET'));
     error_log("================================");
     
-    // Temporary bypass for debugging - let's see if the API itself works
-    // TODO: Remove this after fixing session issue
-    if (empty($_SESSION)) {
-        error_log("TEMP BYPASS: No session data found, using hardcoded patient_id=5 for user maria.garcia@email.com");
-        $_SESSION['patient_id'] = 2;
-        $_SESSION['email'] = 'maria.garcia@email.com';
-        $_SESSION['uid'] = 5;
-        return;
+    // Try to restart session if it seems invalid but we have session cookie
+    if (empty($_SESSION) && !empty($_COOKIE[session_name()])) {
+        error_log("PATIENT AUTH: Session appears invalid but cookie exists, attempting to restart session");
+        session_destroy();
+        session_start([
+            'cookie_httponly' => true,
+            'cookie_secure'   => $isHttps,
+            'cookie_samesite' => 'Lax',
+        ]);
+        error_log("PATIENT AUTH: After restart - Session ID: " . session_id() . ", Data: " . json_encode($_SESSION));
     }
     
     // Check if we have basic authentication from login system
     if (!isset($_SESSION['uid']) || !isset($_SESSION['email'])) {
-        error_log("PATIENT AUTH: Missing basic session data - uid: " . ($_SESSION['uid'] ?? 'NOT SET') . ", email: " . ($_SESSION['email'] ?? 'NOT SET'));
+        error_log("PATIENT AUTH: Missing session data - uid: " . ($_SESSION['uid'] ?? 'NOT SET') . ", email: " . ($_SESSION['email'] ?? 'NOT SET'));
         sendResponse(false, [], 'User not authenticated - please log in again', 401);
         exit();
     }
