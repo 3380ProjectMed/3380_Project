@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./NurseSchedule.css";
-import { getNurseScheduleToday } from '../../api/nurse';
+import { getNurseSchedule } from '../../api/nurse';
 
 export default function NurseSchedule() {
   const [schedule, setSchedule] = useState([]);
@@ -11,12 +11,10 @@ export default function NurseSchedule() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getNurseScheduleToday();
-      
-      console.log('Schedule data:', data);
-      
-      const scheduleData = data?.schedule || data || [];
-      setSchedule(Array.isArray(scheduleData) ? scheduleData : []);
+      const today = new Date().toISOString().slice(0, 10);
+      const appts = await getNurseSchedule({ date: today });
+      const list = Array.isArray(appts) ? appts : (appts?.appointments || []);
+      setSchedule(list);
     } catch (e) {
       console.error('Schedule error:', e);
       setError(e.message || 'Failed to load schedule');
@@ -59,18 +57,13 @@ export default function NurseSchedule() {
             {loading ? (
               <div className="empty">Loading schedule...</div>
             ) : schedule.length > 0 ? (
-              schedule.map((shift, i) => (
-                <div key={i} className="row">
-                  <div>{shift.day_of_week || 'N/A'}</div>
-                  <div>
-                    {shift.start_time || '??'} - {shift.end_time || '??'}
-                  </div>
+              schedule.map((a, i) => (
+                <div key={a.appointmentId ?? i} className="row">
+                  <div>{new Date(a.time).toLocaleDateString()}</div>
+                  <div>{new Date(a.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                  <div>{a.patientName || '-'}</div>
                   <div>-</div>
-                  <div>
-                    {shift.office_name || `Office ${shift.office_id || ''}`}
-                    {shift.address && ` - ${shift.address}, ${shift.city}, ${shift.state}`}
-                  </div>
-                  <div>Regular Shift</div>
+                  <div>{a.reason || 'Visit'}</div>
                 </div>
               ))
             ) : (
