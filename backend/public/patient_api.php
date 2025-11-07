@@ -24,9 +24,15 @@ session_start([
 
 // Helper functions  
 function requireAuth($allowed_roles = ['PATIENT']) {
+    // Temporary debugging - remove after fixing
+    error_log("PATIENT API DEBUG: Session ID = " . session_id());
+    error_log("PATIENT API DEBUG: Full session = " . json_encode($_SESSION));
+    error_log("PATIENT API DEBUG: Email in session = " . ($_SESSION['email'] ?? 'NOT SET'));
+    error_log("PATIENT API DEBUG: UID in session = " . ($_SESSION['uid'] ?? 'NOT SET'));
+    
     // Check if user is authenticated with basic session data from login
     if (!isset($_SESSION['email']) || !isset($_SESSION['uid'])) {
-        sendResponse(false, [], 'User not authenticated', 401);
+        sendResponse(false, [], 'User not authenticated - session data missing', 401);
         exit();
     }
     
