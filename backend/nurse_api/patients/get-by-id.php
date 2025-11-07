@@ -13,11 +13,11 @@ try {
     // normalize id: allow 'p1001' or numeric
     $idNum = preg_replace('/[^0-9]/', '', $id);
 
-    $sql = "SELECT p.Patient_ID AS id, p.First_Name AS firstName, p.Last_Name AS lastName,
-                   DATE_FORMAT(p.DOB, '%Y-%m-%d') AS dob, p.Allergies AS allergies, p.Email AS email, p.Phone AS phone,
-                   p.Medical_History AS history, p.Medications AS medications
-              FROM Patient p
-             WHERE p.Patient_ID = ? LIMIT 1";
+    $sql = "SELECT p.patient_id AS id, p.first_name AS firstName, p.last_name AS lastName,
+                DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.allergies AS allergies, p.email AS email, p.phone AS phone,
+                p.medical_history AS history, p.medications AS medications
+            FROM patient p
+           WHERE p.patient_id = ? LIMIT 1";
 
     $rows = executeQuery($pdo, $sql, 'i', [(int)$idNum]);
     if (empty($rows)) {

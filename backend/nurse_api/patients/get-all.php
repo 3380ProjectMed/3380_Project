@@ -13,15 +13,15 @@ try {
     $params = [];
 
     if ($q) {
-        $where = " WHERE (p.First_Name LIKE ? OR p.Last_Name LIKE ? OR p.Patient_ID LIKE ?)";
+        $where = " WHERE (p.first_name LIKE ? OR p.last_name LIKE ? OR p.patient_id LIKE ?)";
         $like = "%{$q}%";
         $types = 'sss';
         $params = [$like, $like, $like];
     }
 
-    $sql = "SELECT SQL_CALC_FOUND_ROWS p.Patient_ID AS id, CONCAT(p.First_Name,' ',p.Last_Name) AS name,
-                   DATE_FORMAT(p.DOB, '%Y-%m-%d') AS dob, p.Allergies AS allergies, p.Email AS email, p.Phone AS phone
-              FROM Patient p" . $where . " ORDER BY p.Last_Name, p.First_Name LIMIT ? OFFSET ?";
+    $sql = "SELECT SQL_CALC_FOUND_ROWS p.patient_id AS id, CONCAT(p.first_name,' ',p.last_name) AS name,
+                   DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.allergies AS allergies, p.email AS email, p.phone AS phone
+              FROM patient p" . $where . " ORDER BY p.last_name, p.first_name LIMIT ? OFFSET ?";
 
     $types .= 'ii';
     $params[] = $pageSize;
@@ -45,7 +45,7 @@ try {
         ];
     }
 
-    echo json_encode(['items' => $items, 'total' => $total]);
+    echo json_encode(['patients' => $items, 'total' => $total]);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Failed to load patients', 'message' => $e->getMessage()]);

@@ -7,15 +7,14 @@ try {
     $status = $_GET['status'] ?? null;
     $q = $_GET['q'] ?? null;
 
-    $sql = "SELECT a.Appointment_id AS id, a.Appointment_date AS time, a.status, a.Reason_for_visit AS reason,
-                   p.Patient_ID AS patientId, CONCAT(p.First_Name,' ',p.Last_Name) AS patientName
-              FROM Appointment a
-              JOIN Patient p ON p.Patient_ID = a.Patient_id
-             WHERE DATE(a.Appointment_date) = ?
-               AND a.assigned_nurse_id = ?";
+    $sql = "SELECT a.appointment_id AS id, a.appointment_date AS time, a.status, a.reason_for_visit AS reason,
+                p.patient_id AS patientId, CONCAT(p.first_name,' ',p.last_name) AS patientName
+            FROM appointment a
+            JOIN patient p ON p.patient_id = a.patient_id
+           WHERE DATE(a.appointment_date) = ?";
 
-    $types = 'si';
-    $params = [$date, $userId];
+    $types = 's';
+    $params = [$date];
 
     if ($status) {
         $sql .= " AND a.status = ?";

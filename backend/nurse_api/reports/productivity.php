@@ -8,25 +8,23 @@ try {
     $conds = [];
     $types = '';
     $params = [];
-    if ($from) { $conds[] = 'DATE(a.Appointment_date) >= ?'; $types .= 's'; $params[] = $from; }
-    if ($to) { $conds[] = 'DATE(a.Appointment_date) <= ?'; $types .= 's'; $params[] = $to; }
+    if ($from) { $conds[] = 'DATE(a.appointment_date) >= ?'; $types .= 's'; $params[] = $from; }
+    if ($to) { $conds[] = 'DATE(a.appointment_date) <= ?'; $types .= 's'; $params[] = $to; }
 
     $where = '';
     if (!empty($conds)) { $where = ' AND ' . implode(' AND ', $conds); }
 
-    $sqlHandled = "SELECT COUNT(*) AS cnt FROM Appointment a WHERE a.assigned_nurse_id = ? {$where}";
-    $paramsHandled = array_merge([$userId], $params);
-    $typesHandled = 'i' . $types;
-    $rowsH = executeQuery($pdo, $sqlHandled, $typesHandled, $paramsHandled);
+    $sqlHandled = "SELECT COUNT(*) AS cnt FROM appointment a {$where}";
+    $rowsH = executeQuery($pdo, $sqlHandled, $types ?: null, $params ?: []);
     $handled = $rowsH && isset($rowsH[0]['cnt']) ? intval($rowsH[0]['cnt']) : 0;
 
-    $sqlCompleted = "SELECT COUNT(*) AS cnt FROM Appointment a WHERE a.assigned_nurse_id = ? AND a.status = 'Completed' {$where}";
-    $rowsC = executeQuery($pdo, $sqlCompleted, $typesHandled, $paramsHandled);
+    $sqlCompleted = "SELECT COUNT(*) AS cnt FROM appointment a WHERE a.status = 'Completed' {$where}";
+    $rowsC = executeQuery($pdo, $sqlCompleted, $types ?: null, $params ?: []);
     $completed = $rowsC && isset($rowsC[0]['cnt']) ? intval($rowsC[0]['cnt']) : 0;
 
     // intakeDone
-    $sqlIntake = "SELECT COUNT(*) AS cnt FROM intake i JOIN Appointment a ON i.appointment_id = a.Appointment_id WHERE a.assigned_nurse_id = ? {$where}";
-    $rowsI = executeQuery($pdo, $sqlIntake, $typesHandled, $paramsHandled);
+    $sqlIntake = "SELECT COUNT(*) AS cnt FROM intake i JOIN appointment a ON i.appointment_id = a.appointment_id {$where}";
+    $rowsI = executeQuery($pdo, $sqlIntake, $types ?: null, $params ?: []);
     $intakeDone = $rowsI && isset($rowsI[0]['cnt']) ? intval($rowsI[0]['cnt']) : 0;
 
     echo json_encode(['handled' => $handled, 'completed' => $completed, 'intakeDone' => $intakeDone]);

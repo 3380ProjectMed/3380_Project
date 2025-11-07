@@ -5,12 +5,11 @@ require_once __DIR__ . '/../_bootstrap.php';
 try {
     $today = date('Y-m-d');
 
-    $sql = "SELECT a.status
-              FROM Appointment a
-             WHERE DATE(a.Appointment_date) = ?
-               AND a.assigned_nurse_id = ?";
+        $sql = "SELECT a.status
+                            FROM appointment a
+                         WHERE DATE(a.appointment_date) = ?";
 
-    $rows = executeQuery($pdo, $sql, 'si', [$today, $userId]);
+        $rows = executeQuery($pdo, $sql, 's', [$today]);
 
     $total = count($rows);
     $waiting = 0; $upcoming = 0; $completed = 0;

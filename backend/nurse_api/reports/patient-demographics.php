@@ -8,14 +8,14 @@ try {
     $conds = [];
     $types = '';
     $params = [];
-    if ($from) { $conds[] = 'DATE(a.Appointment_date) >= ?'; $types .= 's'; $params[] = $from; }
-    if ($to) { $conds[] = 'DATE(a.Appointment_date) <= ?'; $types .= 's'; $params[] = $to; }
+    if ($from) { $conds[] = 'DATE(a.appointment_date) >= ?'; $types .= 's'; $params[] = $from; }
+    if ($to) { $conds[] = 'DATE(a.appointment_date) <= ?'; $types .= 's'; $params[] = $to; }
     $where = '';
     if (!empty($conds)) { $where = ' AND ' . implode(' AND ', $conds); }
 
     // simple gender distribution
-    $sqlGender = "SELECT p.Gender AS gender, COUNT(*) AS cnt FROM Appointment a JOIN Patient p ON a.Patient_id = p.Patient_ID WHERE a.assigned_nurse_id = ? {$where} GROUP BY p.Gender";
-    $rowsG = executeQuery($pdo, $sqlGender, 'i' . $types, array_merge([$userId], $params));
+    $sqlGender = "SELECT p.gender AS gender, COUNT(*) AS cnt FROM appointment a JOIN patient p ON a.patient_id = p.patient_id {$where} GROUP BY p.gender";
+    $rowsG = executeQuery($pdo, $sqlGender, $types ?: null, $params ?: []);
     $gender = [];
     foreach ($rowsG as $r) { $gender[$r['gender'] ?? 'unknown'] = intval($r['cnt']); }
 
@@ -25,9 +25,9 @@ try {
                   SUM(CASE WHEN TIMESTAMPDIFF(YEAR, p.DOB, CURDATE()) BETWEEN 18 AND 35 THEN 1 ELSE 0 END) AS age18_35,
                   SUM(CASE WHEN TIMESTAMPDIFF(YEAR, p.DOB, CURDATE()) BETWEEN 36 AND 55 THEN 1 ELSE 0 END) AS age36_55,
                   SUM(CASE WHEN TIMESTAMPDIFF(YEAR, p.DOB, CURDATE()) > 55 THEN 1 ELSE 0 END) AS over55
-                FROM Appointment a JOIN Patient p ON a.Patient_id = p.Patient_ID
-                WHERE a.assigned_nurse_id = ? {$where}";
-    $rowsA = executeQuery($pdo, $sqlAge, 'i' . $types, array_merge([$userId], $params));
+                FROM appointment a JOIN patient p ON a.patient_id = p.patient_id
+                {$where}";
+    $rowsA = executeQuery($pdo, $sqlAge, $types ?: null, $params ?: []);
     $age = !empty($rowsA) ? $rowsA[0] : ['under18'=>0,'age18_35'=>0,'age36_55'=>0,'over55'=>0];
 
     echo json_encode(['gender' => $gender, 'ageBuckets' => $age]);
