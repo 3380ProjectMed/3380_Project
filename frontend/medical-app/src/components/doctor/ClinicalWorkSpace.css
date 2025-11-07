@@ -1,40 +1,41 @@
-/* ========== CLINICAL WORKSPACE - BOLD PROMINENT DESIGN ========== */
+/* ========== CLINICAL WORKSPACE - App themed cards and spacing ========== */
 
 /* Main Container */
 .clinical-workspace {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  /* match portal background feel used in other pages */
+  background: linear-gradient(180deg, var(--fifth-color), #ffffff);
   padding: 2rem;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
 /* ===== WORKSPACE HEADER ===== */
 .workspace-header {
-  background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
-  border-radius: 16px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  background: transparent;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 1px solid rgba(0, 119, 182, 0.1);
+  box-sizing: border-box;
 }
 
 .header-info h2 {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin: 0 0 0.75rem 0;
-  font-size: 1.75rem;
+  margin: 0 0 0.25rem 0;
+  font-size: 1.5rem;
   font-weight: 800;
-  color: white;
+  color: var(--primary-color);
 }
 
 .patient-meta {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
   font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.95);
+  color: #6b7280;
   flex-wrap: wrap;
 }
 
@@ -42,16 +43,17 @@
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.375rem 0.875rem;
-  background: rgba(0, 0, 0, 0.15);
+  padding: 0.35rem 0.75rem;
+  background: var(--fifth-color);
   border-radius: 999px;
   font-weight: 700;
+  color: var(--primary-color);
 }
 
 .btn-close {
-  background: rgba(255, 255, 255, 0.25);
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: white;
+  color: var(--primary-color);
+  border: 2px solid var(--fifth-color);
   border-radius: 12px;
   width: 44px;
   height: 44px;
@@ -59,22 +61,20 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
+  transition: all 0.15s ease;
 }
 
 .btn-close:hover {
-  background: rgba(255, 255, 255, 0.35);
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 119, 182, 0.08);
 }
 
 /* ===== WORKSPACE CONTENT - TWO COLUMN LAYOUT ===== */
 .workspace-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  max-width: 1600px;
+  gap: 1.5rem;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -87,16 +87,16 @@
 /* ===== INFO CARDS ===== */
 .info-card {
   background: white;
-  border-radius: 16px;
+  border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.06);
+  border: 2px solid var(--fifth-color);
+  transition: all 0.2s ease;
 }
 
 .info-card:hover {
   box-shadow: 0 8px 24px rgba(0, 119, 182, 0.12);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
 }
 
 /* Card Headers with Dark Blue Background and Cyan Text */
@@ -105,13 +105,9 @@
   align-items: center;
   gap: 0.5rem;
   margin: 0 0 1rem 0;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 800;
-  color: #00b4d8;
-  background: linear-gradient(135deg, #03045e 0%, #0077b6 100%);
-  padding: 1rem 1.25rem;
-  border-radius: 12px;
-  margin: -1.5rem -1.5rem 1rem -1.5rem;
+  color: var(--primary-color);
 }
 
 /* Collapsible Cards */
@@ -124,51 +120,25 @@
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  padding: 1rem 1.25rem;
-  margin: -1.5rem -1.5rem 1rem -1.5rem;
-  border-radius: 12px;
-  transition: background 0.2s ease;
-  background: linear-gradient(135deg, #03045e 0%, #0077b6 100%);
-}
-
-.card-header:hover {
-  background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+  padding: 0;
 }
 
 .card-header h3 {
   margin: 0;
   padding: 0;
-  background: none;
-  border-radius: 0;
-  color: #00b4d8;
-  font-size: 1.25rem;
+  color: var(--primary-color);
+  font-size: 1.125rem;
   font-weight: 800;
-}
-
-.card-header svg {
-  color: #00b4d8;
 }
 
 /* ===== ALERT CARD (ALLERGIES) ===== */
 .info-card.alert-card {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  background: linear-gradient(135deg, #fff5f5 0%, #fff1f0 100%);
   border: 2px solid #f87171;
-  animation: subtle-pulse 3s ease-in-out infinite;
-}
-
-@keyframes subtle-pulse {
-  0%, 100% { 
-    box-shadow: 0 2px 12px rgba(220, 38, 38, 0.15);
-  }
-  50% { 
-    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.25);
-  }
 }
 
 .info-card.alert-card h3 {
-  background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
-  color: #fef2f2;
-  font-weight: 800;
+  color: #991b1b;
 }
 
 .allergy-text {
@@ -190,8 +160,8 @@
   grid-template-columns: 160px 1fr;
   gap: 1rem;
   align-items: center;
-  padding: 0.625rem;
-  background: #f8fafc;
+  padding: 0.75rem;
+  background: var(--fifth-color);
   border-radius: 8px;
 }
 
@@ -231,6 +201,7 @@
 }
 
 /* ===== VITALS SECTION ===== */
+
 .vitals-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -242,9 +213,9 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  background: white;
   border-radius: 12px;
-  border: 1px solid #bae6fd;
+  border: 1px solid var(--fifth-color);
 }
 
 .vital-icon {
@@ -310,11 +281,11 @@
 .medication-item,
 .history-item,
 .med-history-item {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid #e2e8f0;
+  background: white;
+  border: 1px solid var(--fifth-color);
   border-radius: 12px;
   padding: 1rem;
-  transition: all 0.2s ease;
+  transition: all 0.12s ease;
 }
 
 .medication-item:hover,
@@ -390,10 +361,10 @@
 /* ===== NOTES SECTION (RIGHT COLUMN) ===== */
 .notes-card {
   background: white;
-  border-radius: 16px;
+  border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.06);
+  border: 2px solid var(--fifth-color);
 }
 
 .notes-card h3 {
@@ -401,28 +372,24 @@
   align-items: center;
   gap: 0.5rem;
   margin: 0 0 1rem 0;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 800;
-  color: #00b4d8;
-  background: linear-gradient(135deg, #03045e 0%, #0077b6 100%);
-  padding: 1rem 1.25rem;
-  border-radius: 12px;
-  margin: -1.5rem -1.5rem 1rem -1.5rem;
+  color: var(--primary-color);
 }
 
 /* Diagnosis Input */
 .diagnosis-input {
   width: 100%;
-  padding: 0.875rem;
-  border: 2px solid #e2e8f0;
+  padding: 0.75rem;
+  border: 2px solid var(--fifth-color);
   border-radius: 12px;
   font-family: inherit;
   font-size: 1rem;
   font-weight: 600;
   color: #1e293b;
   resize: vertical;
-  transition: all 0.2s ease;
-  background: #f8fafc;
+  transition: all 0.12s ease;
+  background: #fbfbfd;
 }
 
 .diagnosis-input:focus {
@@ -443,7 +410,7 @@
   width: 100%;
   min-height: 300px;
   padding: 1rem;
-  border: 2px solid #e2e8f0;
+  border: 2px solid var(--fifth-color);
   border-radius: 12px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 1rem;
@@ -451,8 +418,8 @@
   font-weight: 500;
   color: #1e293b;
   resize: vertical;
-  transition: all 0.2s ease;
-  background: #f8fafc;
+  transition: all 0.12s ease;
+  background: #fbfbfd;
 }
 
 .notes-textarea:focus {
@@ -476,20 +443,19 @@
 }
 
 .btn-save {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.875rem 1.75rem;
+  padding: 0.75rem 1.25rem;
   background: linear-gradient(135deg, var(--secondary-color), var(--third-color));
   color: white;
   border: none;
-  border-radius: 12px;
-  font-weight: 800;
-  font-size: 1rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
+  transition: all 0.12s ease;
 }
 
 .btn-save:hover:not(:disabled) {
@@ -504,19 +470,19 @@
 }
 
 .btn-clear {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.875rem 1.75rem;
+  padding: 0.75rem 1.25rem;
   background: white;
   color: #64748b;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  font-weight: 800;
-  font-size: 1rem;
+  border: 2px solid var(--fifth-color);
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.12s ease;
 }
 
 .btn-clear:hover:not(:disabled) {

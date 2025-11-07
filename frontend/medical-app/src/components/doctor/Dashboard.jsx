@@ -228,7 +228,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       {/* Loading State */}
       {loading && (
         <div className="loading-spinner">
-          <div>Loading appointments...</div>
+          Loading appointments...
         </div>
       )}
 

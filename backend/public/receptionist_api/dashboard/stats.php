@@ -36,10 +36,10 @@ try {
     
     try {
         $rows = executeQuery($conn, '
-            SELECT s.Work_Location as office_id, o.Name as office_name, o.Address, o.Phone
-            FROM Staff s
-            JOIN user_account ua ON ua.email = s.Staff_Email
-            JOIN Office o ON s.Work_Location = o.Office_ID
+            SELECT s.work_Location as office_id, o.name as office_name, o.address, o.phone
+            FROM staff s
+            JOIN user_account ua ON ua.email = s.staff_email
+            JOIN office o ON s.work_location = o.office_id
             WHERE ua.user_id = ?', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
@@ -55,14 +55,14 @@ try {
     
     $office_id = (int)$rows[0]['office_id'];
     $office_name = $rows[0]['office_name'];
-    $office_address = $rows[0]['Address'] ?? null;
-    $office_phone = $rows[0]['Phone'] ?? null;
+    $office_address = $rows[0]['address'] ?? null;
+    $office_phone = $rows[0]['phone'] ?? null;
     
     // Use America/Chicago timezone
     $tz = new DateTimeZone('America/Chicago');
     $currentDateTime = new DateTime('now', $tz);
     
-    // Get date parameter or use today
+    // Get date parameter or use today's date
     $date = isset($_GET['date']) ? $_GET['date'] : $currentDateTime->format('Y-m-d');
     
     // Validate date format
@@ -82,17 +82,17 @@ try {
                             a.Reason_for_visit,
                             a.Patient_id,
                             pv.Visit_id,
-                            pv.Start_at as check_in_time,
-                            pv.End_at as completion_time,
-                            pv.Payment,
-                            d.Doctor_id,
-                            CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
-                            CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name
-                        FROM Appointment a
-                        INNER JOIN Patient p ON a.Patient_id = p.Patient_ID
-                        INNER JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-                        LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
-                        WHERE a.Office_id = ?
+                            pv.start_at as check_in_time,
+                            pv.end_at as completion_time,
+                            pv.payment,
+                            d.doctor_id,
+                            CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                            CONCAT(p.first_name, ' ', p.last_name) as patient_name
+                        FROM appointment a
+                        INNER JOIN patient p ON a.patient_id = p.patient_id
+                        INNER JOIN doctor d ON a.doctor_id = d.doctor_id
+                        LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
+                        WHERE a.office_id = ?
                         ORDER BY a.Appointment_date";
     
     $appointments = executeQuery($conn, $appointmentsSql, 'is', [$office_id, $date]);
@@ -188,8 +188,8 @@ try {
         }
         
         // Track doctor statistics
-        if ($apt['Doctor_id']) {
-            $doctor_id = $apt['Doctor_id'];
+        if ($apt['doctor_id']) {
+            $doctor_id = $apt['doctor_id'];
             if (!isset($doctor_stats[$doctor_id])) {
                 $doctor_stats[$doctor_id] = [
                     'id' => $doctor_id,
