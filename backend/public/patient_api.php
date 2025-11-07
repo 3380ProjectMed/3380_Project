@@ -106,15 +106,12 @@ try {
 // Require authentication (currently mocked)
 requireAuth(['PATIENT']);
 
-// Get patient_id from session (set by requireAuth)
+// Get patient_id from session (set by mock auth)
 $patient_id = $_SESSION['patient_id'] ?? null;
-error_log("Patient API main: patient_id from session = " . ($patient_id ?: 'NULL'));
 
 // If patient_id isn't set in session, try to map from authenticated user's email
 if (!$patient_id) {
     $user_email = $_SESSION['email'] ?? null;
-    error_log("Patient API main: user_email from session = " . ($user_email ?: 'NULL'));
-    
     if ($user_email) {
         // Lookup patient by email in Patient table
         $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE email = ? LIMIT 1");
@@ -127,9 +124,6 @@ if (!$patient_id) {
                 $patient_id = (int)$row['patient_id'];
                 // persist to session for future requests
                 $_SESSION['patient_id'] = $patient_id;
-                error_log("Patient API main: Found and set patient_id = " . $patient_id);
-            } else {
-                error_log("Patient API main: No patient found for email = " . $user_email);
             }
             $stmt->close();
         }
@@ -234,9 +228,7 @@ if ($endpoint === 'dashboard') {
             ]);
             
         } catch (Exception $e) {
-            error_log("Dashboard error: " . $e->getMessage());
-            error_log("Dashboard stack trace: " . $e->getTraceAsString());
-            sendResponse(false, [], 'Failed to load dashboard: ' . $e->getMessage(), 500);
+            sendResponse(false, [], 'Failed to load dashboard', 500);
         }
     }
 }
@@ -1007,8 +999,7 @@ elseif ($endpoint === 'medical-records') {
 elseif ($endpoint === 'insurance') {
     if ($method === 'GET') {
         try {
-            $stmt = $mysqli->prepare("
-                SELECT 
+            $stmt = $mysqli->prepare("                SELECT 
                     pi.id,
                     pi.member_id,
                     pi.group_id,

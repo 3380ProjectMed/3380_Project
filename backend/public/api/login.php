@@ -8,16 +8,9 @@ ini_set('error_log', __DIR__ . '/../../error.log');
 
 require_once __DIR__ . '/../cors.php';
 
-// Azure App Service HTTPS detection
-// Azure terminates SSL at the load balancer, so check for proxy headers
-$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-    || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-    || (!empty($_SERVER['HTTP_X_ARR_SSL'])) // Azure-specific header
-    || $_SERVER['SERVER_PORT'] == 443;
-
 session_start([
   'cookie_httponly' => true,
-  'cookie_secure'   => $isHttps,  // ← Use same HTTPS detection as patient_api.php
+  'cookie_secure'   => !empty($_SERVER['HTTPS']),
   'cookie_samesite' => 'Lax',
 ]);
 
