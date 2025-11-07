@@ -121,6 +121,8 @@
   gap: 0.5rem;
   width: 100%;
   box-sizing: border-box;
+  grid-auto-rows: 12rem;
+  align-items: stretch;
 }
 
 /* Calendar Container */
