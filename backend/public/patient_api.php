@@ -24,51 +24,50 @@ session_start([
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
-    // Debug: Log all session data
-    error_log("Patient API: Full session data = " . json_encode($_SESSION));
+    // Enhanced debugging
+    error_log("=== PATIENT API AUTH DEBUG ===");
+    error_log("Session ID: " . session_id());
+    error_log("Session data: " . json_encode($_SESSION));
+    error_log("Cookies: " . json_encode($_COOKIE));
+    error_log("================================");
     
-    // Map logged-in user to correct patient
+    // Check if we have basic authentication from login system
+    if (!isset($_SESSION['uid']) || !isset($_SESSION['email'])) {
+        error_log("PATIENT AUTH: Missing basic session data - uid: " . ($_SESSION['uid'] ?? 'NOT SET') . ", email: " . ($_SESSION['email'] ?? 'NOT SET'));
+        sendResponse(false, [], 'User not authenticated - please log in again', 401);
+        exit();
+    }
+    
+    // Map logged-in user to patient record (only if not already done)
     if (!isset($_SESSION['patient_id'])) {
-        // Get the logged-in user's email from the main authentication system
-        $user_email = $_SESSION['email'] ?? null;
-        error_log("Patient API: Session email = " . ($user_email ?: 'NULL'));
+        $user_email = $_SESSION['email'];
+        error_log("PATIENT AUTH: Looking up patient for email: " . $user_email);
         
-        if ($user_email) {
-            // Look up patient by the logged-in user's email
-            try {
-                $mysqli = getDBConnection();
-                error_log("Patient API: Database connection successful");
-                
-                $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient WHERE email = ? LIMIT 1");
-                $stmt->bind_param('s', $user_email);
-                $stmt->execute();
-                $result = $stmt->get_result();
-                $patient = $result->fetch_assoc();
-                $stmt->close();
-                
-                if ($patient) {
-                    $_SESSION['patient_id'] = $patient['patient_id'];
-                    $_SESSION['role'] = 'PATIENT';
-                    $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
-                    error_log("Patient auth: Found patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
-                } else {
-                    error_log("Patient auth: No patient found for email = " . $user_email);
-                    // If no patient found for the logged-in email, return error
-                    sendResponse(false, [], 'No patient record found for logged-in user: ' . $user_email, 403);
-                    exit();
-                }
-            } catch (Exception $e) {
-                error_log("Patient auth: Database error - " . $e->getMessage());
-                sendResponse(false, [], 'Authentication error: ' . $e->getMessage(), 500);
+        try {
+            $mysqli = getDBConnection();
+            $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name FROM patient WHERE email = ? LIMIT 1");
+            $stmt->bind_param('s', $user_email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $patient = $result->fetch_assoc();
+            $stmt->close();
+            
+            if ($patient) {
+                $_SESSION['patient_id'] = $patient['patient_id'];
+                error_log("PATIENT AUTH: Successfully mapped to patient_id: " . $patient['patient_id']);
+            } else {
+                error_log("PATIENT AUTH: No patient record found for email: " . $user_email);
+                sendResponse(false, [], 'No patient record found for this user', 403);
                 exit();
             }
-        } else {
-            // No email in session - user needs to be properly authenticated
-            error_log("Patient auth: No email in session - user not properly authenticated");
-            sendResponse(false, [], 'User not properly authenticated - no email in session', 401);
+        } catch (Exception $e) {
+            error_log("PATIENT AUTH: Database error: " . $e->getMessage());
+            sendResponse(false, [], 'Authentication error', 500);
             exit();
         }
     }
+    
+    error_log("PATIENT AUTH: Success - patient_id: " . $_SESSION['patient_id']);
 }
 
 function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
