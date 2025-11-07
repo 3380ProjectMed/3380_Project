@@ -1,11 +1,11 @@
 <?php
 /**
-    * save-note.php
+ * Save/update clinical note and diagnosis in patient_visit
+ * Note: Treatment field removed - treatments now in treatment_per_visit table
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
-// Set JSON content type header
 header('Content-Type: application/json');
 
 try {
@@ -41,11 +41,10 @@ try {
     
     $visit_id = isset($input['visit_id']) ? intval($input['visit_id']) : 0;
     
-    // Handle appointment IDs - strip "A" prefix if present (e.g., "A1002" -> 1002)
+    // Handle appointment IDs - strip "A" prefix if present
     $appointment_id_raw = isset($input['appointment_id']) ? trim($input['appointment_id']) : '';
     $appointment_id = 0;
     if (!empty($appointment_id_raw)) {
-        // Remove "A" prefix if present (case-insensitive)
         $cleaned_id = $appointment_id_raw;
         if (strtoupper(substr($cleaned_id, 0, 1)) === 'A') {
             $cleaned_id = substr($cleaned_id, 1);
@@ -53,8 +52,8 @@ try {
         $appointment_id = intval($cleaned_id);
     }
     
-    $note_text = isset($input['note_text']) ? trim($input['note_text']) : '';
-    $diagnosis = isset($input['diagnosis']) ? trim($input['diagnosis']) : null;
+    $diagnosis = isset($input['diagnosis']) ? trim($input['diagnosis']) : '';
+    $present_illnesses = isset($input['present_illnesses']) ? trim($input['present_illnesses']) : null;
     
     if ($visit_id === 0 && $appointment_id === 0) {
         closeDBConnection($conn);
@@ -63,10 +62,10 @@ try {
         exit;
     }
     
-    if (empty($note_text)) {
+    if (empty($diagnosis)) {
         closeDBConnection($conn);
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Note text cannot be empty']);
+        echo json_encode(['success' => false, 'error' => 'Diagnosis cannot be empty']);
         exit;
     }
     
@@ -89,21 +88,21 @@ try {
         }
     }
     
-    // Update the treatment field in patient_visit (all lowercase)
+    // Update the diagnosis and present_illnesses in patient_visit
     $sql = "UPDATE patient_visit 
-            SET treatment = ?,
-                diagnosis = COALESCE(?, diagnosis),
+            SET diagnosis = ?,
+                present_illnesses = COALESCE(?, present_illnesses),
                 last_updated = NOW(),
                 updated_by = ?
             WHERE visit_id = ?";
     
-    executeQuery($conn, $sql, 'sssi', [$note_text, $diagnosis, $doctor_name, $visit_id]);
+    executeQuery($conn, $sql, 'sssi', [$diagnosis, $present_illnesses, $doctor_name, $visit_id]);
     
     closeDBConnection($conn);
     
     echo json_encode([
         'success' => true,
-        'message' => 'Clinical note saved successfully',
+        'message' => 'Diagnosis saved successfully',
         'visit_id' => $visit_id
     ]);
 

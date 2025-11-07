@@ -1,8 +1,7 @@
 <?php
 /**
  * Get patient visit details - DATE-SPECIFIC VERSION
- * Only shows patient_visit data if it matches the appointment date
- * Nurse creates patient_visit on check-in, doctor sees it if same day
+ * Now includes treatments from treatment_per_visit and treatment_catalog
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -54,7 +53,6 @@ try {
                 pv.nurse_id,
                 pv.status,
                 pv.diagnosis,
-                pv.treatment,
                 pv.reason_for_visit,
                 pv.department,
                 pv.present_illnesses,
@@ -123,10 +121,9 @@ try {
         
         $appt = $apptRows[0];
         $patient_id = $appt['Patient_id'];
-        $appointment_date = $appt['Appointment_date']; // e.g., "2024-11-05"
+        $appointment_date = $appt['Appointment_date'];
         
         // Step 2: Look for patient_visit that matches BOTH appointment_id AND date
-        // CRITICAL: Must match the appointment date exactly!
         $visitSql = $baseSelect . ", a.Appointment_date, a.Reason_for_visit as appointment_reason"
                  . $baseFrom
                  . " LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
@@ -150,7 +147,7 @@ try {
                 }
             }
             
-            // Return appointment data WITHOUT patient_visit (patient hasn't checked in)
+            // Return appointment data WITHOUT patient_visit
             $response = [
                 'success' => true,
                 'has_visit' => false,
@@ -173,7 +170,6 @@ try {
                     'reason' => $appt['Reason_for_visit'] ?? '',
                     'department' => null,
                     'diagnosis' => null,
-                    'treatment' => null,
                     'present_illnesses' => null,
                     'start_time' => null,
                     'end_time' => null,
@@ -190,6 +186,7 @@ try {
                     'temperature' => null,
                     'recorded_by' => null
                 ],
+                'treatments' => [],
                 'patient' => [
                     'id' => $patient_id,
                     'name' => $appt['patient_name'],
@@ -205,16 +202,13 @@ try {
                 ]
             ];
             
-            // Still fetch patient historical data (chronic conditions, meds, etc.)
+            // Fetch patient historical data
             fetchPatientData($conn, $patient_id, $response);
             
             closeDBConnection($conn);
             echo json_encode($response);
             exit;
         }
-        
-        // If we reach here, patient_visit EXISTS for this appointment date
-        // Fall through to normal processing below
         
     } elseif ($visit_id > 0) {
         // Direct visit_id lookup
@@ -268,7 +262,6 @@ try {
             'reason' => $visit['reason_for_visit'] ?? $visit['appointment_reason'] ?? '',
             'department' => $visit['department'],
             'diagnosis' => $visit['diagnosis'],
-            'treatment' => $visit['treatment'],
             'present_illnesses' => $visit['present_illnesses'],
             'start_time' => $visit['start_at'],
             'end_time' => $visit['end_at'],
@@ -285,6 +278,7 @@ try {
             'temperature' => $visit['temperature'],
             'recorded_by' => $visit['nurse_name']
         ],
+        'treatments' => [],
         'patient' => [
             'id' => $visit['patient_id'],
             'name' => $visit['patient_name'],
@@ -299,6 +293,9 @@ try {
             'currentMedications' => []
         ]
     ];
+
+    // Fetch treatments for this visit
+    fetchVisitTreatments($conn, $visit['visit_id'], $response);
 
     // Fetch additional patient data
     fetchPatientData($conn, $visit['patient_id'], $response);
@@ -317,8 +314,48 @@ try {
 }
 
 /**
+ * Fetch treatments for a specific visit
+ */
+function fetchVisitTreatments($conn, $visit_id, &$response) {
+    try {
+        $sql = "SELECT 
+                    tpv.visit_treatment_id,
+                    tpv.treatment_id,
+                    tpv.quantity,
+                    tpv.cost_each,
+                    tpv.total_cost,
+                    tpv.notes,
+                    tc.treatment_name,
+                    tc.description,
+                    tc.default_cost
+                FROM treatment_per_visit tpv
+                LEFT JOIN treatment_catalog tc ON tpv.treatment_id = tc.treatment_id
+                WHERE tpv.visit_id = ?
+                ORDER BY tpv.visit_treatment_id";
+        
+        $treatments = executeQuery($conn, $sql, 'i', [$visit_id]);
+        
+        if (is_array($treatments)) {
+            $response['treatments'] = array_map(function($t) {
+                return [
+                    'visit_treatment_id' => $t['visit_treatment_id'] ?? null,
+                    'treatment_id' => $t['treatment_id'] ?? null,
+                    'treatment_name' => $t['treatment_name'] ?? '',
+                    'description' => $t['description'] ?? '',
+                    'quantity' => $t['quantity'] ?? 1,
+                    'cost_each' => $t['cost_each'] ?? $t['default_cost'] ?? 0,
+                    'total_cost' => $t['total_cost'] ?? 0,
+                    'notes' => $t['notes'] ?? ''
+                ];
+            }, $treatments);
+        }
+    } catch (Exception $e) {
+        error_log("Error fetching treatments: " . $e->getMessage());
+    }
+}
+
+/**
  * Helper function to fetch patient medical data
- * (Chronic conditions, medication history, current prescriptions)
  */
 function fetchPatientData($conn, $patient_id, &$response) {
     // Fetch medical conditions (chronic conditions)
@@ -365,7 +402,9 @@ function fetchPatientData($conn, $patient_id, &$response) {
                    CONCAT(d.first_name, ' ', d.last_name) as prescribed_by, 
                    p.start_date, 
                    p.end_date, 
-                   p.notes
+                   p.notes,
+                   p.route,
+                   p.refills_allowed
                    FROM prescription p
                    LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
                    WHERE p.patient_id = ?
@@ -381,7 +420,9 @@ function fetchPatientData($conn, $patient_id, &$response) {
                     'prescribed_by' => $m['prescribed_by'] ?? '',
                     'start_date' => $m['start_date'] ?? null,
                     'end_date' => $m['end_date'] ?? null,
-                    'instructions' => $m['notes'] ?? ''
+                    'instructions' => $m['notes'] ?? '',
+                    'route' => $m['route'] ?? '',
+                    'refills_allowed' => $m['refills_allowed'] ?? 0
                 ];
             }, $rxs);
         }
