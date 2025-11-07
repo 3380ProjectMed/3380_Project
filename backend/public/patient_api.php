@@ -22,41 +22,50 @@ session_start([
     'cookie_samesite' => 'Lax',
 ]);
 
-// Helper functions  
+// Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
-    // Temporary debugging - remove after fixing
-    error_log("PATIENT API DEBUG: Session ID = " . session_id());
-    error_log("PATIENT API DEBUG: Full session = " . json_encode($_SESSION));
-    error_log("PATIENT API DEBUG: Email in session = " . ($_SESSION['email'] ?? 'NOT SET'));
-    error_log("PATIENT API DEBUG: UID in session = " . ($_SESSION['uid'] ?? 'NOT SET'));
+    // Debug: Log all session data
+    error_log("Patient API: Full session data = " . json_encode($_SESSION));
     
-    // Check if user is authenticated with basic session data from login
-    if (!isset($_SESSION['email']) || !isset($_SESSION['uid'])) {
-        sendResponse(false, [], 'User not authenticated - session data missing', 401);
-        exit();
-    }
-    
-    // Map logged-in user to correct patient (only if not already set)
+    // Map logged-in user to correct patient
     if (!isset($_SESSION['patient_id'])) {
-        $user_email = $_SESSION['email'];
+        // Get the logged-in user's email from the main authentication system
+        $user_email = $_SESSION['email'] ?? null;
+        error_log("Patient API: Session email = " . ($user_email ?: 'NULL'));
         
-        try {
-            $mysqli = getDBConnection();
-            $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name FROM patient WHERE email = ? LIMIT 1");
-            $stmt->bind_param('s', $user_email);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $patient = $result->fetch_assoc();
-            $stmt->close();
-            
-            if ($patient) {
-                $_SESSION['patient_id'] = $patient['patient_id'];
-            } else {
-                sendResponse(false, [], 'No patient record found for logged-in user', 403);
+        if ($user_email) {
+            // Look up patient by the logged-in user's email
+            try {
+                $mysqli = getDBConnection();
+                error_log("Patient API: Database connection successful");
+                
+                $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient WHERE email = ? LIMIT 1");
+                $stmt->bind_param('s', $user_email);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $patient = $result->fetch_assoc();
+                $stmt->close();
+                
+                if ($patient) {
+                    $_SESSION['patient_id'] = $patient['patient_id'];
+                    $_SESSION['role'] = 'PATIENT';
+                    $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
+                    error_log("Patient auth: Found patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
+                } else {
+                    error_log("Patient auth: No patient found for email = " . $user_email);
+                    // If no patient found for the logged-in email, return error
+                    sendResponse(false, [], 'No patient record found for logged-in user: ' . $user_email, 403);
+                    exit();
+                }
+            } catch (Exception $e) {
+                error_log("Patient auth: Database error - " . $e->getMessage());
+                sendResponse(false, [], 'Authentication error: ' . $e->getMessage(), 500);
                 exit();
             }
-        } catch (Exception $e) {
-            sendResponse(false, [], 'Authentication error', 500);
+        } else {
+            // No email in session - user needs to be properly authenticated
+            error_log("Patient auth: No email in session - user not properly authenticated");
+            sendResponse(false, [], 'User not properly authenticated - no email in session', 401);
             exit();
         }
     }
@@ -94,11 +103,32 @@ try {
     sendResponse(false, [], 'Database connection error: ' . $e->getMessage(), 500);
 }
 
-// Require authentication
+// Require authentication (currently mocked)
 requireAuth(['PATIENT']);
 
-// Get patient_id from session (set by requireAuth)
+// Get patient_id from session (set by mock auth)
 $patient_id = $_SESSION['patient_id'] ?? null;
+
+// If patient_id isn't set in session, try to map from authenticated user's email
+if (!$patient_id) {
+    $user_email = $_SESSION['email'] ?? null;
+    if ($user_email) {
+        // Lookup patient by email in Patient table
+        $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE email = ? LIMIT 1");
+        if ($stmt) {
+            $stmt->bind_param('s', $user_email);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            if ($row && isset($row['patient_id'])) {
+                $patient_id = (int)$row['patient_id'];
+                // persist to session for future requests
+                $_SESSION['patient_id'] = $patient_id;
+            }
+            $stmt->close();
+        }
+    }
+}
 
 if (!$patient_id) {
     sendResponse(false, [], 'Patient ID not found for authenticated user', 400);
@@ -198,9 +228,7 @@ if ($endpoint === 'dashboard') {
             ]);
             
         } catch (Exception $e) {
-            error_log("Dashboard error: " . $e->getMessage());
-            error_log("Dashboard stack trace: " . $e->getTraceAsString());
-            sendResponse(false, [], 'Failed to load dashboard: ' . $e->getMessage(), 500);
+            sendResponse(false, [], 'Failed to load dashboard', 500);
         }
     }
 }
@@ -971,8 +999,7 @@ elseif ($endpoint === 'medical-records') {
 elseif ($endpoint === 'insurance') {
     if ($method === 'GET') {
         try {
-            $stmt = $mysqli->prepare("
-                SELECT 
+            $stmt = $mysqli->prepare("                SELECT 
                     pi.id,
                     pi.member_id,
                     pi.group_id,
