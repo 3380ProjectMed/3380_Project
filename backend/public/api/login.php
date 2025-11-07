@@ -122,13 +122,13 @@ if (!password_verify($password, $user['password_hash'])) {
     $failedCount = intval($user['failed_login_count']) + 1;
     
     // Lock account after 5 failed attempts
-    if ($failedCount >= 5) {
+    if ($failedCount > 3) {
+        // Just increment - trigger handles locking
         $updateStmt = $mysqli->prepare(
             "UPDATE user_account 
-             SET failed_login_count = ?, 
-                 password_hash = NULL, 
-                 updated_at = NOW() 
-             WHERE user_id = ?"
+            SET failed_login_count = ?, 
+                updated_at = NOW() 
+            WHERE user_id = ?"
         );
         $updateStmt->bind_param('ii', $failedCount, $user['user_id']);
         $updateStmt->execute();
@@ -136,7 +136,8 @@ if (!password_verify($password, $user['password_hash'])) {
         
         http_response_code(403);
         echo json_encode([
-            'error' => 'Account locked due to too many failed login attempts. Please reset your password.'
+            'error' => 'Account locked due to too many failed login attempts. Please reset your password.',
+            'requiresReset' => true
         ]);
     } else {
         // Just increment the counter

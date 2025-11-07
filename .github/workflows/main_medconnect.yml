@@ -47,7 +47,7 @@ jobs:
             [ -d backend/public/api ] && cp -R backend/public/api "$WEBROOT/" || true
             [ -d backend/public/admin_api ] && cp -R backend/public/admin_api "$WEBROOT/" || true
             [ -d backend/public/doctor_api ] && cp -R backend/public/doctor_api "$WEBROOT/" || true
-            [ -d backend/public/nurse ] && cp -R backend/public/nurse "$WEBROOT/" || true
+            [ -d backend/public/nurse_api ] && cp -R backend/public/nurse_api "$WEBROOT/" || true
             [ -d backend/public/receptionist_api ] && cp -R backend/public/receptionist_api "$WEBROOT/" || true
             find backend/public -maxdepth 1 -name "*.php" -exec cp {} "$WEBROOT/" \;
             [ -f backend/public/helpers.php ] && cp backend/public/helpers.php "$WEBROOT/" || true
