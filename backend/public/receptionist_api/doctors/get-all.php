@@ -5,8 +5,8 @@
  * ==========================================
  * Get all doctors (no office filter)
  */
-require_once __DIR__ . '/home/site/wwwroot/cors.php';
-require_once __DIR__ . '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
     $conn = getDBConnection();
