@@ -133,7 +133,6 @@ try {
             if ($timeDiff < -15) {
                 // Appointment is more than 15 minutes in the future
                 $displayStatus = 'Upcoming';
-                $stats['upcoming']++;
             } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
                 // Appointment time is now (within 15 min window)
                 $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
@@ -142,41 +141,33 @@ try {
                 if ($dbStatus === 'Scheduled') {
                     $displayStatus = 'Waiting';
                     $waitingTime = round($timeDiff);
-                    $stats['waiting']++;
                 } elseif ($dbStatus === 'In Progress') {
                     $displayStatus = 'In Progress';
                 }
             }
         }
         
-        // Count completed
-        if ($displayStatus === 'Completed') {
-            $stats['completed']++;
-        }
-        
-        // Count cancelled
-        if ($displayStatus === 'Cancelled') {
-            $stats['cancelled']++;
-        }
-        
-        // Count no-show
-        if ($displayStatus === 'No-Show') {
-            $stats['no_show']++;
-        }
-        
-        // Count checked in (based on patient_visit records)
+        // Check if checked in (based on patient_visit records)
         if ($apt['check_in_time'] && !$apt['completion_time'] && $displayStatus !== 'In Progress') {
             $displayStatus = 'Checked In';
+        }
+        
+        // Update statistics based on final displayStatus
+        if ($displayStatus === 'Upcoming') {
+            $stats['upcoming']++;
+        } elseif ($displayStatus === 'Waiting') {
+            $stats['waiting']++;
+        } elseif ($displayStatus === 'Checked In') {
             $stats['checked_in']++;
-        }
-        
-        // Count in progress
-        if ($displayStatus === 'In Progress') {
+        } elseif ($displayStatus === 'In Progress') {
             $stats['in_progress']++;
-        }
-        
-        // Count scheduled (appointments not yet upcoming/waiting/completed/cancelled)
-        if ($displayStatus === 'Ready' || $displayStatus === 'Scheduled') {
+        } elseif ($displayStatus === 'Completed') {
+            $stats['completed']++;
+        } elseif ($displayStatus === 'Cancelled') {
+            $stats['cancelled']++;
+        } elseif ($displayStatus === 'No-Show') {
+            $stats['no_show']++;
+        } elseif ($displayStatus === 'Ready' || $displayStatus === 'Scheduled') {
             $stats['scheduled']++;
         }
         

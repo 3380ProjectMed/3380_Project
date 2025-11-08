@@ -93,6 +93,7 @@ try {
                         INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
                         LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
                         WHERE a.Office_id = ?
+                        AND DATE(a.Appointment_date) = ?
                         ORDER BY a.Appointment_date";
     
     $appointments = executeQuery($conn, $appointmentsSql, 'is', [$office_id, $date]);

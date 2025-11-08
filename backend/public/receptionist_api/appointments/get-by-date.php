@@ -90,15 +90,15 @@ try {
         }
         
         $formatted_appointments[] = [
-            'id' => $apt['Appointment_id'],
+            'Appointment_id' => $apt['Appointment_id'],
             'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
-            'patientId' => $apt['patient_id'],
+            'Patient_id' => $apt['patient_id'],
             'patientIdFormatted' => 'P' . str_pad($apt['patient_id'], 3, '0', STR_PAD_LEFT),
             'patientName' => $apt['patient_name'],
-            'doctorId' => $apt['doctor_id'],
+            'Doctor_id' => $apt['doctor_id'],
             'doctorName' => $apt['doctor_name'],
             'time' => date('g:i A', strtotime($apt['Appointment_date'])),
-            'appointmentDateTime' => $apt['Appointment_date'],
+            'Appointment_date' => $apt['Appointment_date'],
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
             'status' => $displayStatus,
             'dbStatus' => $dbStatus,
