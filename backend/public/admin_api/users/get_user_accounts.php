@@ -37,7 +37,7 @@ try {
                         CAST(d.specialty AS CHAR) as specialization_dept,
                         o.name as work_location,
                         d.work_location as work_location_id,
-                        ua.status,
+                        ua.created_at,
                         ua.is_active
                     FROM user_account ua
                     INNER JOIN doctor d ON ua.email = d.email
@@ -67,7 +67,7 @@ try {
                         n.department as specialization_dept,
                         o.name as work_location,
                         s.work_location as work_location_id,
-                        ua.status,
+                        ua.created_at,
                         ua.is_active
                     FROM user_account ua
                     INNER JOIN staff s ON ua.email = s.staff_email
@@ -140,7 +140,7 @@ try {
                     NULL as specialization_dept,
                     NULL as work_location,
                     NULL as work_location_id,
-                    ua.status,
+                    ua.created_at,
                     ua.is_active
                 FROM user_account ua
                 WHERE ua.role = 'PATIENT'";
