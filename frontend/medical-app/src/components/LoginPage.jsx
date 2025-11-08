@@ -110,7 +110,7 @@ export default function LoginPage() {
                     <label htmlFor="password" className="login-label">
                       Password
                     </label>
-                    <a href="#" className="login-forgot-link">
+                    <a href="/passwordreset" className="login-forgot-link">
                       Forgot password?
                     </a>
                   </div>

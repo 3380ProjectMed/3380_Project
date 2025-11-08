@@ -121,6 +121,8 @@
   gap: 0.5rem;
   width: 100%;
   box-sizing: border-box;
+  grid-auto-rows: 12rem;
+  align-items: stretch;
 }
 
 /* Calendar Container */
@@ -133,7 +135,11 @@
   -webkit-overflow-scrolling: touch;
 }
 
-
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1rem;
+}
 
 
 /* Weekday Headers */
@@ -150,6 +156,7 @@
 /* Each Calendar Day Cell */
 .calendar-day {
   min-height: 9rem;
+  max-height: 140px;
   padding: 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 0.75rem;
@@ -157,6 +164,8 @@
   transition: all 0.15s ease;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
 .calendar-day:hover:not(.empty-day):not(.weekend) {

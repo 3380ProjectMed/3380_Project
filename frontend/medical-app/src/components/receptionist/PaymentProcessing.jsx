@@ -3,13 +3,6 @@ import { ArrowLeft, DollarSign, User, Calendar, Clock, Check, Printer, CreditCar
 // Removed API import as we'll use fetch directly
 import './PaymentProcessing.css';
 
-/**
- * PaymentProcessing Component (Enhanced)
- * 
- * Search for any patient and record payments
- * Can record copayment or any custom amount
- * Shows patient's financial information and appointment history
- */
 function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
   // Step management: 1 = patient search, 2 = payment details, 3 = receipt
   const [currentStep, setCurrentStep] = useState(preSelectedAppointment ? 2 : 1);
@@ -270,10 +263,6 @@ function PaymentProcessing({ preSelectedAppointment, onBack, onSuccess }) {
         <>
           {/* ===== HEADER ===== */}
           <div className="payment-header">
-            <button className="btn-back" onClick={onBack}>
-              <ArrowLeft size={18} />
-              Back
-            </button>
             <div className="header-info">
               <h1 className="page-title">Record Payment</h1>
               <p className="page-subtitle">Search patient and record copayment or any amount</p>

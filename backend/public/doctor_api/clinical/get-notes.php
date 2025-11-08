@@ -6,17 +6,16 @@ require_once '/home/site/wwwroot/database.php';
 header('Content-Type: application/json');
 
 /**
- * get-notes.php
+ * get-notes.php - Updated to use treatment_per_visit table
  */
 
 try {
     $patient_id = isset($_GET['patient_id']) ? intval($_GET['patient_id']) : 0;
     
-    // Handle appointment IDs - strip "A" prefix if present (e.g., "A1002" -> 1002)
+    // Handle appointment IDs - strip "A" prefix if present
     $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
     $appointment_id = 0;
     if (!empty($appointment_id_raw)) {
-        // Remove "A" prefix if present (case-insensitive)
         $cleaned_id = $appointment_id_raw;
         if (strtoupper(substr($cleaned_id, 0, 1)) === 'A') {
             $cleaned_id = substr($cleaned_id, 1);
@@ -41,7 +40,6 @@ try {
     
     // If appointment_id provided, get patient_id
     if ($appointment_id > 0) {
-        // appointment has mixed case columns
         $apptSql = "SELECT Patient_id FROM appointment WHERE Appointment_id = ?";
         $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
         
@@ -51,7 +49,6 @@ try {
     }
     
     // Get all visits for this patient
-    // patient_visit and doctor are lowercase
     $sql = "SELECT 
                 pv.visit_id,
                 pv.appointment_id,
@@ -60,11 +57,11 @@ try {
                 pv.date,
                 pv.status,
                 pv.diagnosis,
-                pv.treatment,
                 pv.reason_for_visit,
                 pv.blood_pressure,
                 pv.temperature,
                 pv.department,
+                pv.present_illnesses,
                 pv.created_at,
                 pv.created_by,
                 d.first_name AS doctor_first,
@@ -79,10 +76,44 @@ try {
     
     if (!is_array($rows)) $rows = [];
     
-    $notes = array_map(function($r) {
+    $notes = array_map(function($r) use ($conn) {
+        $visit_id = $r['visit_id'] ?? null;
+        
+        // Fetch treatments for this visit
+        $treatments = [];
+        if ($visit_id) {
+            $treatSql = "SELECT 
+                            tc.name as treatment_name,
+                            tpv.quantity,
+                            tpv.notes
+                        FROM treatment_per_visit tpv
+                        LEFT JOIN treatment_catalog tc ON tpv.treatment_id = tc.treatment_id
+                        WHERE tpv.visit_id = ?";
+            $treatRows = executeQuery($conn, $treatSql, 'i', [$visit_id]);
+            if (is_array($treatRows)) {
+                $treatments = $treatRows;
+            }
+        }
+        
+        // Build treatment summary for note_text
+        $treatmentText = '';
+        if (!empty($treatments)) {
+            $treatmentLines = array_map(function($t) {
+                $line = $t['treatment_name'];
+                if ($t['quantity'] > 1) {
+                    $line .= ' (x' . $t['quantity'] . ')';
+                }
+                if (!empty($t['notes'])) {
+                    $line .= ' - ' . $t['notes'];
+                }
+                return $line;
+            }, $treatments);
+            $treatmentText = implode(', ', $treatmentLines);
+        }
+        
         return [
-            'id' => $r['visit_id'] ?? null,
-            'visit_id' => $r['visit_id'] ?? null,
+            'id' => $visit_id,
+            'visit_id' => $visit_id,
             'appointment_id' => $r['appointment_id'] ?? null,
             'patient_id' => $r['patient_id'] ?? null,
             'doctor_id' => $r['doctor_id'] ?? null,
@@ -91,8 +122,9 @@ try {
             'visit_date' => $r['date'] ?? null,
             'status' => $r['status'] ?? null,
             'diagnosis' => $r['diagnosis'] ?? null,
-            'treatment' => $r['treatment'] ?? null,
-            'note_text' => $r['treatment'] ?? null,
+            'note_text' => $treatmentText,
+            'treatments' => $treatments,
+            'present_illnesses' => $r['present_illnesses'] ?? null,
             'reason' => $r['reason_for_visit'] ?? null,
             'blood_pressure' => $r['blood_pressure'] ?? null,
             'temperature' => $r['temperature'] ?? null,

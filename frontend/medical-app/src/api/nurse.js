@@ -33,7 +33,8 @@ export async function getNurseSchedule({ date }) {
 
 // Schedule - today (existing function)
 export async function getNurseScheduleToday() {
-  const response = await fetch(`${BASE_URL}/schedule/get-today.php`, {
+  const today = new Date().toISOString().slice(0, 10);
+  const response = await fetch(`${BASE_URL}/schedule/get-by-date.php?date=${today}`, {
     credentials: 'include',
   });
 
@@ -42,7 +43,8 @@ export async function getNurseScheduleToday() {
     throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  return data.appointments || data || [];
 }
 
 // Profile
@@ -64,7 +66,7 @@ export async function getNursePatients(query = '', page = 1, pageSize = 10) {
   const params = new URLSearchParams({
     q: query,
     page: page.toString(),
-    limit: pageSize.toString(),
+    pageSize: pageSize.toString(),
   });
 
   const response = await fetch(`${BASE_URL}/patients/get-all.php?${params}`, {

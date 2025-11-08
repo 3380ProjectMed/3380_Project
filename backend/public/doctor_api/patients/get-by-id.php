@@ -75,7 +75,7 @@ try {
     // Fetch medical conditions (chronic conditions)
     try {
         $conditions_sql = "SELECT 
-                            mc.medical_condition_id,
+                            mc.condition_id,
                             mc.condition_name,
                             mc.diagnosis_date
                           FROM medical_condition mc
@@ -142,7 +142,6 @@ try {
                        v.reason_for_visit, 
                        CONCAT(d.first_name, ' ', d.last_name) as doctor_name, 
                        v.diagnosis, 
-                       v.treatment, 
                        v.blood_pressure, 
                        v.temperature
                        FROM patient_visit v
