@@ -15,17 +15,27 @@ $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (!empty($_SERVER['HTTP_X_ARR_SSL'])) // Azure-specific header
     || $_SERVER['SERVER_PORT'] == 443;
 
+// Configure session parameters exactly like login.php before starting
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_secure', $isHttps ? '1' : '0');
+ini_set('session.cookie_samesite', 'Lax');
+
 // Use session ID from cookie if it exists (critical for session sharing)
 if (isset($_COOKIE['PHPSESSID'])) {
     session_id($_COOKIE['PHPSESSID']);
+    error_log("Patient API: Using session ID from cookie: " . $_COOKIE['PHPSESSID']);
+} else {
+    error_log("Patient API: No PHPSESSID cookie found");
 }
 
 // Start session with same configuration as login system
 session_start([
-    'cookie_httponly' => true,
-    'cookie_secure'   => $isHttps,  // ← Use proper HTTPS detection
-    'cookie_samesite' => 'Lax',
+  'cookie_httponly' => true,
+  'cookie_secure'   => $isHttps,  // ← Use same HTTPS detection as login.php
+  'cookie_samesite' => 'Lax',
 ]);
+
+error_log("Patient API: Session started with ID: " . session_id());
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
