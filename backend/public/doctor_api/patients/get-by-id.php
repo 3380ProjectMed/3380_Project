@@ -105,12 +105,12 @@ try {
                      p.prescription_id, 
                      p.medication_name as name, 
                      CONCAT(p.dosage, ' - ', p.frequency) as frequency, 
-                     CONCAT(d.first_name, ' ', d.last_name) as prescribed_by, 
+                     CONCAT(s.first_name, ' ', s.last_name) as prescribed_by, 
                      p.start_date, 
                      p.end_date, 
                      p.notes
                      FROM prescription p
-                     LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
+                     LEFT JOIN staff s ON p.doctor_id = s.staff_id
                      WHERE p.patient_id = ?
                      AND (p.end_date IS NULL OR p.end_date >= CURDATE())
                      ORDER BY p.start_date DESC";
@@ -140,12 +140,12 @@ try {
                        v.appointment_id, 
                        v.date as visit_date, 
                        v.reason_for_visit, 
-                       CONCAT(d.first_name, ' ', d.last_name) as doctor_name, 
+                       CONCAT(s.first_name, ' ', s.last_name) as doctor_name, 
                        v.diagnosis, 
                        v.blood_pressure, 
                        v.temperature
                        FROM patient_visit v
-                       LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
+                       LEFT JOIN staff s ON v.doctor_id = s.staff_id
                        WHERE v.patient_id = ?
                        ORDER BY v.date DESC
                        LIMIT 50";

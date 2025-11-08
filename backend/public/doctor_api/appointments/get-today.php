@@ -21,9 +21,9 @@ try {
     } else {
         $user_id = (int)$_SESSION['uid'];
         $rows = executeQuery($conn, '
-            SELECT d.doctor_id
-            FROM doctor d
-            JOIN user_account ua ON ua.email = d.email
+            SELECT s.staff_id
+            FROM staff s
+            JOIN user_account ua ON ua.email = s.email
             WHERE ua.user_id = ?', 'i', [$user_id]);
         
         if (empty($rows)) {

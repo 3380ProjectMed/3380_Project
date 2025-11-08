@@ -64,10 +64,10 @@ try {
                 pv.present_illnesses,
                 pv.created_at,
                 pv.created_by,
-                d.first_name AS doctor_first,
-                d.last_name AS doctor_last
+                s.first_name AS doctor_first,
+                s.last_name AS doctor_last
             FROM patient_visit pv
-            LEFT JOIN doctor d ON d.doctor_id = pv.doctor_id
+            LEFT JOIN staff s ON s.staff_id = pv.doctor_id
             WHERE pv.patient_id = ?
             ORDER BY pv.date DESC
             LIMIT 50";

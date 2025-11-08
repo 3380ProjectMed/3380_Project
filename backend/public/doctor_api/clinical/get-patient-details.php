@@ -67,7 +67,7 @@ try {
                 p.blood_type,
                 ca.allergies_text as allergies,
                 cg.gender_text as gender,
-                CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                CONCAT(s.first_name, ' ', s.last_name) as doctor_name,
                 CONCAT(s.first_name, ' ', s.last_name) as nurse_name,
                 o.name as office_name";
     
@@ -75,7 +75,7 @@ try {
                 LEFT JOIN patient p ON pv.patient_id = p.patient_id
                 LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
-                LEFT JOIN doctor d ON pv.doctor_id = d.doctor_id
+                LEFT JOIN staff d ON pv.doctor_id = d.staff_id
                 LEFT JOIN nurse n ON pv.nurse_id = n.nurse_id
                 LEFT JOIN staff s ON n.staff_id = s.staff_id
                 LEFT JOIN office o ON pv.office_id = o.office_id";
@@ -97,13 +97,13 @@ try {
                     p.blood_type,
                     ca.allergies_text as allergies,
                     cg.gender_text as gender,
-                    CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                    CONCAT(s.first_name, ' ', s.last_name) as doctor_name,
                     o.name as office_name
                 FROM appointment a
                 LEFT JOIN patient p ON a.Patient_id = p.patient_id
                 LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
-                LEFT JOIN doctor d ON a.Doctor_id = d.doctor_id
+                LEFT JOIN staff s ON a.Doctor_id = s.staff_id
                 LEFT JOIN office o ON a.Office_id = o.office_id
                 WHERE a.Appointment_id = ?";
         $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
@@ -397,14 +397,14 @@ function fetchPatientData($conn, $patient_id, &$response) {
                    p.prescription_id, 
                    p.medication_name as name, 
                    CONCAT(p.dosage, ' - ', p.frequency) as frequency, 
-                   CONCAT(d.first_name, ' ', d.last_name) as prescribed_by, 
+                   CONCAT(s.first_name, ' ', s.last_name) as prescribed_by, 
                    p.start_date, 
                    p.end_date, 
                    p.notes,
                    p.route,
                    p.refills_allowed
                    FROM prescription p
-                   LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
+                   LEFT JOIN staff sON p.doctor_id = s.staff_id
                    WHERE p.patient_id = ?
                    AND (p.end_date IS NULL OR p.end_date >= CURDATE())
                    ORDER BY p.start_date DESC";
