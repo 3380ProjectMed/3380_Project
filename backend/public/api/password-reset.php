@@ -80,7 +80,7 @@ if ($action === 'reset') {
         echo json_encode(['error' => 'Invalid SSN format']);
         exit;
     }
-
+    $ssn = substr($ssn, 0, 3) . '-' . substr($ssn, 3, 2) . '-' . substr($ssn, 5);
     // Verify SSN matches patient with this email
     $stmt = $mysqli->prepare(
         "SELECT p.patient_id, p.email 

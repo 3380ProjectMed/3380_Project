@@ -11,11 +11,11 @@ require_once '/home/site/wwwroot/database.php';
 try {
     $conn = getDBConnection();
     
-    $sql = "SELECT d.Doctor_id, d.First_Name, d.Last_Name,
+    $sql = "SELECT d.doctor_id, d.first_name, d.last_name,
                    s.specialty_name, s.specialty_id
-            FROM Doctor d
-            JOIN Specialty s ON d.Specialty = s.specialty_id
-            ORDER BY d.Last_Name, d.First_Name";
+            FROM doctor d
+            JOIN specialty s ON d.specialty = s.specialty_id
+            ORDER BY d.last_name, d.first_name";
     
     $rows = executeQuery($conn, $sql);
     closeDBConnection($conn);

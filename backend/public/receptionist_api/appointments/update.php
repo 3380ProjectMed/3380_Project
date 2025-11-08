@@ -35,10 +35,10 @@ try {
     $conn = getDBConnection();
     
     // Verify receptionist has access to this appointment's office
-    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.Work_Location
-                  FROM Appointment a
-                  JOIN Staff s ON s.Work_Location = a.Office_id
-                  JOIN user_account ua ON ua.email = s.Staff_Email
+    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.work_location
+                  FROM appointment a
+                  JOIN staff s ON s.work_location = a.Office_id
+                  JOIN user_account ua ON ua.email = s.staff_email
                   WHERE a.Appointment_id = ? AND ua.user_id = ?";
     
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$appointment_id, $user_id]);
@@ -96,7 +96,7 @@ try {
         $values[] = $appointment_id;
         $types .= 'i';
         
-        $updateSql = "UPDATE Appointment SET " . implode(', ', $updateFields) . " WHERE Appointment_id = ?";
+        $updateSql = "UPDATE appointment SET " . implode(', ', $updateFields) . " WHERE Appointment_id = ?";
         executeQuery($conn, $updateSql, $types, $values);
         
         $conn->commit();

@@ -20,169 +20,158 @@ try {
     $conn = getDBConnection();
     
     $users = [];
-    
-    // Build query based on role filter
-    if ($role === 'all' || $role === 'doctor') {
-        $query = "SELECT 
-                    'doctor' as user_type,
-                    d.doctor_id as id,
-                    d.first_name,
-                    d.last_name,
-                    d.email,
-                    d.phone,
-                    d.ssn,
-                    d.license_number,
-                    cg.gender_text as gender,
-                    d.gender as gender_id,
-                    sp.specialty_name as specialization,
-                    d.specialty,
-                    NULL as department,
-                    o.name as work_location_name,
-                    d.work_location as work_location_id,
-                    o.address as work_location_address,
-                    d.work_schedule,
-                    COALESCE(u.is_active, 0) as is_active
-                FROM doctor d
-                LEFT JOIN user_account u ON d.email = u.email
-                LEFT JOIN codes_gender cg ON d.gender = cg.gender_code
-                LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
-                LEFT JOIN office o ON d.work_location = o.office_id
-                WHERE 1=1";
+
+    // Build unified query for all staff roles or specific role
+    if ($role === 'all' || in_array($role, ['doctor', 'nurse', 'receptionist'])) {
+        // Start building the UNION query
+        $queries = [];
         
-        // Apply filters for doctors
+        // DOCTORS query
+    if ($role === 'all' || $role === 'doctor') {
+        $doctor_query = "SELECT 
+                    d.doctor_id,
+                    COALESCE(ua.user_id, CONCAT('NO_ACCOUNT_D', d.doctor_id)) as user_id,
+                    COALESCE(ua.role, 'DOCTOR') as user_type,
+                    CONCAT(s.first_name, ' ', s.last_name) as name,
+                    s.staff_email as email,
+                    s.ssn,
+                    sp.specialty_name as specialization_dept,
+                    o.name as work_location,
+                    s.work_location as work_location_id,
+                    COALESCE(ua.created_at, NULL) as created_at,
+                    COALESCE(ua.is_active, 0) as is_active,
+                    CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
+                FROM doctor d
+                INNER JOIN staff s ON d.staff_id = s.staff_id
+                LEFT JOIN user_account ua ON s.staff_email = ua.email AND ua.role = 'DOCTOR'
+                LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
+                LEFT JOIN office o ON s.work_location = o.office_id
+                WHERE s.staff_role = 'Doctor'";
+        
         if ($active_status !== 'all') {
-            $is_active = ($active_status === 'active') ? 1 : 0;
-            $query .= " AND COALESCE(u.is_active, 0) = $is_active";
+            if ($active_status === 'active') {
+                $doctor_query .= " AND ua.user_id IS NOT NULL AND ua.is_active = 1";
+            } else {
+                $doctor_query .= " AND (ua.is_active = 0 OR ua.user_id IS NULL)";
+            }
         }
         
         if ($work_location !== 'all') {
-            $query .= " AND d.work_location = " . intval($work_location);
+            $doctor_query .= " AND s.work_location = " . intval($work_location);
         }
         
-        $doctors = executeQuery($conn, $query);
-        $users = array_merge($users, $doctors);
+        $queries[] = $doctor_query;
     }
-    
+
+    // NURSES query
     if ($role === 'all' || $role === 'nurse') {
-        $query = "SELECT 
-                    'nurse' as user_type,
-                    n.nurse_id as id,
-                    s.first_name,
-                    s.last_name,
+        $nurse_query = "SELECT 
+                    n.nurse_id,
+                    COALESCE(ua.user_id, CONCAT('NO_ACCOUNT_N', n.nurse_id)) as user_id,
+                    COALESCE(ua.role, 'NURSE') as user_type,
+                    CONCAT(s.first_name, ' ', s.last_name) as name,
                     s.staff_email as email,
-                    NULL as phone,
                     s.ssn,
-                    s.license_number,
-                    cg.gender_text as gender,
-                    s.gender as gender_id,
-                    NULL as specialization,
-                    NULL as specialty,
-                    n.department,
-                    o.name as work_location_name,
+                    n.department as specialization_dept,
+                    o.name as work_location,
                     s.work_location as work_location_id,
-                    o.address as work_location_address,
-                    s.work_schedule,
-                    COALESCE(u.is_active, 0) as is_active
+                    COALESCE(ua.created_at, NULL) as created_at,
+                    COALESCE(ua.is_active, 0) as is_active,
+                    CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
                 FROM nurse n
                 INNER JOIN staff s ON n.staff_id = s.staff_id
-                LEFT JOIN user_account u ON s.staff_email = u.email
-                LEFT JOIN codes_gender cg ON s.gender = cg.gender_code
+                LEFT JOIN user_account ua ON s.staff_email = ua.email AND ua.role = 'NURSE'
                 LEFT JOIN office o ON s.work_location = o.office_id
                 WHERE s.staff_role = 'Nurse'";
         
-        // Apply filters for nurses
         if ($active_status !== 'all') {
-            $is_active = ($active_status === 'active') ? 1 : 0;
-            $query .= " AND COALESCE(u.is_active, 0) = $is_active";
+            if ($active_status === 'active') {
+                $nurse_query .= " AND ua.user_id IS NOT NULL AND ua.is_active = 1";
+            } else {
+                $nurse_query .= " AND (ua.is_active = 0 OR ua.user_id IS NULL)";
+            }
         }
         
         if ($work_location !== 'all') {
-            $query .= " AND s.work_location = " . intval($work_location);
+            $nurse_query .= " AND s.work_location = " . intval($work_location);
         }
         
         if ($department !== 'all') {
-            $query .= " AND n.department = '" . $conn->real_escape_string($department) . "'";
+            $nurse_query .= " AND n.department = '" . $conn->real_escape_string($department) . "'";
         }
         
-        $nurses = executeQuery($conn, $query);
-        $users = array_merge($users, $nurses);
+        $queries[] = $nurse_query;
     }
-    
+
+    // RECEPTIONISTS query
     if ($role === 'all' || $role === 'receptionist') {
-        $query = "SELECT 
-                    'receptionist' as user_type,
-                    s.staff_id as id,
-                    s.first_name,
-                    s.last_name,
+        $receptionist_query = "SELECT 
+                    s.staff_id,
+                    COALESCE(ua.user_id, CONCAT('NO_ACCOUNT_R', s.staff_id)) as user_id,
+                    COALESCE(ua.role, 'RECEPTIONIST') as user_type,
+                    CONCAT(s.first_name, ' ', s.last_name) as name,
                     s.staff_email as email,
-                    NULL as phone,
                     s.ssn,
-                    s.license_number,
-                    cg.gender_text as gender,
-                    s.gender as gender_id,
-                    NULL as specialization,
-                    NULL as specialty,
-                    NULL as department,
-                    o.name as work_location_name,
+                    NULL as specialization_dept,
+                    o.name as work_location,
                     s.work_location as work_location_id,
-                    o.address as work_location_address,
-                    s.work_schedule,
-                    COALESCE(u.is_active, 0) as is_active
+                    COALESCE(ua.created_at, NULL) as created_at,
+                    COALESCE(ua.is_active, 0) as is_active,
+                    CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
                 FROM staff s
-                LEFT JOIN user_account u ON s.staff_email = u.email
-                LEFT JOIN codes_gender cg ON s.gender = cg.gender_code
+                LEFT JOIN user_account ua ON s.staff_email = ua.email AND ua.role = 'RECEPTIONIST'
                 LEFT JOIN office o ON s.work_location = o.office_id
                 WHERE s.staff_role = 'Receptionist'";
         
-        // Apply filters for receptionists
         if ($active_status !== 'all') {
-            $is_active = ($active_status === 'active') ? 1 : 0;
-            $query .= " AND COALESCE(u.is_active, 0) = $is_active";
+            if ($active_status === 'active') {
+                $receptionist_query .= " AND ua.user_id IS NOT NULL AND ua.is_active = 1";
+            } else {
+                $receptionist_query .= " AND (ua.is_active = 0 OR ua.user_id IS NULL)";
+            }
         }
         
         if ($work_location !== 'all') {
-            $query .= " AND s.work_location = " . intval($work_location);
+            $receptionist_query .= " AND s.work_location = " . intval($work_location);
         }
-        
-        $receptionists = executeQuery($conn, $query);
-        $users = array_merge($users, $receptionists);
-    }
     
+        $queries[] = $receptionist_query;
+    }
+
+    // Combine all queries with UNION ALL
+    $query = implode(' UNION ALL ', $queries);
+    $query .= " ORDER BY user_type, name";
+
+    $staff_users = executeQuery($conn, $query);
+    $users = array_merge($users, $staff_users);    
+}
+    
+    // Handle patients separately with limited information for privacy
     if ($role === 'all' || $role === 'patient') {
         $query = "SELECT 
-                    'patient' as user_type,
-                    p.patient_id as id,
-                    p.first_name,
-                    p.last_name,
-                    p.email,
-                    p.ssn,
-                    NULL as license_number,
-                    cg.gender_text as gender,
-                    p.gender as gender_id,
-                    NULL as specialization,
-                    NULL as specialty,
-                    NULL as department,
-                    NULL as work_location_name,
+                    ua.user_id,
+                    'PATIENT' as user_type,
+                    'Patient Account' as name,
+                    ua.email,
+                    '***-**-****' as ssn,
+                    NULL as specialization_dept,
+                    NULL as work_location,
                     NULL as work_location_id,
-                    NULL as work_location_address,
-                    NULL as work_schedule,
-                    p.dob,
-                    p.insurance_company,
-                    COALESCE(u.is_active, 0) as is_active
-                FROM patient p
-                LEFT JOIN user_account u ON p.email = u.email
-                LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
-                LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id
-                WHERE 1=1";
+                    ua.created_at,
+                    ua.is_active
+                FROM user_account ua
+                WHERE ua.role = 'PATIENT'";
         
-        // Apply filters for patients
+        // Apply active status filter
         if ($active_status !== 'all') {
             $is_active = ($active_status === 'active') ? 1 : 0;
-            $query .= " AND COALESCE(u.is_active, 0) = $is_active";
+            $query .= " AND ua.is_active = $is_active";
         }
         
-        $patients = executeQuery($conn, $query);
-        $users = array_merge($users, $patients);
+        $query .= " ORDER BY ua.email";
+        
+        $patient_users = executeQuery($conn, $query);
+        $users = array_merge($users, $patient_users);
     }
     
     // Get distinct work locations for filter dropdown

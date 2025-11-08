@@ -18,6 +18,13 @@ function PatientSearch({ onBookAppointment }) {
   const [showModal, setShowModal] = useState(false);
 
   /**
+   * Load initial patients on mount
+   */
+  useEffect(() => {
+    handleSearch();
+  }, []);
+
+  /**
    * Debounced search - triggers after user stops typing
    */
   useEffect(() => {

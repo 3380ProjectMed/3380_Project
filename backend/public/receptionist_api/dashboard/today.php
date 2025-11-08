@@ -88,6 +88,7 @@ try {
                 pv.start_at as check_in_time,
                 pv.end_at as completion_time,
                 -- pi.copay
+                pv.payment
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
@@ -112,6 +113,9 @@ try {
         'no_show' => 0
     ];
     
+    $payment_count = 0;
+    $total_collected = 0.0;
+    
     $formatted_appointments = [];
     
     foreach ($appointments as $apt) {
@@ -133,7 +137,6 @@ try {
             if ($timeDiff < -15) {
                 // Appointment is more than 15 minutes in the future
                 $displayStatus = 'Upcoming';
-                $stats['upcoming']++;
             } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
                 // Appointment time is now (within 15 min window)
                 $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
@@ -142,42 +145,40 @@ try {
                 if ($dbStatus === 'Scheduled') {
                     $displayStatus = 'Waiting';
                     $waitingTime = round($timeDiff);
-                    $stats['waiting']++;
                 } elseif ($dbStatus === 'In Progress') {
                     $displayStatus = 'In Progress';
                 }
             }
         }
         
-        // Count completed
-        if ($displayStatus === 'Completed') {
-            $stats['completed']++;
-        }
-        
-        // Count cancelled
-        if ($displayStatus === 'Cancelled') {
-            $stats['cancelled']++;
-        }
-        
-        // Count no-show
-        if ($displayStatus === 'No-Show') {
-            $stats['no_show']++;
-        }
-        
-        // Count checked in (based on PatientVisit records)
+        // Check if checked in (based on patient_visit records)
         if ($apt['check_in_time'] && !$apt['completion_time'] && $displayStatus !== 'In Progress') {
             $displayStatus = 'Checked In';
+        }
+        
+        // Update statistics based on final displayStatus
+        if ($displayStatus === 'Upcoming') {
+            $stats['upcoming']++;
+        } elseif ($displayStatus === 'Waiting') {
+            $stats['waiting']++;
+        } elseif ($displayStatus === 'Checked In') {
             $stats['checked_in']++;
-        }
-        
-        // Count in progress
-        if ($displayStatus === 'In Progress') {
+        } elseif ($displayStatus === 'In Progress') {
             $stats['in_progress']++;
+        } elseif ($displayStatus === 'Completed') {
+            $stats['completed']++;
+        } elseif ($displayStatus === 'Cancelled') {
+            $stats['cancelled']++;
+        } elseif ($displayStatus === 'No-Show') {
+            $stats['no_show']++;
+        } elseif ($displayStatus === 'Ready' || $displayStatus === 'Scheduled') {
+            $stats['scheduled']++;
         }
         
-        // Count scheduled (appointments not yet upcoming/waiting/completed/cancelled)
-        if ($displayStatus === 'Ready' || $displayStatus === 'Scheduled') {
-            $stats['scheduled']++;
+        // Track payment statistics
+        if ($apt['payment'] && $apt['payment'] > 0) {
+            $payment_count++;
+            $total_collected += (float)$apt['payment'];
         }
         
         // Format appointment data
@@ -226,6 +227,13 @@ try {
     }
     
     $stats['total'] = count($formatted_appointments);
+    
+    // Add payment statistics to stats
+    $stats['payment'] = [
+        'count' => $payment_count,
+        'total_collected' => number_format($total_collected, 2),
+        'total_collected_raw' => $total_collected
+    ];
     
     closeDBConnection($conn);
     

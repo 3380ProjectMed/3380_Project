@@ -1,8 +1,7 @@
 <?php
 /**
- * Get appointments by office and date range for calendar view
- * NEW FILE: This is a GET endpoint for fetching appointments
- * (The old get-by-office.php was actually an UPDATE endpoint - rename it to update.php)
+ * Get appointments by month for calendar view
+ * Uses session-based authentication
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -18,22 +17,29 @@ try {
     
     $user_id = (int)$_SESSION['uid'];
     
-    // Validate date parameters
-    if (!isset($_GET['start_date']) || !isset($_GET['end_date'])) {
+    // Validate year and month parameters
+    if (!isset($_GET['year']) || !isset($_GET['month'])) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'start_date and end_date parameters are required']);
+        echo json_encode(['success' => false, 'error' => 'year and month parameters are required']);
         exit;
     }
     
-    $start_date = $_GET['start_date'];
-    $end_date = $_GET['end_date'];
+    $year = (int)$_GET['year'];
+    $month = (int)$_GET['month'];
     
-    // Validate date format (YYYY-MM-DD)
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end_date)) {
+    // Validate month range
+    if ($month < 1 || $month > 12) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Invalid date format. Use YYYY-MM-DD']);
+        echo json_encode(['success' => false, 'error' => 'Invalid month. Must be between 1 and 12']);
         exit;
     }
+    
+    // Calculate start and end dates for the month
+    $start_date = sprintf('%04d-%02d-01', $year, $month);
+    
+    // Get last day of month
+    $last_day = date('t', strtotime($start_date)); // 't' gives number of days in month
+    $end_date = sprintf('%04d-%02d-%02d', $year, $month, $last_day);
     
     $conn = getDBConnection();
     
@@ -58,8 +64,7 @@ try {
     
     $office_id = (int)$rows[0]['office_id'];
     
-    // Fetch appointments with all necessary fields for calendar display
-    // ✅ Returns separate name fields that the frontend expects
+    // Fetch appointments for the entire month
     $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
@@ -86,12 +91,14 @@ try {
     
     closeDBConnection($conn);
     
-    // Return raw appointment data with field names matching frontend expectations
+    // Return appointment data
     echo json_encode([
         'success' => true,
         'appointments' => $appointments,
         'count' => count($appointments),
         'office_id' => $office_id,
+        'month' => $month,
+        'year' => $year,
         'date_range' => [
             'start' => $start_date,
             'end' => $end_date

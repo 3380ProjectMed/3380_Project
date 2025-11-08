@@ -29,9 +29,9 @@ try {
     
     try {
         $rows = executeQuery($conn, '
-            SELECT s.Work_Location as office_id
-            FROM Staff s
-            JOIN user_account ua ON ua.email = s.Staff_Email
+            SELECT s.work_location as office_id
+            FROM staff s
+            JOIN user_account ua ON ua.email = s.staff_email
             WHERE ua.user_id = ?', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
@@ -47,27 +47,30 @@ try {
     
     $office_id = (int)$rows[0]['office_id'];
     
-            $sql = "SELECT
+    $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
                 a.Reason_for_visit,
                 a.Status as apt_status,
-                CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name,
-                p.Patient_ID as patient_id,
-                p.EmergencyContact,
-                CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
-                d.Doctor_id as doctor_id,
-                pv.Status as visit_status,
-                pv.Start_at as Check_in_time,
-                pi.copay
-            FROM Appointment a
-            INNER JOIN Patient p ON a.Patient_id = p.Patient_ID
-            INNER JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-            LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
-            LEFT JOIN patient_insurance pi ON p.InsuranceID = pi.id AND pi.is_primary = 1
+                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                p.patient_id as patient_id,
+                p.emergency_contact_id,
+                CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                d.doctor_id as doctor_id,
+                pv.status as visit_status,
+                pv.start_at as Check_in_time,
+                ip.copay
+            FROM appointment a
+            INNER JOIN patient p ON a.Patient_id = p.patient_id
+            INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
+            LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
+            LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
+            LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
             WHERE a.Office_id = ?
             AND DATE(a.Appointment_date) = ?
-            ORDER BY a.Appointment_date ASC";    $appointments = executeQuery($conn, $sql, 'is', [$office_id, $date]);
+            ORDER BY a.Appointment_date ASC";
+    
+    $appointments = executeQuery($conn, $sql, 'is', [$office_id, $date]);
     
     $formatted_appointments = [];
     
@@ -88,19 +91,19 @@ try {
         }
         
         $formatted_appointments[] = [
-            'id' => $apt['Appointment_id'],
+            'Appointment_id' => $apt['Appointment_id'],
             'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
-            'patientId' => $apt['patient_id'],
+            'Patient_id' => $apt['patient_id'],
             'patientIdFormatted' => 'P' . str_pad($apt['patient_id'], 3, '0', STR_PAD_LEFT),
             'patientName' => $apt['patient_name'],
-            'doctorId' => $apt['doctor_id'],
+            'Doctor_id' => $apt['doctor_id'],
             'doctorName' => $apt['doctor_name'],
             'time' => date('g:i A', strtotime($apt['Appointment_date'])),
-            'appointmentDateTime' => $apt['Appointment_date'],
+            'Appointment_date' => $apt['Appointment_date'],
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
             'status' => $displayStatus,
             'dbStatus' => $dbStatus,
-            'emergencyContact' => $apt['EmergencyContact'],
+            'emergencyContact' => $apt['emergency_contact_id'],
             'checkInTime' => $apt['Check_in_time'],
             'copay' => $apt['copay'] ? number_format($apt['copay'], 2) : '0.00'
         ];

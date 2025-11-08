@@ -30,9 +30,9 @@ try {
     
     try {
         $rows = executeQuery($conn, '
-            SELECT s.Work_Location as office_id
-            FROM Staff s
-            JOIN user_account ua ON ua.email = s.Staff_Email
+            SELECT s.work_location as office_id
+            FROM staff s
+            JOIN user_account ua ON ua.email = s.staff_email
             WHERE ua.user_id = ?', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
@@ -48,16 +48,16 @@ try {
     
     // Get doctor's schedule for the specified date
     $scheduleSql = "SELECT 
-                        ws.Schedule_id,
-                        ws.Day_of_week,
-                        ws.Start_time,
-                        ws.End_time,
-                        d.First_Name,
-                        d.Last_Name
-                    FROM WorkSchedule ws
-                    JOIN Doctor d ON ws.Doctor_id = d.Doctor_id
-                    WHERE ws.Doctor_id = ?
-                    AND ws.Day_of_week = DAYNAME(?)";
+                        ws.schedule_id,
+                        ws.day_of_week,
+                        ws.start_time,
+                        ws.end_time,
+                        d.first_name,
+                        d.last_name
+                    FROM work_schedule ws
+                    JOIN doctor d ON ws.doctor_id = d.doctor_id
+                    WHERE ws.doctor_id = ?
+                    AND ws.day_of_week = DAYNAME(?)";
     
     $schedule = executeQuery($conn, $scheduleSql, 'is', [$doctor_id, $date]);
     
@@ -78,7 +78,7 @@ try {
     $appointmentsSql = "SELECT 
                             Appointment_date,
                             Status
-                        FROM Appointment
+                        FROM appointment
                         WHERE Doctor_id = ?
                         AND DATE(Appointment_date) = ?
                         AND Status NOT IN ('Cancelled', 'No-Show')
@@ -87,8 +87,8 @@ try {
     $existingAppointments = executeQuery($conn, $appointmentsSql, 'is', [$doctor_id, $date]);
     
     // Generate time slots (30-minute intervals)
-    $startTime = new DateTime($date . ' ' . $doctorSchedule['Start_time']);
-    $endTime = new DateTime($date . ' ' . $doctorSchedule['End_time']);
+    $startTime = new DateTime($date . ' ' . $doctorSchedule['start_time']);
+    $endTime = new DateTime($date . ' ' . $doctorSchedule['end_time']);
     $interval = new DateInterval('PT30M'); // 30 minutes
     
     $slots = [];
@@ -117,12 +117,12 @@ try {
         'available' => true,
         'doctor' => [
             'id' => $doctor_id,
-            'name' => $doctorSchedule['First_Name'] . ' ' . $doctorSchedule['Last_Name']
+            'name' => $doctorSchedule['first_name'] . ' ' . $doctorSchedule['last_name']
         ],
         'date' => $date,
         'schedule' => [
-            'start_time' => date('g:i A', strtotime($doctorSchedule['Start_time'])),
-            'end_time' => date('g:i A', strtotime($doctorSchedule['End_time']))
+            'start_time' => date('g:i A', strtotime($doctorSchedule['start_time'])),
+            'end_time' => date('g:i A', strtotime($doctorSchedule['end_time']))
         ],
         'slots' => $slots,
         'total_slots' => count($slots),

@@ -35,10 +35,10 @@ try {
     $conn = getDBConnection();
     
     // Verify receptionist has access to this appointment's office
-    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.Work_Location
-                  FROM Appointment a
-                  JOIN Staff s ON s.Work_Location = a.Office_id
-                  JOIN user_account ua ON ua.email = s.Staff_Email
+    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.work_location
+                  FROM appointment a
+                  JOIN staff s ON s.work_location = a.Office_id
+                  JOIN user_account ua ON ua.email = s.staff_email
                   WHERE a.Appointment_id = ? AND ua.user_id = ?";
     
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$appointment_id, $user_id]);
@@ -53,26 +53,26 @@ try {
     $conn->begin_transaction();
     
     try {
-        // Check if PatientVisit record exists
-        $checkVisitSql = "SELECT Visit_id FROM PatientVisit WHERE Appointment_id = ?";
+        // Check if patient_visit record exists
+        $checkVisitSql = "SELECT visit_id FROM patient_visit WHERE appointment_id = ?";
         $existingVisit = executeQuery($conn, $checkVisitSql, 'i', [$appointment_id]);
         
         if (empty($existingVisit)) {
-            // Create new PatientVisit record
-            $insertVisitSql = "INSERT INTO PatientVisit (Appointment_id, Patient_id, Doctor_id, Office_id, Start_at, Status)
+            // Create new patient_visit record
+            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, office_id, start_at, status)
                               SELECT a.Appointment_id, a.Patient_id, a.Doctor_id, a.Office_id, NOW(), 'Scheduled'
-                              FROM Appointment a WHERE a.Appointment_id = ?";
+                              FROM appointment a WHERE a.Appointment_id = ?";
             executeQuery($conn, $insertVisitSql, 'i', [$appointment_id]);
         } else {
             // Update existing record
-            $updateVisitSql = "UPDATE PatientVisit 
-                              SET Start_at = NOW(), Status = 'Scheduled'
-                              WHERE Appointment_id = ?";
+            $updateVisitSql = "UPDATE patient_visit 
+                              SET start_at = NOW(), status = 'Scheduled'
+                              WHERE appointment_id = ?";
             executeQuery($conn, $updateVisitSql, 'i', [$appointment_id]);
         }
         
         // Update appointment status if needed
-        $updateApptSql = "UPDATE Appointment 
+        $updateApptSql = "UPDATE appointment 
                          SET Status = 'Scheduled'
                          WHERE Appointment_id = ? AND Status NOT IN ('Completed', 'Cancelled')";
         executeQuery($conn, $updateApptSql, 'i', [$appointment_id]);

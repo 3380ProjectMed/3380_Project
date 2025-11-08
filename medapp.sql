@@ -47,93 +47,9 @@ CREATE TABLE `appointment` (
 
 LOCK TABLES `appointment` WRITE;
 /*!40000 ALTER TABLE `appointment` DISABLE KEYS */;
-INSERT INTO `appointment` VALUES (1001,1,1,1,'2025-11-24 09:00:00','2025-10-20 14:30:00','Annual physical examination','Completed'),(1002,3,1,1,'2025-11-08 14:00:00','2025-10-02 16:45:00','Follow-up consultation','Scheduled'),(1003,5,1,1,'2024-01-15 10:30:00','2023-12-22 09:15:00','Cardiology checkup','Scheduled'),(1004,7,2,4,'2025-11-17 11:00:00','2024-01-08 14:25:00','Heart condition monitoring','Scheduled'),(1006,8,3,2,'2024-01-18 15:45:00','2024-01-11 12:15:00','Vaccination','Scheduled'),(1007,4,4,3,'2024-01-16 08:45:00','2023-12-28 11:20:00','Orthopedic consultation','Scheduled'),(1008,1,1,1,'2025-11-04 16:00:00','2025-01-09 17:40:00','Knee pain evaluation','Scheduled'),(1009,6,5,4,'2024-01-17 09:30:00','2024-01-05 08:30:00','OB/GYN appointment','Scheduled'),(1010,3,1,2,'2025-11-11 10:00:00','2024-01-12 09:50:00','Internal medicine consultation','Scheduled'),(1011,4,7,4,'2024-01-19 14:30:00','2024-01-15 16:20:00','Dermatology screening','Scheduled'),(1012,4,1,2,'2025-11-06 09:00:00','2025-10-20 09:00:00','Follow-up consultation','In Progress'),(1013,5,1,1,'2025-11-08 13:00:00','2025-10-23 10:00:00','TEST','In Progress'),(1016,2,1,4,'2026-08-24 11:00:00','2025-11-03 22:34:36','Some weird reason idk','Scheduled');
+INSERT INTO `appointment` VALUES (1001,1,1,1,'2025-11-07 11:00:00','2025-10-20 14:30:00','Annual physical examination','Scheduled'),(1002,3,1,1,'2025-11-05 14:00:00','2025-10-02 16:45:00','Follow-up consultation','Scheduled'),(1003,5,1,1,'2024-01-15 10:30:00','2023-12-22 09:15:00','Cardiology checkup','Scheduled'),(1004,7,2,4,'2025-11-17 11:00:00','2024-01-08 14:25:00','Heart condition monitoring','Scheduled'),(1006,8,3,2,'2024-01-18 15:45:00','2024-01-11 12:15:00','Vaccination','Scheduled'),(1007,4,4,3,'2024-01-16 08:45:00','2023-12-28 11:20:00','Orthopedic consultation','Scheduled'),(1008,1,1,1,'2025-11-04 16:00:00','2025-01-09 17:40:00','Knee pain evaluation','Scheduled'),(1009,6,5,4,'2024-01-17 09:30:00','2024-01-05 08:30:00','OB/GYN appointment','Scheduled'),(1010,3,1,2,'2025-11-11 10:00:00','2024-01-12 09:50:00','Internal medicine consultation','Scheduled'),(1011,4,7,4,'2024-01-19 14:30:00','2024-01-15 16:20:00','Dermatology screening','Scheduled'),(1012,4,1,2,'2025-11-06 09:00:00','2025-10-20 09:00:00','Follow-up consultation','In Progress'),(1013,5,1,1,'2025-11-06 13:00:00','2025-10-23 10:00:00','TEST','In Progress'),(1014,1,1,1,'2025-11-07 16:00:00','2025-11-03 22:34:36','test trigger','Scheduled'),(1016,2,1,4,'2026-08-24 11:00:00','2025-11-03 22:34:36','Some weird reason idk','Scheduled');
 /*!40000 ALTER TABLE `appointment` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `trg_appointment_validate_date` BEFORE INSERT ON `appointment` FOR EACH ROW BEGIN
-    DECLARE conflicting_appointments INT;
-    
-    -- Check if appointment is in the past
-    IF NEW.Appointment_date < NOW() THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Cannot create appointment in the past';
-    END IF;
-    
-    -- Check if appointment is too far in the future (e.g., max 1 year out)
-    IF NEW.Appointment_date > DATE_ADD(NOW(), INTERVAL 1 YEAR) THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Cannot schedule appointment more than 1 year in advance';
-    END IF;
-    
-    -- Check if appointment is during business hours (8 AM - 6 PM)
-    IF HOUR(NEW.Appointment_date) < 8 OR HOUR(NEW.Appointment_date) >= 18 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Appointments must be scheduled between 8 AM and 6 PM';
-    END IF;
-    
-    -- Check if appointment is on a weekend
-    IF DAYOFWEEK(NEW.Appointment_date) IN (1, 7) THEN -- 1=Sunday, 7=Saturday
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Appointments cannot be scheduled on weekends';
-    END IF;
-    
-    -- Check for double-booking: same doctor, same time
-    SELECT COUNT(*) INTO conflicting_appointments
-    FROM Appointment
-    WHERE Doctor_id = NEW.Doctor_id
-    AND Appointment_date = NEW.Appointment_date
-    AND Status != 'Cancelled';
-    
-    IF conflicting_appointments > 0 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'This time slot is already booked. Please select a different time.';
-    END IF;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `trg_appointment_check_referral` BEFORE INSERT ON `appointment` FOR EACH ROW BEGIN
-    DECLARE patient_pcp_id INT;
-    
-    -- Get the patient's Primary Care Physician
-    SELECT Primary_Doctor INTO patient_pcp_id
-    FROM Patient
-    WHERE Patient_ID = NEW.Patient_id;
-    
-    -- If trying to book with a doctor who is NOT their PCP, block it
-    IF patient_pcp_id IS NOT NULL AND NEW.Doctor_id != patient_pcp_id THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'You must have a referral to book an appointment with a specialist. Please contact your primary care physician.';
-    END IF;
-    
-    -- Set status to Confirmed
-    SET NEW.Status = 'Scheduled';
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `codes_allergies`
@@ -366,6 +282,9 @@ CREATE TABLE `insurance_plan` (
   `plan_name` varchar(100) DEFAULT NULL,
   `plan_type` enum('HMO','PPO','EPO','Medicare','Medicaid','Other') DEFAULT NULL,
   `network_rules` json DEFAULT NULL,
+  `copay` decimal(10,2) DEFAULT NULL,
+  `deductible_individual` decimal(10,2) DEFAULT NULL,
+  `coinsurance_rate` decimal(5,2) DEFAULT NULL,
   PRIMARY KEY (`plan_id`),
   KEY `fk_plan_payer` (`payer_id`),
   CONSTRAINT `fk_plan_payer` FOREIGN KEY (`payer_id`) REFERENCES `insurance_payer` (`payer_id`) ON DELETE RESTRICT ON UPDATE CASCADE
@@ -378,7 +297,7 @@ CREATE TABLE `insurance_plan` (
 
 LOCK TABLES `insurance_plan` WRITE;
 /*!40000 ALTER TABLE `insurance_plan` DISABLE KEYS */;
-INSERT INTO `insurance_plan` VALUES (101,1,'BCBS Gold','PPO',NULL),(102,1,'BCBS Silver','HMO',NULL),(103,2,'Aetna Premier','PPO',NULL),(104,3,'UHC Choice Plus','PPO',NULL),(105,4,'Medicare Part B','Medicare',NULL);
+INSERT INTO `insurance_plan` VALUES (101,1,'BCBS Gold','PPO',NULL,NULL,NULL,NULL),(102,1,'BCBS Silver','HMO',NULL,NULL,NULL,NULL),(103,2,'Aetna Premier','PPO',NULL,NULL,NULL,NULL),(104,3,'UHC Choice Plus','PPO',NULL,NULL,NULL,NULL),(105,4,'Medicare Part B','Medicare',NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `insurance_plan` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -483,7 +402,7 @@ CREATE TABLE `nurse` (
   PRIMARY KEY (`nurse_id`),
   KEY `idx_nurse_staff` (`staff_id`),
   CONSTRAINT `fk_nurse__staff` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`staff_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -492,7 +411,7 @@ CREATE TABLE `nurse` (
 
 LOCK TABLES `nurse` WRITE;
 /*!40000 ALTER TABLE `nurse` DISABLE KEYS */;
-INSERT INTO `nurse` VALUES (1,101,'Emergency'),(2,102,'ICU'),(3,103,'Pediatrics'),(4,104,'Orthopedics'),(5,105,'Cardiology');
+INSERT INTO `nurse` VALUES (1,101,'Emergency'),(2,102,'ICU'),(3,103,'Pediatrics'),(4,104,'Orthopedics'),(5,105,'Cardiology'),(6,106,'General');
 /*!40000 ALTER TABLE `nurse` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -584,7 +503,7 @@ CREATE TABLE `patient` (
 
 LOCK TABLES `patient` WRITE;
 /*!40000 ALTER TABLE `patient` DISABLE KEYS */;
-INSERT INTO `patient` VALUES (1,'John','Smith','1985-03-15','123-45-6789',1,1,2,1,'john.smith@email.com',NULL,1,NULL,1,101,NULL,1,'O+'),(2,'Maria','Garcia','2020-07-22','123-45-6790',2,2,1,2,'maria.garcia@email.com',2,6,NULL,2,102,NULL,NULL,'A+'),(3,'David','Johnson','1992-11-30','123-45-6791',1,1,2,1,'david.johnson@email.com',NULL,1,NULL,3,105,NULL,3,'B+'),(4,'Sarah','Williams','1980-05-14','123-45-6792',2,2,2,1,'sarah.williams@email.com',NULL,4,NULL,4,103,NULL,NULL,'AB-'),(5,'Michael','Brown','1975-09-08','123-45-6793',1,1,2,2,'michael.brown@email.com',NULL,2,NULL,5,104,NULL,NULL,'O-'),(6,'Jennifer','Davis','1988-12-25','123-45-6794',2,2,2,1,'jennifer.davis@email.com',NULL,5,NULL,6,101,NULL,NULL,'A-'),(7,'Robert','Miller','1965-02-18','123-45-6795',1,1,2,1,'robert.miller@email.com',NULL,1,NULL,7,105,NULL,NULL,'B-'),(8,'Lisa','Wilson','1990-08-11','123-45-6796',2,2,1,3,'lisa.wilson@email.com',NULL,3,NULL,8,102,NULL,NULL,'AB+'),(9,'Emaad','Rahman','2000-02-01','TEMP0000009',1,1,NULL,NULL,'emaad980@gmail.com',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(10,'Kathiana','Rodriguez','2003-01-03','TEMP0000010',2,2,1,1,'kathiana119@gmail.com',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+INSERT INTO `patient` VALUES (1,'John','Smith','1985-03-15','123-45-6789',1,1,2,1,'john.smith@email.com',NULL,1,NULL,1,101,NULL,1,'O+'),(2,'Maria','Garcia','2020-07-22','123-45-6790',2,2,1,2,'maria.garcia@email.com',2,6,NULL,2,102,NULL,20,'A+'),(3,'David','Johnson','1992-11-30','123-45-6791',1,1,2,1,'david.johnson@email.com',NULL,1,NULL,3,105,NULL,3,'B+'),(4,'Sarah','Williams','1980-05-14','123-45-6792',2,2,2,1,'sarah.williams@email.com',NULL,4,NULL,4,103,NULL,NULL,'AB-'),(5,'Michael','Brown','1975-09-08','123-45-6793',1,1,2,2,'michael.brown@email.com',NULL,2,NULL,5,104,NULL,NULL,'O-'),(6,'Jennifer','Davis','1988-12-25','123-45-6794',2,2,2,1,'jennifer.davis@email.com',NULL,5,NULL,6,101,NULL,NULL,'A-'),(7,'Robert','Miller','1965-02-18','123-45-6795',1,1,2,1,'robert.miller@email.com',NULL,1,NULL,7,105,NULL,NULL,'B-'),(8,'Lisa','Wilson','1990-08-11','123-45-6796',2,2,1,3,'lisa.wilson@email.com',NULL,3,NULL,8,102,NULL,NULL,'AB+'),(9,'Emaad','Rahman','2000-02-01','TEMP0000009',1,1,NULL,NULL,'emaad980@gmail.com',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(10,'Kathiana','Rodriguez','2003-01-03','TEMP0000010',2,2,1,1,'kathiana119@gmail.com',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `patient` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -604,10 +523,6 @@ CREATE TABLE `patient_insurance` (
   `effective_date` date NOT NULL,
   `expiration_date` date DEFAULT NULL,
   `is_primary` tinyint(1) NOT NULL DEFAULT '0',
-  `copay` decimal(10,2) DEFAULT NULL,
-  `deductible_individ` decimal(10,2) NOT NULL,
-  `deductible_family` decimal(10,2) DEFAULT NULL,
-  `coinsurance_rate_pct` decimal(5,2) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ux_patient_plan_member` (`patient_id`,`plan_id`,`member_id`),
   KEY `idx_pi_patient` (`patient_id`),
@@ -615,11 +530,7 @@ CREATE TABLE `patient_insurance` (
   KEY `idx_pi_patient_dates` (`patient_id`,`effective_date`,`expiration_date`),
   CONSTRAINT `fk_pi_patient` FOREIGN KEY (`patient_id`) REFERENCES `patient` (`patient_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_pi_plan` FOREIGN KEY (`plan_id`) REFERENCES `insurance_plan` (`plan_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT `chk_pi_coins_rate` CHECK (((`coinsurance_rate_pct` is null) or ((`coinsurance_rate_pct` >= 0) and (`coinsurance_rate_pct` <= 100)))),
-  CONSTRAINT `chk_pi_copay` CHECK (((`copay` is null) or (`copay` >= 0))),
-  CONSTRAINT `chk_pi_dates` CHECK (((`expiration_date` is null) or (`effective_date` <= `expiration_date`))),
-  CONSTRAINT `chk_pi_deduct_fam` CHECK (((`deductible_family` is null) or (`deductible_family` >= 0))),
-  CONSTRAINT `chk_pi_deduct_ind` CHECK ((`deductible_individ` >= 0))
+  CONSTRAINT `chk_pi_dates` CHECK (((`expiration_date` is null) or (`effective_date` <= `expiration_date`)))
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -629,7 +540,7 @@ CREATE TABLE `patient_insurance` (
 
 LOCK TABLES `patient_insurance` WRITE;
 /*!40000 ALTER TABLE `patient_insurance` DISABLE KEYS */;
-INSERT INTO `patient_insurance` VALUES (1,1,101,'M123456789','G987654','2023-01-01','2024-12-31',1,25.00,1500.00,NULL,20.00),(2,2,102,'M123456790','G987655','2023-03-01','2024-12-31',1,20.00,2000.00,NULL,15.00),(3,3,105,'M123456791',NULL,'2022-06-01',NULL,1,15.00,500.00,NULL,10.00),(4,4,103,'M123456792','G987656','2023-02-15','2024-12-31',1,30.00,1000.00,NULL,25.00),(5,5,104,'M123456793','G987657','2023-01-01','2024-12-31',1,25.00,1500.00,NULL,20.00),(6,6,101,'M123456794',NULL,'2023-01-01',NULL,1,NULL,1500.00,NULL,NULL),(7,7,105,'M123456795',NULL,'2022-06-01',NULL,1,NULL,500.00,NULL,NULL),(8,8,102,'M123456796',NULL,'2023-03-01',NULL,1,NULL,2000.00,NULL,NULL);
+INSERT INTO `patient_insurance` VALUES (1,1,101,'M123456789','G987654','2023-01-01','2024-12-31',1),(2,2,102,'M123456790','G987655','2023-03-01','2024-12-31',1),(3,3,105,'M123456791',NULL,'2022-06-01',NULL,1),(4,4,103,'M123456792','G987656','2023-02-15','2024-12-31',1),(5,5,104,'M123456793','G987657','2023-01-01','2024-12-31',1),(6,6,101,'M123456794',NULL,'2023-01-01',NULL,1),(7,7,105,'M123456795',NULL,'2022-06-01',NULL,1),(8,8,102,'M123456796',NULL,'2023-03-01',NULL,1);
 /*!40000 ALTER TABLE `patient_insurance` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -651,7 +562,6 @@ CREATE TABLE `patient_visit` (
   `nurse_id` int DEFAULT NULL,
   `status` enum('Scheduled','Completed','Canceled','No-Show') DEFAULT NULL,
   `diagnosis` json DEFAULT NULL,
-  `treatment` text,
   `reason_for_visit` varchar(300) DEFAULT NULL,
   `department` varchar(50) DEFAULT NULL,
   `amount_due` decimal(15,2) DEFAULT NULL,
@@ -690,7 +600,7 @@ CREATE TABLE `patient_visit` (
   CONSTRAINT `chk_pv_times` CHECK (((`end_at` is null) or (`start_at` is null) or (`start_at` <= `end_at`))),
   CONSTRAINT `chk_pv_total_due` CHECK (((`total_due` is null) or (`total_due` >= -(999999999999.99)))),
   CONSTRAINT `chk_pv_treatment_cost` CHECK (((`treatment_cost_due` is null) or (`treatment_cost_due` >= 0)))
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -699,7 +609,7 @@ CREATE TABLE `patient_visit` (
 
 LOCK TABLES `patient_visit` WRITE;
 /*!40000 ALTER TABLE `patient_visit` DISABLE KEYS */;
-INSERT INTO `patient_visit` VALUES (1,1001,1,1,'2025-01-15 09:00:00','120/80',1,1,'Completed','[\"Hypertension\", \"Type 2 Diabetes\"]','Continue current medications, lifestyle modifications','Annual physical examination','Internal Medicine',150.00,25.00,125.00,25.00,125.00,1,'[\"Stable condition\"]',98.6,'2024-01-15 09:00:00','2024-01-15 09:45:00',1,'2025-10-23 04:41:08','Dr. Emily Chen','2025-10-23 04:41:08','Dr. Emily Chen'),(2,1002,3,3,'2025-01-16 14:00:00','118/76',1,2,'Completed','[\"Hyperlipidemia\"]','Start statin therapy, dietary changes','Follow-up consultation','Internal Medicine',120.00,15.00,105.00,15.00,105.00,1,'[\"Elevated cholesterol levels\"]',98.4,'2024-01-16 14:00:00','2024-01-16 14:30:00',3,'2025-10-23 04:41:08','Dr. Emily Chen','2025-10-23 04:41:08','Dr. Emily Chen'),(3,1003,5,1,'2025-01-15 10:30:00','130/85',2,5,'Completed','[\"Osteoarthritis\"]','Pain management, physical therapy referral','Cardiology checkup','Cardiology',200.00,25.00,175.00,25.00,175.00,1,'[\"Joint pain in knees\"]',98.2,'2024-01-15 10:30:00','2024-01-15 11:15:00',5,'2025-10-23 04:41:08','Dr. James Rodriguez','2025-10-23 04:41:08','Dr. James Rodriguez'),(15,1013,5,1,'2025-10-24 10:30:00','120/80',1,2,'Scheduled','[\"Mild Severity\", \"Flu\"]','Prescribed rest and hydration; recommended follow-up in one week.','Fever and cough','Internal Medicine',200.00,50.00,150.00,20.00,180.00,1,'{\"Cough\": true, \"Fever\": true}',99.5,'2025-10-24 10:30:00','2025-10-24 11:00:00',5,'2025-10-25 04:21:57','nurse.jane','2025-10-25 04:49:03',NULL),(16,1013,5,1,'2025-10-25 01:15:00','130/80',1,1,'Scheduled',NULL,NULL,NULL,'Internal Medicine',NULL,NULL,NULL,NULL,NULL,NULL,NULL,99.0,'2025-10-24 01:30:00',NULL,5,'2025-10-24 01:10:00',NULL,'2025-10-25 18:16:49',NULL);
+INSERT INTO `patient_visit` VALUES (1,1001,1,1,'2025-01-15 09:00:00','120/80',1,1,'Completed','[\"Hypertension\", \"Type 2 Diabetes\"]','Annual physical examination','Internal Medicine',150.00,25.00,125.00,25.00,125.00,1,'[\"Stable condition\"]',98.6,'2024-01-15 09:00:00','2024-01-15 09:45:00',1,'2025-10-23 04:41:08','Dr. Emily Chen','2025-10-23 04:41:08','Dr. Emily Chen'),(2,1002,3,3,'2025-01-16 14:00:00','118/76',1,2,'Completed','[\"Hyperlipidemia\"]','Follow-up consultation','Internal Medicine',120.00,15.00,105.00,15.00,105.00,1,'[\"Elevated cholesterol levels\"]',98.4,'2024-01-16 14:00:00','2024-01-16 14:30:00',3,'2025-10-23 04:41:08','Dr. Emily Chen','2025-10-23 04:41:08','Dr. Emily Chen'),(3,1003,5,1,'2025-01-15 10:30:00','130/85',2,3,'Completed','[\"Osteoarthritis\"]','Cardiology checkup','Cardiology',200.00,25.00,175.00,25.00,175.00,1,'[\"Joint pain in knees\"]',98.2,'2024-01-15 10:30:00','2024-01-15 11:15:00',5,'2025-10-23 04:41:08','Dr. James Rodriguez','2025-11-06 20:09:25','Dr. James Rodriguez'),(5,1014,1,1,'2025-11-07 12:00:00','120/80',1,1,'Scheduled',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,99.2,'2025-11-07 12:00:00',NULL,NULL,'2025-11-07 18:06:42',NULL,'2025-11-07 18:06:42',NULL),(15,1013,5,1,'2025-11-03 10:30:00','120/80',1,1,'Scheduled','[\"Mild Severity\", \"Flu\"]','Fever and cough','Internal Medicine',200.00,50.00,150.00,20.00,180.00,1,'{\"Cough\": true, \"Fever\": true}',99.5,'2025-10-24 10:30:00','2025-10-24 11:00:00',5,'2025-10-25 04:21:57','nurse.jane','2025-11-07 00:28:09',NULL),(16,1013,5,1,'2025-11-04 01:15:00','130/80',1,2,'Scheduled',NULL,NULL,'Internal Medicine',NULL,NULL,NULL,NULL,NULL,NULL,NULL,99.0,'2025-10-24 01:30:00',NULL,5,'2025-10-24 01:10:00',NULL,'2025-11-07 00:28:09',NULL),(17,1016,2,3,'2025-10-25 02:15:00','120/80',3,1,'Completed','[\"Migraine\"]','Migraines','Internal Medicine',150.00,0.00,150.00,20.00,50.00,1,NULL,NULL,NULL,NULL,NULL,'2025-11-06 06:17:07',NULL,'2025-11-06 06:17:07',NULL),(18,1002,3,1,'2025-11-12 14:00:00',NULL,NULL,6,'Scheduled',NULL,NULL,'General',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2025-11-12 14:00:00',NULL,NULL,'2025-11-06 20:09:25',NULL,'2025-11-06 20:09:25',NULL),(19,1010,3,2,'2025-11-11 10:00:00',NULL,NULL,6,'Scheduled',NULL,NULL,'General',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2025-11-11 10:00:00',NULL,NULL,'2025-11-06 20:09:25',NULL,'2025-11-06 20:09:25',NULL);
 /*!40000 ALTER TABLE `patient_visit` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -874,8 +784,68 @@ CREATE TABLE `staff` (
 
 LOCK TABLES `staff` WRITE;
 /*!40000 ALTER TABLE `staff` DISABLE KEYS */;
-INSERT INTO `staff` VALUES (101,'Jennifer','Taylor','987-65-4326',2,'j.taylor@medconnect.com',1,'Nurse',1,'RN123456'),(102,'Michael','Chen','987-65-4327',1,'m.chen@medconnect.com',1,'Nurse',2,'RN123457'),(103,'Sarah','Rodriguez','987-65-4328',2,'s.rodriguez@medconnect.com',2,'Nurse',1,'RN123458'),(104,'David','Anderson','987-65-4329',1,'d.anderson@medconnect.com',3,'Nurse',3,'RN123459'),(105,'Lisa','Martinez','987-65-4330',2,'l.martinez@medconnect.com',4,'Nurse',2,'RN123460'),(201,'Amanda','Wilson','987-65-4331',2,'a.wilson@medconnect.com',1,'Administrator',1,NULL),(202,'Christopher','Lee','987-65-4332',1,'c.lee@medconnect.com',2,'Receptionist',2,NULL),(204,'Daniel','Thompson','987-65-4334',1,'d.thompson@medconnect.com',4,'Receptionist',4,'RTT123456');
+INSERT INTO `staff` VALUES (101,'Jennifer','Taylor','987-65-4326',2,'j.taylor@medconnect.com',1,'Nurse',1,'RN123456'),(102,'Michael','Chen','987-65-4327',1,'m.chen@medconnect.com',1,'Nurse',2,'RN123457'),(103,'Sarah','Rodriguez','987-65-4328',2,'s.rodriguez@medconnect.com',2,'Nurse',1,'RN123458'),(104,'David','Anderson','987-65-4329',1,'d.anderson@medconnect.com',3,'Nurse',3,'RN123459'),(105,'Lisa','Martinez','987-65-4330',2,'l.martinez@medconnect.com',4,'Nurse',2,'RN123460'),(106,'Tina','Nguyen','987-65-4335',2,'tnguyen@medconnect.com',1,'Nurse',NULL,'RN123461'),(201,'Amanda','Wilson','987-65-4331',2,'a.wilson@medconnect.com',1,'Administrator',1,NULL),(202,'Christopher','Lee','987-65-4332',1,'c.lee@medconnect.com',2,'Receptionist',2,NULL),(204,'Daniel','Thompson','987-65-4334',1,'d.thompson@medconnect.com',4,'Receptionist',4,'RTT123456');
 /*!40000 ALTER TABLE `staff` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `treatment_catalog`
+--
+
+DROP TABLE IF EXISTS `treatment_catalog`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `treatment_catalog` (
+  `treatment_id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `cpt_code` varchar(10) DEFAULT NULL,
+  `cost` decimal(10,2) DEFAULT NULL,
+  `specialty` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`treatment_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `treatment_catalog`
+--
+
+LOCK TABLES `treatment_catalog` WRITE;
+/*!40000 ALTER TABLE `treatment_catalog` DISABLE KEYS */;
+INSERT INTO `treatment_catalog` VALUES (1,'Office Visit - Established (15 min)','99213',125.00,'Internal Medicine'),(2,'Office Visit - Established (25 min)','99214',175.00,'Internal Medicine'),(3,'Office Visit - Established (40 min)','99215',225.00,'Internal Medicine'),(4,'Office Visit - New Patient (30 min)','99203',200.00,'Internal Medicine'),(5,'Office Visit - New Patient (45 min)','99204',275.00,'Internal Medicine'),(6,'Annual Physical - Under 40','99395',185.00,'Internal Medicine'),(7,'Annual Physical - 40-64 years','99396',215.00,'Internal Medicine'),(8,'Annual Physical - 65+ years','99397',245.00,'Internal Medicine'),(9,'EKG - 12 Lead','93000',85.00,'Internal Medicine'),(10,'Pulmonary Function Test','94010',120.00,'Internal Medicine'),(11,'Ear Wax Removal','69210',75.00,'Internal Medicine'),(12,'Wart Removal - Single','17110',95.00,'Internal Medicine'),(13,'Vitamin B12 Injection','96372',25.00,'Internal Medicine'),(14,'Corticosteroid Injection','96372',35.00,'Internal Medicine'),(15,'Flu Vaccine Administration','90471',25.00,'Internal Medicine'),(16,'Tetanus Shot Administration','90471',25.00,'Internal Medicine'),(17,'Rapid Flu Test','87804',55.00,'Internal Medicine'),(18,'Urinalysis - Dipstick','81002',25.00,'Internal Medicine'),(19,'Blood Glucose Test','82947',15.00,'Internal Medicine'),(20,'Diabetes Education','G0108',85.00,'Internal Medicine'),(21,'Smoking Cessation Counseling','99406',65.00,'Internal Medicine'),(22,'Wound Care - Simple','12001',125.00,'Internal Medicine'),(23,'Ingrown Toenail Removal','11750',90.00,'Internal Medicine');
+/*!40000 ALTER TABLE `treatment_catalog` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `treatment_per_visit`
+--
+
+DROP TABLE IF EXISTS `treatment_per_visit`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `treatment_per_visit` (
+  `visit_treatment_id` int NOT NULL AUTO_INCREMENT,
+  `visit_id` int NOT NULL,
+  `treatment_id` int NOT NULL,
+  `quantity` int DEFAULT '1',
+  `cost_each` decimal(10,2) DEFAULT NULL,
+  `total_cost` decimal(10,2) GENERATED ALWAYS AS ((`quantity` * `cost_each`)) STORED,
+  `notes` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`visit_treatment_id`),
+  KEY `fk_vt_visit` (`visit_id`),
+  KEY `fk_vt_treatment` (`treatment_id`),
+  CONSTRAINT `fk_vt_treatment` FOREIGN KEY (`treatment_id`) REFERENCES `treatment_catalog` (`treatment_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_vt_visit` FOREIGN KEY (`visit_id`) REFERENCES `patient_visit` (`visit_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `treatment_per_visit`
+--
+
+LOCK TABLES `treatment_per_visit` WRITE;
+/*!40000 ALTER TABLE `treatment_per_visit` DISABLE KEYS */;
+INSERT INTO `treatment_per_visit` (`visit_treatment_id`, `visit_id`, `treatment_id`, `quantity`, `cost_each`, `notes`) VALUES (1,1,6,1,215.00,'Annual physical for established patient'),(2,1,16,1,35.00,'Routine A1c monitoring'),(3,1,17,1,15.00,'Fasting glucose check'),(4,2,1,1,125.00,'Follow-up for cholesterol management'),(5,2,18,1,65.00,'Lipid panel ordered'),(6,3,2,1,175.00,'Cardiology consultation'),(7,3,9,1,85.00,'Routine EKG'),(8,3,13,1,35.00,'Joint injection for pain'),(9,15,1,1,125.00,'Sick visit for flu symptoms'),(10,15,19,1,55.00,'Rapid influenza test'),(11,15,21,1,25.00,'Symptomatic relief'),(12,16,1,1,125.00,'Routine follow-up');
+/*!40000 ALTER TABLE `treatment_per_visit` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -896,12 +866,13 @@ CREATE TABLE `user_account` (
   `failed_login_count` smallint unsigned NOT NULL DEFAULT '0',
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `ux_user_username` (`username`),
   UNIQUE KEY `ux_user_email` (`email`),
   KEY `idx_user_last_login` (`last_login_at`),
   CONSTRAINT `chk_user_failed_login` CHECK ((`failed_login_count` >= 0))
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -910,29 +881,9 @@ CREATE TABLE `user_account` (
 
 LOCK TABLES `user_account` WRITE;
 /*!40000 ALTER TABLE `user_account` DISABLE KEYS */;
-INSERT INTO `user_account` VALUES (1,'p101','john.smith@email.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','PATIENT',0,'2025-11-05 00:47:34',0,1,'2025-10-22 04:54:59'),(2,'d201','echen@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-05 22:04:11',0,1,'2025-10-22 04:54:59'),(3,'n301','tnguyen@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','NURSE',0,'2025-11-04 21:06:42',0,1,'2025-10-23 14:54:01'),(4,'a401','a.wilson@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','ADMIN',0,'2025-11-05 22:05:27',0,1,'2025-10-25 14:54:01'),(5,'p102','maria.garcia@email.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','PATIENT',0,'2025-11-05 22:29:21',0,1,'2025-10-28 18:50:06'),(6,'d202','jrodriguez@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-04 20:36:49',0,1,'2025-11-04 00:25:39'),(9,'emaad980','emaad980@gmail.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','PATIENT',0,'2025-11-01 20:39:30',0,1,'2025-11-01 20:27:29'),(10,'kathiana119','kathiana119@gmail.com','$2y$12$g34AFS8Sjji2SLi.EvTltevK991t6CfDs4QNMg0cevjgxWgHMy.cO','PATIENT',0,'2025-11-04 00:25:55',0,1,'2025-11-04 00:25:39');
+INSERT INTO `user_account` VALUES (1,'p101','john.smith@email.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','PATIENT',0,'2025-11-06 04:27:37',0,1,'2025-10-22 04:54:59','2025-10-22 04:54:59'),(2,'d201','echen@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-06 20:51:27',0,1,'2025-10-22 04:54:59','2025-10-22 04:54:59'),(3,'n301','tnguyen@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','NURSE',0,'2025-11-06 20:39:42',0,1,'2025-10-23 14:54:01','2025-10-23 14:54:01'),(4,'a401','a.wilson@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','ADMIN',0,'2025-11-06 20:42:18',0,1,'2025-10-25 14:54:01','2025-10-25 14:54:01'),(5,'p102','maria.garcia@email.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','PATIENT',0,'2025-11-06 20:58:42',0,1,'2025-10-28 18:50:06','2025-10-28 18:50:06'),(6,'d202','jrodriguez@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-04 20:36:49',0,1,'2025-11-04 00:25:39','2025-11-04 00:25:39'),(9,'emaad980','emaad980@gmail.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','PATIENT',0,'2025-11-01 20:39:30',0,1,'2025-11-01 20:27:29','2025-11-01 20:27:29'),(10,'kathiana119','kathiana119@gmail.com','$2y$12$g34AFS8Sjji2SLi.EvTltevK991t6CfDs4QNMg0cevjgxWgHMy.cO','PATIENT',0,'2025-11-04 00:25:55',0,1,'2025-11-04 00:25:39','2025-11-04 00:25:39'),(11,'r501','d.thompson@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','RECEPTIONIST',0,'2025-11-06 21:24:50',0,1,'2025-11-06 00:39:39','2025-11-06 00:39:39');
 /*!40000 ALTER TABLE `user_account` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`medroot`@`%`*/ /*!50003 TRIGGER `trg_users_failcount_crosses_threshold` BEFORE UPDATE ON `user_account` FOR EACH ROW BEGIN
-  -- Only when the threshold is crossed (from <=3 to >3)
-  IF NEW.failed_login_count > 3 AND OLD.failed_login_count <= 3 THEN
-    SET NEW.password_hash = NULL;
-  END IF;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `vaccination_history`
@@ -987,7 +938,7 @@ CREATE TABLE `work_schedule` (
   KEY `idx_ws_daydate` (`day_of_week`,`days`),
   CONSTRAINT `fk_wsin__office` FOREIGN KEY (`office_id`) REFERENCES `office` (`office_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `chk_ws_times` CHECK (((`end_time` is null) or (`start_time` is null) or (`start_time` <= `end_time`)))
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -996,7 +947,7 @@ CREATE TABLE `work_schedule` (
 
 LOCK TABLES `work_schedule` WRITE;
 /*!40000 ALTER TABLE `work_schedule` DISABLE KEYS */;
-INSERT INTO `work_schedule` VALUES (1,1,101,NULL,1,'2024-01-15','08:00:00','16:00:00','Monday'),(2,1,102,NULL,2,'2024-01-15','12:00:00','20:00:00','Monday'),(3,1,NULL,1,NULL,'2024-01-15','09:00:00','17:00:00','Monday'),(4,2,NULL,3,NULL,'2024-01-15','08:30:00','16:30:00','Monday'),(5,1,NULL,2,NULL,'2024-01-15','10:00:00','18:00:00','Monday'),(6,1,NULL,1,NULL,NULL,'09:00:00','17:00:00','Monday'),(7,2,NULL,1,NULL,NULL,'09:00:00','17:00:00','Tuesday'),(8,1,NULL,1,NULL,NULL,'09:00:00','17:00:00','Wednesday'),(9,2,NULL,1,NULL,NULL,'09:00:00','17:00:00','Thursday'),(10,1,NULL,1,NULL,NULL,'09:00:00','17:00:00','Friday'),(11,1,NULL,2,NULL,NULL,'08:00:00','16:00:00','Monday'),(12,1,NULL,2,NULL,NULL,'08:00:00','16:00:00','Wednesday'),(13,4,NULL,2,NULL,NULL,'10:00:00','18:00:00','Tuesday'),(14,4,NULL,2,NULL,NULL,'10:00:00','18:00:00','Thursday'),(15,4,NULL,2,NULL,NULL,'09:00:00','13:00:00','Friday');
+INSERT INTO `work_schedule` VALUES (1,1,101,NULL,1,'2024-01-15','08:00:00','16:00:00','Monday'),(2,1,102,NULL,2,'2024-01-15','12:00:00','20:00:00','Monday'),(3,1,NULL,1,NULL,'2024-01-15','09:00:00','17:00:00','Monday'),(4,2,NULL,3,NULL,'2024-01-15','08:30:00','16:30:00','Monday'),(5,1,NULL,2,NULL,'2024-01-15','10:00:00','18:00:00','Monday'),(6,1,NULL,1,NULL,NULL,'09:00:00','17:00:00','Monday'),(7,2,NULL,1,NULL,NULL,'09:00:00','17:00:00','Tuesday'),(8,1,NULL,1,NULL,NULL,'09:00:00','17:00:00','Wednesday'),(9,2,NULL,1,NULL,NULL,'09:00:00','17:00:00','Thursday'),(10,1,NULL,1,NULL,NULL,'09:00:00','17:00:00','Friday'),(11,1,NULL,2,NULL,NULL,'08:00:00','16:00:00','Monday'),(12,1,NULL,2,NULL,NULL,'08:00:00','16:00:00','Wednesday'),(13,4,NULL,2,NULL,NULL,'10:00:00','18:00:00','Tuesday'),(14,4,NULL,2,NULL,NULL,'10:00:00','18:00:00','Thursday'),(15,4,NULL,2,NULL,NULL,'09:00:00','13:00:00','Friday'),(16,1,101,NULL,1,NULL,'07:00:00','15:00:00','Monday'),(17,1,101,NULL,1,NULL,'07:00:00','15:00:00','Wednesday'),(18,1,101,NULL,1,NULL,'07:00:00','15:00:00','Friday'),(19,1,102,NULL,2,NULL,'15:00:00','23:00:00','Tuesday'),(20,1,102,NULL,2,NULL,'15:00:00','23:00:00','Thursday'),(21,2,103,NULL,3,NULL,'08:00:00','16:00:00','Monday'),(22,2,103,NULL,3,NULL,'08:00:00','16:00:00','Tuesday'),(23,2,103,NULL,3,NULL,'08:00:00','16:00:00','Wednesday'),(24,2,103,NULL,3,NULL,'08:00:00','16:00:00','Thursday'),(25,2,103,NULL,3,NULL,'08:00:00','16:00:00','Friday'),(26,3,104,NULL,4,NULL,'09:00:00','17:00:00','Monday'),(27,3,104,NULL,4,NULL,'09:00:00','17:00:00','Wednesday'),(28,4,105,NULL,5,NULL,'10:00:00','18:00:00','Tuesday'),(29,4,105,NULL,5,NULL,'10:00:00','18:00:00','Thursday'),(30,1,106,NULL,6,NULL,'08:00:00','16:00:00','Monday'),(31,1,106,NULL,6,NULL,'08:00:00','16:00:00','Wednesday'),(32,1,106,NULL,6,NULL,'08:00:00','16:00:00','Friday');
 /*!40000 ALTER TABLE `work_schedule` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -1009,4 +960,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-05 16:41:54
+-- Dump completed on 2025-11-07 18:53:18

@@ -10,7 +10,7 @@ function debug_log($message) {
 
 debug_log('=== ME.PHP START ===');
 
-// Ensure CORS headers for cross-origin requests from the dev server
+// Ensure CORS headers
 if (file_exists(__DIR__ . '/../cors.php')) {
     require_once __DIR__ . '/../cors.php';
 } else {
@@ -18,13 +18,11 @@ if (file_exists(__DIR__ . '/../cors.php')) {
 }
 debug_log('CORS loaded');
 
-// Suppress HTML-formatted errors early to avoid leaking into JSON responses
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
 ini_set('html_errors', '0');
 error_reporting(E_ALL & ~E_DEPRECATED);
 
-// Start output buffering so we can control any accidental output
 ob_start();
 register_shutdown_function(function () {
   global $logFile;
@@ -65,7 +63,6 @@ if (empty($_SESSION['uid'])) {
 
 debug_log('Initializing mysqli');
 
-// Initialize mysqli with SSL for Azure MySQL
 $mysqli = mysqli_init();
 if (!$mysqli) {
     debug_log('mysqli_init failed');
@@ -74,7 +71,6 @@ if (!$mysqli) {
     exit;
 }
 
-// Set SSL options BEFORE connecting
 $sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
 debug_log('SSL cert exists: ' . (file_exists($sslCertPath) ? 'YES' : 'NO'));
 
@@ -94,7 +90,6 @@ $port = (int)(getenv('AZURE_MYSQL_PORT') ?: '3306');
 
 debug_log("Connecting to: $host:$port as $user to db $db");
 
-// Connect with SSL
 if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, NULL, MYSQLI_CLIENT_SSL)) {
     debug_log('Connection failed: ' . $mysqli->connect_error);
     http_response_code(500);
@@ -105,11 +100,35 @@ if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, NULL, MYSQLI_CLIENT
 debug_log('Connected successfully');
 $mysqli->set_charset('utf8mb4');
 
-// Prepare query
-$sql = 'SELECT ua.user_id, ua.username, ua.email, ua.role, d.Doctor_id AS doctor_id
-  FROM user_account ua
-  LEFT JOIN Doctor d ON ua.email = d.Email AND ua.role = "DOCTOR"
-  WHERE ua.user_id = ?';
+// Updated query for new structure
+// user_id now equals staff_id or patient_id depending on role
+$sql = "SELECT 
+            ua.user_id, 
+            ua.username, 
+            ua.email, 
+            ua.role,
+            CASE 
+                WHEN ua.role = 'PATIENT' THEN p.first_name
+                ELSE s.first_name
+            END as first_name,
+            CASE 
+                WHEN ua.role = 'PATIENT' THEN p.last_name
+                ELSE s.last_name
+            END as last_name,
+            CASE 
+                WHEN ua.role = 'PATIENT' THEN p.patient_id
+                ELSE s.staff_id
+            END as entity_id,
+            d.doctor_id,
+            s.work_location,
+            o.name as work_location_name,
+            s.staff_role
+        FROM user_account ua
+        LEFT JOIN staff s ON ua.user_id = s.staff_id AND ua.role IN ('DOCTOR', 'NURSE', 'RECEPTIONIST', 'ADMIN')
+        LEFT JOIN patient p ON ua.user_id = p.patient_id AND ua.role = 'PATIENT'
+        LEFT JOIN doctor d ON s.staff_id = d.staff_id AND ua.role = 'DOCTOR'
+        LEFT JOIN office o ON s.work_location = o.office_id
+        WHERE ua.user_id = ?";
 
 debug_log('Preparing statement');
 $stmt = $mysqli->prepare($sql);
@@ -134,6 +153,7 @@ if (!$stmt->execute()) {
 
 debug_log('Fetching results');
 $user = null;
+
 if (method_exists($stmt, 'get_result')) {
   $res = $stmt->get_result();
   if ($res === false) {
@@ -148,8 +168,21 @@ if (method_exists($stmt, 'get_result')) {
   debug_log('User fetched: ' . ($user ? json_encode($user) : 'NULL'));
 } else {
   debug_log('Using bind_result fallback');
-  // bind_result fallback
-  $bound = $stmt->bind_result($user_id, $username, $email, $role, $doctor_id);
+  
+  $bound = $stmt->bind_result(
+    $user_id, 
+    $username, 
+    $email, 
+    $role, 
+    $first_name,
+    $last_name,
+    $entity_id,
+    $doctor_id,
+    $work_location,
+    $work_location_name,
+    $staff_role
+  );
+  
   if ($bound === false) {
     debug_log('bind_result failed: ' . $stmt->error);
     http_response_code(500);
@@ -184,7 +217,13 @@ if (method_exists($stmt, 'get_result')) {
     'username' => $username,
     'email' => $email,
     'role' => $role,
+    'first_name' => $first_name,
+    'last_name' => $last_name,
+    'entity_id' => $entity_id === null ? null : (is_numeric($entity_id) ? (int)$entity_id : $entity_id),
     'doctor_id' => $doctor_id === null ? null : (is_numeric($doctor_id) ? (int)$doctor_id : $doctor_id),
+    'work_location' => $work_location === null ? null : (is_numeric($work_location) ? (int)$work_location : $work_location),
+    'work_location_name' => $work_location_name,
+    'staff_role' => $staff_role,
   ];
   debug_log('User built from bind_result: ' . json_encode($user));
 }
@@ -199,8 +238,13 @@ if (!$user) {
   exit;
 }
 
+// Clean up response - remove null fields for cleaner JSON
+$response = array_filter($user, function($value) {
+    return $value !== null;
+});
+
 debug_log('Returning user successfully');
-echo json_encode($user);
+echo json_encode($response);
 
 $stmt->close();
 $mysqli->close();
