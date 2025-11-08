@@ -20,23 +20,37 @@ ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_secure', $isHttps ? '1' : '0');
 ini_set('session.cookie_samesite', 'Lax');
 
-// Use session ID from cookie if it exists (critical for session sharing)
+// CRITICAL FIX: Set session ID from cookie BEFORE session_start()
 if (isset($_COOKIE['PHPSESSID'])) {
-    session_id($_COOKIE['PHPSESSID']);
-    error_log("Patient API: Using session ID from cookie: " . $_COOKIE['PHPSESSID']);
+    $expected_session_id = $_COOKIE['PHPSESSID'];
+    error_log("Patient API: Setting session ID to: " . $expected_session_id);
+    session_id($expected_session_id);
+    
+    // Verify it was set
+    $actual_id = session_id();
+    error_log("Patient API: Session ID after setting: " . $actual_id);
+    
+    if ($actual_id !== $expected_session_id) {
+        error_log("Patient API: WARNING - Session ID mismatch! Expected: " . $expected_session_id . ", Got: " . $actual_id);
+    }
 } else {
     error_log("Patient API: No PHPSESSID cookie found");
 }
 
-// Start session with same configuration as login system
-session_start([
-  'cookie_httponly' => true,
-  'cookie_secure'   => $isHttps,  // ← Use same HTTPS detection as login.php
-  'cookie_samesite' => 'Lax',
-]);
+// Start session
+session_start();
 
 error_log("Patient API: Session started with ID: " . session_id());
 error_log("Patient API: Session data after start: " . json_encode($_SESSION));
+
+// If session is still empty, try to regenerate with the cookie ID
+if (empty($_SESSION) && isset($_COOKIE['PHPSESSID'])) {
+    error_log("Patient API: Session empty after start, attempting to restart with cookie ID");
+    session_destroy();
+    session_id($_COOKIE['PHPSESSID']);
+    session_start();
+    error_log("Patient API: After restart - ID: " . session_id() . ", Data: " . json_encode($_SESSION));
+}
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
