@@ -309,7 +309,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
         : '';
       
       const response = await fetch(
-        `${API_BASE}/doctor_api/clinical/get-treatment-catalog.php`,
+        `${API_BASE}/doctor_api/clinical/get_treatment.php`,
         { credentials: 'include' }
       );
       
