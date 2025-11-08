@@ -103,7 +103,7 @@ try {
     
     // Get treatment details for this visit
     $treatmentSql = "SELECT 
-                        tc.treatment_name,
+                        tc.name,
                         tc.description,
                         tpv.quantity,
                         tpv.cost_each,
