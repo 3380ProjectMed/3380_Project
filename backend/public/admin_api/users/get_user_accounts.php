@@ -32,32 +32,32 @@ try {
                     d.doctor_id,
                     COALESCE(ua.user_id, CONCAT('NO_ACCOUNT_D', d.doctor_id)) as user_id,
                     COALESCE(ua.role, 'DOCTOR') as user_type,
-                    CONCAT(d.first_name, ' ', d.last_name) as name,
-                    d.email,
-                    d.ssn,
-                    CAST(d.specialty AS CHAR) as specialization_dept,
+                    CONCAT(s.first_name, ' ', s.last_name) as name,
+                    s.staff_email as email,
+                    s.ssn,
+                    sp.specialty_name as specialization_dept,
                     o.name as work_location,
-                    d.work_location as work_location_id,
+                    s.work_location as work_location_id,
                     COALESCE(ua.created_at, NULL) as created_at,
                     COALESCE(ua.is_active, 0) as is_active,
                     CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
                 FROM doctor d
-                LEFT JOIN user_account ua ON d.email = ua.email AND ua.role = 'DOCTOR'
-                LEFT JOIN office o ON d.work_location = o.office_id
-                WHERE 1=1";
+                INNER JOIN staff s ON d.staff_id = s.staff_id
+                LEFT JOIN user_account ua ON s.staff_email = ua.email AND ua.role = 'DOCTOR'
+                LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
+                LEFT JOIN office o ON s.work_location = o.office_id
+                WHERE s.staff_role = 'Doctor'";
         
         if ($active_status !== 'all') {
             if ($active_status === 'active') {
-                // Only show users with accounts that are active
                 $doctor_query .= " AND ua.user_id IS NOT NULL AND ua.is_active = 1";
             } else {
-                // Show inactive accounts OR no accounts at all
                 $doctor_query .= " AND (ua.is_active = 0 OR ua.user_id IS NULL)";
             }
         }
         
         if ($work_location !== 'all') {
-            $doctor_query .= " AND d.work_location = " . intval($work_location);
+            $doctor_query .= " AND s.work_location = " . intval($work_location);
         }
         
         $queries[] = $doctor_query;
