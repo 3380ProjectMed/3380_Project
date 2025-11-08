@@ -1,87 +1,146 @@
-<?php
-// patient_api.php - Patient Portal API Endpoints (SESSION FIXED)
 
-error_log("=== PATIENT API ENTRY POINT ===");
-error_log("Request: " . ($_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN') . " " . ($_SERVER['REQUEST_URI'] ?? 'UNKNOWN'));
+<?php
+// patient_api.php - Patient Portal API Endpoints (cleaned and fixed)
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
+// require_once 'helpers.php'; 
 
 header('Content-Type: application/json');
 
-// Azure HTTPS detection
+// Azure App Service HTTPS detection
+// Azure terminates SSL at the load balancer, so check for proxy headers
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-    || (!empty($_SERVER['HTTP_X_ARR_SSL']))
+    || (!empty($_SERVER['HTTP_X_ARR_SSL'])) // Azure-specific header
     || $_SERVER['SERVER_PORT'] == 443;
 
-// ⭐ CONFIGURE SESSION BEFORE STARTING (CRITICAL!)
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_secure', $isHttps ? '1' : '0');
-ini_set('session.cookie_samesite', 'Lax');
-ini_set('session.use_strict_mode', '1');
-
-// ⭐ USE THE SESSION ID FROM COOKIE IF IT EXISTS
-if (isset($_COOKIE['PHPSESSID'])) {
-    session_id($_COOKIE['PHPSESSID']);
-    error_log("Using session from cookie: " . $_COOKIE['PHPSESSID']);
-}
-
-// ⭐ NOW START SESSION
-session_start();
-
-error_log("Session started - ID: " . session_id() . ", Data: " . json_encode($_SESSION));
+// Start session with same configuration as login system
+session_start([
+    'cookie_httponly' => true,
+    'cookie_secure'   => $isHttps,  // ← Use proper HTTPS detection
+    'cookie_samesite' => 'Lax',
+]);
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
-    global $isHttps;
+    // Debug: Log all session data
+    error_log("Patient API: Full session data = " . json_encode($_SESSION));
     
-    error_log("=== AUTH CHECK ===");
-    error_log("Session ID: " . session_id());
-    error_log("Session data: " . json_encode($_SESSION));
-    error_log("==================");
-    
-    // Simple checks - session is already started and configured correctly
-    if (empty($_SESSION['uid']) && empty($_SESSION['user_id'])) {
-        error_log("AUTH FAILED: No user_id in session");
-        sendResponse(false, [], 'Not authenticated', 401);
-        exit();
-    }
-    
-    if (empty($_SESSION['email'])) {
-        error_log("AUTH FAILED: No email in session");
-        sendResponse(false, [], 'Not authenticated', 401);
-        exit();
-    }
-    
-    // Map to patient_id if not already done
+    // Map logged-in user to correct patient
     if (!isset($_SESSION['patient_id'])) {
-        $user_email = $_SESSION['email'];
-        error_log("Looking up patient for: " . $user_email);
+        // Get the logged-in user's email from the main authentication system
+        $user_email = $_SESSION['email'] ?? null;
+        error_log("Patient API: Session email = " . ($user_email ?: 'NULL'));
         
-        try {
-            $mysqli = getDBConnection();
-            $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE email = ? LIMIT 1");
-            $stmt->bind_param('s', $user_email);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $patient = $result->fetch_assoc();
-            
-            if ($patient) {
-                $_SESSION['patient_id'] = $patient['patient_id'];
-                error_log("Mapped to patient_id: " . $patient['patient_id']);
-            } else {
-                error_log("No patient record found");
-                sendResponse(false, [], 'No patient record found', 403);
+        if ($user_email) {
+            // Look up patient by the logged-in user's email
+            try {
+                $mysqli = getDBConnection();
+                error_log("Patient API: Database connection successful");
+                
+                $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient WHERE email = ? LIMIT 1");
+                $stmt->bind_param('s', $user_email);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $patient = $result->fetch_assoc();
+                $stmt->close();
+                
+                if ($patient) {
+                    $_SESSION['patient_id'] = $patient['patient_id'];
+                    $_SESSION['role'] = 'PATIENT';
+                    $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
+                    error_log("Patient auth: Found patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
+                } else {
+                    error_log("Patient auth: No patient found for email = " . $user_email);
+                    // If no patient found for the logged-in email, return error
+                    sendResponse(false, [], 'No patient record found for logged-in user: ' . $user_email, 403);
+                    exit();
+                }
+            } catch (Exception $e) {
+                error_log("Patient auth: Database error - " . $e->getMessage());
+                sendResponse(false, [], 'Authentication error: ' . $e->getMessage(), 500);
                 exit();
             }
-        } catch (Exception $e) {
-            error_log("Offices error: " . $e->getMessage());
-            sendResponse(false, [], 'Failed to load offices: ' . $e->getMessage(), 500);
+        } else {
+            // No email in session - user needs to be properly authenticated
+            error_log("Patient auth: No email in session - user not properly authenticated");
+            sendResponse(false, [], 'User not properly authenticated - no email in session', 401);
+            exit();
         }
     }
 }
 
+function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
+    http_response_code($statusCode);
+    echo json_encode([
+        'success' => $success,
+        'data' => $data,
+        'message' => $message
+    ], JSON_PRETTY_PRINT);
+    exit();
+}
+
+function validateRequired($input, $required_fields) {
+    $missing = [];
+    
+    if (!is_array($input)) {
+        return $required_fields; // All fields are missing if input is not an array
+    }
+    
+    foreach ($required_fields as $field) {
+        if (!isset($input[$field]) || empty($input[$field])) {
+            $missing[] = $field;
+        }
+    }
+    return $missing;
+}
+
+// Use SSL-enabled database connection for Azure MySQL
+try {
+    $mysqli = getDBConnection();
+} catch (Exception $e) {
+    sendResponse(false, [], 'Database connection error: ' . $e->getMessage(), 500);
+}
+
+// Require authentication (currently mocked)
+requireAuth(['PATIENT']);
+
+// Get patient_id from session (set by mock auth)
+$patient_id = $_SESSION['patient_id'] ?? null;
+
+// If patient_id isn't set in session, try to map from authenticated user's email
+if (!$patient_id) {
+    $user_email = $_SESSION['email'] ?? null;
+    if ($user_email) {
+        // Lookup patient by email in Patient table
+        $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE email = ? LIMIT 1");
+        if ($stmt) {
+            $stmt->bind_param('s', $user_email);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            if ($row && isset($row['patient_id'])) {
+                $patient_id = (int)$row['patient_id'];
+                // persist to session for future requests
+                $_SESSION['patient_id'] = $patient_id;
+            }
+            $stmt->close();
+        }
+    }
+}
+
+if (!$patient_id) {
+    sendResponse(false, [], 'Patient ID not found for authenticated user', 400);
+}
+
+$method = $_SERVER['REQUEST_METHOD'];
+$endpoint = $_GET['endpoint'] ?? '';
+
+// Simple test endpoint
+if ($endpoint === 'test') {
+    sendResponse(true, ['message' => 'Patient API is working', 'timestamp' => date('Y-m-d H:i:s')]);
+}
 
 // ==================== DASHBOARD ====================
 if ($endpoint === 'dashboard') {
@@ -705,6 +764,7 @@ elseif ($endpoint === 'visit') {
                     v.date,
                     v.reason_for_visit,
                     v.diagnosis,
+                    v.treatment,
                     v.blood_pressure,
                     v.temperature,
                     CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
@@ -832,14 +892,11 @@ elseif ($endpoint === 'medical-records') {
                             v.reason_for_visit as reason_for_visit,
                             CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
                             v.diagnosis as diagnosis,
-                            tc.name as treatment,
+                            v.treatment as treatment,
                             v.blood_pressure as blood_pressure,
                             v.temperature as temperature
                         FROM patient_visit v
                         LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
-                        LEFT JOIN treatment_per_visit tpc ON tpc.visit_id= v.visit_id
-                        LEFT JOIN treatment_catalog tc ON tpc.treatment_id = tc.treatment_id
-
                         WHERE v.patient_id = ?
                         AND v.status = 'Completed'
                         ORDER BY v.date DESC
