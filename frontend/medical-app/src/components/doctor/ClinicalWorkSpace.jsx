@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, Calendar, Clock, AlertCircle, FileText, Activity,
   Heart, Thermometer, Droplet, Pill, History, Save, X, ChevronDown, ChevronUp,
@@ -22,6 +22,8 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [alert, setAlert] = useState(null);
+  const alertTimer = useRef(null);
   
   // Treatment management
   const [treatmentCatalog, setTreatmentCatalog] = useState([]);
@@ -91,6 +93,19 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       fetchTreatmentCatalog();
     }
   }, [appointmentId, patientId, patient]);
+
+  // Alert helper: { message, type }
+  const showAlert = (message, type = 'success', timeout = 4000) => {
+    setAlert({ message, type });
+    if (alertTimer.current) clearTimeout(alertTimer.current);
+    alertTimer.current = setTimeout(() => setAlert(null), timeout);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (alertTimer.current) clearTimeout(alertTimer.current);
+    };
+  }, []);
 
   const fetchPatientDetails = async () => {
     try {
@@ -325,13 +340,13 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
 
   const handleSaveDiagnosis = async () => {
     if (!diagnosis.trim()) {
-      alert('Please enter a diagnosis before saving');
+      showAlert('Please enter a diagnosis before saving', 'error');
       return;
     }
 
     // Check if we have a visit to save to
     if (!patientData?.visit?.visit_id && !appointmentId) {
-      alert('Cannot save diagnosis: No active visit or appointment');
+      showAlert('Cannot save diagnosis: No active visit or appointment', 'error');
       return;
     }
 
@@ -365,7 +380,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        alert('Diagnosis saved successfully!');
+        showAlert('Diagnosis saved successfully!', 'success');
         if (appointmentId) {
           fetchNotes();
           fetchPatientDetails();
@@ -378,7 +393,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       }
     } catch (err) {
       console.error('Error saving diagnosis:', err);
-      alert('Error saving diagnosis: ' + err.message);
+      showAlert('Error saving diagnosis: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
@@ -411,12 +426,12 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
 
   const handleSaveTreatments = async () => {
     if (!patientData?.visit?.visit_id) {
-      alert('Patient must check in before adding treatments');
+      showAlert('Patient must check in before adding treatments', 'error');
       return;
     }
 
     if (selectedTreatments.length === 0) {
-      alert('Please add at least one treatment');
+      showAlert('Please add at least one treatment', 'error');
       return;
     }
 
@@ -442,7 +457,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        alert('Treatments saved successfully!');
+        showAlert('Treatments saved successfully!', 'success');
         if (appointmentId) {
           fetchPatientDetails();
           fetchNotes();
@@ -455,7 +470,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       }
     } catch (err) {
       console.error('Error saving treatments:', err);
-      alert('Error saving treatments: ' + err.message);
+      showAlert('Error saving treatments: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
@@ -463,13 +478,13 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
 
   const handleSavePrescription = async () => {
     if (!prescriptionForm.medication_name.trim()) {
-      alert('Please enter medication name');
+      showAlert('Please enter medication name', 'error');
       return;
     }
 
     const currentPatientId = patientData?.patient?.id || patientData?.visit?.patient_id || patientId;
     if (!currentPatientId) {
-      alert('Cannot save prescription: No patient ID available');
+      showAlert('Cannot save prescription: No patient ID available', 'error');
       return;
     }
 
@@ -499,7 +514,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        alert('Prescription saved successfully!');
+        showAlert('Prescription saved successfully!', 'success');
         setShowPrescriptionForm(false);
         setEditingPrescription(null);
         setPrescriptionForm({
@@ -525,7 +540,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       }
     } catch (err) {
       console.error('Error saving prescription:', err);
-      alert('Error saving prescription: ' + err.message);
+      showAlert('Error saving prescription: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
@@ -554,7 +569,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        alert('Prescription deleted successfully!');
+        showAlert('Prescription deleted successfully!', 'success');
         if (appointmentId) {
           fetchPatientDetails();
         } else if (patientId) {
@@ -567,7 +582,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       }
     } catch (err) {
       console.error('Error deleting prescription:', err);
-      alert('Error deleting prescription: ' + err.message);
+      showAlert('Error deleting prescription: ' + err.message, 'error');
     }
   };
 
@@ -635,6 +650,14 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
 
   return (
     <div className="clinical-workspace">
+      {alert && (
+        <div className={`alert ${alert.type === 'success' ? 'alert-success' : alert.type === 'error' ? 'alert-error' : 'alert-info'}`} role="status">
+          <div className="alert-message">{alert.message}</div>
+          <button className="btn-icon" onClick={() => setAlert(null)} aria-label="Dismiss">
+            <X size={16} />
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="workspace-header">
         {/* <div className="header-info"> */}
@@ -875,7 +898,8 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                     <option value="">Select a treatment...</option>
                     {treatmentCatalog.map(t => (
                       <option key={t.treatment_id} value={t.treatment_id}>
-                        {t.treatment_name} - ${t.default_cost}
+                        {t.treatment_name} 
+                        {/* - ${t.cost} should doctor know the price as well? */}
                       </option>
                     ))}
                   </select>
@@ -893,7 +917,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                         </button>
                       </div>
                       <div className="treatment-controls">
-                        <div className="input-group">
+                        {/* <div className="input-group">
                           <label>Quantity:</label>
                           <input 
                             type="number" 
@@ -901,8 +925,8 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                             value={treatment.quantity}
                             onChange={(e) => handleUpdateTreatment(idx, 'quantity', parseInt(e.target.value))}
                           />
-                        </div>
-                        <div className="input-group">
+                        </div> */}
+                        {/* <div className="input-group">
                           <label>Cost Each:</label>
                           <input 
                             type="number" 
@@ -910,7 +934,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                             value={treatment.cost_each}
                             onChange={(e) => handleUpdateTreatment(idx, 'cost_each', parseFloat(e.target.value))}
                           />
-                        </div>
+                        </div> */}
                       </div>
                       <div className="input-group">
                         <label>Notes:</label>
@@ -921,9 +945,9 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                           placeholder="Optional notes..."
                         />
                       </div>
-                      <div className="treatment-total">
+                      {/* <div className="treatment-total">
                         Total: ${(treatment.quantity * treatment.cost_each).toFixed(2)}
-                      </div>
+                      </div> */}
                     </div>
                   ))
                 ) : (

@@ -482,6 +482,10 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
                 <FileText size={18} />
                 View Full Chart
               </button>
+              <button className="btn-action btn-secondary">
+                <Calendar size={18} />
+                Schedule Appointment
+              </button>
             </div>
           </div>
         </div>
