@@ -326,8 +326,7 @@ function fetchVisitTreatments($conn, $visit_id, &$response) {
                     tpv.total_cost,
                     tpv.notes,
                     tc.name as treatment_name,
-                    tc.description,
-                    tc.default_cost
+                    tc.cost
                 FROM treatment_per_visit tpv
                 LEFT JOIN treatment_catalog tc ON tpv.treatment_id = tc.treatment_id
                 WHERE tpv.visit_id = ?
@@ -341,9 +340,8 @@ function fetchVisitTreatments($conn, $visit_id, &$response) {
                     'visit_treatment_id' => $t['visit_treatment_id'] ?? null,
                     'treatment_id' => $t['treatment_id'] ?? null,
                     'treatment_name' => $t['treatment_name'] ?? '',
-                    'description' => $t['description'] ?? '',
                     'quantity' => $t['quantity'] ?? 1,
-                    'cost_each' => $t['cost_each'] ?? $t['default_cost'] ?? 0,
+                    'cost_each' => $t['cost_each'] ?? $t['cost'] ?? 0,
                     'total_cost' => $t['total_cost'] ?? 0,
                     'notes' => $t['notes'] ?? ''
                 ];

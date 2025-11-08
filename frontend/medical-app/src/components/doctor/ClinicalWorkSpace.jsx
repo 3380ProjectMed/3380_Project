@@ -380,7 +380,11 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        showAlert('Diagnosis saved successfully!', 'success');
+        // show a short, friendly notification and clear the input fields
+        showAlert('Save successfully', 'success');
+        setDiagnosis('');
+        setPresentIllnesses('');
+
         if (appointmentId) {
           fetchNotes();
           fetchPatientDetails();
