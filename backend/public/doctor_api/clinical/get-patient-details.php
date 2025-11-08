@@ -325,7 +325,7 @@ function fetchVisitTreatments($conn, $visit_id, &$response) {
                     tpv.cost_each,
                     tpv.total_cost,
                     tpv.notes,
-                    tc.treatment_name,
+                    tc.name as treatment_name,
                     tc.description,
                     tc.default_cost
                 FROM treatment_per_visit tpv
