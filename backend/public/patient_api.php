@@ -9,6 +9,14 @@ error_log("Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'NOT SET'));
 error_log("Query string: " . ($_SERVER['QUERY_STRING'] ?? 'NOT SET'));
 error_log("================================");
 
+// ALSO DEBUG DIRECTLY TO RESPONSE for immediate visibility
+$debug_info = [
+    'debug_entry' => 'patient_api.php called',
+    'method' => $_SERVER['REQUEST_METHOD'] ?? 'NOT SET',
+    'uri' => $_SERVER['REQUEST_URI'] ?? 'NOT SET',
+    'query' => $_SERVER['QUERY_STRING'] ?? 'NOT SET'
+];
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 // require_once 'helpers.php'; 
@@ -95,12 +103,27 @@ function requireAuth($allowed_roles = ['PATIENT']) {
 }
 
 function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
-    http_response_code($statusCode);
-    echo json_encode([
+    global $debug_info;
+    
+    $response = [
         'success' => $success,
         'data' => $data,
         'message' => $message
-    ], JSON_PRETTY_PRINT);
+    ];
+    
+    // Add debug info for authentication failures
+    if (!$success && $statusCode == 401 && isset($debug_info)) {
+        $response['debug'] = $debug_info;
+        $response['session_debug'] = [
+            'session_id' => session_id(),
+            'session_data' => $_SESSION,
+            'cookies' => $_COOKIE,
+            'http_cookie' => $_SERVER['HTTP_COOKIE'] ?? 'NOT SET'
+        ];
+    }
+    
+    http_response_code($statusCode);
+    echo json_encode($response, JSON_PRETTY_PRINT);
     exit();
 }
 
