@@ -1,8 +1,8 @@
-const BASE_URL = '/api/nurse';
+const BASE_URL = '/api/nurse_api';
 
 // Dashboard Stats
-export async function getNurseDashboardStats(date) {
-  const response = await fetch(`${BASE_URL}/dashboard/get-stats.php?date=${date}`, {
+export async function getNurseDashboardStats(date = new Date().toISOString().slice(0,10)) {
+  const response = await fetch(`${BASE_URL}/dashboard/get-stats.php?date=${encodeURIComponent(date)}`, {
     credentials: 'include',
   });
 
@@ -15,8 +15,8 @@ export async function getNurseDashboardStats(date) {
 }
 
 // Schedule - with date parameter
-export async function getNurseSchedule({ date }) {
-  const response = await fetch(`${BASE_URL}/schedule/get-by-date.php?date=${date}`, {
+export async function getNurseSchedule(date = new Date().toISOString().slice(0,10)) {
+  const response = await fetch(`${BASE_URL}/schedule/get-by-date.php?date=${encodeURIComponent(date)}`, {
     credentials: 'include',
   });
 
@@ -26,25 +26,11 @@ export async function getNurseSchedule({ date }) {
   }
 
   const data = await response.json();
-  
-  // Return appointments array directly (matching what NurseDashboard expects)
-  return data.appointments || data.data || [];
+  return data.appointments || [];
 }
 
-// Schedule - today (existing function)
 export async function getNurseScheduleToday() {
-  const today = new Date().toISOString().slice(0, 10);
-  const response = await fetch(`${BASE_URL}/schedule/get-by-date.php?date=${today}`, {
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  return data.appointments || data || [];
+  return getNurseSchedule(new Date().toISOString().slice(0,10));
 }
 
 // Profile
@@ -65,11 +51,11 @@ export async function getNurseProfile() {
 export async function getNursePatients(query = '', page = 1, pageSize = 10) {
   const params = new URLSearchParams({
     q: query,
-    page: page.toString(),
-    pageSize: pageSize.toString(),
+    page: String(page),
+    limit: String(pageSize),
   });
 
-  const response = await fetch(`${BASE_URL}/patients/get-all.php?${params}`, {
+  const response = await fetch(`${BASE_URL}/patients/get-all.php?${params.toString()}`, {
     credentials: 'include',
   });
 
