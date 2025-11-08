@@ -41,19 +41,37 @@ session_start([
 function requireAuth($allowed_roles = ['PATIENT']) {
     // Enhanced session debugging
     error_log("=== PATIENT API AUTH DEBUG ===");
-    error_log("Session ID: " . session_id());  
+    error_log("Original Session ID: " . session_id());  
+    error_log("Expected Session ID from Cookie: " . ($_COOKIE[session_name()] ?? 'NOT SET'));
     error_log("Session name: " . session_name());
     error_log("Session save path: " . session_save_path());
     error_log("Session data: " . json_encode($_SESSION));
     error_log("All cookies: " . json_encode($_COOKIE));
     error_log("HTTP_COOKIE header: " . ($_SERVER['HTTP_COOKIE'] ?? 'NOT SET'));
-    error_log("Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'NOT SET'));
-    error_log("HTTP_REFERER: " . ($_SERVER['HTTP_REFERER'] ?? 'NOT SET'));
+    error_log("HTTPS detection: " . ($isHttps ? 'TRUE' : 'FALSE'));
     error_log("================================");
+    
+    // If session ID doesn't match the cookie, try to restore it
+    $expected_session_id = $_COOKIE[session_name()] ?? null;
+    if ($expected_session_id && session_id() !== $expected_session_id) {
+        error_log("PATIENT AUTH: Session ID mismatch, attempting to restore session");
+        session_write_close();
+        session_id($expected_session_id);
+        session_start([
+            'cookie_httponly' => true,
+            'cookie_secure'   => $isHttps,
+            'cookie_samesite' => 'Lax',
+        ]);
+        error_log("PATIENT AUTH: After restore - Session ID: " . session_id() . ", Data: " . json_encode($_SESSION));
+    }
     
     // Try to restart session if it seems invalid but we have session cookie
     if (empty($_SESSION) && !empty($_COOKIE[session_name()])) {
         error_log("PATIENT AUTH: Session appears invalid but cookie exists, attempting to restart session");
+        
+        // Use the same HTTPS detection as the main session start
+        global $isHttps;
+        
         session_destroy();
         session_start([
             'cookie_httponly' => true,
