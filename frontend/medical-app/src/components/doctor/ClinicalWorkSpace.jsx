@@ -309,7 +309,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
         : '';
       
       const response = await fetch(
-        `${API_BASE}/doctor_api/clinical/get_treatment.php`,
+        `${API_BASE}/doctor_api/clinical/get-treatment.php`,
         { credentials: 'include' }
       );
       
@@ -427,7 +427,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
         : '';
       
       const response = await fetch(
-        `${API_BASE}/doctor_api/clinical/save-treatments.php`,
+        `${API_BASE}/doctor_api/clinical/save-treatment.php`,
         {
           method: 'POST',
           credentials: 'include',
@@ -759,27 +759,6 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                     <p className="empty-state">No current medications</p>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Chronic Conditions */}
-          <div className="info-card collapsible">
-            <div className="card-header" onClick={() => toggleSection('chronicConditions')}>
-              <h3><FileText size={20} /> Chronic Conditions</h3>
-              {expandedSections.chronicConditions ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-            </div>
-            {expandedSections.chronicConditions && (
-              <div className="conditions-list">
-                {patientInfo?.chronicConditions && patientInfo.chronicConditions.length > 0 ? (
-                  <ul>
-                    {patientInfo.chronicConditions.map((condition, idx) => (
-                      <li key={idx}>{condition}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="empty-state">No chronic conditions recorded</p>
-                )}
               </div>
             )}
           </div>
