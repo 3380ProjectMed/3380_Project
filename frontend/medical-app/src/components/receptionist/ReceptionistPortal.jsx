@@ -36,13 +36,7 @@ function ReceptionistPortal() {
   const receptionistOfficeId = user?.work_location || 1; // Office_ID from Office table
   const receptionistOfficeName = user?.office_name || 'Downtown Medical Center';
 
-  /**
-   * Handle logout with confirmation
-   */
   const handleLogout = async () => {
-    const confirmed = window.confirm('Are you sure you want to log out?');
-    if (!confirmed) return;
-    
     try {
       await logout();
     } catch (e) {
