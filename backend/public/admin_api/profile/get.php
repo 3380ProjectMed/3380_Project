@@ -1,68 +1,63 @@
 <?php
-/**
- * Get doctor profile
- * Matches YOUR database schema
- */
-
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
-
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 
 try {
     session_start();
-
+    
     if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin access required']);
         exit;
     }
-    // Read staff_id from query params (admin specifies which staff to fetch)
-    $staff_id = isset($_GET['staff_id']) ? intval($_GET['staff_id']) : 0;
-    if ($staff_id <= 0) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'staff_id is required']);
-        exit;
-    }
-
-    // Open DB connection
+    
     $conn = getDBConnection();
-
-    // SQL query for staff info
-    $sql = "SELECT 
-                s.First_Name, 
-                s.Last_Name,
-                s.Staff_Email as Email, 
-                cg.Gender_Text as gender
-            FROM Staff s
-            LEFT JOIN CodesGender cg ON s.Gender = cg.GenderCode
-            WHERE s.Staff_id = ?";
-
-    $result = executeQuery($conn, $sql, 'i', [$staff_id]);
-
-    if (empty($result)) {
-        throw new Exception('Staff not found');
-    }
-
-    $staff = $result[0];
+    $user_id = $_SESSION['uid'];
+    
+    $query = "SELECT 
+                s.first_name as firstName,
+                s.last_name as lastName,
+                ua.email,
+                ua.username,
+                s.ssn,
+                s.gender,
+                s.work_location as workLocation,
+                o.name as workLocationName,
+                s.staff_role as role,
+                ua.is_active as isActive,
+                ua.created_at as createdAt
+             FROM user_account ua
+             LEFT JOIN staff s ON ua.email = s.staff_email
+             LEFT JOIN office o ON s.work_location = o.office_id
+             WHERE ua.user_id = ?";
+    
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $profile = $result->fetch_assoc();
+    $stmt->close();
     
     closeDBConnection($conn);
     
-    echo json_encode([
-        'success' => true,
-        'profile' => [
-            'firstName' => $staff['First_Name'],
-            'lastName' => $staff['Last_Name'],
-            'email' => $staff['Email'],
-            'gender' => $staff['gender'],
-            'bio' => '' // Add bio field to your database if needed
-        ]
-    ]);
+    if ($profile) {
+        echo json_encode([
+            'success' => true,
+            'profile' => $profile
+        ]);
+    } else {
+        http_response_code(404);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Profile not found'
+        ]);
+    }
     
 } catch (Exception $e) {
+    if (isset($conn)) {
+        closeDBConnection($conn);
+    }
     http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => $e->getMessage()
-    ]);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
 ?>
