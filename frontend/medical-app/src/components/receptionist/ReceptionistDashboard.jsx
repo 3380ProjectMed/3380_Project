@@ -73,22 +73,16 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
       
-      const [statsResponse, appointmentsResponse] = await Promise.all([
-        fetch(`/receptionist_api/dashboard/stats.php?date=${today}`, { credentials: 'include' }),
-        fetch('/receptionist_api/dashboard/today.php', { credentials: 'include' })
-      ]);
+      // Use today.php which returns both appointments and stats
+      const response = await fetch('/receptionist_api/dashboard/today.php', { credentials: 'include' });
+      const data = await response.json();
 
-      const statsData = await statsResponse.json();
-      const appointmentsData = await appointmentsResponse.json();
-
-      if (statsData.success) {
-        setStats(statsData.stats);
-      }
-      
-      if (appointmentsData.success) {
-        setTodayAppointments(appointmentsData.appointments || []);
+      if (data.success) {
+        setTodayAppointments(data.appointments || []);
+        setStats(data.stats || null);
+      } else {
+        setError(data.error || 'Failed to load dashboard data');
       }
       
       setError(null);
@@ -189,7 +183,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   };
 
   const getDoctorById = (doctorId) => {
-    return doctors.find(doc => doc.Doctor_id === doctorId);
+    return doctors.find(doc => doc.doctor_id === doctorId);
   };
 
   const formatTime = (datetime) => {
@@ -521,8 +515,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
               >
                 <option value="all">All Doctors</option>
                 {doctors.map(doc => (
-                  <option key={doc.Doctor_id} value={doc.Doctor_id}>
-                    Dr. {doc.First_Name} {doc.Last_Name}
+                  <option key={doc.doctor_id} value={doc.doctor_id}>
+                    Dr. {doc.first_name} {doc.last_name}
                   </option>
                 ))}
               </select>
@@ -532,10 +526,10 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
           {doctors.length > 0 && (
             <div className="doctor-legend">
               {doctors.map(doc => (
-                <div key={doc.Doctor_id} className="legend-item">
+                <div key={doc.doctor_id} className="legend-item">
                   <div className="legend-color" style={{ backgroundColor: doc.color }}></div>
                   <div className="legend-info">
-                    <span className="legend-name">Dr. {doc.First_Name} {doc.Last_Name}</span>
+                    <span className="legend-name">Dr. {doc.first_name} {doc.last_name}</span>
                     <span className="legend-specialty">{doc.specialty_name || doc.Specialty}</span>
                   </div>
                 </div>
@@ -590,7 +584,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                                 {apt.Patient_First} {apt.Patient_Last}
                               </div>
                               <div className="apt-doctor" style={{ color: doctor?.color || '#6b7280' }}>
-                                Dr. {doctor?.Last_Name || 'Unknown'}
+                                Dr. {doctor?.last_name || 'Unknown'}
                               </div>
                             </div>
                           );
@@ -639,8 +633,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     Doctor
                   </label>
                   <p className="detail-value">
-                    Dr. {getDoctorById(selectedAppointment.Doctor_id)?.First_Name}{' '}
-                    {getDoctorById(selectedAppointment.Doctor_id)?.Last_Name}
+                    Dr. {getDoctorById(selectedAppointment.Doctor_id)?.first_name}{' '}
+                    {getDoctorById(selectedAppointment.Doctor_id)?.last_name}
                   </p>
                 </div>
 

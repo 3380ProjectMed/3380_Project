@@ -87,6 +87,7 @@ try {
                 pv.status as visit_status,
                 pv.start_at as check_in_time,
                 pv.end_at as completion_time,
+                pv.payment,
                 ip.copay
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
@@ -112,6 +113,9 @@ try {
         'cancelled' => 0,
         'no_show' => 0
     ];
+    
+    $payment_count = 0;
+    $total_collected = 0.0;
     
     $formatted_appointments = [];
     
@@ -172,6 +176,12 @@ try {
             $stats['scheduled']++;
         }
         
+        // Track payment statistics
+        if ($apt['payment'] && $apt['payment'] > 0) {
+            $payment_count++;
+            $total_collected += (float)$apt['payment'];
+        }
+        
         // Format appointment data
         $formatted_appointments[] = [
             // ID fields (multiple formats for compatibility)
@@ -218,6 +228,13 @@ try {
     }
     
     $stats['total'] = count($formatted_appointments);
+    
+    // Add payment statistics to stats
+    $stats['payment'] = [
+        'count' => $payment_count,
+        'total_collected' => number_format($total_collected, 2),
+        'total_collected_raw' => $total_collected
+    ];
     
     closeDBConnection($conn);
     
