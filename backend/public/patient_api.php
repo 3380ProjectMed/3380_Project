@@ -117,12 +117,25 @@ function requireAuth($allowed_roles = ['PATIENT']) {
 }
 
 function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
-    http_response_code($statusCode);
-    echo json_encode([
+    $response = [
         'success' => $success,
         'data' => $data,
         'message' => $message
-    ], JSON_PRETTY_PRINT);
+    ];
+    
+    // Add debug info for failed authentication
+    if (!$success && $statusCode == 401) {
+        $response['debug'] = [
+            'session_id' => session_id(),
+            'session_data' => $_SESSION,
+            'cookies' => $_COOKIE,
+            'has_phpsessid_cookie' => isset($_COOKIE['PHPSESSID']),
+            'cookie_value' => $_COOKIE['PHPSESSID'] ?? 'NOT SET'
+        ];
+    }
+    
+    http_response_code($statusCode);
+    echo json_encode($response, JSON_PRETTY_PRINT);
     exit();
 }
 
