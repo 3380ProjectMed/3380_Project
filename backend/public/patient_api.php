@@ -764,7 +764,6 @@ elseif ($endpoint === 'visit') {
                     v.date,
                     v.reason_for_visit,
                     v.diagnosis,
-                    v.treatment,
                     v.blood_pressure,
                     v.temperature,
                     CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
@@ -892,11 +891,14 @@ elseif ($endpoint === 'medical-records') {
                             v.reason_for_visit as reason_for_visit,
                             CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
                             v.diagnosis as diagnosis,
-                            v.treatment as treatment,
+                            tc.name as treatment,
                             v.blood_pressure as blood_pressure,
                             v.temperature as temperature
                         FROM patient_visit v
                         LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
+                        LEFT JOIN treatment_per_visit tpc ON tpc.visit_id= v.visit_id
+                        LEFT JOIN treatment_catalog tc ON tpc.treatment_id = tc.treatment_id
+
                         WHERE v.patient_id = ?
                         AND v.status = 'Completed'
                         ORDER BY v.date DESC
