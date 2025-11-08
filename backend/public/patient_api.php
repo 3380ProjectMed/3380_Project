@@ -15,23 +15,68 @@ $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (!empty($_SERVER['HTTP_X_ARR_SSL'])) // Azure-specific header
     || $_SERVER['SERVER_PORT'] == 443;
 
+// Configure session parameters exactly like login.php before starting
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_secure', $isHttps ? '1' : '0');
+ini_set('session.cookie_samesite', 'Lax');
+
+// Use session ID from cookie if it exists (critical for session sharing)
+if (isset($_COOKIE['PHPSESSID'])) {
+    session_id($_COOKIE['PHPSESSID']);
+    error_log("Patient API: Using session ID from cookie: " . $_COOKIE['PHPSESSID']);
+} else {
+    error_log("Patient API: No PHPSESSID cookie found");
+}
+
 // Start session with same configuration as login system
 session_start([
-    'cookie_httponly' => true,
-    'cookie_secure'   => $isHttps,  // ← Use proper HTTPS detection
-    'cookie_samesite' => 'Lax',
+  'cookie_httponly' => true,
+  'cookie_secure'   => $isHttps,  // ← Use same HTTPS detection as login.php
+  'cookie_samesite' => 'Lax',
 ]);
+
+error_log("Patient API: Session started with ID: " . session_id());
+error_log("Patient API: Session data after start: " . json_encode($_SESSION));
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
     // Debug: Log all session data
+    error_log("=== PATIENT API AUTH DEBUG ===");
     error_log("Patient API: Full session data = " . json_encode($_SESSION));
+    error_log("Patient API: Session ID = " . session_id());
+    error_log("Patient API: PHPSESSID cookie = " . ($_COOKIE['PHPSESSID'] ?? 'NOT SET'));
+    error_log("Patient API: Session save path = " . session_save_path());
+    error_log("Patient API: All cookies = " . json_encode($_COOKIE));
+    error_log("===============================");
+    
+    // Try to restart session if empty but cookie exists
+    if (empty($_SESSION) && isset($_COOKIE['PHPSESSID'])) {
+        error_log("Patient API: Session empty but cookie exists, attempting session restart");
+        session_write_close();
+        session_id($_COOKIE['PHPSESSID']);
+        session_start([
+            'cookie_httponly' => true,
+            'cookie_secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                || (!empty($_SERVER['HTTP_X_ARR_SSL']))
+                || $_SERVER['SERVER_PORT'] == 443,
+            'cookie_samesite' => 'Lax',
+        ]);
+        error_log("Patient API: After restart - Session ID = " . session_id() . ", Data = " . json_encode($_SESSION));
+    }
+    
+    // First check if we have basic authentication from login.php
+    if (!isset($_SESSION['uid']) || !isset($_SESSION['email'])) {
+        error_log("Patient API: Missing basic session data - uid: " . ($_SESSION['uid'] ?? 'NOT SET') . ", email: " . ($_SESSION['email'] ?? 'NOT SET'));
+        sendResponse(false, [], 'User not properly authenticated - no email in session', 401);
+        exit();
+    }
     
     // Map logged-in user to correct patient
     if (!isset($_SESSION['patient_id'])) {
         // Get the logged-in user's email from the main authentication system
-        $user_email = $_SESSION['email'] ?? null;
-        error_log("Patient API: Session email = " . ($user_email ?: 'NULL'));
+        $user_email = $_SESSION['email'];
+        error_log("Patient API: Session email = " . $user_email);
         
         if ($user_email) {
             // Look up patient by the logged-in user's email
@@ -72,12 +117,25 @@ function requireAuth($allowed_roles = ['PATIENT']) {
 }
 
 function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
-    http_response_code($statusCode);
-    echo json_encode([
+    $response = [
         'success' => $success,
         'data' => $data,
         'message' => $message
-    ], JSON_PRETTY_PRINT);
+    ];
+    
+    // Add debug info for failed authentication
+    if (!$success && $statusCode == 401) {
+        $response['debug'] = [
+            'session_id' => session_id(),
+            'session_data' => $_SESSION,
+            'cookies' => $_COOKIE,
+            'has_phpsessid_cookie' => isset($_COOKIE['PHPSESSID']),
+            'cookie_value' => $_COOKIE['PHPSESSID'] ?? 'NOT SET'
+        ];
+    }
+    
+    http_response_code($statusCode);
+    echo json_encode($response, JSON_PRETTY_PRINT);
     exit();
 }
 
