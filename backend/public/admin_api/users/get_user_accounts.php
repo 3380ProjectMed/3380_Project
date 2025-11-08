@@ -102,7 +102,7 @@ try {
                         NULL as specialization_dept,
                         o.name as work_location,
                         s.work_location as work_location_id,
-                        ua.status,
+                        ua.created_at,
                         ua.is_active
                     FROM user_account ua
                     INNER JOIN staff s ON ua.email = s.staff_email
