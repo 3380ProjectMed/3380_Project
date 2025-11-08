@@ -15,6 +15,11 @@ $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (!empty($_SERVER['HTTP_X_ARR_SSL'])) // Azure-specific header
     || $_SERVER['SERVER_PORT'] == 443;
 
+// Use session ID from cookie if it exists (critical for session sharing)
+if (isset($_COOKIE['PHPSESSID'])) {
+    session_id($_COOKIE['PHPSESSID']);
+}
+
 // Start session with same configuration as login system
 session_start([
     'cookie_httponly' => true,
@@ -26,12 +31,21 @@ session_start([
 function requireAuth($allowed_roles = ['PATIENT']) {
     // Debug: Log all session data
     error_log("Patient API: Full session data = " . json_encode($_SESSION));
+    error_log("Patient API: Session ID = " . session_id());
+    error_log("Patient API: PHPSESSID cookie = " . ($_COOKIE['PHPSESSID'] ?? 'NOT SET'));
+    
+    // First check if we have basic authentication from login.php
+    if (!isset($_SESSION['uid']) || !isset($_SESSION['email'])) {
+        error_log("Patient API: Missing basic session data - uid: " . ($_SESSION['uid'] ?? 'NOT SET') . ", email: " . ($_SESSION['email'] ?? 'NOT SET'));
+        sendResponse(false, [], 'User not properly authenticated - no email in session', 401);
+        exit();
+    }
     
     // Map logged-in user to correct patient
     if (!isset($_SESSION['patient_id'])) {
         // Get the logged-in user's email from the main authentication system
-        $user_email = $_SESSION['email'] ?? null;
-        error_log("Patient API: Session email = " . ($user_email ?: 'NULL'));
+        $user_email = $_SESSION['email'];
+        error_log("Patient API: Session email = " . $user_email);
         
         if ($user_email) {
             // Look up patient by the logged-in user's email
