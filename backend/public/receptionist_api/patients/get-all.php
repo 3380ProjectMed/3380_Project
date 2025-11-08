@@ -19,7 +19,7 @@ try {
     $verifyStaffSql = "SELECT s.staff_id 
                        FROM staff s 
                        JOIN user_account ua ON ua.email = s.staff_email 
-                       WHERE ua.user_id = ? AND s.staff_role = 'RECEPTIONIST'";
+                       WHERE ua.user_id = ? AND s.staff_role = 'Receptionist'";
     $staffResult = executeQuery($conn, $verifyStaffSql, 'i', [$user_id]);
     
     if (empty($staffResult)) {

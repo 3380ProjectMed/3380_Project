@@ -59,12 +59,13 @@ try {
                 d.doctor_id as doctor_id,
                 pv.status as visit_status,
                 pv.start_at as Check_in_time,
-                pi.copay
+                ip.copay
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
             LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
             LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
+            LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
             WHERE a.Office_id = ?
             AND DATE(a.Appointment_date) = ?
             ORDER BY a.Appointment_date ASC";
