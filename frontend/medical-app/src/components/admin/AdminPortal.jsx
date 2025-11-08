@@ -17,6 +17,7 @@ import AdminDashboard from './Dashboard.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import UserManagement from './UserManagement.jsx';
+import Profile from './Profile.jsx';
 // --- Simple stub pages used by the admin sidebar ---
 function UsersView() {
   return (
@@ -403,7 +404,7 @@ function AdminPortal({ preview = false }) {
               )}
             </>
           )}
-          {currentPage === 'profile' && <ProfileView />}
+          {currentPage === 'profile' && <Profile />}
           {currentPage === 'security' && <div><h2>Security</h2><p>Security settings will go here.</p></div>}
       
 

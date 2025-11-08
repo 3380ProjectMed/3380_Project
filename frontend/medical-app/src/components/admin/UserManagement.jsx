@@ -88,31 +88,42 @@ function UserManagement() {
     setShowAddModal(true);
   };
 
+  // Simplified filtering - only filter by name and email since backend handles other filters
   const filteredUsers = users.filter(user => {
     const searchLower = searchTerm.toLowerCase();
-    const name = `${user.first_name} ${user.last_name}`.toLowerCase();
+    const name = (user.name || '').toLowerCase();
     const email = (user.email || '').toLowerCase();
-    const specialization = (user.specialization || '').toLowerCase();
-    const department = (user.department || '').toLowerCase();
-    const insuranceCompany = (user.insurance_company || '').toLowerCase();
-    const workLocation = (user.work_location_name || '').toLowerCase();
+    const specializationDept = (user.specialization_dept || '').toLowerCase();
+    const workLocation = (user.work_location || '').toLowerCase();
     
     return name.includes(searchLower) || 
            email.includes(searchLower) || 
-           specialization.includes(searchLower) ||
-           department.includes(searchLower) ||
-           insuranceCompany.includes(searchLower) ||
+           specializationDept.includes(searchLower) ||
            workLocation.includes(searchLower);
   });
 
   const getRoleLabel = (userType) => {
     const labels = {
+      'DOCTOR': 'Doctor',
       'doctor': 'Doctor',
+      'NURSE': 'Nurse',
       'nurse': 'Nurse',
+      'RECEPTIONIST': 'Receptionist',
       'receptionist': 'Receptionist',
+      'PATIENT': 'Patient',
       'patient': 'Patient'
     };
     return labels[userType] || userType;
+  };
+
+  // Get initials from full name
+  const getInitials = (fullName) => {
+    if (!fullName) return '??';
+    const parts = fullName.trim().split(' ');
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return fullName.substring(0, 2).toUpperCase();
   };
 
   const clearFilters = () => {
@@ -266,14 +277,10 @@ function UserManagement() {
                   <th>Name</th>
                   <th>Email</th>
                   <th>SSN</th>
+                  {filters.role === 'all' && <th>Specialization/Dept</th>}
                   {filters.role === 'doctor' && <th>Specialization</th>}
                   {filters.role === 'nurse' && <th>Department</th>}
-                  {filters.role === 'patient' && <th>DOB</th>}
-                  {filters.role === 'patient' && <th>Insurance</th>}
-                  {filters.role !== 'patient' && filters.role !== 'all' && <th>License</th>}
-                  {filters.role !== 'patient' && filters.role !== 'all' && <th>Work Location</th>}
-                  {filters.role === 'all' && <th>Specialization/Dept</th>}
-                  {filters.role === 'all' && <th>Work Location</th>}
+                  {filters.role !== 'patient' && <th>Work Location</th>}
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -281,24 +288,24 @@ function UserManagement() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="no-data">
+                    <td colSpan={8} className="no-data">
                       {searchTerm ? `No users found matching "${searchTerm}"` : 'No users found'}
                     </td>
                   </tr>
                 ) : (
                   filteredUsers.map((user) => (
-                    <tr key={`${user.user_type}-${user.id}`}>
+                    <tr key={`${user.user_type}-${user.user_id}`}>
                       <td>
-                        <span className={`role-badge ${user.user_type}`}>
+                        <span className={`role-badge ${user.user_type.toLowerCase()}`}>
                           {getRoleLabel(user.user_type)}
                         </span>
                       </td>
                       <td>
                         <div className="user-info">
                           <div className="user-avatar">
-                            {user.first_name?.[0]}{user.last_name?.[0]}
+                            {getInitials(user.name)}
                           </div>
-                          <span>{user.first_name} {user.last_name}</span>
+                          <span>{user.name}</span>
                         </div>
                       </td>
                       <td>
@@ -309,35 +316,14 @@ function UserManagement() {
                       </td>
                       <td>{user.ssn || 'N/A'}</td>
                       
-                      {/* Role-specific columns for filtered view */}
-                      {filters.role === 'doctor' && (
-                        <td>{user.specialization || 'N/A'}</td>
+                      {/* Specialization/Department column */}
+                      {(filters.role === 'all' || filters.role === 'doctor' || filters.role === 'nurse') && (
+                        <td>{user.specialization_dept || 'N/A'}</td>
                       )}
                       
-                      {filters.role === 'nurse' && (
-                        <td>{user.department || 'N/A'}</td>
-                      )}
-                      
-                      {filters.role === 'patient' && (
-                        <>
-                          <td>{user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : 'N/A'}</td>
-                          <td>{user.insurance_company || 'Self-Pay'}</td>
-                        </>
-                      )}
-                      
-                      {filters.role !== 'patient' && filters.role !== 'all' && (
-                        <>
-                          <td>{user.license_number || 'N/A'}</td>
-                          <td>{user.work_location_name || 'N/A'}</td>
-                        </>
-                      )}
-
-                      {/* Combined columns for 'all' view */}
-                      {filters.role === 'all' && (
-                        <>
-                          <td>{user.specialization || user.department || 'N/A'}</td>
-                          <td>{user.work_location_name || (user.user_type === 'patient' ? 'N/A' : 'N/A')}</td>
-                        </>
+                      {/* Work Location - not shown for patients */}
+                      {filters.role !== 'patient' && (
+                        <td>{user.work_location || 'N/A'}</td>
                       )}
                       
                       <td>
@@ -401,7 +387,7 @@ function UserManagement() {
   );
 }
 
-// Add User Modal Component (keeping the same as original)
+// Add User Modal Component
 function AddUserModal({ type, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     firstName: '',
@@ -431,9 +417,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
         ? '/admin_api/users/add-doctor.php'
         : type === 'nurse'
         ? '/admin_api/users/add-nurse.php'
-        : type === 'receptionist'
-        ? '/admin_api/users/add-receptionist.php'
-        : '/admin_api/users/add-patient.php';
+        : '/admin_api/users/add-receptionist.php';
 
       const payload = {
         first_name: formData.firstName,
@@ -488,7 +472,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
     }));
   };
 
-  // Show info message for patients
+  // Show info message for patients - admin cannot add patients
   if (type === 'patient') {
     return (
       <div className="modal-overlay" onClick={onClose}>
@@ -500,10 +484,11 @@ function AddUserModal({ type, onClose, onSuccess }) {
             </button>
           </div>
           <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <AlertCircle size={48} style={{ margin: '0 auto 1rem' }} />
-            <p>Patient registration is not available through admin portal.</p>
+            <AlertCircle size={48} style={{ margin: '0 auto 1rem', color: '#f59e0b' }} />
+            <h3 style={{ marginBottom: '1rem' }}>Patient Registration Restricted</h3>
+            <p>Patient accounts cannot be created through the admin portal.</p>
             <p>Patients must register through the patient registration page.</p>
-            <button className="btn btn-secondary" onClick={onClose} style={{ marginTop: '1rem' }}>
+            <button className="btn btn-secondary" onClick={onClose} style={{ marginTop: '1.5rem' }}>
               Close
             </button>
           </div>

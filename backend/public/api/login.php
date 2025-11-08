@@ -1,5 +1,4 @@
 <?php
-// public/api/login.php
 declare(strict_types=1);
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
@@ -22,14 +21,12 @@ $pass = getenv('AZURE_MYSQL_PASSWORD') ?: 'QuinnRocks!';
 $db   = getenv('AZURE_MYSQL_DBNAME') ?: 'med-app-db';
 $port = (int)(getenv('AZURE_MYSQL_PORT') ?: '3306');
 
-// Test environment variables
 if (!$host || !$user || !$db) {
     http_response_code(500);
     echo json_encode(['error' => 'Missing environment variables']);
     exit;
 }
 
-// Initialize mysqli
 $mysqli = mysqli_init();
 if (!$mysqli) {
     http_response_code(500);
@@ -37,7 +34,6 @@ if (!$mysqli) {
     exit;
 }
 
-// Set SSL options BEFORE connecting
 $sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
 
 if (file_exists($sslCertPath)) {
@@ -48,7 +44,6 @@ if (file_exists($sslCertPath)) {
     $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 0);
 }
 
-// NOW connect (only once!)
 if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, NULL, MYSQLI_CLIENT_SSL)) {
     http_response_code(500);
     echo json_encode(['error' => 'Database connection failed: ' . $mysqli->connect_error]);
@@ -57,7 +52,6 @@ if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, NULL, MYSQLI_CLIENT
 
 $mysqli->set_charset('utf8mb4');
 
-// Get POST data
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input || !isset($input['email']) || !isset($input['password'])) {
     http_response_code(400);
@@ -68,11 +62,29 @@ if (!$input || !isset($input['email']) || !isset($input['password'])) {
 $email = $input['email'];
 $password = $input['password'];
 
-// Query user - get failed_login_count too
-$sql = "SELECT user_id, username, email, password_hash, role, failed_login_count, is_active 
-        FROM user_account 
-        WHERE email = ? 
+// Query user with name from appropriate table based on role
+$sql = "SELECT 
+            ua.user_id, 
+            ua.username, 
+            ua.email, 
+            ua.password_hash, 
+            ua.role, 
+            ua.failed_login_count, 
+            ua.is_active,
+            CASE 
+                WHEN ua.role = 'PATIENT' THEN p.first_name
+                ELSE s.first_name
+            END as first_name,
+            CASE 
+                WHEN ua.role = 'PATIENT' THEN p.last_name
+                ELSE s.last_name
+            END as last_name
+        FROM user_account ua
+        LEFT JOIN staff s ON ua.user_id = s.staff_id AND ua.role IN ('DOCTOR', 'NURSE', 'RECEPTIONIST', 'ADMIN')
+        LEFT JOIN patient p ON ua.user_id = p.patient_id AND ua.role = 'PATIENT'
+        WHERE ua.email = ? 
         LIMIT 1";
+
 $stmt = $mysqli->prepare($sql);
 
 if (!$stmt) {
@@ -96,7 +108,7 @@ if (!$result || $result->num_rows === 0) {
 $user = $result->fetch_assoc();
 $stmt->close();
 
-// Check if account is locked (password_hash is null means locked)
+// Check if account is locked
 if ($user['password_hash'] === null) {
     http_response_code(403);
     echo json_encode([
@@ -118,12 +130,9 @@ if ($user['is_active'] == 0) {
 
 // Verify password
 if (!password_verify($password, $user['password_hash'])) {
-    // Password is incorrect - increment failed_login_count
     $failedCount = intval($user['failed_login_count']) + 1;
     
-    // Lock account after 5 failed attempts
     if ($failedCount > 3) {
-        // Just increment - trigger handles locking
         $updateStmt = $mysqli->prepare(
             "UPDATE user_account 
             SET failed_login_count = ?, 
@@ -140,7 +149,6 @@ if (!password_verify($password, $user['password_hash'])) {
             'requiresReset' => true
         ]);
     } else {
-        // Just increment the counter
         $updateStmt = $mysqli->prepare(
             "UPDATE user_account 
              SET failed_login_count = ?, 
@@ -162,28 +170,28 @@ if (!password_verify($password, $user['password_hash'])) {
     exit;
 }
 
-// Password is correct - reset failed_login_count
-if ($user['failed_login_count'] > 0) {
-    $resetStmt = $mysqli->prepare(
-        "UPDATE user_account 
-         SET failed_login_count = 0, 
-             updated_at = NOW() 
-         WHERE user_id = ?"
-    );
-    $resetStmt->bind_param('i', $user['user_id']);
-    $resetStmt->execute();
-    $resetStmt->close();
-}
+// Password correct - reset failed_login_count and update last_login_at
+$updateStmt = $mysqli->prepare(
+    "UPDATE user_account 
+     SET failed_login_count = 0,
+         last_login_at = NOW(),
+         updated_at = NOW() 
+     WHERE user_id = ?"
+);
+$updateStmt->bind_param('i', $user['user_id']);
+$updateStmt->execute();
+$updateStmt->close();
 
 // Set session
 $_SESSION['uid'] = $user['user_id'];
 $_SESSION['email'] = $user['email'];
 $_SESSION['role'] = $user['role'];
 $_SESSION['username'] = $user['username'];
+$_SESSION['first_name'] = $user['first_name'];
+$_SESSION['last_name'] = $user['last_name'];
 
 $mysqli->close();
 
-// Return success
 http_response_code(200);
 echo json_encode([
     'success' => true,
@@ -191,7 +199,9 @@ echo json_encode([
         'user_id' => $user['user_id'],
         'username' => $user['username'],
         'email' => $user['email'],
-        'role' => $user['role']
+        'role' => $user['role'],
+        'first_name' => $user['first_name'],
+        'last_name' => $user['last_name']
     ]
 ]);
 ?>
