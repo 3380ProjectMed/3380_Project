@@ -21,8 +21,7 @@ try {
     $sql = "SELECT 
                 treatment_id,
                 name as treatment_name,
-                cost,
-                category
+                cost
             FROM treatment_catalog
             ORDER BY treatment_name";
     
