@@ -87,12 +87,12 @@ try {
                 pv.status as visit_status,
                 pv.start_at as check_in_time,
                 pv.end_at as completion_time,
-                pi.copay
+                -- pi.copay
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
             LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
-            LEFT JOIN patient_insurance pi ON p.insuranceid = pi.id AND pi.is_primary = 1
+            -- LEFT JOIN patient_insurance pi ON p.insuranceid = pi.id AND pi.is_primary = 1
             LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             WHERE a.Office_id = ? $dateFilter
             ORDER BY a.Appointment_date ASC";
