@@ -20,12 +20,11 @@ try {
     
     $sql = "SELECT 
                 treatment_id,
-                treatment_name,
-                description,
-                default_cost,
+                name as treatment_name,
+                cost,
                 category
             FROM treatment_catalog
-            ORDER BY category, treatment_name";
+            ORDER BY treatment_name";
     
     $rows = executeQuery($conn, $sql);
     
@@ -35,9 +34,7 @@ try {
             return [
                 'treatment_id' => $r['treatment_id'] ?? null,
                 'treatment_name' => $r['treatment_name'] ?? '',
-                'description' => $r['description'] ?? '',
-                'default_cost' => $r['default_cost'] ?? 0,
-                'category' => $r['category'] ?? ''
+                'cost' => $r['cost'] ?? 0
             ];
         }, $rows);
     }
