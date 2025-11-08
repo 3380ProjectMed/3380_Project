@@ -46,7 +46,7 @@ try {
     $patient = $patientRows[0];
     
     // Get insurance info
-    $insSql = "SELECT pi.id, pi.copay, pi.deductible_individ, pi.coinsurance_rate_pct,
+    $insSql = "SELECT pi.id, ip.copay, pi.deductible_individ, pi.coinsurance_rate_pct,
                       ip.plan_name, ip.plan_type,
                       py.name as payer_name
                FROM patient_insurance pi
@@ -61,9 +61,9 @@ try {
     }
     
     // Get recent appointments
-    $apptSql = "SELECT a.Appointment_id, a.Appointment_date, a.Reason_for_visit,
+    $apptSql = "SELECT a.Appointment_id, a.Appointment_date, a.Reason_for_visit, a.Status,
                        d.first_name as Doctor_First, d.last_name as Doctor_Last,
-                       pv.status
+                       pv.status as visit_status
                 FROM appointment a
                 JOIN doctor d ON a.Doctor_id = d.doctor_id
                 LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
