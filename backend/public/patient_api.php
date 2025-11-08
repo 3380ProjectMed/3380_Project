@@ -1,210 +1,87 @@
-
 <?php
-// patient_api.php - Patient Portal API Endpoints (cleaned and fixed)
+// patient_api.php - Patient Portal API Endpoints (SESSION FIXED)
 
-// IMMEDIATE DEBUG - Check if this file is even being called
 error_log("=== PATIENT API ENTRY POINT ===");
-error_log("Request method: " . ($_SERVER['REQUEST_METHOD'] ?? 'NOT SET'));
-error_log("Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'NOT SET'));
-error_log("Query string: " . ($_SERVER['QUERY_STRING'] ?? 'NOT SET'));
-error_log("================================");
-
-// ALSO DEBUG DIRECTLY TO RESPONSE for immediate visibility
-$debug_info = [
-    'debug_entry' => 'patient_api.php called',
-    'method' => $_SERVER['REQUEST_METHOD'] ?? 'NOT SET',
-    'uri' => $_SERVER['REQUEST_URI'] ?? 'NOT SET',
-    'query' => $_SERVER['QUERY_STRING'] ?? 'NOT SET'
-];
+error_log("Request: " . ($_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN') . " " . ($_SERVER['REQUEST_URI'] ?? 'UNKNOWN'));
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-// require_once 'helpers.php'; 
 
 header('Content-Type: application/json');
 
-// Azure App Service HTTPS detection
-// Azure terminates SSL at the load balancer, so check for proxy headers
+// Azure HTTPS detection
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-    || (!empty($_SERVER['HTTP_X_ARR_SSL'])) // Azure-specific header
+    || (!empty($_SERVER['HTTP_X_ARR_SSL']))
     || $_SERVER['SERVER_PORT'] == 443;
 
-// Start session with same configuration as login system
-session_start([
-    'cookie_httponly' => true,
-    'cookie_secure'   => $isHttps,  // ← Use proper HTTPS detection
-    'cookie_samesite' => 'Lax',
-]);
+// ⭐ CONFIGURE SESSION BEFORE STARTING (CRITICAL!)
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_secure', $isHttps ? '1' : '0');
+ini_set('session.cookie_samesite', 'Lax');
+ini_set('session.use_strict_mode', '1');
+
+// ⭐ USE THE SESSION ID FROM COOKIE IF IT EXISTS
+if (isset($_COOKIE['PHPSESSID'])) {
+    session_id($_COOKIE['PHPSESSID']);
+    error_log("Using session from cookie: " . $_COOKIE['PHPSESSID']);
+}
+
+// ⭐ NOW START SESSION
+session_start();
+
+error_log("Session started - ID: " . session_id() . ", Data: " . json_encode($_SESSION));
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT']) {
-    // Enhanced session debugging
-    error_log("=== PATIENT API AUTH DEBUG ===");
-    error_log("Original Session ID: " . session_id());  
-    error_log("Expected Session ID from Cookie: " . ($_COOKIE[session_name()] ?? 'NOT SET'));
-    error_log("Session name: " . session_name());
-    error_log("Session save path: " . session_save_path());
+    global $isHttps;
+    
+    error_log("=== AUTH CHECK ===");
+    error_log("Session ID: " . session_id());
     error_log("Session data: " . json_encode($_SESSION));
-    error_log("All cookies: " . json_encode($_COOKIE));
-    error_log("HTTP_COOKIE header: " . ($_SERVER['HTTP_COOKIE'] ?? 'NOT SET'));
-    error_log("HTTPS detection: " . ($isHttps ? 'TRUE' : 'FALSE'));
-    error_log("================================");
+    error_log("==================");
     
-    // If session ID doesn't match the cookie, try to restore it
-    $expected_session_id = $_COOKIE[session_name()] ?? null;
-    if ($expected_session_id && session_id() !== $expected_session_id) {
-        error_log("PATIENT AUTH: Session ID mismatch, attempting to restore session");
-        session_write_close();
-        session_id($expected_session_id);
-        session_start([
-            'cookie_httponly' => true,
-            'cookie_secure'   => $isHttps,
-            'cookie_samesite' => 'Lax',
-        ]);
-        error_log("PATIENT AUTH: After restore - Session ID: " . session_id() . ", Data: " . json_encode($_SESSION));
-    }
-    
-    // Try to restart session if it seems invalid but we have session cookie
-    if (empty($_SESSION) && !empty($_COOKIE[session_name()])) {
-        error_log("PATIENT AUTH: Session appears invalid but cookie exists, attempting to restart session");
-        
-        // Use the same HTTPS detection as the main session start
-        global $isHttps;
-        
-        session_destroy();
-        session_start([
-            'cookie_httponly' => true,
-            'cookie_secure'   => $isHttps,
-            'cookie_samesite' => 'Lax',
-        ]);
-        error_log("PATIENT AUTH: After restart - Session ID: " . session_id() . ", Data: " . json_encode($_SESSION));
-    }
-    
-    // Check if we have basic authentication from login system
-    if (!isset($_SESSION['uid']) || !isset($_SESSION['email'])) {
-        error_log("PATIENT AUTH: Missing session data - uid: " . ($_SESSION['uid'] ?? 'NOT SET') . ", email: " . ($_SESSION['email'] ?? 'NOT SET'));
-        sendResponse(false, [], 'User not authenticated - please log in again', 401);
+    // Simple checks - session is already started and configured correctly
+    if (empty($_SESSION['uid']) && empty($_SESSION['user_id'])) {
+        error_log("AUTH FAILED: No user_id in session");
+        sendResponse(false, [], 'Not authenticated', 401);
         exit();
     }
     
-    // Map logged-in user to patient record (only if not already done)
+    if (empty($_SESSION['email'])) {
+        error_log("AUTH FAILED: No email in session");
+        sendResponse(false, [], 'Not authenticated', 401);
+        exit();
+    }
+    
+    // Map to patient_id if not already done
     if (!isset($_SESSION['patient_id'])) {
         $user_email = $_SESSION['email'];
-        error_log("PATIENT AUTH: Looking up patient for email: " . $user_email);
+        error_log("Looking up patient for: " . $user_email);
         
         try {
             $mysqli = getDBConnection();
-            $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name FROM patient WHERE email = ? LIMIT 1");
+            $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE email = ? LIMIT 1");
             $stmt->bind_param('s', $user_email);
             $stmt->execute();
             $result = $stmt->get_result();
             $patient = $result->fetch_assoc();
-            $stmt->close();
             
             if ($patient) {
                 $_SESSION['patient_id'] = $patient['patient_id'];
-                error_log("PATIENT AUTH: Successfully mapped to patient_id: " . $patient['patient_id']);
+                error_log("Mapped to patient_id: " . $patient['patient_id']);
             } else {
-                error_log("PATIENT AUTH: No patient record found for email: " . $user_email);
-                sendResponse(false, [], 'No patient record found for this user', 403);
+                error_log("No patient record found");
+                sendResponse(false, [], 'No patient record found', 403);
                 exit();
             }
         } catch (Exception $e) {
-            error_log("PATIENT AUTH: Database error: " . $e->getMessage());
-            sendResponse(false, [], 'Authentication error', 500);
-            exit();
-        }
-    }
-    
-    error_log("PATIENT AUTH: Success - patient_id: " . $_SESSION['patient_id']);
-}
-
-function sendResponse($success, $data = [], $message = '', $statusCode = 200) {
-    global $debug_info;
-    
-    $response = [
-        'success' => $success,
-        'data' => $data,
-        'message' => $message
-    ];
-    
-    // Add debug info for authentication failures
-    if (!$success && $statusCode == 401 && isset($debug_info)) {
-        $response['debug'] = $debug_info;
-        $response['session_debug'] = [
-            'session_id' => session_id(),
-            'session_data' => $_SESSION,
-            'cookies' => $_COOKIE,
-            'http_cookie' => $_SERVER['HTTP_COOKIE'] ?? 'NOT SET'
-        ];
-    }
-    
-    http_response_code($statusCode);
-    echo json_encode($response, JSON_PRETTY_PRINT);
-    exit();
-}
-
-function validateRequired($input, $required_fields) {
-    $missing = [];
-    
-    if (!is_array($input)) {
-        return $required_fields; // All fields are missing if input is not an array
-    }
-    
-    foreach ($required_fields as $field) {
-        if (!isset($input[$field]) || empty($input[$field])) {
-            $missing[] = $field;
-        }
-    }
-    return $missing;
-}
-
-// Use SSL-enabled database connection for Azure MySQL
-try {
-    $mysqli = getDBConnection();
-} catch (Exception $e) {
-    sendResponse(false, [], 'Database connection error: ' . $e->getMessage(), 500);
-}
-
-// Require authentication (currently mocked)
-requireAuth(['PATIENT']);
-
-// Get patient_id from session (set by mock auth)
-$patient_id = $_SESSION['patient_id'] ?? null;
-
-// If patient_id isn't set in session, try to map from authenticated user's email
-if (!$patient_id) {
-    $user_email = $_SESSION['email'] ?? null;
-    if ($user_email) {
-        // Lookup patient by email in Patient table
-        $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE email = ? LIMIT 1");
-        if ($stmt) {
-            $stmt->bind_param('s', $user_email);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $row = $res ? $res->fetch_assoc() : null;
-            if ($row && isset($row['patient_id'])) {
-                $patient_id = (int)$row['patient_id'];
-                // persist to session for future requests
-                $_SESSION['patient_id'] = $patient_id;
-            }
-            $stmt->close();
+            error_log("Offices error: " . $e->getMessage());
+            sendResponse(false, [], 'Failed to load offices: ' . $e->getMessage(), 500);
         }
     }
 }
 
-if (!$patient_id) {
-    sendResponse(false, [], 'Patient ID not found for authenticated user', 400);
-}
-
-$method = $_SERVER['REQUEST_METHOD'];
-$endpoint = $_GET['endpoint'] ?? '';
-
-// Simple test endpoint
-if ($endpoint === 'test') {
-    sendResponse(true, ['message' => 'Patient API is working', 'timestamp' => date('Y-m-d H:i:s')]);
-}
 
 // ==================== DASHBOARD ====================
 if ($endpoint === 'dashboard') {
