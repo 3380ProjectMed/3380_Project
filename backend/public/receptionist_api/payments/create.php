@@ -38,10 +38,10 @@ try {
     $conn = getDBConnection();
     
     // Verify receptionist has access to this appointment's office
-    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.Work_Location, s.Staff_Email
-                  FROM Appointment a
-                  JOIN Staff s ON s.Work_Location = a.Office_id
-                  JOIN user_account ua ON ua.email = s.Staff_Email
+    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.work_location, s.staff_email
+                  FROM appointment a
+                  JOIN staff s ON s.work_location = a.Office_id
+                  JOIN user_account ua ON ua.email = s.staff_email
                   WHERE a.Appointment_id = ? AND ua.user_id = ?";
     
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$input['appointment_id'], $user_id]);
@@ -56,15 +56,15 @@ try {
     $conn->begin_transaction();
     
     try {
-        // Update PatientVisit with payment information
-        $updateVisitSql = "UPDATE PatientVisit 
-                          SET Status = 'Completed',
-                              Payment = ?,
-                              CopayAmount_Due = ?,
-                              AmountDue = ?,
-                              TotalDue = ? - ?,
-                              UpdatedBy = ?
-                          WHERE Appointment_id = ?";
+        // Update patient_visit with payment information
+        $updateVisitSql = "UPDATE patient_visit
+                          SET status = 'Completed',
+                              payment = ?,
+                              copayamount_due = ?,
+                              amount_due = ?,
+                              total_due = ? - ?,
+                              updatedby = ?
+                          WHERE appointment_id = ?";
         
         $amount_due = $input['copay_amount'];
         $payment = $input['payment_received'];
