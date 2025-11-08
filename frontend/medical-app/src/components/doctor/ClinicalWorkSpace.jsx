@@ -637,7 +637,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
     <div className="clinical-workspace">
       {/* Header */}
       <div className="workspace-header">
-        <div className="header-info">
+        {/* <div className="header-info"> */}
           <h2>
             <User size={24} />
             {patientInfo?.name || 'Patient'}
@@ -649,7 +649,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
             <span>•</span>
             <span>Blood Type: {patientInfo?.blood_type || 'Unknown'}</span>
           </div>
-        </div>
+        {/* </div> */}
         <button onClick={onClose} className="btn-close">
           <X size={20} />
         </button>
