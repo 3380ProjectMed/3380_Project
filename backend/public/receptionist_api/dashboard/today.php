@@ -92,7 +92,7 @@ try {
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
             LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
-            LEFT JOIN patient_insurance pi ON p.insuranceid = pi.id AND pi.is_primary = 1
+            LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
             LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             WHERE a.Office_id = ? $dateFilter
             ORDER BY a.Appointment_date ASC";
@@ -164,7 +164,7 @@ try {
             $stats['no_show']++;
         }
         
-        // Count checked in (based on PatientVisit records)
+        // Count checked in (based on patient_visit records)
         if ($apt['check_in_time'] && !$apt['completion_time'] && $displayStatus !== 'In Progress') {
             $displayStatus = 'Checked In';
             $stats['checked_in']++;

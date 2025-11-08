@@ -22,9 +22,9 @@ try {
     
     $dayOfWeek = date('l', strtotime($date)); // Returns day name (Monday, Tuesday, etc.)
     
-    $sql = "SELECT Schedule_id, Day_of_week, Start_time, End_time
-            FROM WorkSchedule
-            WHERE Doctor_id = ? AND Day_of_week = ?";
+    $sql = "SELECT schedule_id, day_of_week, start_time, end_time
+            FROM work_schedule
+            WHERE doctor_id = ? AND day_of_week = ?";
     
     $rows = executeQuery($conn, $sql, 'is', [$doctorId, $dayOfWeek]);
     closeDBConnection($conn);

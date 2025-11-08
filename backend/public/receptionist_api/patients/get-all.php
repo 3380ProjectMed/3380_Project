@@ -35,17 +35,17 @@ try {
     if ($q !== '') {
         // Search by name, phone or dob
         $like = '%' . $q . '%';
-        $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact,
+        $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact_id,
                        pi.copay, ip.plan_name, ip.plan_type
                 FROM patient p
                 LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
                 LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
-                WHERE p.first_name LIKE ? OR p.last_name LIKE ? OR p.emergency_contact LIKE ? OR p.dob = ?
+                WHERE p.first_name LIKE ? OR p.last_name LIKE ? OR p.emergency_contact_id LIKE ? OR p.dob = ?
                 ORDER BY p.last_name, p.first_name";
         $rows = executeQuery($conn, $sql, 'ssss', [$like, $like, $like, $q]);
     } else {
         // Return a limited list to avoid huge payloads (pagination could be added later)
-        $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact,
+        $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact_id,
                        pi.copay, ip.plan_name, ip.plan_type
                 FROM patient p
                 LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
@@ -58,12 +58,12 @@ try {
     // Map to friendly shape used by frontend
     $patients = array_map(function($r) {
         return [
-            'patient_id' => (int)($r['patient_id'] ?? 0),
-            'first_name' => $r['first_name'] ?? '',
-            'last_name' => $r['last_name'] ?? '',
+            'Patient_ID' => (int)($r['patient_id'] ?? 0),
+            'First_Name' => $r['first_name'] ?? '',
+            'Last_Name' => $r['last_name'] ?? '',
             'dob' => $r['dob'] ?? '',
-            'email' => $r['email'] ?? '',
-            'emergency_contact_id' => $r['emergency_contact_id'] ?? '',
+            'Email' => $r['email'] ?? '',
+            'EmergencyContact' => $r['emergency_contact_id'] ?? '',
             'copay' => isset($r['copay']) ? (float)$r['copay'] : null,
             'plan_name' => $r['plan_name'] ?? null,
             'plan_type' => $r['plan_type'] ?? null,

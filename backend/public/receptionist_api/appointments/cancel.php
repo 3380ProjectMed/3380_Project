@@ -36,10 +36,10 @@ try {
     $conn = getDBConnection();
     
     // Verify receptionist has access to this appointment's office
-    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.Work_Location
-                  FROM Appointment a
-                  JOIN Staff s ON s.Work_Location = a.Office_id
-                  JOIN user_account ua ON ua.email = s.Staff_Email
+    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.work_location
+                  FROM appointment a
+                  JOIN staff s ON s.work_location = a.Office_id
+                  JOIN user_account ua ON ua.email = s.staff_email
                   WHERE a.Appointment_id = ? AND ua.user_id = ?";
     
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$appointment_id, $user_id]);
@@ -55,24 +55,24 @@ try {
     
     try {
         // Update appointment status to cancelled
-        $updateApptSql = "UPDATE Appointment 
+        $updateApptSql = "UPDATE appointment 
                          SET Status = 'Cancelled'
                          WHERE Appointment_id = ?";
         executeQuery($conn, $updateApptSql, 'i', [$appointment_id]);
         
-        // Update or create PatientVisit record
-        $checkVisitSql = "SELECT Visit_id FROM PatientVisit WHERE Appointment_id = ?";
+        // Update or create patient_visit record
+        $checkVisitSql = "SELECT visit_id FROM patient_visit WHERE appointment_id = ?";
         $existingVisit = executeQuery($conn, $checkVisitSql, 'i', [$appointment_id]);
         
         if (empty($existingVisit)) {
-            $insertVisitSql = "INSERT INTO PatientVisit (Appointment_id, Patient_id, Doctor_id, Office_id, Status)
+            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, office_id, status)
                               SELECT a.Appointment_id, a.Patient_id, a.Doctor_id, a.Office_id, 'Canceled'
-                              FROM Appointment a WHERE a.Appointment_id = ?";
+                              FROM appointment a WHERE a.Appointment_id = ?";
             executeQuery($conn, $insertVisitSql, 'i', [$appointment_id]);
         } else {
-            $updateVisitSql = "UPDATE PatientVisit 
-                              SET Status = 'Canceled'
-                              WHERE Appointment_id = ?";
+            $updateVisitSql = "UPDATE patient_visit 
+                              SET status = 'Canceled'
+                              WHERE appointment_id = ?";
             executeQuery($conn, $updateVisitSql, 'i', [$appointment_id]);
         }
         
