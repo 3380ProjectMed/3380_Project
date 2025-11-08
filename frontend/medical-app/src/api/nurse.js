@@ -10,23 +10,41 @@ async function getJSON(url) {
   return resp.json();
 }
 
+// Dashboard stats
 export function getNurseDashboardStats(date = new Date().toISOString().slice(0,10)) {
   return getJSON(`${BASE_URL}/dashboard/get-stats.php?date=${encodeURIComponent(date)}`);
 }
 
-export async function getNurseSchedule(date = new Date().toISOString().slice(0,10)) {
-  const data = await getJSON(`${BASE_URL}/schedule/get-by-date.php?date=${encodeURIComponent(date)}`);
+// Schedule by date (for dashboard appointments) - FIXED to handle both response formats
+export async function getNurseSchedule(params) {
+  // Handle both object { date: '...' } and string date
+  const dateStr = typeof params === 'string' ? params : (params?.date || new Date().toISOString().slice(0,10));
+  const data = await getJSON(`${BASE_URL}/schedule/get-by-date.php?date=${encodeURIComponent(dateStr)}`);
+  
+  // Handle both response formats: plain array or { appointments: [...] }
+  if (Array.isArray(data)) {
+    return data;
+  }
   return data.appointments || [];
 }
 
-export function getNurseScheduleToday() {
-  return getNurseSchedule(new Date().toISOString().slice(0,10));
+// Schedule today (weekly recurring schedule for Schedule page)
+export async function getNurseScheduleToday() {
+  const data = await getJSON(`${BASE_URL}/schedule/get-today.php`);
+  
+  // Handle response format: { success: true, schedule: [...] } or plain array
+  if (data.schedule) {
+    return data.schedule;
+  }
+  return Array.isArray(data) ? data : [];
 }
 
+// Profile
 export function getNurseProfile() {
   return getJSON(`${BASE_URL}/profile/get.php`);
 }
 
+// Patients with pagination
 export function getNursePatients(query = '', page = 1, pageSize = 10) {
   const params = new URLSearchParams({ q: query, page: String(page), limit: String(pageSize) });
   return getJSON(`${BASE_URL}/patients/get-all.php?${params.toString()}`);
