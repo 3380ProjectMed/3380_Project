@@ -163,7 +163,6 @@ try {
         pv.visit_id as visit_id,
         pv.status as status,
         pv.diagnosis as diagnosis,
-        pv.treatment as treatment,
         pv.amount_due as total_bill,
         pv.total_due as total_due,
         pv.payment as payment,

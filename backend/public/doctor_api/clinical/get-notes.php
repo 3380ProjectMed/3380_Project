@@ -83,7 +83,7 @@ try {
         $treatments = [];
         if ($visit_id) {
             $treatSql = "SELECT 
-                            tc.treatment_name,
+                            tc.name as treatment_name,
                             tpv.quantity,
                             tpv.notes
                         FROM treatment_per_visit tpv
