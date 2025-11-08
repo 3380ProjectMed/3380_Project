@@ -19,21 +19,21 @@ try {
 
     $conn = getDBConnection();
     
-    $sql = "SELECT DISTINCT d.Doctor_id, d.First_Name, d.Last_Name,
+    $sql = "SELECT DISTINCT d.doctor_id, d.first_name, d.last_name,
                    s.specialty_name, s.specialty_id
-            FROM Doctor d
-            JOIN Specialty s ON d.Specialty = s.specialty_id
-            WHERE d.Work_Location = ?
-            ORDER BY d.Last_Name, d.First_Name";
+            FROM doctor d
+            JOIN specialty s ON d.specialty = s.specialty_id
+            WHERE d.work_location = ?
+            ORDER BY d.last_name, d.first_name";
     
     $rows = executeQuery($conn, $sql, 'i', [$officeId]);
     closeDBConnection($conn);
 
     $doctors = array_map(function($r) {
         return [
-            'Doctor_id' => (int)$r['Doctor_id'],
-            'First_Name' => $r['First_Name'],
-            'Last_Name' => $r['Last_Name'],
+            'Doctor_id' => (int)$r['doctor_id'],
+            'First_Name' => $r['first_name'],
+            'Last_Name' => $r['last_name'],
             'specialty_name' => $r['specialty_name'],
             'specialty_id' => (int)$r['specialty_id']
         ];

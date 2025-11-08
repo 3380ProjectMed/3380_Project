@@ -30,10 +30,10 @@ try {
     $conn = getDBConnection();
     
     // Get patient basic info
-    $sql = "SELECT p.Patient_ID, p.First_Name, p.Last_Name, p.dob,
-                   p.Email, p.EmergencyContact, p.InsuranceID
-            FROM Patient p
-            WHERE p.Patient_ID = ?";
+    $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob,
+                   p.email, p.emergency_contact_id, p.insurance_id
+            FROM patient p
+            WHERE p.patient_id = ?";
     
     $patientRows = executeQuery($conn, $sql, 'i', [$patientId]);
     
@@ -48,25 +48,25 @@ try {
     // Get insurance info
     $insSql = "SELECT pi.id, pi.copay, pi.deductible_individ, pi.coinsurance_rate_pct,
                       ip.plan_name, ip.plan_type,
-                      py.NAME as payer_name
+                      py.name as payer_name
                FROM patient_insurance pi
                JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
                JOIN insurance_payer py ON ip.payer_id = py.payer_id
                WHERE pi.id = ? AND pi.is_primary = 1";
     
     $insurance = null;
-    if ($patient['InsuranceID']) {
-        $insRows = executeQuery($conn, $insSql, 'i', [$patient['InsuranceID']]);
+    if ($patient['insurance_id']) {
+        $insRows = executeQuery($conn, $insSql, 'i', [$patient['insurance_id']]);
         $insurance = !empty($insRows) ? $insRows[0] : null;
     }
     
     // Get recent appointments
     $apptSql = "SELECT a.Appointment_id, a.Appointment_date, a.Reason_for_visit,
-                       d.First_Name as Doctor_First, d.Last_Name as Doctor_Last,
-                       pv.Status
-                FROM Appointment a
-                JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-                LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
+                       d.first_name as Doctor_First, d.last_name as Doctor_Last,
+                       pv.status
+                FROM appointment a
+                JOIN doctor d ON a.Doctor_id = d.doctor_id
+                LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
                 WHERE a.Patient_id = ?
                 ORDER BY a.Appointment_date DESC
                 LIMIT 5";

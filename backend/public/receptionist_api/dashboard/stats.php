@@ -4,13 +4,13 @@
  * IMPROVED VERSION: Uses intelligent time-based status calculation
  * 
  * DATABASE SCHEMA NOTES:
- * - Staff.Work_Location -> Office.Office_ID (receptionist's office)
- * - Appointment.Patient_id -> Patient.Patient_ID (case-sensitive join)
- * - Appointment.Doctor_id -> Doctor.Doctor_id
- * - Appointment.Office_id -> Office.Office_ID
- * - PatientVisit.Start_at = check-in time
- * - PatientVisit.End_at = completion time
- * - PatientVisit.Payment = payment amount
+ * - staff.work_location -> office.office_id (receptionist's office)
+ * - appointment.Patient_id -> patient.patient_id (case-sensitive join)
+ * - appointment.Doctor_id -> doctor.doctor_id
+ * - appointment.Office_id -> office.office_id
+ * - patient_visit.start_at = check-in time
+ * - patient_visit.end_at = completion time
+ * - patient_visit.payment = payment amount
  * 
  * TEST DATA DATES (for Office 3 - Memorial Park Healthcare):
  * - 2024-01-16: Has appointment 1007 (Patient 4, Doctor 4)
@@ -36,10 +36,10 @@ try {
     
     try {
         $rows = executeQuery($conn, '
-            SELECT s.Work_Location as office_id, o.Name as office_name, o.Address, o.Phone
-            FROM Staff s
-            JOIN user_account ua ON ua.email = s.Staff_Email
-            JOIN Office o ON s.Work_Location = o.Office_ID
+            SELECT s.work_location as office_id, o.name as office_name, o.address, o.phone
+            FROM staff s
+            JOIN user_account ua ON ua.email = s.staff_email
+            JOIN office o ON s.work_location = o.office_id
             WHERE ua.user_id = ?', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
@@ -55,14 +55,14 @@ try {
     
     $office_id = (int)$rows[0]['office_id'];
     $office_name = $rows[0]['office_name'];
-    $office_address = $rows[0]['Address'] ?? null;
-    $office_phone = $rows[0]['Phone'] ?? null;
+    $office_address = $rows[0]['address'] ?? null;
+    $office_phone = $rows[0]['phone'] ?? null;
     
     // Use America/Chicago timezone
     $tz = new DateTimeZone('America/Chicago');
     $currentDateTime = new DateTime('now', $tz);
     
-    // Get date parameter or use today
+    // Get date parameter or use today's date
     $date = isset($_GET['date']) ? $_GET['date'] : $currentDateTime->format('Y-m-d');
     
     // Validate date format
@@ -73,25 +73,25 @@ try {
     }
     
     // Get all appointments for the date
-    // Schema notes: Appointment.Patient_id joins to Patient.Patient_ID (case difference)
-    // PatientVisit uses Start_at and End_at for check-in and completion times
+    // Schema notes: appointment.Patient_id joins to patient.patient_id (case difference)
+    // patient_visit uses start_at and end_at for check-in and completion times
     $appointmentsSql = "SELECT
                             a.Appointment_id,
                             a.Appointment_date,
                             a.Status,
                             a.Reason_for_visit,
                             a.Patient_id,
-                            pv.Visit_id,
-                            pv.Start_at as check_in_time,
-                            pv.End_at as completion_time,
-                            pv.Payment,
-                            d.Doctor_id,
-                            CONCAT(d.First_Name, ' ', d.Last_Name) as doctor_name,
-                            CONCAT(p.First_Name, ' ', p.Last_Name) as patient_name
-                        FROM Appointment a
-                        INNER JOIN Patient p ON a.Patient_id = p.Patient_ID
-                        INNER JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-                        LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
+                            pv.visit_id,
+                            pv.start_at as check_in_time,
+                            pv.end_at as completion_time,
+                            pv.payment,
+                            d.doctor_id,
+                            CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                            CONCAT(p.first_name, ' ', p.last_name) as patient_name
+                        FROM appointment a
+                        INNER JOIN patient p ON a.Patient_id = p.patient_id
+                        INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
+                        LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
                         WHERE a.Office_id = ?
                         ORDER BY a.Appointment_date";
     
@@ -165,7 +165,7 @@ try {
             $stats['no_show']++;
         }
         
-        // Count checked in (based on PatientVisit records)
+        // Count checked in (based on patient_visit records)
         if ($apt['check_in_time'] && !$apt['completion_time'] && $displayStatus !== 'In Progress') {
             $displayStatus = 'Checked In';
             $stats['checked_in']++;
@@ -182,14 +182,14 @@ try {
         }
         
         // Track payment statistics
-        if ($apt['Payment'] && $apt['Payment'] > 0) {
+        if ($apt['payment'] && $apt['payment'] > 0) {
             $payment_count++;
-            $total_collected += (float)$apt['Payment'];
+            $total_collected += (float)$apt['payment'];
         }
         
         // Track doctor statistics
-        if ($apt['Doctor_id']) {
-            $doctor_id = $apt['Doctor_id'];
+        if ($apt['doctor_id']) {
+            $doctor_id = $apt['doctor_id'];
             if (!isset($doctor_stats[$doctor_id])) {
                 $doctor_stats[$doctor_id] = [
                     'id' => $doctor_id,

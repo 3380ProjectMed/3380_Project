@@ -40,9 +40,9 @@ try {
     // Get receptionist's office from their staff record
     try {
         $rows = executeQuery($conn, '
-            SELECT s.Work_Location as office_id
-            FROM Staff s
-            JOIN user_account ua ON ua.email = s.Staff_Email
+            SELECT s.work_location as office_id
+            FROM staff s
+            JOIN user_account ua ON ua.email = s.staff_email
             WHERE ua.user_id = ?', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
@@ -66,18 +66,18 @@ try {
                 a.Reason_for_visit,
                 a.Status,
                 a.Doctor_id,
-                p.Patient_ID,
-                p.First_Name as Patient_First,
-                p.Last_Name as Patient_Last,
-                d.First_Name as Doctor_First,
-                d.Last_Name as Doctor_Last,
-                pv.Status as visit_status,
-                pv.Start_at as check_in_time,
-                pv.End_at as completion_time
-            FROM Appointment a
-            INNER JOIN Patient p ON a.Patient_id = p.Patient_ID
-            INNER JOIN Doctor d ON a.Doctor_id = d.Doctor_id
-            LEFT JOIN PatientVisit pv ON a.Appointment_id = pv.Appointment_id
+                p.patient_id,
+                p.first_name as Patient_First,
+                p.last_name as Patient_Last,
+                d.first_name as Doctor_First,
+                d.last_name as Doctor_Last,
+                pv.status as visit_status,
+                pv.start_at as check_in_time,
+                pv.end_at as completion_time
+            FROM appointment a
+            INNER JOIN patient p ON a.Patient_id = p.patient_id
+            INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
+            LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
             WHERE a.Office_id = ?
             AND DATE(a.Appointment_date) BETWEEN ? AND ?
             ORDER BY a.Appointment_date ASC";

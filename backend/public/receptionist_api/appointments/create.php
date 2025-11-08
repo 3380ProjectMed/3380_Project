@@ -38,10 +38,10 @@ try {
     $conn = getDBConnection();
     
     // Verify receptionist works at the specified office
-    $verifySql = "SELECT s.Work_Location
-                  FROM Staff s
-                  JOIN user_account ua ON ua.email = s.Staff_Email
-                  WHERE ua.user_id = ? AND s.Work_Location = ?";
+    $verifySql = "SELECT s.work_location
+                  FROM staff s
+                  JOIN user_account ua ON ua.email = s.staff_email
+                  WHERE ua.user_id = ? AND s.work_location = ?";
     
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$user_id, $input['Office_id']]);
     
@@ -53,7 +53,7 @@ try {
     }
     
     // Verify doctor exists and works at this office
-    $doctorSql = "SELECT Doctor_id FROM Doctor WHERE Doctor_id = ?";
+    $doctorSql = "SELECT doctor_id FROM doctor WHERE doctor_id = ?";
     $doctorResult = executeQuery($conn, $doctorSql, 'i', [$input['Doctor_id']]);
     
     if (empty($doctorResult)) {
@@ -64,7 +64,7 @@ try {
     }
     
     // Verify patient exists
-    $patientSql = "SELECT Patient_ID FROM Patient WHERE Patient_ID = ?";
+    $patientSql = "SELECT patient_id FROM patient WHERE patient_id = ?";
     $patientResult = executeQuery($conn, $patientSql, 'i', [$input['Patient_id']]);
     
     if (empty($patientResult)) {
@@ -78,7 +78,7 @@ try {
     
     try {
         // Insert appointment
-        $insertSql = "INSERT INTO Appointment (
+        $insertSql = "INSERT INTO appointment (
                         Patient_id, 
                         Doctor_id, 
                         Appointment_date, 
