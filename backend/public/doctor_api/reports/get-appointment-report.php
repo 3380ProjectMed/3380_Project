@@ -152,7 +152,7 @@ try {
         p.dob as patient_dob,
         p.emergency_contact_id as patient_ec_id,
         CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
-        d.doctor_id as doctor_id,
+        st.staff_id as doctor_id,
         s.specialty_name as doctor_specialty,
         o.name as office_name,
         o.office_id as office_id,
@@ -171,7 +171,8 @@ try {
         ipayer.name as insurance_company
     FROM appointment a
     LEFT JOIN patient p ON a.Patient_id = p.patient_id
-    LEFT JOIN doctor d ON a.Doctor_id = d.doctor_id
+    LEFT JOIN staff st ON a.Doctor_id = st.doctor_id
+    LEFT JOIN doctor d ON st.staff_id = d.doctor_id
     LEFT JOIN specialty s ON d.specialty = s.specialty_id
     LEFT JOIN office o ON a.Office_id = o.office_id
     LEFT JOIN (

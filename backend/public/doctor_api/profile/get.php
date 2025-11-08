@@ -21,7 +21,7 @@ try {
         $user_id = (int)$_SESSION['uid'];
 
         $conn = getDBConnection();
-        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $rows = executeQuery($conn, 'SELECT s.staff_id FROM staff s JOIN user_account ua ON ua.email = s.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
         if (empty($rows)) {
             closeDBConnection($conn);
             http_response_code(403);
@@ -35,18 +35,19 @@ try {
     
     // SQL query for doctor info (all lowercase)
     $sql = "SELECT 
-                d.doctor_id,
-                d.first_name,
-                d.last_name,
-                d.email,
-                d.phone,
-                d.license_number,
+                s.staff_id,
+                s.first_name,
+                s.last_name,
+                s.email,
+                s.phone,
+                s.license_number,
                 s.specialty_name,
                 cg.gender_text as gender
-            FROM doctor d
+            FROM staff s
+            LEFT JOIN doctor d ON s.staff_id = d.doctor_id
             LEFT JOIN specialty s ON d.specialty = s.specialty_id
             LEFT JOIN codes_gender cg ON d.gender = cg.gender_code
-            WHERE d.doctor_id = ?";
+            WHERE s.staff_id = ?";
 
     $result = executeQuery($conn, $sql, 'i', [$doctor_id]);
     
