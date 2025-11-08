@@ -1,70 +1,35 @@
 const BASE_URL = '/api/nurse_api';
 
-// Dashboard Stats
-export async function getNurseDashboardStats(date = new Date().toISOString().slice(0,10)) {
-  const response = await fetch(`${BASE_URL}/dashboard/get-stats.php?date=${encodeURIComponent(date)}`, {
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+async function getJSON(url) {
+  const resp = await fetch(url, { credentials: 'include' });
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try { const data = await resp.json(); msg = data.error || data.message || msg; } catch (e) {}
+    throw new Error(msg);
   }
-
-  return response.json();
+  return resp.json();
 }
 
-// Schedule - with date parameter
+export function getNurseDashboardStats(date = new Date().toISOString().slice(0,10)) {
+  return getJSON(`${BASE_URL}/dashboard/get-stats.php?date=${encodeURIComponent(date)}`);
+}
+
 export async function getNurseSchedule(date = new Date().toISOString().slice(0,10)) {
-  const response = await fetch(`${BASE_URL}/schedule/get-by-date.php?date=${encodeURIComponent(date)}`, {
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const data = await response.json();
+  const data = await getJSON(`${BASE_URL}/schedule/get-by-date.php?date=${encodeURIComponent(date)}`);
   return data.appointments || [];
 }
 
-export async function getNurseScheduleToday() {
+export function getNurseScheduleToday() {
   return getNurseSchedule(new Date().toISOString().slice(0,10));
 }
 
-// Profile
-export async function getNurseProfile() {
-  const response = await fetch(`${BASE_URL}/profile/get.php`, {
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
+export function getNurseProfile() {
+  return getJSON(`${BASE_URL}/profile/get.php`);
 }
 
-// Patients
-export async function getNursePatients(query = '', page = 1, pageSize = 10) {
-  const params = new URLSearchParams({
-    q: query,
-    page: String(page),
-    limit: String(pageSize),
-  });
-
-  const response = await fetch(`${BASE_URL}/patients/get-all.php?${params.toString()}`, {
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
+export function getNursePatients(query = '', page = 1, pageSize = 10) {
+  const params = new URLSearchParams({ q: query, page: String(page), limit: String(pageSize) });
+  return getJSON(`${BASE_URL}/patients/get-all.php?${params.toString()}`);
 }
 
 // Clinical - Save Nurse Note
