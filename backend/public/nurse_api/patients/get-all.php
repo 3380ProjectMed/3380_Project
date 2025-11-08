@@ -1,51 +1,59 @@
 <?php
-require_once __DIR__ . '/../../lib/db.php';
+declare(strict_types=1);
+header('Content-Type: application/json');
 require_once __DIR__ . '/../_bootstrap.php';
 
+function fail(int $code, string $msg, array $extra = []): void {
+  http_response_code($code);
+  echo json_encode(array_merge(['error' => $msg], $extra));
+  exit;
+}
+
 try {
-    $q = $_GET['q'] ?? null;
-    $page = max(1, intval($_GET['page'] ?? 1));
-    $pageSize = max(1, intval($_GET['pageSize'] ?? 25));
-    $offset = ($page - 1) * $pageSize;
+    $q = trim((string)($_GET['q'] ?? ''));
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $limit = max(1, min(50, (int)($_GET['limit'] ?? 10)));
+    $offset = ($page - 1) * $limit;
 
-    $where = "";
-    $types = '';
     $params = [];
-
-    if ($q) {
-        $where = " WHERE (p.first_name LIKE ? OR p.last_name LIKE ? OR p.patient_id LIKE ?)";
-        $like = "%{$q}%";
-        $types = 'sss';
-        $params = [$like, $like, $like];
+    $where = '';
+    $types = '';
+    if ($q !== '') {
+        // if query looks like p123 or numeric, search by id
+        if (preg_match('/^p?(\d+)$/i', $q, $m)) {
+            $where = ' WHERE p.patient_id = ?';
+            $types .= 'i';
+            $params[] = (int)$m[1];
+        } else {
+            $like = "%{$q}%";
+            $where = ' WHERE (p.first_name LIKE ? OR p.last_name LIKE ? OR CONCAT(p.first_name, " ", p.last_name) LIKE ?)';
+            $types .= 'sss';
+            $params[] = $like; $params[] = $like; $params[] = $like;
+        }
     }
 
-    $sql = "SELECT SQL_CALC_FOUND_ROWS p.patient_id AS id, CONCAT(p.first_name,' ',p.last_name) AS name,
-                   DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.allergies AS allergies, p.email AS email, p.phone AS phone
-              FROM patient p" . $where . " ORDER BY p.last_name, p.first_name LIMIT ? OFFSET ?";
+    $sql = "SELECT SQL_CALC_FOUND_ROWS p.patient_id AS patient_id, p.first_name, p.last_name, DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.allergies
+            FROM patient p {$where} ORDER BY p.last_name, p.first_name LIMIT ? OFFSET ?";
 
     $types .= 'ii';
-    $params[] = $pageSize;
-    $params[] = $offset;
+    $params[] = $limit; $params[] = $offset;
 
     $rows = executeQuery($pdo, $sql, $types, $params);
 
-    // get total
-    $totalRows = executeQuery($pdo, 'SELECT FOUND_ROWS() as cnt');
-    $total = $totalRows && isset($totalRows[0]['cnt']) ? (int)$totalRows[0]['cnt'] : count($rows);
+    $cntRows = executeQuery($pdo, 'SELECT FOUND_ROWS() AS total');
+    $total = isset($cntRows[0]['total']) ? (int)$cntRows[0]['total'] : count($rows ?: []);
 
-    $items = [];
-    foreach ($rows as $r) {
-        $items[] = [
-            'id' => 'p' . $r['id'],
-            'name' => $r['name'],
-            'dob' => $r['dob'],
-            'allergies' => $r['allergies'],
-            'email' => $r['email'],
-            'phone' => $r['phone']
+    $items = array_map(function($r) {
+        return [
+            'patient_id' => 'p' . $r['patient_id'],
+            'first_name' => $r['first_name'],
+            'last_name'  => $r['last_name'],
+            'dob'        => $r['dob'],
+            'allergies'  => $r['allergies'],
         ];
-    }
+    }, $rows ?: []);
 
-    echo json_encode(['patients' => $items, 'total' => $total]);
+    echo json_encode(['items' => $items, 'total' => $total]);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Failed to load patients', 'message' => $e->getMessage()]);
