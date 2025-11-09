@@ -10,42 +10,50 @@ require_once '/home/site/wwwroot/database.php';
 try {
     session_start();
     
+    // Verify authentication and role first
+    if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit;
+    }
+    
     $conn = getDBConnection();
     
-    if (isset($_GET['doctor_id'])) {
-        $doctor_id = intval($_GET['doctor_id']);
-    } else {
-        // Verify authentication and role
-        if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
-            http_response_code(401);
-            echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-            exit;
-        }
-        
-        if ($_SESSION['role'] !== 'DOCTOR') {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'Doctor access required']);
-            exit;
-        }
-        
-        // user_id = staff_id for doctors
+    // Get logged-in user's doctor_id (if they're a doctor)
+    $logged_in_doctor_id = null;
+    if ($_SESSION['role'] === 'DOCTOR') {
         $staff_id = (int)$_SESSION['uid'];
-        
-        // Get doctor_id from staff_id
         $rows = executeQuery($conn, 
             'SELECT doctor_id FROM doctor WHERE staff_id = ? LIMIT 1', 
             'i', 
             [$staff_id]
         );
+        if (!empty($rows)) {
+            $logged_in_doctor_id = (int)$rows[0]['doctor_id'];
+        }
+    }
+    
+    // Determine which doctor profile to fetch
+    if (isset($_GET['doctor_id'])) {
+        $requested_doctor_id = intval($_GET['doctor_id']);
         
-        if (empty($rows)) {
-            closeDBConnection($conn);
+        // Security: Only allow viewing own profile or if admin/receptionist
+        if ($_SESSION['role'] === 'DOCTOR' && $requested_doctor_id !== $logged_in_doctor_id) {
             http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'No doctor record found for this user']);
+            echo json_encode(['success' => false, 'error' => 'Cannot view other doctor profiles']);
             exit;
         }
         
-        $doctor_id = (int)$rows[0]['doctor_id'];
+        $doctor_id = $requested_doctor_id;
+    } else {
+        // No parameter - use logged-in doctor
+        if ($_SESSION['role'] !== 'DOCTOR' || !$logged_in_doctor_id) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Doctor access required']);
+            exit;
+        }
+        
+        $doctor_id = $logged_in_doctor_id;
     }
     
     // SQL query for doctor info
