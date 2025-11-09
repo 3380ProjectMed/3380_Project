@@ -87,12 +87,13 @@ try {
                 pv.status as visit_status,
                 pv.start_at as check_in_time,
                 pv.end_at as completion_time,
-                pi.copay
+                -- pi.copay
+                pv.payment
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
             LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
-            LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
+            -- LEFT JOIN patient_insurance pi ON p.insuranceid = pi.id AND pi.is_primary = 1
             LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             WHERE a.Office_id = ? $dateFilter
             ORDER BY a.Appointment_date ASC";
@@ -111,6 +112,9 @@ try {
         'cancelled' => 0,
         'no_show' => 0
     ];
+    
+    $payment_count = 0;
+    $total_collected = 0.0;
     
     $formatted_appointments = [];
     
@@ -171,6 +175,12 @@ try {
             $stats['scheduled']++;
         }
         
+        // Track payment statistics
+        if ($apt['payment'] && $apt['payment'] > 0) {
+            $payment_count++;
+            $total_collected += (float)$apt['payment'];
+        }
+        
         // Format appointment data
         $formatted_appointments[] = [
             // ID fields (multiple formats for compatibility)
@@ -217,6 +227,13 @@ try {
     }
     
     $stats['total'] = count($formatted_appointments);
+    
+    // Add payment statistics to stats
+    $stats['payment'] = [
+        'count' => $payment_count,
+        'total_collected' => number_format($total_collected, 2),
+        'total_collected_raw' => $total_collected
+    ];
     
     closeDBConnection($conn);
     

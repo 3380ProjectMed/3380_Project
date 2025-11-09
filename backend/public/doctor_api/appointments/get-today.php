@@ -7,29 +7,39 @@ require_once '/home/site/wwwroot/database.php';
 
 try {
     session_start();
-    if (empty($_SESSION['uid'])) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-        exit;
-    }
-
+    
     $conn = getDBConnection();
     
-    // Determine doctor_id
+    // Get doctor_id from query param or derive from session
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
     } else {
-        $user_id = (int)$_SESSION['uid'];
-        $rows = executeQuery($conn, '
-            SELECT d.doctor_id
-            FROM doctor d
-            JOIN user_account ua ON ua.email = d.email
-            WHERE ua.user_id = ?', 'i', [$user_id]);
+        // Verify authentication and role
+        if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+            exit;
+        }
+        
+        if ($_SESSION['role'] !== 'DOCTOR') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Doctor access required']);
+            exit;
+        }
+        
+        // user_id = staff_id for doctors, get doctor_id
+        $staff_id = (int)$_SESSION['uid'];
+        
+        $rows = executeQuery($conn, 
+            'SELECT doctor_id FROM doctor WHERE staff_id = ? LIMIT 1', 
+            'i', 
+            [$staff_id]
+        );
         
         if (empty($rows)) {
             closeDBConnection($conn);
             http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'No doctor account associated with the logged-in user']);
+            echo json_encode(['success' => false, 'error' => 'No doctor record found']);
             exit;
         }
         

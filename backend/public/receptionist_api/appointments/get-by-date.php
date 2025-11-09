@@ -29,9 +29,10 @@ try {
     
     try {
         $rows = executeQuery($conn, '
-            SELECT s.work_location as office_id
+            SELECT s.work_location as office_id, o.name as office_name
             FROM staff s
             JOIN user_account ua ON ua.email = s.staff_email
+            LEFT JOIN office o ON s.work_location = o.office_id
             WHERE ua.user_id = ?', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
@@ -46,6 +47,7 @@ try {
     }
     
     $office_id = (int)$rows[0]['office_id'];
+    $office_name = $rows[0]['office_name'] ?? 'Unknown Office';
     
     $sql = "SELECT
                 a.Appointment_id,
@@ -59,12 +61,11 @@ try {
                 d.doctor_id as doctor_id,
                 pv.status as visit_status,
                 pv.start_at as Check_in_time,
-                pi.copay
+                pv.payment as copay
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
             LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
-            LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
             WHERE a.Office_id = ?
             AND DATE(a.Appointment_date) = ?
             ORDER BY a.Appointment_date ASC";
@@ -115,7 +116,10 @@ try {
         'appointments' => $formatted_appointments,
         'count' => count($formatted_appointments),
         'date' => $date,
-        'office_id' => $office_id
+        'office' => [
+            'id' => $office_id,
+            'name' => $office_name
+        ]
     ]);
     
 } catch (Exception $e) {

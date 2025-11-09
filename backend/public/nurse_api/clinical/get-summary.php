@@ -10,7 +10,6 @@ try {
         exit;
     }
 
-    // fetch appointment and patient
     $sql = "SELECT a.appointment_id AS id, a.appointment_date AS time, a.status, a.reason_for_visit AS reason,
                 p.patient_id AS patientId, CONCAT(p.first_name,' ',p.last_name) AS patientName,
                 DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.allergies AS allergies
@@ -25,8 +24,6 @@ try {
         exit;
     }
     $apt = $rows[0];
-
-    // access control removed for assigned_nurse_id (not present in schema); rely on higher-level auth/role
 
     // vitals
     $vrows = executeQuery($pdo, 'SELECT bp, hr, temp, spo2, height, weight FROM vitals WHERE appointment_id = ? LIMIT 1', 'i', [$apptId]);

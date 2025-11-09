@@ -39,9 +39,11 @@ try {
     
     // Get user role and associated doctor/admin info
     $userQuery = "SELECT ua.role, d.doctor_id 
-                  FROM user_account ua 
-                  LEFT JOIN doctor d ON ua.email = d.email 
-                  WHERE ua.user_id = ? LIMIT 1";
+              FROM user_account ua 
+              LEFT JOIN staff s ON ua.email = s.staff_email AND s.staff_role = 'Doctor'
+              LEFT JOIN doctor d ON s.staff_id = d.doctor_id
+              WHERE ua.user_id = ? 
+              LIMIT 1";
     $userInfo = executeQuery($conn, $userQuery, 'i', [$user_id]);
     
     if (!is_array($userInfo) || count($userInfo) === 0) {
@@ -52,7 +54,7 @@ try {
     }
     
     $userRole = $userInfo[0]['role'];
-    $loggedInDoctorId = $userInfo[0]['doctor_id'];
+    $loggedInDoctorId = $userInfo[0]['staff_id'];
     
     // Verify user has permission to access reports
     if (!in_array($userRole, ['DOCTOR', 'ADMIN'])) {
@@ -152,7 +154,7 @@ try {
         p.dob as patient_dob,
         p.emergency_contact_id as patient_ec_id,
         CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
-        d.doctor_id as doctor_id,
+        st.staff_id as doctor_id,
         s.specialty_name as doctor_specialty,
         o.name as office_name,
         o.office_id as office_id,
@@ -171,7 +173,8 @@ try {
         ipayer.name as insurance_company
     FROM appointment a
     LEFT JOIN patient p ON a.Patient_id = p.patient_id
-    LEFT JOIN doctor d ON a.Doctor_id = d.doctor_id
+    LEFT JOIN staff st ON a.Doctor_id = st.doctor_id
+    LEFT JOIN doctor d ON st.staff_id = d.staff_id
     LEFT JOIN specialty s ON d.specialty = s.specialty_id
     LEFT JOIN office o ON a.Office_id = o.office_id
     LEFT JOIN (

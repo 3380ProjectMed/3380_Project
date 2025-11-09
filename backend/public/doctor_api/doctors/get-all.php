@@ -31,18 +31,19 @@ try {
     
     // Get all doctors with their specialty (all lowercase for Azure)
     $sql = "SELECT 
-                d.doctor_id,
-                d.first_name,
-                d.last_name,
-                d.email,
+                st.doctor_id,
+                st.first_name,
+                st.last_name,
+                st.staff_email,
                 d.phone,
-                d.license_number,
+                st.license_number,
                 s.specialty_name,
                 cg.gender_text as gender
-            FROM doctor d
+            FROM staff st
+            LEFT JOIN doctor d ON st.staff_id = d.staff_id
             LEFT JOIN specialty s ON d.specialty = s.specialty_id
-            LEFT JOIN codes_gender cg ON d.gender = cg.gender_code
-            ORDER BY d.last_name, d.first_name";
+            LEFT JOIN codes_gender cg ON st.gender = cg.gender_code
+            ORDER BY st.last_name, st.first_name";
     
     $doctors = executeQuery($conn, $sql, '', []);
     

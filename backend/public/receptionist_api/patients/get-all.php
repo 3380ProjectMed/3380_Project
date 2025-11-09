@@ -19,7 +19,7 @@ try {
     $verifyStaffSql = "SELECT s.staff_id 
                        FROM staff s 
                        JOIN user_account ua ON ua.email = s.staff_email 
-                       WHERE ua.user_id = ? AND s.staff_role = 'RECEPTIONIST'";
+                       WHERE ua.user_id = ? AND s.staff_role = 'Receptionist'";
     $staffResult = executeQuery($conn, $verifyStaffSql, 'i', [$user_id]);
     
     if (empty($staffResult)) {
@@ -36,7 +36,7 @@ try {
         // Search by name, phone or dob
         $like = '%' . $q . '%';
         $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact_id,
-                       pi.copay, ip.plan_name, ip.plan_type
+                       ip.copay, ip.plan_name, ip.plan_type
                 FROM patient p
                 LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
                 LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
@@ -46,7 +46,7 @@ try {
     } else {
         // Return a limited list to avoid huge payloads (pagination could be added later)
         $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact_id,
-                       pi.copay, ip.plan_name, ip.plan_type
+                       ip.copay, ip.plan_name, ip.plan_type
                 FROM patient p
                 LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
                 LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id

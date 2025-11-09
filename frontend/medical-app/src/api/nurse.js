@@ -1,84 +1,53 @@
-const BASE_URL = '/api/nurse';
+const BASE_URL = '/api/nurse_api';
 
-// Dashboard Stats
-export async function getNurseDashboardStats(date) {
-  const response = await fetch(`${BASE_URL}/dashboard/get-stats.php?date=${date}`, {
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+async function getJSON(url) {
+  const resp = await fetch(url, { credentials: 'include' });
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try { const data = await resp.json(); msg = data.error || data.message || msg; } catch (e) {}
+    throw new Error(msg);
   }
-
-  return response.json();
+  return resp.json();
 }
 
-// Schedule - with date parameter
-export async function getNurseSchedule({ date }) {
-  const response = await fetch(`${BASE_URL}/schedule/get-by-date.php?date=${date}`, {
-    credentials: 'include',
-  });
+// Dashboard stats
+export function getNurseDashboardStats(date = new Date().toISOString().slice(0,10)) {
+  return getJSON(`${BASE_URL}/dashboard/get-stats.php?date=${encodeURIComponent(date)}`);
+}
 
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const data = await response.json();
+// Schedule by date (for dashboard appointments) - FIXED to handle both response formats
+export async function getNurseSchedule(params) {
+  // Handle both object { date: '...' } and string date
+  const dateStr = typeof params === 'string' ? params : (params?.date || new Date().toISOString().slice(0,10));
+  const data = await getJSON(`${BASE_URL}/schedule/get-by-date.php?date=${encodeURIComponent(dateStr)}`);
   
-  // Return appointments array directly (matching what NurseDashboard expects)
-  return data.appointments || data.data || [];
+  // Handle both response formats: plain array or { appointments: [...] }
+  if (Array.isArray(data)) {
+    return data;
+  }
+  return data.appointments || [];
 }
 
-// Schedule - today (existing function)
+// Schedule today (weekly recurring schedule for Schedule page)
 export async function getNurseScheduleToday() {
-  const today = new Date().toISOString().slice(0, 10);
-  const response = await fetch(`${BASE_URL}/schedule/get-by-date.php?date=${today}`, {
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+  const data = await getJSON(`${BASE_URL}/schedule/get-today.php`);
+  
+  // Handle response format: { success: true, schedule: [...] } or plain array
+  if (data.schedule) {
+    return data.schedule;
   }
-
-  const data = await response.json();
-  return data.appointments || data || [];
+  return Array.isArray(data) ? data : [];
 }
 
 // Profile
-export async function getNurseProfile() {
-  const response = await fetch(`${BASE_URL}/profile/get.php`, {
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
+export function getNurseProfile() {
+  return getJSON(`${BASE_URL}/profile/get.php`);
 }
 
-// Patients
-export async function getNursePatients(query = '', page = 1, pageSize = 10) {
-  const params = new URLSearchParams({
-    q: query,
-    page: page.toString(),
-    pageSize: pageSize.toString(),
-  });
-
-  const response = await fetch(`${BASE_URL}/patients/get-all.php?${params}`, {
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
+// Patients with pagination
+export function getNursePatients(query = '', page = 1, pageSize = 10) {
+  const params = new URLSearchParams({ q: query, page: String(page), limit: String(pageSize) });
+  return getJSON(`${BASE_URL}/patients/get-all.php?${params.toString()}`);
 }
 
 // Clinical - Save Nurse Note

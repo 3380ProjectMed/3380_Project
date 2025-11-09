@@ -21,9 +21,9 @@ try {
     // Get doctor info
     $conn = getDBConnection();
     $rows = executeQuery($conn, '
-        SELECT d.doctor_id, CONCAT(d.first_name, " ", d.last_name) as doctor_name
-        FROM doctor d
-        JOIN user_account ua ON ua.email = d.email
+        SELECT s.staff_id, CONCAT(s.first_name, " ", s.last_name) as doctor_name
+        FROM staff s
+        JOIN user_account ua ON ua.email = s.staff_email
         WHERE ua.user_id = ?', 'i', [$user_id]);
     
     if (empty($rows)) {
