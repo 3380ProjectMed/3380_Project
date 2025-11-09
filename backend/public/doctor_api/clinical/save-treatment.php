@@ -24,7 +24,7 @@ try {
     $rows = executeQuery($conn, '
         SELECT s.staff_id 
         FROM staff s
-        JOIN user_account ua ON ua.email = s.email
+        JOIN user_account ua ON ua.email = s.staff_email
         WHERE ua.user_id = ?', 'i', [$user_id]);
     
     if (empty($rows)) {

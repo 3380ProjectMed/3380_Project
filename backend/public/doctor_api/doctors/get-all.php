@@ -34,7 +34,7 @@ try {
                 st.doctor_id,
                 st.first_name,
                 st.last_name,
-                st.email,
+                st.staff_email,
                 st.phone,
                 st.license_number,
                 s.specialty_name,

@@ -39,9 +39,11 @@ try {
     
     // Get user role and associated doctor/admin info
     $userQuery = "SELECT ua.role, d.doctor_id 
-                  FROM user_account ua 
-                  LEFT JOIN doctor d ON ua.email = d.email 
-                  WHERE ua.user_id = ? LIMIT 1";
+              FROM user_account ua 
+              LEFT JOIN staff s ON ua.email = s.staff_email AND s.staff_role = 'Doctor'
+              LEFT JOIN doctor d ON s.staff_id = d.doctor_id
+              WHERE ua.user_id = ? 
+              LIMIT 1";
     $userInfo = executeQuery($conn, $userQuery, 'i', [$user_id]);
     
     if (!is_array($userInfo) || count($userInfo) === 0) {
@@ -52,7 +54,7 @@ try {
     }
     
     $userRole = $userInfo[0]['role'];
-    $loggedInDoctorId = $userInfo[0]['doctor_id'];
+    $loggedInDoctorId = $userInfo[0]['staff_id'];
     
     // Verify user has permission to access reports
     if (!in_array($userRole, ['DOCTOR', 'ADMIN'])) {
