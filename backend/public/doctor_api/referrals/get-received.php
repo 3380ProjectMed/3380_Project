@@ -37,7 +37,7 @@ try {
             FROM referral r
             INNER JOIN patient p ON r.patient_id = p.patient_id
             LEFT JOIN staff st ON r.specialist_doctor_staff_id = st.staff_id
-            LEFT JOIN doctor d2 ON st.staff_id = d2.doctor_id
+            LEFT JOIN doctor d2 ON st.staff_id = d2.staff_id
             LEFT JOIN specialty s ON d2.specialty = s.specialty_id
             WHERE r.specialist_doctor_staff_id = ?
             ORDER BY r.referral_id DESC";
