@@ -135,7 +135,13 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       onAppointmentClick(appointment);
     }
   };
-
+  const getCurrentDate = () => {
+    return new Date().toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
   /**
    * Render status actions for each appointment
    */
