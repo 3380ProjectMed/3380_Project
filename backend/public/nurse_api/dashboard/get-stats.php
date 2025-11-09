@@ -29,8 +29,7 @@ try {
   $nurse_id = (int)$rows[0]['nurse_id'];
   $date = $_GET['date'] ?? date('Y-m-d');
 
-  // Get appointments for THIS nurse only
-  $sql = "SELECT a.Status 
+$sql = "SELECT a.Status 
           FROM appointment a
           JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
           WHERE DATE(a.Appointment_date) = ?
