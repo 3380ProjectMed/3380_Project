@@ -39,12 +39,12 @@ try {
                 st.first_name,
                 st.last_name,
                 st.staff_email,
-                st.phone,
+                d.phone,
                 st.license_number,
-                st.specialty_name,
+                s.specialty_name,
                 cg.gender_text as gender
             FROM staff st
-            LEFT JOIN doctor d ON st.staff_id = d.doctor_id
+            LEFT JOIN doctor d ON st.staff_id = d.staff_id
             LEFT JOIN specialty s ON d.specialty = s.specialty_id
             LEFT JOIN codes_gender cg ON d.gender = cg.gender_code
             WHERE s.staff_id = ?";

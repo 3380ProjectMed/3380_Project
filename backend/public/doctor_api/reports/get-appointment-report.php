@@ -174,7 +174,7 @@ try {
     FROM appointment a
     LEFT JOIN patient p ON a.Patient_id = p.patient_id
     LEFT JOIN staff st ON a.Doctor_id = st.doctor_id
-    LEFT JOIN doctor d ON st.staff_id = d.doctor_id
+    LEFT JOIN doctor d ON st.staff_id = d.staff_id
     LEFT JOIN specialty s ON d.specialty = s.specialty_id
     LEFT JOIN office o ON a.Office_id = o.office_id
     LEFT JOIN (

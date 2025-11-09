@@ -35,12 +35,12 @@ try {
                 st.first_name,
                 st.last_name,
                 st.staff_email,
-                st.phone,
+                d.phone,
                 st.license_number,
                 s.specialty_name,
                 cg.gender_text as gender
             FROM staff st
-            LEFT JOIN doctor d ON st.staff_id = d.doctor_id
+            LEFT JOIN doctor d ON st.staff_id = d.staff_id
             LEFT JOIN specialty s ON d.specialty = s.specialty_id
             LEFT JOIN codes_gender cg ON st.gender = cg.gender_code
             ORDER BY st.last_name, st.first_name";
