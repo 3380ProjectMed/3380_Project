@@ -24,8 +24,8 @@ try {
          FROM doctor d
          LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
          JOIN specialty s ON d.specialty = s.specialty_id
-         WHERE d.work_location = ?
-         ORDER BY doc_staff.last_name, doc_staff.first_name";
+    WHERE doc_staff.work_location = ?
+    ORDER BY doc_staff.last_name, doc_staff.first_name";
 
     $rows = executeQuery($conn, $sql, 'i', [$officeId]);
     closeDBConnection($conn);
