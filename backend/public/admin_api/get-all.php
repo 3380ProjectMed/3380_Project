@@ -38,7 +38,7 @@ try {
                 u.last_login_at,
                 u.mfa_enabled,
                 CASE 
-                    WHEN u.role = 'DOCTOR' THEN CONCAT(d.First_Name, ' ', d.Last_Name)
+                    WHEN u.role = 'DOCTOR' THEN CONCAT(sf.first_name, ' ', sf.last_name)
                     WHEN u.role = 'PATIENT' THEN CONCAT(p.First_Name, ' ', p.Last_Name)
                     ELSE u.username
                 END as full_name,
@@ -46,6 +46,7 @@ try {
                 p.Patient_ID
             FROM user_account u
             LEFT JOIN Doctor d ON u.email = d.Email AND u.role = 'DOCTOR'
+            LEFT JOIN staff sf ON d.staff_id = sf.staff_id
             LEFT JOIN Patient p ON u.email = p.Email AND u.role = 'PATIENT'
             ORDER BY u.created_at DESC";
     

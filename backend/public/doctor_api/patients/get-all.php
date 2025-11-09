@@ -9,9 +9,9 @@ require_once '/home/site/wwwroot/database.php';
 try {
     error_reporting(E_ALL);
     error_log("=== Get All Patients API Called ===");
-    
+
     $conn = getDBConnection();
-    
+
     // Determine doctor_id: query param overrides, otherwise resolve from logged-in user
     $doctor_id = null;
     if (isset($_GET['doctor_id'])) {
@@ -35,11 +35,11 @@ try {
             closeDBConnection($conn);
             exit;
         }
-        $doctor_id = (int)$rows[0]['doctor_id'];
+        $doctor_id = (int) $rows[0]['doctor_id'];
     }
-    
+
     error_log("Querying patients for doctor_id: " . $doctor_id);
-    
+
     // SQL query - Azure database uses lowercase table names
     // appointment table has mixed case: Appointment_date, Patient_id, etc.
     // patient table has all lowercase columns
@@ -63,11 +63,11 @@ try {
             GROUP BY p.patient_id, p.first_name, p.last_name, p.dob, p.email, 
                      p.emergency_contact_id, p.blood_type, ca.allergies_text, cg.gender_text
             ORDER BY p.last_name, p.first_name";
-    
+
     $patients = executeQuery($conn, $sql, 'i', [$doctor_id]);
-    
+
     error_log("Found " . count($patients) . " patients");
-    
+
     // Format response
     $formatted_patients = [];
     foreach ($patients as $patient) {
@@ -82,7 +82,7 @@ try {
                 error_log("Error calculating age: " . $e->getMessage());
             }
         }
-        
+
         $formatted_patients[] = [
             'id' => 'P' . str_pad($patient['patient_id'], 3, '0', STR_PAD_LEFT),
             'name' => $patient['first_name'] . ' ' . $patient['last_name'],
@@ -103,14 +103,15 @@ try {
     // Enrich each patient with chronic conditions and current medications
     foreach ($formatted_patients as $idx => $fp) {
         $rawId = isset($fp['id']) ? intval(preg_replace('/[^0-9]/', '', $fp['id'])) : 0;
-        if ($rawId <= 0) continue;
+        if ($rawId <= 0)
+            continue;
 
         // Fetch medical conditions
         try {
             $mc_sql = "SELECT condition_name FROM medical_condition WHERE patient_id = ? ORDER BY diagnosis_date DESC";
             $mcs = executeQuery($conn, $mc_sql, 'i', [$rawId]);
             if (is_array($mcs)) {
-                $formatted_patients[$idx]['chronicConditions'] = array_values(array_map(function($r){
+                $formatted_patients[$idx]['chronicConditions'] = array_values(array_map(function ($r) {
                     return $r['condition_name'] ?? '';
                 }, $mcs));
             }
@@ -124,18 +125,19 @@ try {
                        p.prescription_id, 
                        p.medication_name as name, 
                        CONCAT(p.dosage, ' - ', p.frequency) as frequency, 
-                       CONCAT(d.first_name, ' ', d.last_name) as prescribed_by, 
+                       CONCAT(sf.first_name, ' ', sf.last_name) as prescribed_by, 
                        p.start_date, 
                        p.end_date, 
                        p.notes
                        FROM prescription p
                        LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
+                       LEFT JOIN staff sf ON d.staff_id = sf.staff_id
                        WHERE p.patient_id = ?
                        AND (p.end_date IS NULL OR p.end_date >= CURDATE())
                        ORDER BY p.start_date DESC";
             $rxs = executeQuery($conn, $rx_sql, 'i', [$rawId]);
             if (is_array($rxs)) {
-                $formatted_patients[$idx]['currentMedications'] = array_map(function($m){
+                $formatted_patients[$idx]['currentMedications'] = array_map(function ($m) {
                     return [
                         'id' => $m['prescription_id'] ?? null,
                         'name' => $m['name'] ?? '',
@@ -151,15 +153,15 @@ try {
             error_log("Error fetching prescriptions for patient $rawId: " . $e->getMessage());
         }
     }
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'patients' => $formatted_patients,
         'count' => count($formatted_patients)
     ]);
-    
+
 } catch (Exception $e) {
     error_log("Fatal error in get-all.php: " . $e->getMessage());
     error_log("Stack trace: " . $e->getTraceAsString());

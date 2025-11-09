@@ -68,7 +68,7 @@ try {
                 p.dob,
                 pv.appointment_id,
                 a.Appointment_date,
-                CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as doctor_name,
                 -- Insurance info
                 ipayer.name as payer_name,
                 iplan.plan_name
@@ -76,6 +76,7 @@ try {
             LEFT JOIN Appointment a ON pv.appointment_id = a.Appointment_id
             INNER JOIN patient p ON pv.patient_id = p.patient_id
             LEFT JOIN doctor d ON pv.doctor_id = d.doctor_id
+            LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
             LEFT JOIN patient_insurance pi ON pv.insurance_policy_id_used = pi.id
             LEFT JOIN insurance_plan iplan ON pi.plan_id = iplan.plan_id
             LEFT JOIN insurance_payer ipayer ON iplan.payer_id = ipayer.payer_id
