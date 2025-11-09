@@ -265,11 +265,10 @@ if ($endpoint === 'dashboard') {
                     s.specialty_name,
                     o.name as office_name,
                     d.phone,
-                    d.email,
+                    doc_staff.staff_email,
                     CONCAT(o.address, ', ', o.city, ', ', o.state) as location
                 FROM patient p
                 LEFT JOIN doctor d ON p.primary_doctor = d.doctor_id
-                LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
                 LEFT JOIN office o ON doc_staff.work_location = o.office_id
