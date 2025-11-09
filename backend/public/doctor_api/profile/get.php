@@ -21,7 +21,7 @@ try {
         $user_id = (int)$_SESSION['uid'];
 
         $conn = getDBConnection();
-        $rows = executeQuery($conn, 'SELECT s.staff_id FROM staff s JOIN user_account ua ON ua.email = s.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $rows = executeQuery($conn, 'SELECT s.staff_id FROM staff s JOIN user_account ua ON ua.email = s.email_email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
         if (empty($rows)) {
             closeDBConnection($conn);
             http_response_code(403);
@@ -38,7 +38,7 @@ try {
                 st.staff_id,
                 st.first_name,
                 st.last_name,
-                st.email,
+                st.staff_email,
                 st.phone,
                 st.license_number,
                 st.specialty_name,
