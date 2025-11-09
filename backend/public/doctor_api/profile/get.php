@@ -35,16 +35,16 @@ try {
     
     // SQL query for doctor info (all lowercase)
     $sql = "SELECT 
-                s.staff_id,
-                s.first_name,
-                s.last_name,
-                s.email,
-                s.phone,
-                s.license_number,
-                s.specialty_name,
+                st.staff_id,
+                st.first_name,
+                st.last_name,
+                st.email,
+                st.phone,
+                st.license_number,
+                st.specialty_name,
                 cg.gender_text as gender
-            FROM staff s
-            LEFT JOIN doctor d ON s.staff_id = d.doctor_id
+            FROM staff st
+            LEFT JOIN doctor d ON st.staff_id = d.doctor_id
             LEFT JOIN specialty s ON d.specialty = s.specialty_id
             LEFT JOIN codes_gender cg ON d.gender = cg.gender_code
             WHERE s.staff_id = ?";
