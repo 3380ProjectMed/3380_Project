@@ -46,7 +46,7 @@ try {
     $patient = $patientRows[0];
 
     // Get insurance info
-    $insSql = "SELECT pi.id, ip.copay, pi.deductible_individ, pi.coinsurance_rate_pct,
+    $insSql = "SELECT pi.id, ip.copay, ip.deductible_individual, ip.coinsurance_rate,
                       ip.plan_name, ip.plan_type,
                       py.name as payer_name
                FROM patient_insurance pi

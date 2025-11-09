@@ -272,7 +272,7 @@ if ($endpoint === 'dashboard') {
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN office o ON d.work_location = o.office_id
+                LEFT JOIN office o ON doc_staff.work_location = o.office_id
                 WHERE p.patient_id = ?
             ");
             $stmt->bind_param('i', $patient_id);
@@ -349,7 +349,7 @@ elseif ($endpoint === 'profile') {
                 LEFT JOIN doctor d ON p.primary_doctor = d.doctor_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN office o ON d.work_location = o.office_id
+                LEFT JOIN office o ON doc_staff.work_location = o.office_id
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
                 LEFT JOIN codes_assigned_at_birth_gender cag ON p.assigned_at_birth_gender = cag.gender_code
                 LEFT JOIN codes_ethnicity ce ON p.ethnicity = ce.ethnicity_code
@@ -773,7 +773,7 @@ elseif ($endpoint === 'doctors') {
                     CONCAT(o.address, ', ', o.city, ', ', o.state) as location
                 FROM doctor d
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN office o ON d.work_location = o.office_id
+                LEFT JOIN office o ON doc_staff.work_location = o.office_id
             ";
 
             // Add WHERE clause if specialty filter is provided
@@ -1090,9 +1090,9 @@ elseif ($endpoint === 'insurance') {
                     pi.effective_date,
                     pi.expiration_date,
                     pi.is_primary,
-                    pi.copay,
-                    pi.deductible_individ,
-                    pi.coinsurance_rate_pct,
+                    ipl.copay,
+                    ipl.deductible_individual,
+                    ipl.coinsurance_rate,
                     ip.NAME as provider_name,
                     ipl.plan_name,
                     ipl.plan_type

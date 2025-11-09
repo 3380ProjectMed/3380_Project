@@ -39,7 +39,7 @@ try {
             AND pv.status IN ('Checked In', 'Completed')
             AND (
                 CONCAT(p.first_name, ' ', p.last_name) LIKE ?
-                OR p.emergency_contact LIKE ?
+                OR p.emergency_contact_id LIKE ?
                 OR pv.appointment_id = ?
             )
             ORDER BY pv.date DESC
