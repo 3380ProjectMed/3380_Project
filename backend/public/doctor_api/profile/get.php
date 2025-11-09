@@ -1,7 +1,7 @@
 <?php
 /**
  * Get doctor profile
- * Updated for Azure database
+ * Updated for new table structure
  */
 
 require_once '/home/site/wwwroot/cors.php';
@@ -9,45 +9,63 @@ require_once '/home/site/wwwroot/database.php';
 
 try {
     session_start();
-
+    
+    $conn = getDBConnection();
+    
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
     } else {
-        if (empty($_SESSION['uid'])) {
+        // Verify authentication and role
+        if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
             http_response_code(401);
             echo json_encode(['success' => false, 'error' => 'Not authenticated']);
             exit;
         }
-        $user_id = (int)$_SESSION['uid'];
-
-        $conn = getDBConnection();
-        $rows = executeQuery($conn, 'SELECT s.staff_id FROM staff s JOIN user_account ua ON ua.email = s.email_email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        
+        if ($_SESSION['role'] !== 'DOCTOR') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Doctor access required']);
+            exit;
+        }
+        
+        // user_id = staff_id for doctors
+        $staff_id = (int)$_SESSION['uid'];
+        
+        // Get doctor_id from staff_id
+        $rows = executeQuery($conn, 
+            'SELECT doctor_id FROM doctor WHERE staff_id = ? LIMIT 1', 
+            'i', 
+            [$staff_id]
+        );
+        
         if (empty($rows)) {
             closeDBConnection($conn);
             http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'No doctor associated with this user']);
+            echo json_encode(['success' => false, 'error' => 'No doctor record found for this user']);
             exit;
         }
+        
         $doctor_id = (int)$rows[0]['doctor_id'];
     }
     
-    $conn = $conn ?? getDBConnection();
-    
-    // SQL query for doctor info (all lowercase)
+    // SQL query for doctor info
     $sql = "SELECT 
-                st.staff_id,
-                st.first_name,
-                st.last_name,
-                st.staff_email,
-                d.phone,
-                st.license_number,
-                s.specialty_name,
+                d.doctor_id,
+                d.staff_id,
+                s.first_name,
+                s.last_name,
+                s.staff_email,
+                s.license_number,
+                s.work_location,
+                o.name as work_location_name,
+                sp.specialty_name,
                 cg.gender_text as gender
-            FROM staff st
-            LEFT JOIN doctor d ON st.staff_id = d.staff_id
-            LEFT JOIN specialty s ON d.specialty = s.specialty_id
-            LEFT JOIN codes_gender cg ON d.gender = cg.gender_code
-            WHERE s.staff_id = ?";
+            FROM doctor d
+            INNER JOIN staff s ON d.staff_id = s.staff_id
+            LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
+            LEFT JOIN codes_gender cg ON s.gender = cg.gender_code
+            LEFT JOIN office o ON s.work_location = o.office_id
+            WHERE d.doctor_id = ?";
 
     $result = executeQuery($conn, $sql, 'i', [$doctor_id]);
     
@@ -62,11 +80,13 @@ try {
     echo json_encode([
         'success' => true,
         'profile' => [
-            'firstName' => $doctor['first_name'],  // ← Fixed: lowercase from query
-            'lastName' => $doctor['last_name'],     // ← Fixed: lowercase
-            'email' => $doctor['email'],
-            'phone' => $doctor['phone'] ?: 'Not provided',
-            'licenseNumber' => $doctor['license_number'],  // ← Fixed: lowercase
+            'doctorId' => $doctor['doctor_id'],
+            'staffId' => $doctor['staff_id'],
+            'firstName' => $doctor['first_name'],
+            'lastName' => $doctor['last_name'],
+            'email' => $doctor['staff_email'],
+            'licenseNumber' => $doctor['license_number'] ?: 'Not provided',
+            'workLocation' => $doctor['work_location_name'] ?: 'Not assigned',
             'specialties' => [$doctor['specialty_name']],
             'gender' => $doctor['gender'],
             'bio' => ''

@@ -100,8 +100,7 @@ if (!@$mysqli->real_connect($host, $user, $pass, $db, $port, NULL, MYSQLI_CLIENT
 debug_log('Connected successfully');
 $mysqli->set_charset('utf8mb4');
 
-// Updated query for new structure
-// user_id now equals staff_id or patient_id depending on role
+// Simplified query - just get basic user info with names from appropriate table
 $sql = "SELECT 
             ua.user_id, 
             ua.username, 
@@ -114,20 +113,10 @@ $sql = "SELECT
             CASE 
                 WHEN ua.role = 'PATIENT' THEN p.last_name
                 ELSE s.last_name
-            END as last_name,
-            CASE 
-                WHEN ua.role = 'PATIENT' THEN p.patient_id
-                ELSE s.staff_id
-            END as entity_id,
-            d.doctor_id,
-            s.work_location,
-            o.name as work_location_name,
-            s.staff_role
+            END as last_name
         FROM user_account ua
         LEFT JOIN staff s ON ua.user_id = s.staff_id AND ua.role IN ('DOCTOR', 'NURSE', 'RECEPTIONIST', 'ADMIN')
         LEFT JOIN patient p ON ua.user_id = p.patient_id AND ua.role = 'PATIENT'
-        LEFT JOIN doctor d ON s.staff_id = d.staff_id AND ua.role = 'DOCTOR'
-        LEFT JOIN office o ON s.work_location = o.office_id
         WHERE ua.user_id = ?";
 
 debug_log('Preparing statement');
@@ -175,12 +164,7 @@ if (method_exists($stmt, 'get_result')) {
     $email, 
     $role, 
     $first_name,
-    $last_name,
-    $entity_id,
-    $doctor_id,
-    $work_location,
-    $work_location_name,
-    $staff_role
+    $last_name
   );
   
   if ($bound === false) {
@@ -218,12 +202,7 @@ if (method_exists($stmt, 'get_result')) {
     'email' => $email,
     'role' => $role,
     'first_name' => $first_name,
-    'last_name' => $last_name,
-    'entity_id' => $entity_id === null ? null : (is_numeric($entity_id) ? (int)$entity_id : $entity_id),
-    'doctor_id' => $doctor_id === null ? null : (is_numeric($doctor_id) ? (int)$doctor_id : $doctor_id),
-    'work_location' => $work_location === null ? null : (is_numeric($work_location) ? (int)$work_location : $work_location),
-    'work_location_name' => $work_location_name,
-    'staff_role' => $staff_role,
+    'last_name' => $last_name
   ];
   debug_log('User built from bind_result: ' . json_encode($user));
 }
@@ -238,10 +217,15 @@ if (!$user) {
   exit;
 }
 
-// Clean up response - remove null fields for cleaner JSON
-$response = array_filter($user, function($value) {
-    return $value !== null;
-});
+// Return essential user info only
+$response = [
+    'user_id' => $user['user_id'],
+    'username' => $user['username'],
+    'email' => $user['email'],
+    'role' => $user['role'],
+    'first_name' => $user['first_name'],
+    'last_name' => $user['last_name']
+];
 
 debug_log('Returning user successfully');
 echo json_encode($response);
