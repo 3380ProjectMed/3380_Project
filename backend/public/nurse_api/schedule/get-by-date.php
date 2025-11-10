@@ -1,8 +1,7 @@
 <?php
 declare(strict_types=1);
 header('Content-Type: application/json');
-require_once __DIR__ . '/../../../cors.php';
-require_once __DIR__ . '/../../../database.php';
+require_once __DIR__ . '/../../_bootstrap.php';
 
 function fail(int $code, string $msg, array $extra = []): void {
   http_response_code($code);
@@ -11,42 +10,39 @@ function fail(int $code, string $msg, array $extra = []): void {
 }
 
 try {
-    session_start();
-    if (empty($_SESSION['uid'])) {
-      fail(401, 'UNAUTHENTICATED');
-    }
+    // _bootstrap.php provides: $pdo (mysqli), $userId, $role, $email, $nurseOfficeId
+    $email = $email ?? ($_SESSION['email'] ?? '');
+    if (empty($email)) fail(401, 'UNAUTHENTICATED');
 
-    $conn = getDBConnection();
-
-    // Get nurse_id from session
-    $email = $_SESSION['email'] ?? '';
-    $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
+    // Resolve nurse_id for this user
+    $rows = executeQuery($pdo, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
     if (empty($rows)) {
-      closeDBConnection($conn);
       fail(404, 'NURSE_NOT_FOUND');
     }
-
     $nurse_id = (int)$rows[0]['nurse_id'];
+
     $date = $_GET['date'] ?? date('Y-m-d');
 
     // Get appointments for THIS nurse on this date
     $sql = "SELECT 
-                a.Appointment_id AS appointmentId,
-                DATE_FORMAT(a.Appointment_date, '%h:%i %p') AS time,
-                a.Status AS status,
-                a.Reason_for_visit AS reason,
+                a.appointment_id AS id,
+                a.appointment_date AS datetime,
+                DATE_FORMAT(a.appointment_date, '%Y-%m-%d %H:%i:%s') AS time_full,
+                DATE_FORMAT(a.appointment_date, '%h:%i %p') AS time,
+                a.status AS status,
+                a.reason AS reason,
                 p.patient_id AS patientId,
-                CONCAT(p.first_name,' ',p.last_name) AS patientName
+                CONCAT(p.first_name,' ',p.last_name) AS patientName,
+                o.name AS office_name
             FROM appointment a
-            JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
-            JOIN patient p ON p.patient_id = a.Patient_id
-            WHERE DATE(a.Appointment_date) = ?
+            JOIN patient p ON p.patient_id = a.patient_id
+            LEFT JOIN patient_visit pv ON a.appointment_id = pv.appointment_id
+            LEFT JOIN office o ON a.office_id = o.office_id
+            WHERE DATE(a.appointment_date) = ?
             AND pv.nurse_id = ?
-            ORDER BY a.Appointment_date ASC";
+            ORDER BY a.appointment_date ASC";
 
-    $appointments = executeQuery($conn, $sql, 'si', [$date, $nurse_id]);
-
-    closeDBConnection($conn);
+    $appointments = executeQuery($pdo, $sql, 'si', [$date, $nurse_id]);
 
     // Return plain array (not wrapped in {appointments: ...})
     echo json_encode($appointments ?: []);
