@@ -51,13 +51,17 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
    */
   const loadDoctors = async () => {
     try {
-      const response = await fetch('/receptionist_api/doctors/get-all.php', { credentials: 'include' });
+      const response = await fetch(`/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success) {
-        // Assign colors to doctors
+        // Assign colors to doctors and normalize property names
         const doctorsWithColors = (data.doctors || []).map((doc, index) => ({
-          ...doc,
+          doctor_id: doc.Doctor_id,
+          first_name: doc.First_Name,
+          last_name: doc.Last_Name,
+          specialty_name: doc.specialty_name,
+          specialty_id: doc.specialty_id,
           color: doctorColors[index % doctorColors.length]
         }));
         setDoctors(doctorsWithColors);
@@ -80,12 +84,31 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
 
       if (data.success) {
         setTodayAppointments(data.appointments || []);
-        setStats(data.stats || null);
+        
+        // Set stats from API response
+        if (data.stats) {
+          setStats(data.stats);
+        } else {
+          // Fallback: calculate stats from appointments if not provided
+          const appointments = data.appointments || [];
+          const calculatedStats = {
+            total: appointments.length,
+            scheduled: appointments.filter(a => ['Scheduled', 'Ready', 'Upcoming'].includes(a.status || a.Status)).length,
+            checked_in: appointments.filter(a => ['Checked In', 'Completed'].includes(a.status || a.Status)).length,
+            completed: appointments.filter(a => (a.status || a.Status) === 'Completed').length,
+            payment: {
+              total_collected: appointments
+                .filter(a => a.copay && (a.status || a.Status) === 'Completed')
+                .reduce((sum, a) => sum + (parseFloat(a.copay) || 0), 0)
+                .toFixed(2)
+            }
+          };
+          setStats(calculatedStats);
+        }
+        setError(null);
       } else {
         setError(data.error || 'Failed to load dashboard data');
       }
-      
-      setError(null);
     } catch (err) {
       console.error('Failed to load dashboard:', err);
       setError('Failed to load dashboard data');
@@ -125,7 +148,16 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     }
   };
 
-  const dashStats = stats || {
+  // Calculate dashboard statistics
+  const dashStats = stats ? {
+    total: stats.total || 0,
+    scheduled: (stats.scheduled || 0) + (stats.upcoming || 0), // Combine scheduled and upcoming for "Pending Check-in"
+    checked_in: (stats.checked_in || 0) + (stats.completed || 0), // Combine checked in and completed for "Awaiting Payment"
+    completed: stats.completed || 0,
+    payment: {
+      total_collected: stats.payment?.total_collected || '0.00'
+    }
+  } : {
     total: 0,
     scheduled: 0,
     checked_in: 0,
@@ -633,8 +665,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     Doctor
                   </label>
                   <p className="detail-value">
-                    Dr. {getDoctorById(selectedAppointment.Doctor_id)?.first_name}{' '}
-                    {getDoctorById(selectedAppointment.Doctor_id)?.last_name}
+                    Dr. {selectedAppointment.Doctor_First} {selectedAppointment.Doctor_Last}
                   </p>
                 </div>
 
