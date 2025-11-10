@@ -16,7 +16,8 @@ function SimplePayment() {
 
   // Search for visits
   const handleSearch = async () => {
-    if (searchTerm.length < 2) return;
+    // Allow searching from 1 character (was 2) to be more responsive.
+    if (searchTerm.length < 1) return;
     
     setLoading(true);
     try {
@@ -106,9 +107,16 @@ function SimplePayment() {
 
   // Debounced search
   useEffect(() => {
+    // Clear results immediately when input is empty
+    if (searchTerm.length < 1) {
+      setSearchResults([]);
+      return;
+    }
+
     const timer = setTimeout(() => {
-      if (searchTerm.length >= 2) handleSearch();
+      if (searchTerm.length >= 1) handleSearch();
     }, 500);
+
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
