@@ -1,7 +1,7 @@
 <?php
 /**
- * SIMPLE VERSION - Get visit for payment
- * Just shows what patient owes
+ * Get copay info for visit
+ * Receptionists collect copays - show insurance copay amount
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -22,28 +22,24 @@ try {
         exit;
     }
 
-    $visit_id = (int) $_GET['visit_id'];
+    $visit_id = (int)$_GET['visit_id'];
     $conn = getDBConnection();
 
-    // Get visit with patient and insurance info
+    // Get visit with patient info
     $sql = "SELECT 
                 pv.visit_id,
                 pv.patient_id,
                 pv.appointment_id,
                 pv.date as visit_date,
                 pv.payment,
+                pv.payment_method,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.dob,
-                p.emergency_contact,
-                CONCAT(sf.first_name, ' ', sf.last_name) as doctor_name,
-                -- Get copay from insurance if patient has it
-                iplan.copay as insurance_copay
+                p.email,
+                ec.phone_number as patient_phone
             FROM patient_visit pv
             INNER JOIN patient p ON pv.patient_id = p.patient_id
-            LEFT JOIN doctor d ON p.doctor_id = d.doctor_id
-            LEFT JOIN staff sf ON d.staff_id = sf.staff_id
-            LEFT JOIN patient_insurance pi ON pi.patient_id = p.patient_id AND pi.is_primary = 1
-            LEFT JOIN insurance_plan iplan ON pi.plan_id = iplan.plan_id
+            LEFT JOIN emergency_contact ec ON p.emergency_contact_id = ec.emergency_contact_id
             WHERE pv.visit_id = ?";
 
     $visits = executeQuery($conn, $sql, 'i', [$visit_id]);
@@ -57,38 +53,54 @@ try {
 
     $visit = $visits[0];
 
-    // Get treatments for this visit
-    $treatmentSql = "SELECT 
-                        tc.name as treatment_name,
-                        tpv.quantity,
-                        tpv.cost_each,
-                        tpv.total_cost
-                    FROM treatment_per_visit tpv
-                    LEFT JOIN treatment_catalog tc ON tpv.treatment_id = tc.treatment_id
-                    WHERE tpv.visit_id = ?";
+    // Get patient's PRIMARY insurance copay
+    $insuranceSql = "SELECT 
+                        pi.id as insurance_id,
+                        pi.member_id,
+                        pi.group_id,
+                        iplan.plan_name,
+                        iplan.plan_type,
+                        iplan.copay,
+                        iplan.deductible_individual,
+                        iplan.coinsurance_rate,
+                        ipayer.name as payer_name
+                    FROM patient_insurance pi
+                    INNER JOIN insurance_plan iplan ON pi.plan_id = iplan.plan_id
+                    INNER JOIN insurance_payer ipayer ON iplan.payer_id = ipayer.payer_id
+                    WHERE pi.patient_id = ? 
+                    AND pi.is_primary = 1
+                    AND (pi.expiration_date IS NULL OR pi.expiration_date >= CURDATE())
+                    AND pi.effective_date <= CURDATE()
+                    LIMIT 1";
 
-    $treatments = executeQuery($conn, $treatmentSql, 'i', [$visit_id]);
+    $insuranceRows = executeQuery($conn, $insuranceSql, 'i', [$visit['patient_id']]);
 
-    // Calculate totals
-    $treatment_total = 0;
-    $treatment_list = [];
+    $insurance_info = null;
+    $copay_amount = 0;
 
-    if (is_array($treatments)) {
-        foreach ($treatments as $t) {
-            $treatment_total += (float) $t['total_cost'];
-            $treatment_list[] = [
-                'name' => $t['treatment_name'],
-                'quantity' => (int) $t['quantity'],
-                'cost' => number_format((float) $t['total_cost'], 2)
-            ];
-        }
+    if (!empty($insuranceRows)) {
+        $ins = $insuranceRows[0];
+        $copay_amount = (float)($ins['copay'] ?? 0);
+        
+        $insurance_info = [
+            'has_insurance' => true,
+            'payer_name' => $ins['payer_name'],
+            'plan_name' => $ins['plan_name'],
+            'plan_type' => $ins['plan_type'],
+            'member_id' => $ins['member_id'],
+            'group_id' => $ins['group_id'],
+            'copay' => number_format($copay_amount, 2),
+            'deductible' => $ins['deductible_individual'] ? number_format((float)$ins['deductible_individual'], 2) : 'N/A',
+            'coinsurance_rate' => $ins['coinsurance_rate'] ? $ins['coinsurance_rate'] . '%' : 'N/A'
+        ];
+    } else {
+        $insurance_info = [
+            'has_insurance' => false,
+            'message' => 'No active insurance on file'
+        ];
     }
 
-    // Simple calculation
-    $copay = (float) ($visit['insurance_copay'] ?? 0);
-    $total_due = $copay + $treatment_total;
-    $already_paid = (float) ($visit['payment'] ?? 0);
-    $remaining = $total_due - $already_paid;
+    $already_paid = (float)($visit['payment'] ?? 0);
 
     closeDBConnection($conn);
 
@@ -99,20 +111,16 @@ try {
             'patient_id' => $visit['patient_id'],
             'patient_name' => $visit['patient_name'],
             'patient_dob' => $visit['dob'],
-            'patient_phone' => $visit['emergency_contact'],
+            'patient_phone' => $visit['patient_phone'],
+            'patient_email' => $visit['email'],
             'appointment_id' => $visit['appointment_id'],
             'visit_date' => $visit['visit_date'],
-            'doctor_name' => $visit['doctor_name']
-        ],
-        'payment_info' => [
-            'copay' => number_format($copay, 2),
-            'treatments' => number_format($treatment_total, 2),
-            'total_due' => number_format($total_due, 2),
             'already_paid' => number_format($already_paid, 2),
-            'remaining' => number_format($remaining, 2),
-            'needs_payment' => $remaining > 0
+            'payment_method_used' => $visit['payment_method']
         ],
-        'treatments' => $treatment_list
+        'insurance' => $insurance_info,
+        'copay_amount' => number_format($copay_amount, 2),
+        'needs_payment' => $already_paid == 0
     ]);
 
 } catch (Exception $e) {

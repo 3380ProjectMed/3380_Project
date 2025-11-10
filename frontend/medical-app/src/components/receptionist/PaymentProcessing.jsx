@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, DollarSign, User, Calendar, Check, X, CreditCard, Printer } from 'lucide-react';
+import { Search, DollarSign, User, Check, X, CreditCard, Printer, Heart, AlertCircle } from 'lucide-react';
 import './PaymentProcessing.css';
 
 function SimplePayment() {
@@ -16,7 +16,6 @@ function SimplePayment() {
 
   // Search for visits
   const handleSearch = async () => {
-    // Allow searching from 1 character (was 2) to be more responsive.
     if (searchTerm.length < 1) return;
     
     setLoading(true);
@@ -29,6 +28,8 @@ function SimplePayment() {
       
       if (data.success) {
         setSearchResults(data.visits || []);
+      } else {
+        setError(data.error || 'Search failed');
       }
     } catch (err) {
       setError('Search failed');
@@ -41,6 +42,7 @@ function SimplePayment() {
   const selectVisit = async (visit) => {
     setSelectedVisit(visit);
     setLoading(true);
+    setError('');
     
     try {
       const response = await fetch(
@@ -51,10 +53,14 @@ function SimplePayment() {
       
       if (data.success) {
         setVisitDetails(data);
-        setPaymentAmount(data.payment_info.remaining.replace(',', ''));
+        // Auto-fill copay amount
+        const copay = data.copay_amount ? parseFloat(data.copay_amount.replace(',', '')) : 0;
+        setPaymentAmount(copay > 0 ? copay.toFixed(2) : '');
+      } else {
+        setError(data.error || 'Failed to load visit');
       }
     } catch (err) {
-      setError('Failed to load visit');
+      setError('Failed to load visit details');
     } finally {
       setLoading(false);
     }
@@ -62,12 +68,16 @@ function SimplePayment() {
 
   // Record payment
   const recordPayment = async () => {
-    if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
-      setError('Enter valid amount');
+    const amount = parseFloat(paymentAmount);
+    
+    if (!amount || amount <= 0) {
+      setError('Enter valid payment amount');
       return;
     }
 
     setLoading(true);
+    setError('');
+    
     try {
       const response = await fetch(`/receptionist_api/payments/record-payment.php`, {
         method: 'POST',
@@ -75,7 +85,7 @@ function SimplePayment() {
         credentials: 'include',
         body: JSON.stringify({
           visit_id: selectedVisit.visit_id,
-          amount: parseFloat(paymentAmount),
+          amount: amount,
           method: paymentMethod
         })
       });
@@ -88,7 +98,7 @@ function SimplePayment() {
         setError(data.error || 'Payment failed');
       }
     } catch (err) {
-      setError('Payment failed');
+      setError('Payment failed - please try again');
     } finally {
       setLoading(false);
     }
@@ -103,18 +113,18 @@ function SimplePayment() {
     setPaymentAmount('');
     setShowReceipt(false);
     setError('');
+    setPaymentMethod('card');
   };
 
   // Debounced search
   useEffect(() => {
-    // Clear results immediately when input is empty
     if (searchTerm.length < 1) {
       setSearchResults([]);
       return;
     }
 
     const timer = setTimeout(() => {
-      if (searchTerm.length >= 1) handleSearch();
+      handleSearch();
     }, 500);
 
     return () => clearTimeout(timer);
@@ -122,7 +132,7 @@ function SimplePayment() {
 
   return (
     <div className="payment-page">
-      <h1 className="page-title">💰 Process Payment</h1>
+      <h1 className="page-title">💰 Collect Copay</h1>
 
       {!showReceipt ? (
         <>
@@ -140,6 +150,10 @@ function SimplePayment() {
                 />
               </div>
 
+              {loading && searchTerm && (
+                <div className="loading-message">Searching...</div>
+              )}
+
               {searchResults.length > 0 && (
                 <div className="results-list">
                   {searchResults.map(visit => (
@@ -153,9 +167,17 @@ function SimplePayment() {
                         <p>Visit: {new Date(visit.visit_date).toLocaleDateString()}</p>
                         {visit.reason && <p className="text-muted">{visit.reason}</p>}
                       </div>
-                      <span className="badge">Needs Payment</span>
+                      <span className="badge">Collect Copay</span>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {searchTerm.length >= 1 && !loading && searchResults.length === 0 && (
+                <div className="no-results">
+                  <AlertCircle size={48} />
+                  <p>No patients found</p>
+                  <p className="text-muted">Try searching by full name or appointment number</p>
                 </div>
               )}
             </div>
@@ -168,44 +190,56 @@ function SimplePayment() {
                 <X size={18} /> Back to Search
               </button>
 
+              {/* Patient Info */}
               <div className="info-card">
-                <h3>Patient: {visitDetails.visit.patient_name}</h3>
+                <h3><User size={20} style={{display: 'inline', marginRight: '8px'}} />Patient: {visitDetails.visit.patient_name}</h3>
                 <p>Visit Date: {new Date(visitDetails.visit.visit_date).toLocaleDateString()}</p>
-                {visitDetails.visit.doctor_name && (
-                  <p>Doctor: {visitDetails.visit.doctor_name}</p>
+                {visitDetails.visit.patient_dob && (
+                  <p>DOB: {new Date(visitDetails.visit.patient_dob).toLocaleDateString()}</p>
                 )}
               </div>
 
-              <div className="payment-breakdown">
-                <h3>Amount Due</h3>
-                <div className="breakdown-row">
-                  <span>Copay:</span>
-                  <span>${visitDetails.payment_info.copay}</span>
-                </div>
-                <div className="breakdown-row">
-                  <span>Treatments:</span>
-                  <span>${visitDetails.payment_info.treatments}</span>
-                </div>
-                <div className="breakdown-row total">
-                  <strong>Total:</strong>
-                  <strong>${visitDetails.payment_info.total_due}</strong>
-                </div>
-              </div>
-
-              {visitDetails.treatments && visitDetails.treatments.length > 0 && (
-                <div className="treatments-list">
-                  <h4>Treatments:</h4>
-                  {visitDetails.treatments.map((t, i) => (
-                    <div key={i} className="treatment-item">
-                      <span>{t.name} (x{t.quantity})</span>
-                      <span>${t.cost}</span>
+              {/* Insurance Info */}
+              {visitDetails.insurance && visitDetails.insurance.has_insurance ? (
+                <div className="insurance-card">
+                  <h3><Heart size={20} style={{display: 'inline', marginRight: '8px'}} />Insurance Coverage</h3>
+                  <div className="insurance-details">
+                    <div className="insurance-row">
+                      <span>Provider:</span>
+                      <strong>{visitDetails.insurance.payer_name}</strong>
                     </div>
-                  ))}
+                    <div className="insurance-row">
+                      <span>Plan:</span>
+                      <strong>{visitDetails.insurance.plan_name} ({visitDetails.insurance.plan_type})</strong>
+                    </div>
+                    {visitDetails.insurance.member_id && (
+                      <div className="insurance-row">
+                        <span>Member ID:</span>
+                        <span>{visitDetails.insurance.member_id}</span>
+                      </div>
+                    )}
+                    <div className="insurance-divider"></div>
+                    <div className="insurance-row copay-row">
+                      <span>Copay Amount:</span>
+                      <strong className="copay-amount">${visitDetails.insurance.copay}</strong>
+                    </div>
+                    <div className="insurance-row-small">
+                      <span>Deductible: {visitDetails.insurance.deductible}</span>
+                      <span>Coinsurance: {visitDetails.insurance.coinsurance_rate}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="no-insurance-card">
+                  <AlertCircle size={24} />
+                  <p>No active insurance on file</p>
+                  <p className="text-muted">Patient will pay out-of-pocket</p>
                 </div>
               )}
 
+              {/* Payment Amount */}
               <div className="payment-input">
-                <label>Payment Amount</label>
+                <label>Copay Amount Collected</label>
                 <div className="input-group">
                   <span>$</span>
                   <input
@@ -214,10 +248,17 @@ function SimplePayment() {
                     onChange={(e) => setPaymentAmount(e.target.value)}
                     step="0.01"
                     min="0"
+                    placeholder="0.00"
                   />
                 </div>
+                {visitDetails.copay_amount && parseFloat(visitDetails.copay_amount) > 0 && (
+                  <p className="help-text">
+                    Expected copay: ${visitDetails.copay_amount}
+                  </p>
+                )}
               </div>
 
+              {/* Payment Method */}
               <div className="payment-methods">
                 <label>Payment Method</label>
                 <div className="method-buttons">
@@ -233,20 +274,31 @@ function SimplePayment() {
                   >
                     <CreditCard size={20} /> Card
                   </button>
+                  <button
+                    className={paymentMethod === 'check' ? 'active' : ''}
+                    onClick={() => setPaymentMethod('check')}
+                  >
+                    <CreditCard size={20} /> Check
+                  </button>
                 </div>
               </div>
 
+              {/* Error Message */}
               {error && (
-                <div className="error-message">{error}</div>
+                <div className="error-message">
+                  <AlertCircle size={20} />
+                  {error}
+                </div>
               )}
 
+              {/* Submit Button */}
               <button 
                 className="btn-primary btn-large"
                 onClick={recordPayment}
-                disabled={loading || !paymentAmount}
+                disabled={loading || !paymentAmount || parseFloat(paymentAmount) <= 0}
               >
                 <Check size={20} />
-                {loading ? 'Processing...' : `Record Payment - $${paymentAmount}`}
+                {loading ? 'Processing...' : `Record Copay Payment - $${paymentAmount || '0.00'}`}
               </button>
             </div>
           )}
@@ -257,26 +309,55 @@ function SimplePayment() {
           <div className="success-icon">
             <Check size={48} />
           </div>
-          <h2>Payment Successful!</h2>
+          <h2>Copay Received!</h2>
 
           <div className="receipt-card">
-            <h3>Receipt</h3>
+            <h3>Payment Receipt</h3>
+            
             <div className="receipt-row">
               <span>Patient:</span>
               <span>{visitDetails?.visit.patient_name}</span>
             </div>
+            
             <div className="receipt-row">
-              <span>Amount Paid:</span>
-              <span>${paymentAmount}</span>
+              <span>Visit ID:</span>
+              <span>{selectedVisit?.visit_id}</span>
             </div>
+            
+            {visitDetails?.insurance?.has_insurance && (
+              <>
+                <div className="receipt-divider"></div>
+                <div className="receipt-row">
+                  <span>Insurance:</span>
+                  <span>{visitDetails.insurance.payer_name}</span>
+                </div>
+                <div className="receipt-row">
+                  <span>Plan:</span>
+                  <span>{visitDetails.insurance.plan_name}</span>
+                </div>
+              </>
+            )}
+            
+            <div className="receipt-divider"></div>
+            
             <div className="receipt-row">
               <span>Payment Method:</span>
               <span>{paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)}</span>
             </div>
+            
+            <div className="receipt-row total-row">
+              <strong>Copay Collected:</strong>
+              <strong>${paymentAmount}</strong>
+            </div>
+            
             <div className="receipt-row">
               <span>Date:</span>
-              <span>{new Date().toLocaleDateString()}</span>
+              <span>{new Date().toLocaleString()}</span>
             </div>
+          </div>
+
+          <div className="receipt-note">
+            <p><strong>Note:</strong> Medical bills for services will be sent separately after insurance processing.</p>
           </div>
 
           <div className="receipt-actions">
@@ -284,7 +365,7 @@ function SimplePayment() {
               <Printer size={18} /> Print Receipt
             </button>
             <button className="btn-primary" onClick={reset}>
-              Process Another Payment
+              Next Patient
             </button>
           </div>
         </div>
