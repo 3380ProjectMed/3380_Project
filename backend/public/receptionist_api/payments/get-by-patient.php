@@ -58,11 +58,12 @@ try {
                     pv.total_due,
                     pv.status,
                     CONCAT(p.first_name, ' ', p.last_name) as patient_name,
-                    CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                    CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as doctor_name,
                     o.name as office_name
                 FROM patient_visit pv
                 INNER JOIN patient p ON pv.patient_id = p.patient_id
                 LEFT JOIN doctor d ON pv.doctor_id = d.doctor_id
+                LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN office o ON pv.office_id = o.office_id
                 WHERE pv.visit_id = ? AND pv.office_id = ?";
     

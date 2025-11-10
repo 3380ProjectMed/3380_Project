@@ -14,20 +14,20 @@ try {
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     if (!isset($_GET['doctor_id']) || !isset($_GET['date'])) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'doctor_id and date parameters are required']);
         exit;
     }
-    
-    $doctor_id = (int)$_GET['doctor_id'];
+
+    $doctor_id = (int) $_GET['doctor_id'];
     $date = $_GET['date'];
-    $user_id = (int)$_SESSION['uid'];
-    
+    $user_id = (int) $_SESSION['uid'];
+
     // Verify receptionist is authenticated
     $conn = getDBConnection();
-    
+
     try {
         $rows = executeQuery($conn, '
             SELECT s.work_location as office_id
@@ -38,29 +38,30 @@ try {
         closeDBConnection($conn);
         throw $ex;
     }
-    
+
     if (empty($rows)) {
         closeDBConnection($conn);
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'No receptionist account associated with the logged-in user']);
         exit;
     }
-    
+
     // Get doctor's schedule for the specified date
     $scheduleSql = "SELECT 
                         ws.schedule_id,
                         ws.day_of_week,
                         ws.start_time,
                         ws.end_time,
-                        d.first_name,
-                        d.last_name
+                        doc_staff.first_name,
+                        doc_staff.last_name
                     FROM work_schedule ws
                     JOIN doctor d ON ws.doctor_id = d.doctor_id
+                    LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                     WHERE ws.doctor_id = ?
                     AND ws.day_of_week = DAYNAME(?)";
-    
+
     $schedule = executeQuery($conn, $scheduleSql, 'is', [$doctor_id, $date]);
-    
+
     if (empty($schedule)) {
         closeDBConnection($conn);
         echo json_encode([
@@ -71,9 +72,9 @@ try {
         ]);
         exit;
     }
-    
+
     $doctorSchedule = $schedule[0];
-    
+
     // Get existing appointments for this doctor on this date
     $appointmentsSql = "SELECT 
                             Appointment_date,
@@ -83,35 +84,35 @@ try {
                         AND DATE(Appointment_date) = ?
                         AND Status NOT IN ('Cancelled', 'No-Show')
                         ORDER BY Appointment_date";
-    
+
     $existingAppointments = executeQuery($conn, $appointmentsSql, 'is', [$doctor_id, $date]);
-    
+
     // Generate time slots (30-minute intervals)
     $startTime = new DateTime($date . ' ' . $doctorSchedule['start_time']);
     $endTime = new DateTime($date . ' ' . $doctorSchedule['end_time']);
     $interval = new DateInterval('PT30M'); // 30 minutes
-    
+
     $slots = [];
-    $bookedTimes = array_map(function($apt) {
+    $bookedTimes = array_map(function ($apt) {
         return date('H:i:s', strtotime($apt['Appointment_date']));
     }, $existingAppointments);
-    
+
     $currentSlot = clone $startTime;
     while ($currentSlot < $endTime) {
         $slotTime = $currentSlot->format('H:i:s');
         $isAvailable = !in_array($slotTime, $bookedTimes);
-        
+
         $slots[] = [
             'time' => $currentSlot->format('g:i A'),
             'datetime' => $date . ' ' . $slotTime,
             'available' => $isAvailable
         ];
-        
+
         $currentSlot->add($interval);
     }
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'available' => true,
@@ -126,9 +127,10 @@ try {
         ],
         'slots' => $slots,
         'total_slots' => count($slots),
-        'available_slots' => count(array_filter($slots, function($s) { return $s['available']; }))
+        'available_slots' => count(array_filter($slots, function ($s) {
+            return $s['available']; }))
     ]);
-    
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

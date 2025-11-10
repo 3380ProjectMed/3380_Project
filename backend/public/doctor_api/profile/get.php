@@ -1,7 +1,7 @@
 <?php
 /**
  * Get doctor profile
- * Updated for Azure database
+ * Updated for new table structure
  */
 
 require_once '/home/site/wwwroot/cors.php';
@@ -9,43 +9,70 @@ require_once '/home/site/wwwroot/database.php';
 
 try {
     session_start();
-
-    if (isset($_GET['doctor_id'])) {
-        $doctor_id = intval($_GET['doctor_id']);
-    } else {
-        if (empty($_SESSION['uid'])) {
-            http_response_code(401);
-            echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-            exit;
-        }
-        $user_id = (int)$_SESSION['uid'];
-
-        $conn = getDBConnection();
-        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
-        if (empty($rows)) {
-            closeDBConnection($conn);
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'No doctor associated with this user']);
-            exit;
-        }
-        $doctor_id = (int)$rows[0]['doctor_id'];
+    
+    // Verify authentication and role first
+    if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit;
     }
     
-    $conn = $conn ?? getDBConnection();
+    $conn = getDBConnection();
     
-    // SQL query for doctor info (all lowercase)
+    // Get logged-in user's doctor_id (if they're a doctor)
+    $logged_in_doctor_id = null;
+    if ($_SESSION['role'] === 'DOCTOR') {
+        $staff_id = (int)$_SESSION['uid'];
+        $rows = executeQuery($conn, 
+            'SELECT doctor_id FROM doctor WHERE staff_id = ? LIMIT 1', 
+            'i', 
+            [$staff_id]
+        );
+        if (!empty($rows)) {
+            $logged_in_doctor_id = (int)$rows[0]['doctor_id'];
+        }
+    }
+    
+    // Determine which doctor profile to fetch
+    if (isset($_GET['doctor_id'])) {
+        $requested_doctor_id = intval($_GET['doctor_id']);
+        
+        // Security: Only allow viewing own profile or if admin/receptionist
+        if ($_SESSION['role'] === 'DOCTOR' && $requested_doctor_id !== $logged_in_doctor_id) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Cannot view other doctor profiles']);
+            exit;
+        }
+        
+        $doctor_id = $requested_doctor_id;
+    } else {
+        // No parameter - use logged-in doctor
+        if ($_SESSION['role'] !== 'DOCTOR' || !$logged_in_doctor_id) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Doctor access required']);
+            exit;
+        }
+        
+        $doctor_id = $logged_in_doctor_id;
+    }
+    
+    // SQL query for doctor info
     $sql = "SELECT 
                 d.doctor_id,
-                d.first_name,
-                d.last_name,
-                d.email,
-                d.phone,
-                d.license_number,
-                s.specialty_name,
+                d.staff_id,
+                s.first_name,
+                s.last_name,
+                s.staff_email,
+                s.license_number,
+                s.work_location,
+                o.name as work_location_name,
+                sp.specialty_name,
                 cg.gender_text as gender
             FROM doctor d
-            LEFT JOIN specialty s ON d.specialty = s.specialty_id
-            LEFT JOIN codes_gender cg ON d.gender = cg.gender_code
+            INNER JOIN staff s ON d.staff_id = s.staff_id
+            LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
+            LEFT JOIN codes_gender cg ON s.gender = cg.gender_code
+            LEFT JOIN office o ON s.work_location = o.office_id
             WHERE d.doctor_id = ?";
 
     $result = executeQuery($conn, $sql, 'i', [$doctor_id]);
@@ -61,11 +88,13 @@ try {
     echo json_encode([
         'success' => true,
         'profile' => [
-            'firstName' => $doctor['first_name'],  // ← Fixed: lowercase from query
-            'lastName' => $doctor['last_name'],     // ← Fixed: lowercase
-            'email' => $doctor['email'],
-            'phone' => $doctor['phone'] ?: 'Not provided',
-            'licenseNumber' => $doctor['license_number'],  // ← Fixed: lowercase
+            'doctorId' => $doctor['doctor_id'],
+            'staffId' => $doctor['staff_id'],
+            'firstName' => $doctor['first_name'],
+            'lastName' => $doctor['last_name'],
+            'email' => $doctor['staff_email'],
+            'licenseNumber' => $doctor['license_number'] ?: 'Not provided',
+            'workLocation' => $doctor['work_location_name'] ?: 'Not assigned',
             'specialties' => [$doctor['specialty_name']],
             'gender' => $doctor['gender'],
             'bio' => ''

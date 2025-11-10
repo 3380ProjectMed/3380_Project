@@ -16,7 +16,13 @@ try {
             exit;
         }
         $user_id = intval($_SESSION['uid']);
-        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $rows = executeQuery($conn, 'SELECT d.doctor_id 
+            FROM user_account ua
+            JOIN staff s ON ua.user_id = s.staff_id
+            JOIN doctor d ON s.staff_id = d.staff_id
+            WHERE ua.user_id = ? 
+            LIMIT 1
+            ', 'i', [$user_id]);
         if (!is_array($rows) || count($rows) === 0) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
@@ -30,13 +36,14 @@ try {
                 r.referral_id,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.patient_id,
-                CONCAT(d2.first_name, ' ', d2.last_name) as specialist_name,
+                CONCAT(st.first_name, ' ', st.last_name) as specialist_name,
                 s.specialty_name,
                 r.reason,
                 r.date_of_approval
             FROM referral r
             INNER JOIN patient p ON r.patient_id = p.patient_id
-            LEFT JOIN doctor d2 ON r.specialist_doctor_staff_id = d2.doctor_id
+            LEFT JOIN staff st ON r.specialist_doctor_staff_id = st.staff_id
+            LEFT JOIN doctor d2 ON st.staff_id = d2.staff_id
             LEFT JOIN specialty s ON d2.specialty = s.specialty_id
             WHERE r.specialist_doctor_staff_id = ?
             ORDER BY r.referral_id DESC";

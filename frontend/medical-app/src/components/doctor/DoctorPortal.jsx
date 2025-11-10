@@ -133,9 +133,11 @@ function DoctorPortal() {
           />
         )}
 
-        {currentPage === 'clinical' && selectedAppointment && (
+        {currentPage === 'clinical' && (selectedAppointment || selectedPatient) && (
           <ClinicalWorkSpace
-            appointmentId={getAppointmentId()}
+            appointmentId={selectedAppointment ? getAppointmentId() : null}
+            patientId={selectedPatient?.patient_id || selectedPatient?.id}
+            patient={selectedPatient}
             onClose={handleBackToDashboard}
           />
         )}

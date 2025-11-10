@@ -1,8 +1,5 @@
 <?php
 /**
- * ==========================================
- * FILE: public/receptionist_api/doctors/get-all.php
- * ==========================================
  * Get all doctors (no office filter)
  */
 require_once '/home/site/wwwroot/cors.php';
@@ -10,13 +7,13 @@ require_once '/home/site/wwwroot/database.php';
 
 try {
     $conn = getDBConnection();
-    
-    $sql = "SELECT d.doctor_id, d.first_name, d.last_name,
+    $sql = "SELECT st.staff_id, st.first_name, st.last_name, 
                    s.specialty_name, s.specialty_id
-            FROM doctor d
+            FROM staff st
+            JOIN doctor d ON d.staff_id = st.staff_id
             JOIN specialty s ON d.specialty = s.specialty_id
-            ORDER BY d.last_name, d.first_name";
-    
+            ORDER BY st.last_name, st.first_name";
+
     $rows = executeQuery($conn, $sql);
     closeDBConnection($conn);
 

@@ -22,7 +22,13 @@ try {
         }
         $user_id = intval($_SESSION['uid']);
         $conn = getDBConnection();
-        $rows = executeQuery($conn, 'SELECT d.Doctor_id FROM Doctor d JOIN user_account ua ON ua.email = d.Email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $rows = executeQuery($conn, 'SELECT d.doctor_id 
+            FROM user_account ua
+            JOIN staff s ON ua.user_id = s.staff_id
+            JOIN doctor d ON s.staff_id = d.staff_id
+            WHERE ua.user_id = ? 
+            LIMIT 1
+            ', 'i', [$user_id]);
         if (!is_array($rows) || count($rows) === 0) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);

@@ -9,7 +9,6 @@ require_once '/home/site/wwwroot/database.php';
 try {
     $conn = getDBConnection();
     
-    // Determine doctor_id: query param overrides, otherwise resolve from logged-in user
     $doctor_id = null;
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
@@ -22,8 +21,15 @@ try {
             exit;
         }
         $user_id = intval($_SESSION['uid']);
-        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
-        if (!is_array($rows) || count($rows) === 0) {
+        
+        $rows = executeQuery($conn, 'SELECT d.doctor_id 
+                        FROM user_account ua
+                        JOIN staff s ON ua.user_id = s.staff_id
+                        JOIN doctor d ON s.staff_id = d.staff_id
+                        WHERE ua.user_id = ? 
+                        LIMIT 1', 'i', [$user_id]);
+        
+        if (empty($rows)) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
             closeDBConnection($conn);

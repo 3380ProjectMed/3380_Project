@@ -41,9 +41,10 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
    * Load calendar when month changes
    */
   useEffect(() => {
-    if (doctors.length > 0) {
-      loadCalendarData();
-    }
+    // Always attempt to load calendar data when the month, office, or doctors list changes.
+    // Previously this waited for doctors.length > 0 which could skip the calendar fetch
+    // if the doctors API was delayed — causing the calendar to show incomplete data.
+    loadCalendarData();
   }, [currentDate, officeId, doctors]);
 
   /**

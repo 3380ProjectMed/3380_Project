@@ -27,7 +27,7 @@ try {
                 ua.is_active as isActive,
                 ua.created_at as createdAt
              FROM user_account ua
-             LEFT JOIN staff s ON ua.email = s.staff_email
+             LEFT JOIN staff s ON ua.user_id = s.staff_id AND ua.role IN ('DOCTOR', 'NURSE', 'RECEPTIONIST', 'ADMIN')
              LEFT JOIN office o ON s.work_location = o.office_id
              WHERE ua.user_id = ?";
     

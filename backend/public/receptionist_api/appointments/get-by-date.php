@@ -14,19 +14,19 @@ try {
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     if (!isset($_GET['date'])) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Date parameter is required']);
         exit;
     }
-    
+
     $date = $_GET['date'];
-    $user_id = (int)$_SESSION['uid'];
-    
+    $user_id = (int) $_SESSION['uid'];
+
     // Resolve the receptionist's office ID
     $conn = getDBConnection();
-    
+
     try {
         $rows = executeQuery($conn, '
             SELECT s.work_location as office_id, o.name as office_name
@@ -38,17 +38,17 @@ try {
         closeDBConnection($conn);
         throw $ex;
     }
-    
+
     if (empty($rows)) {
         closeDBConnection($conn);
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'No receptionist account associated with the logged-in user']);
         exit;
     }
-    
-    $office_id = (int)$rows[0]['office_id'];
+
+    $office_id = (int) $rows[0]['office_id'];
     $office_name = $rows[0]['office_name'] ?? 'Unknown Office';
-    
+
     $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
@@ -57,7 +57,7 @@ try {
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.patient_id as patient_id,
                 p.emergency_contact_id,
-                CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as doctor_name,
                 d.doctor_id as doctor_id,
                 pv.status as visit_status,
                 pv.start_at as Check_in_time,
@@ -65,19 +65,20 @@ try {
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
+            LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
             LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
             WHERE a.Office_id = ?
             AND DATE(a.Appointment_date) = ?
             ORDER BY a.Appointment_date ASC";
-    
+
     $appointments = executeQuery($conn, $sql, 'is', [$office_id, $date]);
-    
+
     $formatted_appointments = [];
-    
+
     foreach ($appointments as $apt) {
         $dbStatus = $apt['apt_status'] ?? 'Scheduled';
         $visitStatus = $apt['visit_status'] ?? null;
-        
+
         // Determine display status
         $displayStatus = $dbStatus;
         if ($visitStatus === 'Completed') {
@@ -89,7 +90,7 @@ try {
         } else {
             $displayStatus = 'Scheduled';
         }
-        
+
         $formatted_appointments[] = [
             'Appointment_id' => $apt['Appointment_id'],
             'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
@@ -108,9 +109,9 @@ try {
             'copay' => $apt['copay'] ? number_format($apt['copay'], 2) : '0.00'
         ];
     }
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'appointments' => $formatted_appointments,
@@ -121,7 +122,7 @@ try {
             'name' => $office_name
         ]
     ]);
-    
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

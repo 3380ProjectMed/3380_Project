@@ -80,9 +80,9 @@ try {
                 p.emergency_contact_id,
                 p.allergies as allergy_code,
                 ca.allergies_text as allergies,
-                CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
-                d.first_name as doctor_first,
-                d.last_name as doctor_last,
+                CONCAT(sf.first_name, ' ', sf.last_name) as doctor_name,
+                sf.first_name as doctor_first,
+                sf.last_name as doctor_last,
                 pv.visit_id,
                 pv.status as visit_status,
                 pv.start_at as check_in_time,
@@ -92,6 +92,7 @@ try {
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             INNER JOIN doctor d ON a.Doctor_id = d.doctor_id
+            LEFT JOIN staff sf ON d.staff_id = sf.staff_id
             LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
             -- LEFT JOIN patient_insurance pi ON p.insuranceid = pi.id AND pi.is_primary = 1
             LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code

@@ -16,65 +16,55 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
 
   // Auto-refresh appointments every 30 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      const doctorId = auth.user?.doctor_id;
-      if (doctorId && !loading) {
-        fetchAppointments(doctorId, false); // Silent refresh
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
+    if (auth.user?.role === 'DOCTOR' && !loading) {
+      fetchAppointments(false); // Silent refresh
+    }
   }, [auth.user, loading]);
 
   // Fetch appointments when authenticated user becomes available
   useEffect(() => {
-    const doctorId = auth.user?.doctor_id ?? null;
     if (auth.loading) return;
 
-    if (!doctorId) {
-      setError('No doctor account found for the logged-in user.');
+    if (!auth.user || auth.user.role !== 'DOCTOR') {
+      setError('Doctor access required.');
       setLoading(false);
       return;
     }
 
-    const loadForDoctor = async (did) => {
-      try {
-  const pr = await fetch(`/doctor_api/profile/get.php?doctor_id=${did}`, { credentials: 'include' });
-        const pj = await pr.json();
-        if (pj.success) setDoctorProfile(pj.profile);
-      } catch (e) {
-        console.error('Failed to load profile', e);
-      }
-      fetchAppointments(did);
-    };
-
-    loadForDoctor(doctorId);
+    loadDoctorData();
   }, [auth.user, auth.loading]);
 
   /**
-   * Get formatted current date
+   * Load doctor profile and appointments
    */
-  const getCurrentDate = () => {
-    const today = new Date();
-    return today.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+  const loadDoctorData = async () => {
+    try {
+      // Fetch profile (backend derives doctor_id from session)
+      const pr = await fetch(`/doctor_api/profile/get.php`, { 
+        credentials: 'include' 
+      });
+      const pj = await pr.json();
+      if (pj.success) setDoctorProfile(pj.profile);
+    } catch (e) {
+      console.error('Failed to load profile', e);
+    }
+    
+    fetchAppointments(true);
   };
 
   /**
    * Fetch appointments from API
    */
-  const fetchAppointments = async (doctorIdParam, showLoader = true) => {
+  const fetchAppointments = async (showLoader = true) => {
     try {
       if (showLoader) setLoading(true);
       setError(null);
-      const doctorId = doctorIdParam ?? auth.user?.doctor_id;
-      if (!doctorId) throw new Error('doctor_id missing');
 
-  const response = await fetch(`/doctor_api/appointments/get-today.php?doctor_id=${doctorId}`, { credentials: 'include' });
+      // Backend derives doctor_id from session
+      const response = await fetch(
+        `/doctor_api/appointments/get-today.php`, 
+        { credentials: 'include' }
+      );
       
       const data = await response.json();
       
@@ -97,7 +87,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
    */
   const updateAppointmentStatus = async (appointmentId, newStatus) => {
     try {
-  const response = await fetch('/doctor_api/appointments/update-status.php', {
+      const response = await fetch('/doctor_api/appointments/update-status.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -110,11 +100,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       const data = await response.json();
       
       if (data.success) {
-        // Refresh appointments after status update
-        const doctorId = auth.user?.doctor_id;
-        if (doctorId) {
-          await fetchAppointments(doctorId, false);
-        }
+        await fetchAppointments(false); // Refresh appointments
       } else {
         throw new Error(data.error || 'Failed to update status');
       }
@@ -149,7 +135,13 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       onAppointmentClick(appointment);
     }
   };
-
+  const getCurrentDate = () => {
+    return new Date().toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
   /**
    * Render status actions for each appointment
    */

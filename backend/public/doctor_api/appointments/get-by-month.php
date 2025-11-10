@@ -19,8 +19,13 @@ try {
     } else {
         $user_id = (int)$_SESSION['uid'];
         // Azure: lowercase tables, lowercase columns in doctor
-        $rows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
-        if (empty($rows)) {
+            $rows = executeQuery($conn, 'SELECT d.doctor_id 
+                        FROM user_account ua
+                        JOIN staff s ON ua.user_id = s.staff_id
+                        JOIN doctor d ON s.staff_id = d.staff_id
+                        WHERE ua.user_id = ? 
+                        LIMIT 1', 'i', [$user_id]);         
+            if (empty($rows)) {
             closeDBConnection($conn);
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'No doctor associated with the logged-in user']);

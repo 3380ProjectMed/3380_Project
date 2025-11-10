@@ -20,12 +20,13 @@ try {
     
     // Get doctor info
     $conn = getDBConnection();
-    $rows = executeQuery($conn, '
-        SELECT d.doctor_id, CONCAT(d.first_name, " ", d.last_name) as doctor_name
-        FROM doctor d
-        JOIN user_account ua ON ua.email = d.email
-        WHERE ua.user_id = ?', 'i', [$user_id]);
-    
+    $rows = executeQuery($conn, 'SELECT d.doctor_id, CONCAT(s.first_name, " ", s.last_name) as doctor_name
+            FROM user_account ua
+            JOIN staff s ON ua.user_id = s.staff_id
+            JOIN doctor d ON s.staff_id = d.staff_id
+            WHERE ua.user_id = ? 
+            LIMIT 1
+            ', 'i', [$user_id]);
     if (empty($rows)) {
         closeDBConnection($conn);
         http_response_code(403);
