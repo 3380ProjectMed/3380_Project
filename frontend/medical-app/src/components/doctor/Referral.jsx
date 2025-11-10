@@ -9,23 +9,23 @@ function Referral() {
   const [form, setForm] = useState({ 
     patient_id: '', 
     patient_name: '', 
-    specialist_doctor_staff_id: '', 
+    specialist_doctor_id: '', 
     reason: '' 
   });
   const [status, setStatus] = useState(null);
 
   const [patients, setPatients] = useState([]);
-  const [doctors, setDoctors] = useState([]);
+  const [specialists, setSpecialists] = useState([]);
   const [showPatientList, setShowPatientList] = useState(false);
 
+  // Filtered patient autocomplete results
   const filteredPatientResults = useMemo(() => {
     const q = (form.patient_name || '').trim().toLowerCase();
     if (!q) return [];
     return patients.filter(p => {
       const full = (p.name || '').toLowerCase();
       const id = (p.id || '').toLowerCase();
-      const numericId = String((p.Patient_ID || '').toString()).toLowerCase();
-      return full.includes(q) || id.includes(q) || numericId === q || String(p.Patient_ID) === q;
+      return full.includes(q) || id.includes(q);
     }).slice(0, 50);
   }, [form.patient_name, patients]);
 
@@ -62,28 +62,29 @@ function Referral() {
     loadReceived(doctorId);
   }, [auth.loading, auth.user]);
 
-  // Load patients and doctors for the form
+  // Load patients and specialists for the form
   useEffect(() => {
     const loadLists = async () => {
       try {
         if (auth.loading) return;
         const doctorId = auth.user?.doctor_id ?? null;
         if (!doctorId) return;
-        const [pRes, dRes] = await Promise.all([
+        
+        const [pRes, sRes] = await Promise.all([
           fetch(`/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' }),
-          fetch('/doctor_api/doctors/get-all.php', { credentials: 'include' })
+          fetch('/doctor_api/referrals/get-specialists.php', { credentials: 'include' })
         ]);
 
         const pText = await pRes.text();
-        const dText = await dRes.text();
-        let pJson = null; let dJson = null;
+        const sText = await sRes.text();
+        let pJson = null; let sJson = null;
         try { pJson = JSON.parse(pText); } catch(e){ pJson = null; }
-        try { dJson = JSON.parse(dText); } catch(e){ dJson = null; }
+        try { sJson = JSON.parse(sText); } catch(e){ sJson = null; }
 
         if (pJson && pJson.success) setPatients(pJson.patients || []);
-        if (dJson && dJson.success) setDoctors(dJson.doctors || []);
+        if (sJson && sJson.success) setSpecialists(sJson.specialists || []);
       } catch (err) {
-        console.error('Failed to load patients or doctors', err);
+        console.error('Failed to load patients or specialists', err);
       }
     };
     loadLists();
@@ -92,28 +93,16 @@ function Referral() {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      // Resolve patient_id from patient_name input
-      let patientId = null;
-      const match = (form.patient_name || '').match(/\(P(\d+)\)$/);
-      if (match) {
-        patientId = parseInt(match[1], 10);
-      } else {
-        const found = patients.find(p => `${p.name}`.toLowerCase() === (form.patient_name || '').toLowerCase());
-        if (found) {
-          const numericMatch = (found.id || '').match(/\d+/);
-          patientId = numericMatch ? parseInt(numericMatch[0], 10) : null;
-        }
-      }
-
-      if (!patientId) {
+      // Validate patient_id is set
+      if (!form.patient_id) {
         setStatus({ type: 'error', text: 'Please select a valid patient from the list' });
         setTimeout(() => setStatus(null), 3000);
         return;
       }
 
       const payload = {
-        patient_id: patientId,
-        specialist_doctor_id: parseInt(form.specialist_doctor_staff_id, 10),
+        patient_id: parseInt(form.patient_id, 10),
+        specialist_doctor_id: parseInt(form.specialist_doctor_id, 10),
         reason: form.reason
       };
 
@@ -130,7 +119,7 @@ function Referral() {
 
       if (json && json.success) {
         setStatus({ type: 'success', text: 'Referral sent to specialist successfully!' });
-        setForm({ patient_id: '', patient_name: '', specialist_doctor_staff_id: '', reason: '' });
+        setForm({ patient_id: '', patient_name: '', specialist_doctor_id: '', reason: '' });
         loadReceived(auth.user?.doctor_id ?? null);
       } else {
         const msg = (json && json.error) ? json.error : text || 'Failed to create referral';
@@ -147,19 +136,19 @@ function Referral() {
    * Format date for display
    */
   const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
-  try {
-    const [year, month, day] = dateString.split('T')[0].split('-');
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  } catch {
-    return dateString;
-  }
-};
+    if (!dateString) return 'N/A';
+    try {
+      const [year, month, day] = dateString.split('T')[0].split('-');
+      const date = new Date(year, month - 1, day);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  };
 
   return (
     <div className="referral-page">
@@ -240,7 +229,10 @@ function Referral() {
         <div className="referral-column">
           <h3>Create Referral</h3>
           <form className="referral-form" onSubmit={handleCreate}>
-            <label>Patient *
+            
+            {/* Patient Autocomplete */}
+            <label>
+              Patient *
               <div className="patient-select">
                 <input
                   type="text"
@@ -259,43 +251,53 @@ function Referral() {
                     {filteredPatientResults.length === 0 ? (
                       <div className="patient-list-empty">No matching patients</div>
                     ) : (
-                      filteredPatientResults.map(p => (
-                        <div 
-                          key={p.id} 
-                          className="patient-list-item" 
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            const numeric = parseInt((p.id || '').replace(/^P/i, ''), 10) || null;
-                            setForm({ ...form, patient_name: `${p.name} (${p.id})`, patient_id: numeric });
-                            setShowPatientList(false);
-                          }}
-                        >
-                          <div className="patient-list-item-name">{p.name}</div>
-                          <div className="patient-list-item-id">{p.id}</div>
-                        </div>
-                      ))
+                      filteredPatientResults.map(p => {
+                        const numericId = p.id ? parseInt(p.id.replace(/^P/i, ''), 10) : null;
+                        return (
+                          <div 
+                            key={p.id} 
+                            className="patient-list-item" 
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setForm({ 
+                                ...form, 
+                                patient_name: `${p.name} (${p.id})`, 
+                                patient_id: numericId 
+                              });
+                              setShowPatientList(false);
+                            }}
+                          >
+                            <div className="patient-list-item-name">{p.name}</div>
+                            <div className="patient-list-item-id">{p.id}</div>
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 )}
               </div>
             </label>
 
-            <label>Specialist *
+            {/* Specialist Dropdown */}
+            <label>
+              Specialist *
               <select 
-                value={form.specialist_doctor_staff_id} 
-                onChange={e => setForm({...form, specialist_doctor_staff_id: e.target.value})} 
+                value={form.specialist_doctor_id} 
+                onChange={e => setForm({...form, specialist_doctor_id: e.target.value})} 
                 required
               >
                 <option value="">-- Select specialist --</option>
-                {doctors.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}{d.specialty_name ? ` — ${d.specialty_name}` : ''}
+                {specialists.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} — {s.specialty_name}
                   </option>
                 ))}
               </select>
             </label>
 
-            <label>Reason for Referral *
+            {/* Reason */}
+            <label>
+              Reason for Referral *
               <textarea 
                 value={form.reason} 
                 onChange={e => setForm({...form, reason: e.target.value})} 
