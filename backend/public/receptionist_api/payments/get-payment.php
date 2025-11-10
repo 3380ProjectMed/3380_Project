@@ -36,7 +36,7 @@ try {
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.dob,
                 p.email,
-                ec.phone as patient_phone
+                ec.ec_phone as patient_phone
             FROM patient_visit pv
             INNER JOIN patient p ON pv.patient_id = p.patient_id
             LEFT JOIN emergency_contact ec ON p.emergency_contact_id = ec.emergency_contact_id
