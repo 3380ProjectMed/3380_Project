@@ -17,6 +17,7 @@ function Referral() {
   const [patients, setPatients] = useState([]);
   const [specialists, setSpecialists] = useState([]);
   const [showPatientList, setShowPatientList] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
 
   // Filtered patient autocomplete results
   const filteredPatientResults = useMemo(() => {
@@ -66,25 +67,77 @@ function Referral() {
   useEffect(() => {
     const loadLists = async () => {
       try {
-        if (auth.loading) return;
+        setLoadingData(true);
+        if (auth.loading) {
+          console.log('⏳ Auth still loading...');
+          return;
+        }
+        
         const doctorId = auth.user?.doctor_id ?? null;
-        if (!doctorId) return;
+        console.log('👨‍⚕️ Doctor ID:', doctorId);
+        
+        if (!doctorId) {
+          console.warn('❌ No doctor_id available');
+          setLoadingData(false);
+          return;
+        }
+        
+        console.log('🔍 Fetching patients and specialists...');
         
         const [pRes, sRes] = await Promise.all([
           fetch(`/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' }),
           fetch('/doctor_api/referrals/get-specialists.php', { credentials: 'include' })
         ]);
 
+        console.log('📥 Patients response status:', pRes.status);
+        console.log('📥 Specialists response status:', sRes.status);
+
         const pText = await pRes.text();
         const sText = await sRes.text();
+        
+        console.log('📄 Raw patients response:', pText.substring(0, 200));
+        console.log('📄 Raw specialists response:', sText.substring(0, 200));
+        
         let pJson = null; let sJson = null;
-        try { pJson = JSON.parse(pText); } catch(e){ pJson = null; }
-        try { sJson = JSON.parse(sText); } catch(e){ sJson = null; }
+        
+        try { 
+          pJson = JSON.parse(pText); 
+          console.log('✅ Parsed patients JSON:', pJson);
+        } catch(e){ 
+          console.error('❌ Failed to parse patients JSON:', e);
+          console.error('Raw text was:', pText);
+          pJson = null; 
+        }
+        
+        try { 
+          sJson = JSON.parse(sText); 
+          console.log('✅ Parsed specialists JSON:', sJson);
+        } catch(e){ 
+          console.error('❌ Failed to parse specialists JSON:', e);
+          console.error('Raw text was:', sText);
+          sJson = null; 
+        }
 
-        if (pJson && pJson.success) setPatients(pJson.patients || []);
-        if (sJson && sJson.success) setSpecialists(sJson.specialists || []);
+        if (pJson && pJson.success) {
+          console.log('✅ Patients loaded:', pJson.patients?.length, 'patients');
+          setPatients(pJson.patients || []);
+        } else {
+          console.error('❌ Patients API error:', pJson?.error);
+          setPatients([]);
+        }
+        
+        if (sJson && sJson.success) {
+          console.log('✅ Specialists loaded:', sJson.specialists?.length, 'specialists');
+          console.log('Specialist data:', sJson.specialists);
+          setSpecialists(sJson.specialists || []);
+        } else {
+          console.error('❌ Specialists API error:', sJson?.error);
+          setSpecialists([]);
+        }
       } catch (err) {
-        console.error('Failed to load patients or specialists', err);
+        console.error('❌ Network error loading lists:', err);
+      } finally {
+        setLoadingData(false);
       }
     };
     loadLists();
@@ -105,6 +158,8 @@ function Referral() {
         specialist_doctor_id: parseInt(form.specialist_doctor_id, 10),
         reason: form.reason
       };
+
+      console.log('📤 Sending referral:', payload);
 
       const res = await fetch(`${apiBase}/create.php`, {
         method: 'POST', 
@@ -153,6 +208,32 @@ function Referral() {
   return (
     <div className="referral-page">
       <h2 className="page-title">Referrals</h2>
+      
+      {/* Debug Panel - shows data loading status */}
+      <div style={{ 
+        background: loadingData ? '#fef3c7' : '#d1fae5', 
+        padding: '12px', 
+        marginBottom: '20px', 
+        borderRadius: '8px',
+        border: '2px solid ' + (loadingData ? '#fbbf24' : '#10b981')
+      }}>
+        <strong>📊 Data Status:</strong><br />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
+          <div>
+            <strong>Patients:</strong> {loadingData ? 'Loading...' : `${patients.length} loaded`}
+          </div>
+          <div>
+            <strong>Specialists:</strong> {loadingData ? 'Loading...' : `${specialists.length} loaded`}
+          </div>
+          <div>
+            <strong>Auth Status:</strong> {auth.loading ? 'Loading' : 'Ready'}
+          </div>
+          <div>
+            <strong>Doctor ID:</strong> {auth.user?.doctor_id || 'None'}
+          </div>
+        </div>
+      </div>
+      
       <div className="referral-grid">
         {/* ===== RECEIVED REFERRALS ===== */}
         <div className="referral-column">
@@ -228,91 +309,109 @@ function Referral() {
         {/* ===== CREATE REFERRAL FORM ===== */}
         <div className="referral-column">
           <h3>Create Referral</h3>
-          <form className="referral-form" onSubmit={handleCreate}>
-            
-            {/* Patient Autocomplete */}
-            <label>
-              Patient *
-              <div className="patient-select">
-                <input
-                  type="text"
-                  placeholder="Type patient name or ID"
-                  value={form.patient_name}
-                  onChange={e => { 
-                    setForm({...form, patient_name: e.target.value, patient_id: ''}); 
-                    setShowPatientList(true); 
-                  }}
-                  onFocus={() => setShowPatientList(true)}
-                  onBlur={() => setTimeout(() => setShowPatientList(false), 200)}
-                  required
-                />
-                {showPatientList && (form.patient_name || '').trim() !== '' && !form.patient_id && (
-                  <div className="patient-list-dropdown open">
-                    {filteredPatientResults.length === 0 ? (
-                      <div className="patient-list-empty">No matching patients</div>
-                    ) : (
-                      filteredPatientResults.map(p => {
-                        const numericId = p.id ? parseInt(p.id.replace(/^P/i, ''), 10) : null;
-                        return (
-                          <div 
-                            key={p.id} 
-                            className="patient-list-item" 
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              setForm({ 
-                                ...form, 
-                                patient_name: `${p.name} (${p.id})`, 
-                                patient_id: numericId 
-                              });
-                              setShowPatientList(false);
-                            }}
-                          >
-                            <div className="patient-list-item-name">{p.name}</div>
-                            <div className="patient-list-item-id">{p.id}</div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
-              </div>
-            </label>
-
-            {/* Specialist Dropdown */}
-            <label>
-              Specialist *
-              <select 
-                value={form.specialist_doctor_id} 
-                onChange={e => setForm({...form, specialist_doctor_id: e.target.value})} 
-                required
-              >
-                <option value="">-- Select specialist --</option>
-                {specialists.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} — {s.specialty_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {/* Reason */}
-            <label>
-              Reason for Referral *
-              <textarea 
-                value={form.reason} 
-                onChange={e => setForm({...form, reason: e.target.value})} 
-                placeholder="Describe the reason for this referral..."
-                rows="4"
-                required 
-              />
-            </label>
-
-            <div style={{ marginTop: 16 }}>
-              <button className="btn btn-primary" type="submit">
-                Send Referral to Specialist
-              </button>
+          
+          {loadingData ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
+              Loading form data...
             </div>
-          </form>
+          ) : (
+            <form className="referral-form" onSubmit={handleCreate}>
+              
+              {/* Patient Autocomplete */}
+              <label>
+                Patient * <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>({patients.length} available)</span>
+                <div className="patient-select">
+                  <input
+                    type="text"
+                    placeholder="Type patient name or ID to search..."
+                    value={form.patient_name}
+                    onChange={e => { 
+                      setForm({...form, patient_name: e.target.value, patient_id: ''}); 
+                      setShowPatientList(true); 
+                    }}
+                    onFocus={() => setShowPatientList(true)}
+                    onBlur={() => setTimeout(() => setShowPatientList(false), 200)}
+                    required
+                  />
+                  {showPatientList && (form.patient_name || '').trim() !== '' && !form.patient_id && (
+                    <div className="patient-list-dropdown open">
+                      {filteredPatientResults.length === 0 ? (
+                        <div className="patient-list-empty">No matching patients</div>
+                      ) : (
+                        filteredPatientResults.map(p => {
+                          const numericId = p.id ? parseInt(p.id.replace(/^P/i, ''), 10) : null;
+                          return (
+                            <div 
+                              key={p.id} 
+                              className="patient-list-item" 
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setForm({ 
+                                  ...form, 
+                                  patient_name: `${p.name} (${p.id})`, 
+                                  patient_id: numericId 
+                                });
+                                setShowPatientList(false);
+                              }}
+                            >
+                              <div className="patient-list-item-name">{p.name}</div>
+                              <div className="patient-list-item-id">{p.id}</div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              </label>
+
+              {/* Specialist Dropdown */}
+              <label>
+                Specialist * <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>({specialists.length} available)</span>
+                <select 
+                  value={form.specialist_doctor_id} 
+                  onChange={e => {
+                    console.log('Selected specialist ID:', e.target.value);
+                    setForm({...form, specialist_doctor_id: e.target.value});
+                  }} 
+                  required
+                >
+                  <option value="">-- Select specialist --</option>
+                  {specialists.length === 0 ? (
+                    <option value="" disabled>No specialists available (check console)</option>
+                  ) : (
+                    specialists.map(s => {
+                      console.log('Rendering option for specialist:', s);
+                      return (
+                        <option key={s.id} value={s.id}>
+                          {s.name} — {s.specialty_name}
+                        </option>
+                      );
+                    })
+                  )}
+                </select>
+              </label>
+
+              {/* Reason */}
+              <label>
+                Reason for Referral *
+                <textarea 
+                  value={form.reason} 
+                  onChange={e => setForm({...form, reason: e.target.value})} 
+                  placeholder="Describe the reason for this referral..."
+                  rows="4"
+                  required 
+                />
+              </label>
+
+              <div style={{ marginTop: 16 }}>
+                <button className="btn btn-primary" type="submit">
+                  Send Referral to Specialist
+                </button>
+              </div>
+            </form>
+          )}
+          
           {status && <div className={`alert alert-${status.type}`}>{status.text}</div>}
         </div>
       </div>
