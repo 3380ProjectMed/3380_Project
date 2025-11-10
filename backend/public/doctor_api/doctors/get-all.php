@@ -23,7 +23,12 @@ try {
     $current_doctor_id = null;
     $user_id = isset($_SESSION['uid']) ? intval($_SESSION['uid']) : null;
     if ($user_id) {
-        $currentDoctorRows = executeQuery($conn, 'SELECT d.doctor_id FROM doctor d JOIN user_account ua ON ua.email = d.email WHERE ua.user_id = ? LIMIT 1', 'i', [$user_id]);
+        $currentDoctorRows = executeQuery($conn, 'SELECT d.doctor_id 
+                        FROM user_account ua
+                        JOIN staff s ON ua.user_id = s.staff_id
+                        JOIN doctor d ON s.staff_id = d.staff_id
+                        WHERE ua.user_id = ? 
+                        LIMIT 1', 'i', [$user_id]);
         if (is_array($currentDoctorRows) && count($currentDoctorRows) > 0) {
             $current_doctor_id = (int)$currentDoctorRows[0]['doctor_id'];
         }

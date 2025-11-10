@@ -19,14 +19,12 @@ try {
     } else {
         $user_id = (int)$_SESSION['uid'];
         // Azure: lowercase tables, lowercase columns in doctor
-            $rows = executeQuery($conn, '
-                        SELECT d.doctor_id 
+            $rows = executeQuery($conn, 'SELECT d.doctor_id 
                         FROM user_account ua
                         JOIN staff s ON ua.user_id = s.staff_id
                         JOIN doctor d ON s.staff_id = d.staff_id
                         WHERE ua.user_id = ? 
-                        LIMIT 1
-            ', 'i', [$user_id]);         
+                        LIMIT 1', 'i', [$user_id]);         
             if (empty($rows)) {
             closeDBConnection($conn);
             http_response_code(403);
