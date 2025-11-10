@@ -1,7 +1,7 @@
 <?php
 /**
- * SIMPLE VERSION - Record a payment
- * Just saves payment amount to patient_visit
+ * Record copay payment
+ * Receptionist collects copay - that's it!
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -65,8 +65,8 @@ try {
     $receptionist_name = $staffRows[0]['staff_name'];
     $office_id = (int)$staffRows[0]['office_id'];
     
-    // Check if visit exists and belongs to this office
-    $checkSql = "SELECT payment, office_id FROM patient_visit WHERE visit_id = ?";
+    // Check visit exists and belongs to this office
+    $checkSql = "SELECT payment, office_id, patient_id FROM patient_visit WHERE visit_id = ?";
     $existing = executeQuery($conn, $checkSql, 'i', [$visit_id]);
     
     if (empty($existing)) {
@@ -94,23 +94,31 @@ try {
         exit;
     }
     
-    // Update with payment
+    // Simple update - just save the copay payment
     $updateSql = "UPDATE patient_visit 
                   SET payment = ?,
                       payment_method = ?,
-                      status = 'Completed',
+                      copay_amount_due = ?,
                       last_updated = NOW(),
                       updated_by = ?
                   WHERE visit_id = ?";
     
-    executeQuery($conn, $updateSql, 'dssi', [$amount, $method, $receptionist_name, $visit_id]);
+    executeQuery($conn, $updateSql, 'dsdsi', [$amount, $method, $amount, $receptionist_name, $visit_id]);
+    
+    // Get patient name for response
+    $patientSql = "SELECT CONCAT(p.first_name, ' ', p.last_name) as patient_name
+                   FROM patient p
+                   WHERE p.patient_id = ?";
+    $patientRows = executeQuery($conn, $patientSql, 'i', [$existing[0]['patient_id']]);
+    $patient_name = $patientRows[0]['patient_name'] ?? 'Unknown';
     
     closeDBConnection($conn);
     
     echo json_encode([
         'success' => true,
-        'message' => 'Payment recorded successfully',
+        'message' => 'Copay payment recorded successfully',
         'visit_id' => $visit_id,
+        'patient_name' => $patient_name,
         'amount' => number_format($amount, 2),
         'method' => $method,
         'recorded_by' => $receptionist_name
@@ -120,8 +128,7 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false, 
-        'error' => $e->getMessage(),
-        'trace' => $e->getTraceAsString()
+        'error' => $e->getMessage()
     ]);
 }
 ?>

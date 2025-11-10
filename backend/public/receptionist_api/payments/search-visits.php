@@ -1,7 +1,7 @@
 <?php
 /**
- * Search for visits that need payment
- * Fixed to properly search by patient name or appointment ID
+ * Search for visits that need copay payment
+ * Receptionists collect copays - that's it!
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -18,7 +18,6 @@ try {
 
     $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-    // Return empty results if search is too short
     if (strlen($search) < 1) {
         echo json_encode(['success' => true, 'visits' => [], 'count' => 0]);
         exit;
@@ -26,7 +25,7 @@ try {
 
     $conn = getDBConnection();
 
-    // Get receptionist's office to limit results
+    // Get receptionist's office
     $staffRows = executeQuery($conn, '
         SELECT s.work_location as office_id
         FROM staff s
@@ -42,8 +41,7 @@ try {
     
     $office_id = (int)$staffRows[0]['office_id'];
 
-    // Search by patient name or appointment ID
-    // Only show visits that haven't been fully paid yet
+    // Search visits that need copay payment
     $sql = "SELECT 
                 pv.visit_id,
                 pv.patient_id,
@@ -51,18 +49,13 @@ try {
                 pv.date as visit_date,
                 pv.reason_for_visit,
                 pv.payment,
-                pv.amount_due,
-                pv.total_due,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
-                p.dob as patient_dob,
-                CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as doctor_name
+                p.dob as patient_dob
             FROM patient_visit pv
             INNER JOIN patient p ON pv.patient_id = p.patient_id
-            LEFT JOIN doctor d ON pv.doctor_id = d.doctor_id
-            LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
             WHERE pv.office_id = ?
-            AND pv.status IN ('Checked In', 'Completed')
-            AND (pv.payment IS NULL OR pv.payment = 0 OR pv.total_due > 0)
+            AND pv.status IN ('Checked In', 'Scheduled')
+            AND (pv.payment IS NULL OR pv.payment = 0)
             AND (
                 CONCAT(p.first_name, ' ', p.last_name) LIKE ?
                 OR pv.appointment_id = ?
@@ -86,9 +79,7 @@ try {
                 'appointment_id' => $v['appointment_id'],
                 'visit_date' => $v['visit_date'],
                 'reason' => $v['reason_for_visit'],
-                'doctor_name' => $v['doctor_name'],
-                'needs_payment' => true,
-                'current_payment' => $v['payment'] ? number_format((float)$v['payment'], 2) : '0.00'
+                'needs_payment' => true
             ];
         }
     }
@@ -105,8 +96,7 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false, 
-        'error' => $e->getMessage(),
-        'trace' => $e->getTraceAsString()
+        'error' => $e->getMessage()
     ]);
 }
 ?>

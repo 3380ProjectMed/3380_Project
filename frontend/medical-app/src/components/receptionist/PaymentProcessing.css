@@ -1,14 +1,14 @@
-/* SIMPLE Payment Processing Styles */
+/* Payment Processing - Copay Collection */
 
 .payment-page {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 2rem;
 }
 
 .page-title {
   font-size: 2rem;
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
   color: #2563eb;
 }
 
@@ -35,6 +35,12 @@
   font-size: 1rem;
 }
 
+.loading-message {
+  text-align: center;
+  padding: 1rem;
+  color: #6b7280;
+}
+
 .results-list {
   background: white;
   border: 1px solid #e5e7eb;
@@ -49,6 +55,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: background 0.2s;
 }
 
 .result-item:hover {
@@ -60,11 +67,23 @@
 }
 
 .badge {
-  background: #fef3c7;
-  color: #92400e;
+  background: #dbeafe;
+  color: #1e40af;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
   font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.no-results {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6b7280;
+}
+
+.no-results svg {
+  color: #d1d5db;
+  margin-bottom: 1rem;
 }
 
 /* Payment Section */
@@ -84,7 +103,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  transition: background 0.2s;
 }
 
 .btn-back:hover {
@@ -93,14 +113,17 @@
 
 .info-card {
   background: #f9fafb;
-  padding: 1rem;
-  border-radius: 6px;
+  padding: 1.5rem;
+  border-radius: 8px;
   margin-bottom: 1.5rem;
+  border-left: 4px solid #2563eb;
 }
 
 .info-card h3 {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.75rem 0;
   color: #1f2937;
+  display: flex;
+  align-items: center;
 }
 
 .info-card p {
@@ -108,54 +131,86 @@
   color: #6b7280;
 }
 
-.payment-breakdown {
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
+/* Insurance Card */
+.insurance-card {
+  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
   padding: 1.5rem;
+  border-radius: 8px;
   margin-bottom: 1.5rem;
+  border: 2px solid #93c5fd;
 }
 
-.payment-breakdown h3 {
+.insurance-card h3 {
   margin: 0 0 1rem 0;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
 }
 
-.breakdown-row {
+.insurance-details {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+}
+
+.insurance-row {
   display: flex;
   justify-content: space-between;
-  padding: 0.5rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid #e5e7eb;
 }
 
-.breakdown-row:last-child {
+.insurance-row:last-child {
   border-bottom: none;
 }
 
-.breakdown-row.total {
-  margin-top: 0.5rem;
-  padding-top: 1rem;
-  border-top: 2px solid #2563eb;
+.insurance-divider {
+  height: 1px;
+  background: #d1d5db;
+  margin: 0.5rem 0;
+}
+
+.copay-row {
+  background: #fef3c7;
+  margin: 0 -1rem;
+  padding: 0.75rem 1rem !important;
+  border-bottom: none !important;
+}
+
+.copay-amount {
+  color: #92400e;
   font-size: 1.25rem;
-  color: #2563eb;
 }
 
-.treatments-list {
-  background: #f9fafb;
-  padding: 1rem;
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
-}
-
-.treatments-list h4 {
-  margin: 0 0 0.75rem 0;
-}
-
-.treatment-item {
+.insurance-row-small {
   display: flex;
   justify-content: space-between;
-  padding: 0.5rem 0;
   font-size: 0.875rem;
+  color: #6b7280;
+  padding-top: 0.5rem;
 }
 
+.no-insurance-card {
+  background: #fef3c7;
+  border: 2px solid #fbbf24;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.no-insurance-card svg {
+  color: #92400e;
+  margin-bottom: 0.5rem;
+}
+
+.no-insurance-card p:first-of-type {
+  font-weight: 600;
+  color: #92400e;
+  margin: 0.5rem 0;
+}
+
+/* Payment Input */
 .payment-input {
   margin-bottom: 1.5rem;
 }
@@ -163,7 +218,8 @@
 .payment-input label {
   display: block;
   margin-bottom: 0.5rem;
-  font-weight: 500;
+  font-weight: 600;
+  color: #374151;
 }
 
 .input-group {
@@ -173,25 +229,40 @@
   border-radius: 6px;
   padding: 0.75rem;
   background: white;
+  transition: border-color 0.2s;
+}
+
+.input-group:focus-within {
+  border-color: #2563eb;
 }
 
 .input-group span {
   margin-right: 0.5rem;
   color: #6b7280;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 1.25rem;
 }
 
 .input-group input {
   flex: 1;
   border: none;
   outline: none;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
+.help-text {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Payment Methods */
 .payment-methods label {
   display: block;
   margin-bottom: 0.5rem;
-  font-weight: 500;
+  font-weight: 600;
+  color: #374151;
 }
 
 .method-buttons {
@@ -212,26 +283,34 @@
   justify-content: center;
   gap: 0.5rem;
   font-size: 1rem;
+  transition: all 0.2s;
 }
 
 .method-buttons button:hover {
   border-color: #2563eb;
+  background: #eff6ff;
 }
 
 .method-buttons button.active {
   border-color: #2563eb;
-  background: #eff6ff;
-  color: #2563eb;
+  background: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
 }
 
+/* Error Message */
 .error-message {
   background: #fee2e2;
   color: #991b1b;
   padding: 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
+/* Primary Button */
 .btn-primary {
   width: 100%;
   padding: 1rem;
@@ -240,14 +319,16 @@
   border: none;
   border-radius: 6px;
   font-size: 1.125rem;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  transition: background 0.2s;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #1d4ed8;
 }
 
@@ -268,6 +349,8 @@
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .success-icon {
@@ -291,13 +374,14 @@
   background: #f9fafb;
   padding: 2rem;
   border-radius: 8px;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   text-align: left;
 }
 
 .receipt-card h3 {
   margin: 0 0 1rem 0;
   text-align: center;
+  color: #1f2937;
 }
 
 .receipt-row {
@@ -309,6 +393,30 @@
 
 .receipt-row:last-child {
   border-bottom: none;
+}
+
+.receipt-divider {
+  height: 1px;
+  background: #d1d5db;
+  margin: 0.5rem 0;
+}
+
+.total-row {
+  background: #dbeafe;
+  margin: 0 -2rem;
+  padding: 1rem 2rem !important;
+  border-bottom: none !important;
+  color: #1e40af;
+  font-size: 1.25rem;
+}
+
+.receipt-note {
+  background: #fef3c7;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  color: #92400e;
 }
 
 .receipt-actions {
@@ -328,10 +436,12 @@
   justify-content: center;
   gap: 0.5rem;
   font-size: 1rem;
+  transition: all 0.2s;
 }
 
 .btn-secondary:hover {
   background: #f9fafb;
+  border-color: #2563eb;
 }
 
 .text-muted {
@@ -339,8 +449,13 @@
   font-size: 0.875rem;
 }
 
+/* Print Styles */
 @media print {
   .receipt-actions {
     display: none;
+  }
+  
+  .receipt-section {
+    box-shadow: none;
   }
 }
