@@ -182,7 +182,7 @@ try {
         GROUP BY appointment_id
     ) pvmax ON a.Appointment_id = pvmax.appointment_id
     LEFT JOIN patient_visit pv ON pv.visit_id = pvmax.max_visit_id
-    LEFT JOIN nurses n ON pv.nurse_id = n.nurse_id
+    LEFT JOIN nurse n ON pv.nurse_id = n.nurse_id
     LEFT JOIN staff nurse_staff ON n.staff_id = nurse_staff.staff_id
     LEFT JOIN patient_insurance ip ON pv.insurance_policy_id_used = ip.id
     LEFT JOIN insurance_plan iplan ON ip.plan_id = iplan.plan_id

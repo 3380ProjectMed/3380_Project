@@ -40,7 +40,7 @@ try {
                 d.doctor_id,
                 st.first_name,
                 st.last_name,
-                st.email as staff_email,
+                st.staff_email as staff_email,
                 st.phone as staff_phone,
                 d.license_number,
                 s.specialty_name,
