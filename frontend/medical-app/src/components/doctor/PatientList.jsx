@@ -49,35 +49,46 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     );
   }, [searchTerm, patients]);
 
-  // Load all patients for the doctor when auth provides doctor_id
+  // Load patients function - separated for reusability
+  const loadPatients = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const staffId = auth.user.user_id; // staff_id = user_id
+      const response = await fetch(`${API_URL}/api/doctors/${staffId}/patients`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${auth.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setPatients(data.patients);
+      } else {
+        setError(data.message || 'Failed to load patients');
+      }
+    } catch (err) {
+      setError('Failed to load patients: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load all patients for the doctor when auth becomes available
   useEffect(() => {
     if (auth.loading) return;
-    const doctorId = auth.user?.doctor_id ?? null;
-    if (!doctorId) {
-      setError('No doctor account is associated with this user.');
+
+    if (!auth.user || auth.user.role !== 'DOCTOR') {
+      setError('Doctor access required.');
+      setLoading(false);
       return;
     }
 
-    const loadPatients = async (did) => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Use proxy-relative path so dev server forwards to backend and avoids CORS/html errors
-        const res = await fetch(`/doctor_api/patients/get-all.php?doctor_id=${did}`, { credentials: 'include' });
-        const payload = await res.json();
-        if (payload.success) {
-          setPatients(payload.patients);
-        } else {
-          setError(payload.error || 'Failed to load patients');
-        }
-      } catch (err) {
-        console.error('Error fetching patients', err);
-        setError(err.message || String(err));
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadPatients(doctorId);
+    loadPatients();
   }, [auth.user, auth.loading]);
 
   // Search by ID using the API (if the input looks like an ID)
@@ -258,7 +269,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
 
       {error && (
         <div className="patient-list__error">Error: {error}
-          <button onClick={() => { setError(null); setSearchTerm(''); /* reload all */ window.location.reload(); }} style={{ marginLeft: '8px'}}>Reload</button>
+          <button onClick={() => { setError(null); setSearchTerm(''); loadPatients(); }} style={{ marginLeft: '8px'}}>Reload</button>
         </div>
       )}
 
