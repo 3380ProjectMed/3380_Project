@@ -34,18 +34,19 @@ try {
         }
     }
     
-    // Get all doctors with their specialty (all lowercase for Azure)
+    // Get all doctors with their specialty
+    // FIXED: Use correct column names from correct tables
     $sql = "SELECT 
-                st.doctor_id,
+                d.doctor_id,
                 st.first_name,
                 st.last_name,
-                st.staff_email,
-                d.phone,
-                st.license_number,
+                st.email as staff_email,
+                st.phone as staff_phone,
+                d.license_number,
                 s.specialty_name,
                 cg.gender_text as gender
-            FROM staff st
-            LEFT JOIN doctor d ON st.staff_id = d.staff_id
+            FROM doctor d
+            JOIN staff st ON d.staff_id = st.staff_id
             LEFT JOIN specialty s ON d.specialty = s.specialty_id
             LEFT JOIN codes_gender cg ON st.gender = cg.gender_code
             ORDER BY st.last_name, st.first_name";
@@ -69,8 +70,8 @@ try {
             'lastName' => $doc['last_name'],
             'name' => $doc['first_name'] . ' ' . $doc['last_name'], // Add 'name' field for dropdown
             'fullName' => $doc['first_name'] . ' ' . $doc['last_name'],
-            'email' => $doc['email'],
-            'phone' => $doc['phone'] ?: 'Not provided',
+            'email' => $doc['staff_email'],
+            'phone' => $doc['staff_phone'] ?: 'Not provided',
             'licenseNumber' => $doc['license_number'],
             'specialty' => $doc['specialty_name'],
             'specialty_name' => $doc['specialty_name'], // Add for consistency
