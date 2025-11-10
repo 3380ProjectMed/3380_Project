@@ -37,11 +37,11 @@ try {
     
     $user_id = intval($_SESSION['uid']);
     
-    // Get user role and associated doctor/admin info
+    // Get user role and associated doctor/admin info - FIXED FOR NEW SCHEMA
     $userQuery = "SELECT ua.role, d.doctor_id 
               FROM user_account ua 
-              LEFT JOIN staff s ON ua.email = s.staff_email AND s.staff_role = 'Doctor'
-              LEFT JOIN doctor d ON s.staff_id = d.doctor_id
+              LEFT JOIN staff s ON ua.user_id = s.staff_id
+              LEFT JOIN doctor d ON s.staff_id = d.staff_id
               WHERE ua.user_id = ? 
               LIMIT 1";
     $userInfo = executeQuery($conn, $userQuery, 'i', [$user_id]);
@@ -54,7 +54,7 @@ try {
     }
     
     $userRole = $userInfo[0]['role'];
-    $loggedInDoctorId = $userInfo[0]['staff_id'];
+    $loggedInDoctorId = $userInfo[0]['doctor_id'];  // FIXED: Use doctor_id from query
     
     // Verify user has permission to access reports
     if (!in_array($userRole, ['DOCTOR', 'ADMIN'])) {
@@ -141,8 +141,7 @@ try {
     // Build WHERE clause
     $whereClause = count($whereConditions) > 0 ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
     
-    // Main query - ALL LOWERCASE for Azure database
-    // Note: appointment table has mixed case column names: Appointment_id, Patient_id, Doctor_id, etc.
+    // Main query - FIXED FOR NEW SCHEMA
     $sql = "SELECT 
         a.Appointment_id as appointment_id,
         DATE(a.Appointment_date) as appointment_date,
@@ -153,14 +152,14 @@ try {
         p.patient_id as patient_id,
         p.dob as patient_dob,
         p.emergency_contact_id as patient_ec_id,
-    CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as doctor_name,
-    doc_staff.staff_id as doctor_id,
+        CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as doctor_name,
+        d.doctor_id as doctor_id,
         s.specialty_name as doctor_specialty,
         o.name as office_name,
         o.office_id as office_id,
         o.city as office_city,
         o.state as office_state,
-        CONCAT(staff.first_name, ' ', staff.last_name) as nurse_name,
+        CONCAT(nurse_staff.first_name, ' ', nurse_staff.last_name) as nurse_name,
         n.nurse_id as nurse_id,
         pv.visit_id as visit_id,
         pv.status as status,
@@ -174,7 +173,7 @@ try {
     FROM appointment a
     LEFT JOIN patient p ON a.Patient_id = p.patient_id
     LEFT JOIN doctor d ON a.Doctor_id = d.doctor_id
-    LEFT JOIN staff ON d.staff_id = staff.staff_id
+    LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
     LEFT JOIN specialty s ON d.specialty = s.specialty_id
     LEFT JOIN office o ON a.Office_id = o.office_id
     LEFT JOIN (
@@ -184,7 +183,7 @@ try {
     ) pvmax ON a.Appointment_id = pvmax.appointment_id
     LEFT JOIN patient_visit pv ON pv.visit_id = pvmax.max_visit_id
     LEFT JOIN nurse n ON pv.nurse_id = n.nurse_id
-    LEFT JOIN staff staff ON n.staff_id = staff.staff_id
+    LEFT JOIN staff nurse_staff ON n.staff_id = nurse_staff.staff_id
     LEFT JOIN patient_insurance ip ON pv.insurance_policy_id_used = ip.id
     LEFT JOIN insurance_plan iplan ON ip.plan_id = iplan.plan_id
     LEFT JOIN insurance_payer ipayer ON iplan.payer_id = ipayer.payer_id
