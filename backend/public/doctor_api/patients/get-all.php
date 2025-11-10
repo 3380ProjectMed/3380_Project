@@ -28,8 +28,7 @@ try {
 
         $user_id = intval($_SESSION['uid']);
         // Note: doctor table is lowercase, but columns are lowercase too
-        $rows = executeQuery($conn, '
-            SELECT d.doctor_id 
+        $rows = executeQuery($conn, 'SELECT d.doctor_id 
             FROM user_account ua
             JOIN staff s ON ua.user_id = s.staff_id
             JOIN doctor d ON s.staff_id = d.staff_id
@@ -47,9 +46,6 @@ try {
 
     error_log("Querying patients for doctor_id: " . $doctor_id);
 
-    // SQL query - Azure database uses lowercase table names
-    // appointment table has mixed case: Appointment_date, Patient_id, etc.
-    // patient table has all lowercase columns
     $sql = "SELECT 
                 p.patient_id,
                 p.first_name,
