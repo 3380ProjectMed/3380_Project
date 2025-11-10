@@ -34,7 +34,7 @@ try {
                 pv.payment,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.dob,
-                p.emergency_contact,
+                p.emergency_contact_id,
                 CONCAT(sf.first_name, ' ', sf.last_name) as doctor_name,
                 -- Get copay from insurance if patient has it
                 iplan.copay as insurance_copay
