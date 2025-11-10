@@ -35,12 +35,14 @@ try {
     // Get specialist doctors (exclude primary care specialties 1,2,3,4,7)
     $sql = "SELECT 
                 d.doctor_id,
+                s.staff_id,
                 s.first_name,
                 s.last_name,
                 sp.specialty_name,
                 sp.specialty_id
             FROM doctor d
             JOIN staff s ON d.staff_id = s.staff_id
+            INNER JOIN user_account ua ON ua.user_id = s.staff_id
             LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
             WHERE d.specialty NOT IN (1, 2, 3, 4, 7)
             ORDER BY sp.specialty_name, s.last_name, s.first_name";
