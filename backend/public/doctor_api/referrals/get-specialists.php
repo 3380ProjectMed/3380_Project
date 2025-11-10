@@ -35,7 +35,6 @@ try {
     // Get specialist doctors (exclude primary care specialties 1,2,3,4,7)
     $sql = "SELECT 
                 d.doctor_id,
-                s.staff_id,
                 s.first_name,
                 s.last_name,
                 sp.specialty_name,
