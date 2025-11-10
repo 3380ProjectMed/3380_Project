@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, Users, Clock, FileText, Search, Filter } from 'lucide-react';
 import './NurseDashboard.css';
-import { getNurseDashboardStats, getNurseSchedule } from '../../api/nurse';
+import { getNurseDashboardStats, getNurseScheduleToday } from '../../api/nurse';
 
 export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
   const [appointments, setAppointments] = useState([]);
-  const [stats, setStats] = useState({ total: 0, waiting: 0, pending: 0, completed: 0 });
+  const [stats, setStats] = useState({ total: 0, waiting: 0, upcoming: 0, completed: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -21,10 +21,11 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
         const today = new Date().toISOString().slice(0, 10);
         const s = await getNurseDashboardStats(today).catch(() => null);
         if (s && mounted) {
-          setStats({ total: s.totalAppointments ?? 0, waiting: s.waitingCount ?? 0, pending: s.upcomingCount ?? 0, completed: s.completedCount ?? 0 });
+          // s is normalized to { total, waiting, upcoming, completed }
+          setStats({ total: s.total ?? 0, waiting: s.waiting ?? 0, upcoming: s.upcoming ?? 0, completed: s.completed ?? 0 });
         }
 
-        const appts = await getNurseSchedule({ date: new Date().toISOString().slice(0,10) }).catch(() => null);
+        const appts = await getNurseScheduleToday().catch(() => null);
         if (mounted) {
           setAppointments(Array.isArray(appts) ? appts : []);
         }

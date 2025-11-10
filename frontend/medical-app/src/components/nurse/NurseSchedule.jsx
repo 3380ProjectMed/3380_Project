@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./NurseSchedule.css";
-import { getNurseSchedule } from '../../api/nurse';
+import { getNurseScheduleToday } from '../../api/nurse';
 
 export default function NurseSchedule() {
   const [schedule, setSchedule] = useState([]);
@@ -11,10 +11,8 @@ export default function NurseSchedule() {
     setLoading(true);
     setError(null);
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const appts = await getNurseSchedule({ date: today });
-      const list = Array.isArray(appts) ? appts : (appts?.appointments || []);
-      setSchedule(list);
+      const list = await getNurseScheduleToday();
+      setSchedule(Array.isArray(list) ? list : []);
     } catch (e) {
       console.error('Schedule error:', e);
       setError(e.message || 'Failed to load schedule');
@@ -57,15 +55,25 @@ export default function NurseSchedule() {
             {loading ? (
               <div className="empty">Loading schedule...</div>
             ) : schedule.length > 0 ? (
-              schedule.map((a, i) => (
-                <div key={a.appointmentId ?? i} className="row">
-                  <div>{new Date(a.time).toLocaleDateString()}</div>
-                  <div>{new Date(a.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-                  <div>{a.patientName || '-'}</div>
-                  <div>-</div>
-                  <div>{a.reason || 'Visit'}</div>
-                </div>
-              ))
+              schedule.map((a, i) => {
+                const time = a.time || a.appointment_time || a.datetime || '';
+                let day = '-';
+                let timeStr = '-';
+                try {
+                  const dt = new Date(time);
+                  day = dt.toLocaleDateString(undefined, { weekday: 'long' });
+                  timeStr = dt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+                } catch (e) {}
+                return (
+                  <div key={a.id ?? a.appointmentId ?? i} className="row">
+                    <div>{day}</div>
+                    <div>{timeStr}</div>
+                    <div>{a.patientName || a.patient_name || '-'}</div>
+                    <div>{a.office_name || (a.location && a.location.office_name) || '-'}</div>
+                    <div>{a.reason || 'Visit'}</div>
+                  </div>
+                );
+              })
             ) : (
               <div className="empty">No schedule</div>
             )}

@@ -17,7 +17,6 @@ export default function NursePatients() {
     try {
   const data = await getNursePatients(search, page, pageSize);
   console.log('Patients response:', data);
-
   const patientList = Array.isArray(data?.patients) ? data.patients : [];
   setPatients(patientList);
   setTotal(Number.isFinite(data?.total) ? data.total : patientList.length);
@@ -70,9 +69,9 @@ export default function NursePatients() {
               <div className="empty">Loading patients...</div>
             ) : patients.length > 0 ? (
               patients.map((p) => (
-                <div key={p.id} className="row">
-                  <div>{p.id}</div>
-                  <div>{p.name}</div>
+                <div key={p.patient_id} className="row">
+                  <div>{p.patient_id}</div>
+                  <div>{`${p.first_name} ${p.last_name}`.trim() || 'Unknown'}</div>
                   <div>{p.dob ? new Date(p.dob).toLocaleDateString() : 'N/A'}</div>
                   <div>{p.allergies || 'None'}</div>
                 </div>
