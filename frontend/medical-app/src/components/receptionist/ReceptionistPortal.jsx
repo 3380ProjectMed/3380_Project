@@ -27,6 +27,7 @@ function ReceptionistPortal() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
   
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -71,6 +72,15 @@ function ReceptionistPortal() {
     setSelectedAppointment(appointment);
   };
 
+  /**
+   * Handle time slot selection from schedule
+   * Navigates to booking page with pre-filled doctor, date, and time
+   */
+  const handleSelectTimeSlot = (slotData) => {
+    setSelectedTimeSlot(slotData);
+    setCurrentPage('booking');
+  };
+
   return (
     <div className="receptionist-portal">
       <Sidebar
@@ -95,6 +105,7 @@ function ReceptionistPortal() {
           <OfficeSchedule
             onAppointmentClick={handleAppointmentClick}
             onBookAppointment={() => setCurrentPage('booking')}
+            onSelectTimeSlot={handleSelectTimeSlot}
             officeId={receptionistOfficeId}
             officeName={receptionistOfficeName}
           />
@@ -111,10 +122,16 @@ function ReceptionistPortal() {
         {currentPage === 'booking' && (
           <AppointmentBooking
             preSelectedPatient={selectedPatient}
-            onBack={() => setCurrentPage('dashboard')}
+            preSelectedTimeSlot={selectedTimeSlot}
+            onBack={() => {
+              setCurrentPage('dashboard');
+              setSelectedPatient(null);
+              setSelectedTimeSlot(null);
+            }}
             onSuccess={() => {
               setCurrentPage('schedule');
               setSelectedPatient(null);
+              setSelectedTimeSlot(null);
             }}
             officeId={receptionistOfficeId}
             officeName={receptionistOfficeName}
