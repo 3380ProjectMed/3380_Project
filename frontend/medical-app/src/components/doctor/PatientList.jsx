@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { Search, X, Calendar, Mail, AlertCircle, FileText } from 'lucide-react';
 import './PatientList.css';
+
 /**
  * PatientList Component
  * 
@@ -37,7 +38,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
    * Filter patients based on search term
    * Searches in: name and patient ID
    */
-  // Filter patients (search by name or ID).
   const filteredPatients = useMemo(() => {
     const source = patients || [];
     if (!searchTerm.trim()) return source;
@@ -49,36 +49,41 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     );
   }, [searchTerm, patients]);
 
-  // Load patients function - separated for reusability
+  /**
+   * Load patients function - separated for reusability
+   * Uses the relative API path pattern consistent with other endpoints
+   */
   const loadPatients = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const staffId = auth.user.user_id; // staff_id = user_id
-      const response = await fetch(`${API_URL}/api/doctors/${staffId}/patients`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${auth.token}`,
-          'Content-Type': 'application/json'
-        }
+      const staffId = auth.user.user_id; // staff_id = user_id in new schema
+      
+      // Using relative path to match your existing API pattern
+      const response = await fetch(`/doctor_api/patients/get-all.php?staff_id=${staffId}`, {
+        credentials: 'include'
       });
       
       const data = await response.json();
       
       if (data.success) {
-        setPatients(data.patients);
+        setPatients(data.patients || []);
       } else {
-        setError(data.message || 'Failed to load patients');
+        setError(data.error || data.message || 'Failed to load patients');
       }
     } catch (err) {
+      console.error('Error loading patients:', err);
       setError('Failed to load patients: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load all patients for the doctor when auth becomes available
+  /**
+   * Load all patients when auth becomes available
+   * Follows the pattern from your appointments module
+   */
   useEffect(() => {
     if (auth.loading) return;
 
@@ -103,7 +108,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       setLoading(true);
       setError(null);
       try {
-        // query patient by id using proxy-relative URL
         const res = await fetch(`/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(q)}`, { credentials: 'include' });
         const payload = await res.json();
         if (payload.success) {
@@ -268,8 +272,18 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       )}
 
       {error && (
-        <div className="patient-list__error">Error: {error}
-          <button onClick={() => { setError(null); setSearchTerm(''); loadPatients(); }} style={{ marginLeft: '8px'}}>Reload</button>
+        <div className="patient-list__error">
+          Error: {error}
+          <button 
+            onClick={() => { 
+              setError(null); 
+              setSearchTerm(''); 
+              loadPatients(); 
+            }} 
+            style={{ marginLeft: '8px'}}
+          >
+            Reload
+          </button>
         </div>
       )}
 
