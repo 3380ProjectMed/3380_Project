@@ -47,6 +47,7 @@ export default function NurseProfile() {
             <p><strong>Email:</strong> {profile.email || 'N/A'}</p>
             <p><strong>Department:</strong> {profile.department || 'N/A'}</p>
             <p><strong>License:</strong> {profile.licenseNumber || 'N/A'}</p>
+            {profile.location && <p><strong>Location:</strong> {typeof profile.location === 'string' ? profile.location : (profile.location.office_name || profile.location.name || JSON.stringify(profile.location))}</p>}
             {profile.phone && <p><strong>Phone:</strong> {profile.phone}</p>}
           </div>
         </div>
