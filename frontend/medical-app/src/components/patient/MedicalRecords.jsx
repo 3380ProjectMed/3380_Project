@@ -94,6 +94,38 @@ export default function MedicalRecords(props) {
     }
   };
 
+  const handleDeleteMedication = async (medicationId) => {
+    if (window.confirm('Are you sure you want to delete this medication?')) {
+      try {
+        const data = await medicalRecordsAPI.deleteMedication(medicationId);
+        if (data.success) {
+          onRefresh && onRefresh(); // Refresh the medical records
+        } else {
+          alert('Error deleting medication: ' + data.message);
+        }
+      } catch (error) {
+        console.error('Error deleting medication:', error);
+        alert('Error deleting medication');
+      }
+    }
+  };
+
+  const handleDeleteAllergy = async (allergyId) => {
+    if (window.confirm('Are you sure you want to remove this allergy?')) {
+      try {
+        const data = await medicalRecordsAPI.deleteAllergy(allergyId);
+        if (data.success) {
+          onRefresh && onRefresh(); // Refresh the medical records
+        } else {
+          alert('Error removing allergy: ' + data.message);
+        }
+      } catch (error) {
+        console.error('Error removing allergy:', error);
+        alert('Error removing allergy');
+      }
+    }
+  };
+
   return (
     <div className="portal-content">
       <h1 className="page-title">Medical Records</h1>
@@ -125,8 +157,21 @@ export default function MedicalRecords(props) {
             </button>
             
             {medications.length === 0 ? <p className="text-gray">No medications recorded</p> : (
-              <ul>
-                {medications.map((m, i) => (<li key={i}>{m.name} — {m.frequency}</li>))}
+              <ul className="medication-list">
+                {medications.map((m, i) => (
+                  <li key={i} className="medication-item">
+                    <span>{m.name} — {m.frequency}</span>
+                    {m.id && (
+                      <button 
+                        className="btn-delete"
+                        onClick={() => handleDeleteMedication(m.id)}
+                        title="Delete medication"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </li>
+                ))}
               </ul>
             )}
           </div>
@@ -141,7 +186,22 @@ export default function MedicalRecords(props) {
             </button>
             
             {allergies.length === 0 ? <p className="text-gray">No allergies recorded</p> : (
-              <ul>{allergies.map((a, i) => (<li key={i}>{typeof a === 'string' ? a : a.name}</li>))}</ul>
+              <ul className="allergy-list">
+                {allergies.map((a, i) => (
+                  <li key={i} className="allergy-item">
+                    <span>{typeof a === 'string' ? a : (a.allergy || a.name)}</span>
+                    {a.id && (
+                      <button 
+                        className="btn-delete"
+                        onClick={() => handleDeleteAllergy(a.id)}
+                        title="Remove allergy"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
 
