@@ -76,18 +76,19 @@ function Referral() {
         const doctorId = auth.user?.doctor_id ?? null;
         console.log('👨‍⚕️ Doctor ID:', doctorId);
         
-        if (!doctorId) {
-          console.warn('❌ No doctor_id available');
-          setLoadingData(false);
-          return;
-        }
-        
         console.log('🔍 Fetching patients and specialists...');
-        
-        const [pRes, sRes] = await Promise.all([
-          fetch(`/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' }),
-          fetch('/doctor_api/referrals/get-specialists.php', { credentials: 'include' })
-        ]);
+
+        // Always fetch specialists (server will use session to determine current user).
+        // Fetch patients only when we have a doctorId - otherwise leave patients empty.
+        const specialistsFetch = fetch('/doctor_api/referrals/get-specialists.php', { credentials: 'include' });
+        const patientsFetch = doctorId
+          ? fetch(`/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' })
+          : null;
+
+        const [sRes, pRes] = await Promise.all([
+          specialistsFetch,
+          patientsFetch
+        ].map(p => p ? p : Promise.resolve({ text: async () => JSON.stringify({ success: true, patients: [] }), status: 200 })));
 
         console.log('📥 Patients response status:', pRes.status);
         console.log('📥 Specialists response status:', sRes.status);
@@ -382,9 +383,12 @@ function Referral() {
                   ) : (
                     specialists.map(s => {
                       console.log('Rendering option for specialist:', s);
+                      const id = s.id || s.doctor_id || s.doctorId || '';
+                      const name = s.name || s.fullName || ((s.firstName || s.lastName) ? `${s.firstName || ''} ${s.lastName || ''}`.trim() : 'Unknown');
+                      const specialty = s.specialty_name || s.specialtyName || 'Specialist';
                       return (
-                        <option key={s.id} value={s.id}>
-                          {s.name} — {s.specialty_name}
+                        <option key={id} value={id}>
+                          {name} — {specialty}
                         </option>
                       );
                     })
