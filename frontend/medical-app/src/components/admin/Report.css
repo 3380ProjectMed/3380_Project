@@ -939,7 +939,7 @@
 		width: 64px;
 		height: 64px;
 	}
-
+ 
 	.report-selector-card h3 {
 		font-size: 1.25rem;
 	}
@@ -949,7 +949,7 @@
 	}
 
 	.report-table {
-		font-size: 0.75rem;
+		font-size: 0.75rem;	
 	}
 
 	.report-table th,

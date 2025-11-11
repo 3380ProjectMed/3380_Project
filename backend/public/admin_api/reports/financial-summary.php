@@ -102,7 +102,7 @@ try {
             LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
             LEFT JOIN insurance_payer ipayer ON ip.payer_id = ipayer.payer_id
             WHERE $where_clause
-            GROUP BY period_group
+            GROUP BY period_group, period_label
             ORDER BY period_group DESC";
     
     $daily_revenue = executeQuery($conn, $sql, $param_types, $params);
