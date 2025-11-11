@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from "react";
-import { User, Mail, Phone, Save } from 'lucide-react';
+import { User, Mail, Phone, Save, AlertCircle } from 'lucide-react';
 import "./NurseProfile.css";
 import { getNurseProfile } from '../../api/nurse';
 
@@ -11,7 +12,10 @@ export default function NurseProfile() {
     phone: '',
     licenseNumber: '',
     department: '',
-    location: ''
+    location: '',
+    gender: '',
+    shift: '',
+    emergencyContact: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -60,8 +64,12 @@ export default function NurseProfile() {
     }
   };
 
+
   if (loading) return <div className="nurse-page"><p>Loading profile...</p></div>;
-  if (error) return <div className="nurse-page"><p style={{color: 'red'}}>{error}</p></div>;
+  if (error) return <div className="nurse-page"><div className="nurse-profile-empty"><AlertCircle size={20} style={{marginRight:8}}/> <span style={{color: 'red'}}>{error}</span></div></div>;
+  if (!profile || (!profile.firstName && !profile.lastName && !profile.email)) {
+    return <div className="nurse-page"><div className="nurse-profile-empty"><AlertCircle size={20} style={{marginRight:8}}/> <span>No profile found. Please contact admin.</span></div></div>;
+  }
 
   const initial = profile.firstName?.[0]?.toUpperCase() || 'A';
   const fullName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Unknown';
@@ -93,6 +101,15 @@ export default function NurseProfile() {
                 <input value={profile.phone} onChange={e => handleChange('phone', e.target.value)} />
               </div>
               <div className="form-group">
+                <label>Gender</label>
+                <select value={profile.gender} onChange={e => handleChange('gender', e.target.value)}>
+                  <option value="">Select</option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="form-group">
                 <label>License Number</label>
                 <input value={profile.licenseNumber} onChange={e => handleChange('licenseNumber', e.target.value)} />
               </div>
@@ -103,6 +120,14 @@ export default function NurseProfile() {
               <div className="form-group">
                 <label>Location</label>
                 <input value={typeof profile.location === 'string' ? profile.location : (profile.location?.office_name || profile.location?.name || '')} onChange={e => handleChange('location', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Shift</label>
+                <input value={profile.shift} onChange={e => handleChange('shift', e.target.value)} placeholder="e.g. Day, Night, Rotating" />
+              </div>
+              <div className="form-group">
+                <label>Emergency Contact</label>
+                <input value={profile.emergencyContact} onChange={e => handleChange('emergencyContact', e.target.value)} placeholder="Name & phone" />
               </div>
             </div>
           </div>
