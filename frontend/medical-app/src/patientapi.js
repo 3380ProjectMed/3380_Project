@@ -81,7 +81,17 @@ export const medicalRecordsAPI = {
   }),
 
   getAllAvailableAllergies: () =>
-  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=all-allergies`)
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=all-allergies`),
+
+  deleteMedication: (medicationId) =>
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=medications&id=${medicationId}`, {
+    method: 'DELETE'
+  }),
+
+  deleteAllergy: (allergyId) =>
+  j(`${PATIENT_API_BASE}/patient_api.php?endpoint=medical-records&type=allergies&id=${allergyId}`, {
+    method: 'DELETE'
+  })
 };
 
 // ==================== VISITS ====================

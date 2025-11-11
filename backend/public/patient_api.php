@@ -855,6 +855,7 @@ elseif ($endpoint === 'medical-records') {
                 case 'medications':
                     $stmt = $mysqli->prepare("
                         SELECT 
+                            mh.drug_id as id,
                             mh.drug_name as name,
                             mh.duration_and_frequency_of_drug_use as frequency,
                             'Patient History' as prescribed_by,
@@ -873,16 +874,17 @@ elseif ($endpoint === 'medical-records') {
 
                 case 'allergies':
                     $stmt = $mysqli->prepare("
-                        SELECT ca.allergies_text as allergy
+                        SELECT 
+                            ca.allergies_code as id,
+                            ca.allergies_text as allergy
                         FROM patient p
                         LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
-                        WHERE p.patient_id = ?
+                        WHERE p.patient_id = ? AND ca.allergies_text IS NOT NULL
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
                     $result = $stmt->get_result();
-                    $allergy = $result->fetch_assoc();
-                    $allergies = $allergy && $allergy['allergy'] ? [$allergy['allergy']] : [];
+                    $allergies = $result->fetch_all(MYSQLI_ASSOC);
                     sendResponse(true, $allergies);
                     break;
 
@@ -1023,6 +1025,65 @@ elseif ($endpoint === 'medical-records') {
         } catch (Exception $e) {
             error_log("Medical records POST error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to update medical records', 500);
+        }
+    } elseif ($method === 'DELETE') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $type = $_GET['type'] ?? '';
+        $item_id = $_GET['id'] ?? $input['id'] ?? null;
+
+        if (!$item_id) {
+            sendResponse(false, [], 'ID is required for deletion', 400);
+        }
+
+        try {
+            switch ($type) {
+                case 'medications':
+                    // Delete from medication_history table
+                    $stmt = $mysqli->prepare("
+                        DELETE FROM medication_history 
+                        WHERE drug_id = ? AND patient_id = ?
+                    ");
+                    $stmt->bind_param('ii', $item_id, $patient_id);
+                    $stmt->execute();
+
+                    if ($stmt->affected_rows > 0) {
+                        sendResponse(true, [], 'Medication deleted successfully');
+                    } else {
+                        sendResponse(false, [], 'Medication not found', 404);
+                    }
+                    break;
+
+                case 'allergies':
+                    // For allergies, we need to clear the patient's allergy field if it matches
+                    // First check if this allergy is assigned to this patient
+                    $stmt = $mysqli->prepare("
+                        SELECT allergies FROM patient WHERE patient_id = ?
+                    ");
+                    $stmt->bind_param('i', $patient_id);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $patient_data = $result->fetch_assoc();
+
+                    if ($patient_data && $patient_data['allergies'] == $item_id) {
+                        // Clear the patient's allergy
+                        $stmt2 = $mysqli->prepare("
+                            UPDATE patient SET allergies = NULL WHERE patient_id = ?
+                        ");
+                        $stmt2->bind_param('i', $patient_id);
+                        $stmt2->execute();
+                        sendResponse(true, [], 'Allergy removed successfully');
+                    } else {
+                        sendResponse(false, [], 'Allergy not found for this patient', 404);
+                    }
+                    break;
+
+                default:
+                    sendResponse(false, [], 'Invalid medical record type for DELETE', 400);
+            }
+
+        } catch (Exception $e) {
+            error_log("Medical records DELETE error: " . $e->getMessage());
+            sendResponse(false, [], 'Failed to delete medical record', 500);
         }
     }
 }
