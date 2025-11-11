@@ -19,9 +19,9 @@ try {
     $sql = "SELECT 
                 DATE(pv.date) as visit_date,
                 COUNT(*) as total_visits,
-                SUM(pv.amount_due) as gross_revenue,
+                SUM(pv.copay_amount_due) as gross_revenue,
                 SUM(pv.payment) as collected_payments,
-                SUM(pv.total_due) as outstanding_balance,
+                SUM(pv.treatment_cost_due) as outstanding_balance,
                 COUNT(DISTINCT pv.patient_id) as unique_patients
             FROM patient_visit pv
             WHERE pv.date BETWEEN ? AND ?
