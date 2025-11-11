@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users, Clock, FileText, Search, Filter, CheckCircle, XCircle, PlayCircle } from 'lucide-react';
+import { Calendar, Users, Clock, FileText, Search, Filter, ClipboardList } from 'lucide-react';
 import './NurseDashboard.css';
-import { getNurseDashboardStats, getNurseSchedule } from '../../api/nurse';
+import { getNurseDashboardStats, getNurseSchedule, getNurseProfile } from '../../api/nurse';
 
 export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
   const [appointments, setAppointments] = useState([]);
@@ -10,6 +10,8 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [nurseName, setNurseName] = useState('');
+  const [tasks, setTasks] = useState({ pendingNotes: 0, referrals: 0 });
 
   useEffect(() => {
     let mounted = true;
@@ -27,6 +29,14 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
         });
         const appts = await getNurseSchedule({ date: today });
         if (mounted) setAppointments(Array.isArray(appts) ? appts : []);
+        // Fetch nurse name for welcome banner
+        const profile = await getNurseProfile();
+        if (mounted && profile && profile.lastName) setNurseName(profile.lastName);
+        // Mock task counts (replace with real API if available)
+        if (mounted) setTasks({
+          pendingNotes: (appts || []).filter(a => a.status && a.status.toLowerCase() === 'in progress').length,
+          referrals: 1 // Placeholder
+        });
       } catch (err) {
         if (mounted) setError(err?.message || 'Failed to load');
       } finally {
@@ -80,11 +90,21 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
       {/* ===== WELCOME HEADER ===== */}
       <div className="dashboard-header">
         <div className="welcome-section">
-          <h1>Welcome Back, Nurse</h1>
+          <h1>Welcome, Nurse{nurseName ? `. ${nurseName}` : ''}</h1>
           <p className="office-info">
             <Calendar size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
             {getCurrentDate()} • <span>Main Clinic, Suite 305</span>
           </p>
+        </div>
+      </div>
+
+      {/* ===== TASK LIST ===== */}
+      <div className="task-list">
+        <div className="task-item">
+          <ClipboardList size={18} style={{marginRight:4}} /> Appointments pending your notes: <strong>{tasks.pendingNotes}</strong>
+        </div>
+        <div className="task-item">
+          <Users size={18} style={{marginRight:4}} /> Referral requests to review: <strong>{tasks.referrals}</strong>
         </div>
       </div>
 
@@ -142,14 +162,14 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
           onClick={() => setCurrentPage && setCurrentPage('schedule')}
         >
           <Calendar size={18} />
-          Full Schedule
+          My Schedule
         </button>
         <button
           className="action-btn"
           onClick={() => setCurrentPage && setCurrentPage('clinical')}
         >
-          <FileText size={18} />
-          Clinical Notes
+          <ClipboardList size={18} />
+          Clinical Workspace
         </button>
       </div>
 
