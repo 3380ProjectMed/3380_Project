@@ -526,9 +526,30 @@ elseif ($endpoint === 'appointments') {
             // Parse appointment date
             $appointmentdateTime = $input['appointment_date'];
             if (strpos($appointmentdateTime, 'AM') !== false || strpos($appointmentdateTime, 'PM') !== false) {
-                $dt = dateTime::createFromFormat('Y-m-d g:i A', $appointmentdateTime);
+                // Try multiple format patterns to handle different time formats
+                $formats = [
+                    'Y-m-d g:i A',    // 2026-11-12 2:00 PM
+                    'Y-m-d h:i A',    // 2026-11-12 02:00 PM
+                    'Y-m-d G:i',      // 2026-11-12 14:00
+                    'Y-m-d H:i'       // 2026-11-12 14:00
+                ];
+                
+                $dt = null;
+                foreach ($formats as $format) {
+                    $dt = DateTime::createFromFormat($format, $appointmentdateTime);
+                    if ($dt && $dt->format($format) === $appointmentdateTime) {
+                        break;
+                    }
+                    $dt = null;
+                }
+                
                 if ($dt) {
                     $appointmentdateTime = $dt->format('Y-m-d H:i:s');
+                } else {
+                    // Log the parsing error
+                    error_log("Date parsing failed for: " . $appointmentdateTime);
+                    sendResponse(false, [], 'Invalid date format. Please use YYYY-MM-DD HH:MM AM/PM format.', 400);
+                    return;
                 }
             }
 
