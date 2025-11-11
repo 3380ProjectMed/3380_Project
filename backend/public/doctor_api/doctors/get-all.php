@@ -42,7 +42,7 @@ try {
                 st.last_name,
                 st.staff_email as staff_email,
                 d.phone as staff_phone,
-                s.license_number,
+                st.license_number,
                 s.specialty_name,
                 cg.gender_text as gender
             FROM doctor d
