@@ -1032,9 +1032,11 @@ elseif ($endpoint === 'insurance') {
                             pi.effective_date,
                             pi.expiration_date,
                             pi.is_primary,
+                            pi.plan_id,
                             ipl.copay,
                             ipl.deductible_individual,
                             ipl.coinsurance_rate,
+                            ip.payer_id,
                             ip.NAME as provider_name,
                             ipl.plan_name,
                             ipl.plan_type
@@ -1070,44 +1072,116 @@ elseif ($endpoint === 'insurance') {
         }
 
         try {
-            // Update patient_insurance record
-            $stmt = $mysqli->prepare("
-                UPDATE patient_insurance 
-                SET member_id = ?, 
-                    group_id = ?, 
-                    effective_date = ?, 
-                    expiration_date = ?, 
-                    is_primary = ?
-                WHERE id = ? AND patient_id = ?
-            ");
-            
-            if (!$stmt) {
-                sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
-            }
-
             $member_id = $input['member_id'] ?? '';
             $group_id = $input['group_id'] ?? '';
             $effective_date = $input['effective_date'] ?? null;
             $expiration_date = $input['expiration_date'] ?? null;
             $is_primary = isset($input['is_primary']) ? (int)$input['is_primary'] : 0;
+            $payer_id = $input['payer_id'] ?? null;
+            $plan_name = $input['plan_name'] ?? '';
+            $plan_type = $input['plan_type'] ?? '';
 
-            $stmt->bind_param('sssssii', 
-                $member_id, 
-                $group_id, 
-                $effective_date, 
-                $expiration_date, 
-                $is_primary, 
-                $insurance_id, 
-                $patient_id
-            );
+            // Start transaction
+            $mysqli->begin_transaction();
+
+            $plan_id = null;
+
+            // If payer_id and plan details are provided, find or create insurance plan
+            if ($payer_id && ($plan_name || $plan_type)) {
+                // Check if a plan with these details already exists
+                $plan_check = $mysqli->prepare("
+                    SELECT plan_id FROM insurance_plan 
+                    WHERE payer_id = ? AND plan_name = ? AND plan_type = ?
+                ");
+                $plan_check->bind_param('iss', $payer_id, $plan_name, $plan_type);
+                $plan_check->execute();
+                $plan_result = $plan_check->get_result();
+                
+                if ($plan_row = $plan_result->fetch_assoc()) {
+                    $plan_id = $plan_row['plan_id'];
+                } else {
+                    // Create new plan
+                    $create_plan = $mysqli->prepare("
+                        INSERT INTO insurance_plan (payer_id, plan_name, plan_type) 
+                        VALUES (?, ?, ?)
+                    ");
+                    $create_plan->bind_param('iss', $payer_id, $plan_name, $plan_type);
+                    if ($create_plan->execute()) {
+                        $plan_id = $mysqli->insert_id;
+                    }
+                    $create_plan->close();
+                }
+                $plan_check->close();
+            }
+
+            // Build UPDATE query dynamically based on what fields are provided
+            $update_fields = [];
+            $update_values = [];
+            $update_types = '';
+
+            if ($member_id !== '') {
+                $update_fields[] = 'member_id = ?';
+                $update_values[] = $member_id;
+                $update_types .= 's';
+            }
+            if ($group_id !== '') {
+                $update_fields[] = 'group_id = ?';
+                $update_values[] = $group_id;
+                $update_types .= 's';
+            }
+            if ($effective_date) {
+                $update_fields[] = 'effective_date = ?';
+                $update_values[] = $effective_date;
+                $update_types .= 's';
+            }
+            if ($expiration_date) {
+                $update_fields[] = 'expiration_date = ?';
+                $update_values[] = $expiration_date;
+                $update_types .= 's';
+            }
+            if (isset($input['is_primary'])) {
+                $update_fields[] = 'is_primary = ?';
+                $update_values[] = $is_primary;
+                $update_types .= 'i';
+            }
+            if ($plan_id) {
+                $update_fields[] = 'plan_id = ?';
+                $update_values[] = $plan_id;
+                $update_types .= 'i';
+            }
+
+            if (empty($update_fields)) {
+                $mysqli->rollback();
+                sendResponse(false, [], 'No valid fields to update', 400);
+                return;
+            }
+
+            // Add WHERE clause parameters
+            $update_values[] = $insurance_id;
+            $update_values[] = $patient_id;
+            $update_types .= 'ii';
+
+            $sql = "UPDATE patient_insurance SET " . implode(', ', $update_fields) . " WHERE id = ? AND patient_id = ?";
+            $stmt = $mysqli->prepare($sql);
+            
+            if (!$stmt) {
+                $mysqli->rollback();
+                sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
+                return;
+            }
+
+            $stmt->bind_param($update_types, ...$update_values);
             
             if ($stmt->execute()) {
                 if ($stmt->affected_rows > 0) {
+                    $mysqli->commit();
                     sendResponse(true, ['id' => $insurance_id], 'Insurance updated successfully');
                 } else {
+                    $mysqli->rollback();
                     sendResponse(false, [], 'Insurance policy not found or no changes made', 404);
                 }
             } else {
+                $mysqli->rollback();
                 sendResponse(false, [], 'Failed to update insurance: ' . $stmt->error, 500);
             }
             
