@@ -210,7 +210,7 @@ function Referral() {
     <div className="referral-page">
       <h2 className="page-title">Referrals</h2>
       
-      {/* Debug Panel - shows data loading status */}
+      {/* Debug Panel - shows data loading status
       <div style={{ 
         background: loadingData ? '#fef3c7' : '#d1fae5', 
         padding: '12px', 
@@ -233,7 +233,7 @@ function Referral() {
             <strong>Doctor ID:</strong> {auth.user?.doctor_id || 'None'}
           </div>
         </div>
-      </div>
+      </div> */}
       
       <div className="referral-grid">
         {/* ===== RECEIVED REFERRALS ===== */}

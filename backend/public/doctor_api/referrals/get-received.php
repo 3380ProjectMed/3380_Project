@@ -18,7 +18,8 @@ try {
         $user_id = intval($_SESSION['uid']);
         $rows = executeQuery($conn, 'SELECT d.doctor_id 
             FROM user_account ua
-            JOIN doctor d ON ua.email = d.email
+            JOIN staff s ON ua.email = s.email
+            JOIN doctor d ON s.staff_id = d.staff_id
             WHERE ua.user_id = ? 
             LIMIT 1
             ', 'i', [$user_id]);
