@@ -553,7 +553,7 @@ elseif ($endpoint === 'appointments') {
                 }
             }
 
-            // Insert appointment - trigger will validate PCP or referral
+            // Insert appointment - trigger will validate date/time constraints and PCP/referral requirements
             $stmt = $mysqli->prepare("
                 INSERT INTO appointment (
                     Appointment_id, Patient_id, Doctor_id, Office_id, 
@@ -576,13 +576,14 @@ elseif ($endpoint === 'appointments') {
                 $error_msg = $stmt->error;
                 $mysqli->rollback();
 
+                // Match exact trigger error messages
                 if (strpos($error_msg, 'Cannot create appointment in the past') !== false) {
                     sendResponse(false, [], 'Cannot schedule an appointment in the past. Please select a future date and time.', 400);
                 } elseif (strpos($error_msg, 'Cannot schedule appointment more than 1 year in advance') !== false) {
                     sendResponse(false, [], 'Cannot schedule appointments more than 1 year in advance.', 400);
-                } elseif (strpos($error_msg, 'Appointments must be scheduled between') !== false) {
+                } elseif (strpos($error_msg, 'Appointments must be scheduled between 8 AM and 6 PM') !== false) {
                     sendResponse(false, [], 'Appointments must be scheduled during business hours (8 AM - 6 PM).', 400);
-                } elseif (strpos($error_msg, 'cannot be scheduled on weekends') !== false) {
+                } elseif (strpos($error_msg, 'Appointments cannot be scheduled on weekends') !== false) {
                     sendResponse(false, [], 'Appointments cannot be scheduled on weekends. Please select a weekday.', 400);
                 } elseif (strpos($error_msg, 'This time slot is already booked') !== false) {
                     sendResponse(false, [], 'This time slot is already booked. Please select a different time.', 400);
