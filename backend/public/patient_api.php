@@ -7,77 +7,31 @@ require_once '/home/site/wwwroot/database.php';
 
 header('Content-Type: application/json');
 
-// Azure App Service HTTPS detection
-// Azure terminates SSL at the load balancer, so check for proxy headers
+// Azure App Service HTTPS detection - MUST BE IDENTICAL TO login.php
 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
     || (!empty($_SERVER['HTTP_X_ARR_SSL'])) // Azure-specific header
     || $_SERVER['SERVER_PORT'] == 443;
 
-// Configure session parameters exactly like login.php before starting
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_secure', $isHttps ? '1' : '0');
-ini_set('session.cookie_samesite', 'Lax');
-
-// CRITICAL FIX: Set session ID from cookie BEFORE session_start()
-if (isset($_COOKIE['PHPSESSID'])) {
-    $expected_session_id = $_COOKIE['PHPSESSID'];
-    error_log("Patient API: Setting session ID to: " . $expected_session_id);
-    session_id($expected_session_id);
-
-    // Verify it was set
-    $actual_id = session_id();
-    error_log("Patient API: Session ID after setting: " . $actual_id);
-
-    if ($actual_id !== $expected_session_id) {
-        error_log("Patient API: WARNING - Session ID mismatch! Expected: " . $expected_session_id . ", Got: " . $actual_id);
-    }
-} else {
-    error_log("Patient API: No PHPSESSID cookie found");
-}
-
-// Start session
-session_start();
+// Start session with IDENTICAL configuration to login.php
+session_start([
+    'cookie_httponly' => true,
+    'cookie_secure'   => $isHttps,
+    'cookie_samesite' => 'Lax',
+]);
 
 error_log("Patient API: Session started with ID: " . session_id());
 error_log("Patient API: Session data after start: " . json_encode($_SESSION));
-
-// If session is still empty, try to regenerate with the cookie ID
-if (empty($_SESSION) && isset($_COOKIE['PHPSESSID'])) {
-    error_log("Patient API: Session empty after start, attempting to restart with cookie ID");
-    session_destroy();
-    session_id($_COOKIE['PHPSESSID']);
-    session_start();
-    error_log("Patient API: After restart - ID: " . session_id() . ", Data: " . json_encode($_SESSION));
-}
+error_log("Patient API: Session save path: " . session_save_path());
 
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT'])
 {
-    // Debug: Log all session data
     error_log("=== PATIENT API AUTH DEBUG ===");
     error_log("Patient API: Full session data = " . json_encode($_SESSION));
     error_log("Patient API: Session ID = " . session_id());
     error_log("Patient API: PHPSESSID cookie = " . ($_COOKIE['PHPSESSID'] ?? 'NOT SET'));
-    error_log("Patient API: Session save path = " . session_save_path());
-    error_log("Patient API: All cookies = " . json_encode($_COOKIE));
     error_log("===============================");
-
-    // Try to restart session if empty but cookie exists
-    if (empty($_SESSION) && isset($_COOKIE['PHPSESSID'])) {
-        error_log("Patient API: Session empty but cookie exists, attempting session restart");
-        session_write_close();
-        session_id($_COOKIE['PHPSESSID']);
-        session_start([
-            'cookie_httponly' => true,
-            'cookie_secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-                || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-                || (!empty($_SERVER['HTTP_X_ARR_SSL']))
-                || $_SERVER['SERVER_PORT'] == 443,
-            'cookie_samesite' => 'Lax',
-        ]);
-        error_log("Patient API: After restart - Session ID = " . session_id() . ", Data = " . json_encode($_SESSION));
-    }
 
     // First check if we have basic authentication from login.php
     if (!isset($_SESSION['uid']) || !isset($_SESSION['email'])) {
@@ -88,43 +42,33 @@ function requireAuth($allowed_roles = ['PATIENT'])
 
     // Map logged-in user to correct patient
     if (!isset($_SESSION['patient_id'])) {
-        // Get the logged-in user's email from the main authentication system
         $user_email = $_SESSION['email'];
         error_log("Patient API: Session email = " . $user_email);
 
-        if ($user_email) {
-            // Look up patient by the logged-in user's email
-            try {
-                $mysqli = getDBConnection();
-                error_log("Patient API: Database connection successful");
+        try {
+            $mysqli = getDBConnection();
+            error_log("Patient API: Database connection successful");
 
-                $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient WHERE email = ? LIMIT 1");
-                $stmt->bind_param('s', $user_email);
-                $stmt->execute();
-                $result = $stmt->get_result();
-                $patient = $result->fetch_assoc();
-                $stmt->close();
+            $stmt = $mysqli->prepare("SELECT patient_id, first_name, last_name, email FROM patient WHERE email = ? LIMIT 1");
+            $stmt->bind_param('s', $user_email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $patient = $result->fetch_assoc();
+            $stmt->close();
 
-                if ($patient) {
-                    $_SESSION['patient_id'] = $patient['patient_id'];
-                    $_SESSION['role'] = 'PATIENT';
-                    $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
-                    error_log("Patient auth: Found patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
-                } else {
-                    error_log("Patient auth: No patient found for email = " . $user_email);
-                    // If no patient found for the logged-in email, return error
-                    sendResponse(false, [], 'No patient record found for logged-in user: ' . $user_email, 403);
-                    exit();
-                }
-            } catch (Exception $e) {
-                error_log("Patient auth: Database error - " . $e->getMessage());
-                sendResponse(false, [], 'Authentication error: ' . $e->getMessage(), 500);
+            if ($patient) {
+                $_SESSION['patient_id'] = $patient['patient_id'];
+                $_SESSION['role'] = 'PATIENT';
+                $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
+                error_log("Patient auth: Found patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
+            } else {
+                error_log("Patient auth: No patient found for email = " . $user_email);
+                sendResponse(false, [], 'No patient record found for logged-in user: ' . $user_email, 403);
                 exit();
             }
-        } else {
-            // No email in session - user needs to be properly authenticated
-            error_log("Patient auth: No email in session - user not properly authenticated");
-            sendResponse(false, [], 'User not properly authenticated - no email in session', 401);
+        } catch (Exception $e) {
+            error_log("Patient auth: Database error - " . $e->getMessage());
+            sendResponse(false, [], 'Authentication error: ' . $e->getMessage(), 500);
             exit();
         }
     }
@@ -234,7 +178,6 @@ if ($endpoint === 'dashboard') {
                     CONCAT(o.address, ', ', o.city, ', ', o.state, ' ', o.zipcode) as office_address
                 FROM appointment a
                 LEFT JOIN doctor d ON a.doctor_id = d.doctor_id
-                LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
                 LEFT JOIN office o ON a.office_id = o.office_id
@@ -521,6 +464,7 @@ elseif ($endpoint === 'appointments') {
                         CONCAT(o.address, ', ', o.city, ', ', o.state, ' ', o.zipcode) as office_address
                     FROM appointment a
                     LEFT JOIN doctor d ON a.doctor_id = d.doctor_id
+                    LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                     LEFT JOIN specialty s ON d.specialty = s.specialty_id
                     LEFT JOIN office o ON a.office_id = o.office_id
                     WHERE a.patient_id = ? 
@@ -542,6 +486,7 @@ elseif ($endpoint === 'appointments') {
                         'Scheduled' AS status
                     FROM appointment a
                     LEFT JOIN doctor d ON a.doctor_id = d.doctor_id
+                    LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                     LEFT JOIN office o ON a.office_id = o.office_id
                     WHERE a.patient_id = ?
                     AND a.appointment_date < NOW()
@@ -550,12 +495,13 @@ elseif ($endpoint === 'appointments') {
                         v.visit_id AS id,
                         v.date AS date,
                         v.reason_for_visit AS reason,
-                        CONCAT(d2.first_name, ' ', d2.last_name) AS doctor_name,
+                        CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) AS doctor_name,
                         'Visit' AS item_type,
                         NULL AS office_name,
                         v.status AS status
                     FROM patient_visit v
                     LEFT JOIN doctor d2 ON v.doctor_id = d2.doctor_id
+                    LEFT JOIN staff doc_staff ON d2.staff_id = doc_staff.staff_id
                     WHERE v.patient_id = ?
                     AND v.status = 'Completed'
                     ORDER BY date DESC"
@@ -742,7 +688,8 @@ elseif ($endpoint === 'appointments') {
         }
 
         try {
-            $stmt = $mysqli->prepare("                DELETE FROM appointment 
+            $stmt = $mysqli->prepare("
+                DELETE FROM appointment 
                 WHERE appointment_id = ? 
                 AND patient_id = ?
             ");
@@ -764,13 +711,15 @@ elseif ($endpoint === 'doctors') {
         try {
             $specialty_filter = $_GET['specialty'] ?? null;
 
-            $query = "\n                SELECT 
+            $query = "
+                SELECT 
                     d.doctor_id,
                     CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as name,
                     s.specialty_name,
                     o.name as office_name,
                     CONCAT(o.address, ', ', o.city, ', ', o.state) as location
                 FROM doctor d
+                LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
                 LEFT JOIN office o ON doc_staff.work_location = o.office_id
             ";
@@ -855,6 +804,7 @@ elseif ($endpoint === 'visit') {
                     CONCAT(o.address, ', ', o.city, ', ', o.state, ' ', o.zipcode) as office_address
                 FROM patient_visit v
                 LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
+                LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
                 LEFT JOIN office o ON v.office_id = o.office_id
                 WHERE v.visit_id = ? AND v.patient_id = ?
@@ -979,6 +929,7 @@ elseif ($endpoint === 'medical-records') {
                             v.temperature as temperature
                         FROM patient_visit v
                         LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
+                        LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                         WHERE v.patient_id = ?
                         AND v.status = 'Completed'
                         ORDER BY v.date DESC
@@ -1082,7 +1033,8 @@ elseif ($endpoint === 'medical-records') {
 elseif ($endpoint === 'insurance') {
     if ($method === 'GET') {
         try {
-            $stmt = $mysqli->prepare("                SELECT 
+            $stmt = $mysqli->prepare("
+                SELECT 
                     pi.id,
                     pi.member_id,
                     pi.group_id,
@@ -1212,9 +1164,6 @@ elseif ($endpoint === 'billing') {
                 // No visit specified: apply as credit (not implemented fully).
                 sendResponse(false, [], 'Visit id required for payment', 400);
             }
-        } catch (Exception $e) {
-            error_log('payment error: ' . $e->getMessage());
-            sendResponse(false, [], 'Failed to process payment', 500);
         } catch (Exception $e) {
             error_log('payment error: ' . $e->getMessage());
             sendResponse(false, [], 'Failed to process payment', 500);
