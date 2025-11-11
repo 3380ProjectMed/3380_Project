@@ -67,8 +67,7 @@ try {
                 s.work_location,
                 o.name as work_location_name,
                 sp.specialty_name,
-                cg.gender_text as gender,
-                d.phone as phone_number
+                cg.gender_text as gender
             FROM doctor d
             INNER JOIN staff s ON d.staff_id = s.staff_id
             LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
@@ -98,8 +97,7 @@ try {
             'workLocation' => $doctor['work_location_name'] ?: 'Not assigned',
             'specialties' => [$doctor['specialty_name']],
             'gender' => $doctor['gender'],
-            'bio' => '',
-            'phone' => $doctor['phone_number'] ?: 'Not provided'
+            'bio' => ''
         ]
     ]);
     
