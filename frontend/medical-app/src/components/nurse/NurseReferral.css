@@ -1,2 +1,50 @@
-/* Nurse referrals removed — styles intentionally cleared. */
+
+/* Nurse Referral - Unique Modern UI */
+.nurse-referral-root {
+	padding: 2.2rem;
+	max-width: 1200px;
+	margin: 0 auto;
+	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+.nurse-referral-grid {
+	display: grid;
+	grid-template-columns: 1fr 420px;
+	gap: 1.3rem;
+}
+.nurse-referral-column {
+	background: #fff;
+	border-radius: 1.1rem;
+	padding: 1.3rem 1.7rem;
+	border: 2px solid #caf0f8;
+	box-shadow: 0 4px 12px rgba(15, 61, 145, 0.08);
+	box-sizing: border-box;
+	overflow: hidden;
+}
+.nurse-referral-column h3 {
+	color: #0f3d91;
+	margin-top: 0;
+	margin-bottom: 1rem;
+	font-size: 1.15rem;
+	font-weight: 800;
+}
+.nurse-referral-cards-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.7rem;
+	max-height: 70vh;
+	overflow-y: auto;
+	padding-right: 0.3rem;
+}
+.nurse-received-referral-card {
+	background: #fff;
+	border: 2px solid #caf0f8;
+	border-radius: 1.1rem;
+	padding: 1.3rem 1.7rem;
+	transition: all 0.2s;
+	box-shadow: 0 2px 8px rgba(15, 61, 145, 0.08);
+}
+.nurse-received-referral-card:hover {
+	box-shadow: 0 8px 24px rgba(15, 61, 145, 0.13);
+	border-color: #3db2ff;
+}
 
