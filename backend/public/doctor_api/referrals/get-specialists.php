@@ -24,7 +24,7 @@ try {
     $user_id = intval($_SESSION['uid']);
     $currentDoctorRows = executeQuery($conn, 'SELECT d.doctor_id 
                     FROM user_account ua
-                    JOIN staff s ON ua.email = s.email
+                    JOIN staff s ON ua.email = s.staff_email
                     JOIN doctor d ON s.staff_id = d.staff_id
                     WHERE ua.user_id = ? 
                     LIMIT 1', 'i', [$user_id]);
