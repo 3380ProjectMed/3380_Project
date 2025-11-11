@@ -24,8 +24,7 @@ try {
     $user_id = intval($_SESSION['uid']);
     $currentDoctorRows = executeQuery($conn, 'SELECT d.doctor_id 
                     FROM user_account ua
-                    JOIN staff s ON ua.user_id = s.staff_id
-                    JOIN doctor d ON s.staff_id = d.staff_id
+                    JOIN doctor d ON ua.email = d.email
                     WHERE ua.user_id = ? 
                     LIMIT 1', 'i', [$user_id]);
     if (is_array($currentDoctorRows) && count($currentDoctorRows) > 0) {
@@ -53,10 +52,10 @@ try {
     foreach ($specialists as $doc) {
         $doc_id = (int)$doc['doctor_id'];
         
-        // Optionally exclude the current logged-in doctor
-        if ($current_doctor_id && $doc_id === $current_doctor_id) {
-            continue;
-        }
+        // Note: Not excluding current doctor - they may need to refer to themselves or colleagues
+        // if ($current_doctor_id && $doc_id === $current_doctor_id) {
+        //     continue;
+        // }
         
         $formatted_specialists[] = [
             'id' => $doc_id,
