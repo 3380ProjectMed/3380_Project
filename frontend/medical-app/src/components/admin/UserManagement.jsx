@@ -400,7 +400,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
     workLocation: '1',
     workSchedule: '1',
     licenseNumber: '',
-    specialization: '',
+    specialty: '',
     department: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -419,7 +419,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
         ? '/admin_api/users/add-nurse.php'
         : '/admin_api/users/add-receptionist.php';
 
-      const payload = {
+      const payload = {  
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
