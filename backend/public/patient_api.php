@@ -1056,6 +1056,67 @@ elseif ($endpoint === 'insurance') {
             error_log("Insurance error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load insurance', 500);
         }
+    } elseif ($method === 'PUT') {
+        // Update insurance policy
+        $insurance_id = $_GET['id'] ?? null;
+        if (!$insurance_id) {
+            sendResponse(false, [], 'Insurance ID is required', 400);
+        }
+
+        $raw_input = file_get_contents('php://input');
+        $input = json_decode($raw_input, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            sendResponse(false, [], 'Invalid JSON data: ' . json_last_error_msg(), 400);
+        }
+
+        try {
+            // Update patient_insurance record
+            $stmt = $mysqli->prepare("
+                UPDATE patient_insurance 
+                SET member_id = ?, 
+                    group_id = ?, 
+                    effective_date = ?, 
+                    expiration_date = ?, 
+                    is_primary = ?
+                WHERE id = ? AND patient_id = ?
+            ");
+            
+            if (!$stmt) {
+                sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
+            }
+
+            $member_id = $input['member_id'] ?? '';
+            $group_id = $input['group_id'] ?? '';
+            $effective_date = $input['effective_date'] ?? null;
+            $expiration_date = $input['expiration_date'] ?? null;
+            $is_primary = isset($input['is_primary']) ? (int)$input['is_primary'] : 0;
+
+            $stmt->bind_param('sssssii', 
+                $member_id, 
+                $group_id, 
+                $effective_date, 
+                $expiration_date, 
+                $is_primary, 
+                $insurance_id, 
+                $patient_id
+            );
+            
+            if ($stmt->execute()) {
+                if ($stmt->affected_rows > 0) {
+                    sendResponse(true, ['id' => $insurance_id], 'Insurance updated successfully');
+                } else {
+                    sendResponse(false, [], 'Insurance policy not found or no changes made', 404);
+                }
+            } else {
+                sendResponse(false, [], 'Failed to update insurance: ' . $stmt->error, 500);
+            }
+            
+            $stmt->close();
+
+        } catch (Exception $e) {
+            error_log("Insurance update error: " . $e->getMessage());
+            sendResponse(false, [], 'Failed to update insurance', 500);
+        }
     }
 }
 
