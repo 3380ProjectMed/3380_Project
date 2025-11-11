@@ -79,7 +79,7 @@ try {
         $staff_role = 'Doctor';
         $license_number = $input['license_number'] ?? null;
         
-        $stmt->bind_param('ssissiiis',
+        $stmt->bind_param('sssssiiis',
             $input['first_name'],
             $input['last_name'],
             $input['ssn'],
