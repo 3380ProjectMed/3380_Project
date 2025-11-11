@@ -1,3 +1,12 @@
+/* Sleek, modern card-based UI for Nurse Report */
+.nurse-report-container {
+	background: #fff;
+	border-radius: 18px;
+	box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+	padding: 2rem 2.5rem;
+	margin: 2rem auto;
+	max-width: 1000px;
+}
 
 /* Nurse Report - Unique Modern UI */
 .nurse-report-root {
