@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, User, Activity, Clock, MapPin, Phone, Mail, Check, Plus, Stethoscope } from 'lucide-react';
+import { Calendar, User, Activity, Clock, MapPin, Phone, Mail, Check, Plus, Stethoscope, UserCheck, FileText } from 'lucide-react';
 import './Dashboard.css';
 
 export default function Dashboard(props) {
@@ -74,17 +74,46 @@ export default function Dashboard(props) {
                 <p className="text-gray">No recent activity</p>
               ) : (
                 <div className="activity-list">
-                  {recentActivity.map((activity, idx) => (
-                    <div key={idx} className="activity-item">
-                      <Check className="activity-icon success" />
-                      <div>
-                        <p><strong>{activity.status}</strong></p>
-                        <p className="text-small">
-                          {activity.doctor_name} — {new Date(activity.date).toLocaleDateString()}
-                        </p>
+                  {recentActivity.map((activity, idx) => {
+                    const isReferral = activity.activity_type === 'referral' || activity.status === 'Referral Approved';
+                    const ActivityIcon = isReferral ? UserCheck : (activity.status === 'Completed' ? Check : FileText);
+                    const iconClass = isReferral ? 'activity-icon referral' : 'activity-icon success';
+                    
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`activity-item ${isReferral ? 'referral-notification' : ''}`}
+                        data-status={activity.status?.toLowerCase()}
+                        data-type={activity.activity_type}
+                      >
+                        <ActivityIcon className={iconClass} />
+                        <div className="activity-content">
+                          <div className="activity-header">
+                            <p><strong>{activity.status}</strong></p>
+                            <span className="activity-date">{new Date(activity.date).toLocaleDateString()}</span>
+                          </div>
+                          <p className="activity-details">
+                            {activity.doctor_name}
+                          </p>
+                          {activity.description && (
+                            <p className="activity-description text-small">
+                              {activity.description}
+                            </p>
+                          )}
+                          {isReferral && (
+                            <button 
+                              className="btn btn-referral-action"
+                              onClick={() => setShowBookingModal(true)}
+                              title={`Book appointment with ${activity.specialist_name || 'specialist'}`}
+                            >
+                              <Calendar className="small-icon" />
+                              Book Appointment
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
