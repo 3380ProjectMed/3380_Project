@@ -55,7 +55,7 @@ try {
             INNER JOIN patient p ON pv.patient_id = p.patient_id
             WHERE pv.office_id = ?
             AND pv.status IN ('Checked In', 'Scheduled')
-            AND (pv.payment IS NULL OR pv.payment = 0)
+            -- AND (pv.payment IS NULL OR pv.payment = 0)
             AND (
                 CONCAT(p.first_name, ' ', p.last_name) LIKE ?
                 OR pv.appointment_id = ?
