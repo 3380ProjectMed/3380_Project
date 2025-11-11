@@ -78,23 +78,18 @@ function Referral() {
         
         console.log('🔍 Fetching patients and specialists...');
 
-        // Always fetch specialists (server will use session to determine current user).
-        // Fetch patients only when we have a doctorId - otherwise leave patients empty.
+        // Always fetch specialists and patients. Let the server resolve the
+        // current doctor via session when no explicit doctor_id is provided.
         const specialistsFetch = fetch('/doctor_api/referrals/get-specialists.php', { credentials: 'include' });
-        const patientsFetch = doctorId
-          ? fetch(`/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' })
-          : null;
+        const patientsFetch = fetch('/doctor_api/patients/get-all.php', { credentials: 'include' });
 
-        const [sRes, pRes] = await Promise.all([
-          specialistsFetch,
-          patientsFetch
-        ].map(p => p ? p : Promise.resolve({ text: async () => JSON.stringify({ success: true, patients: [] }), status: 200 })));
+        const [sRes, pRes] = await Promise.all([specialistsFetch, patientsFetch]);
 
         console.log('📥 Patients response status:', pRes.status);
         console.log('📥 Specialists response status:', sRes.status);
 
-        const pText = await pRes.text();
-        const sText = await sRes.text();
+  const pText = await pRes.text();
+  const sText = await sRes.text();
         
         console.log('📄 Raw patients response:', pText.substring(0, 200));
         console.log('📄 Raw specialists response:', sText.substring(0, 200));
@@ -340,7 +335,9 @@ function Referral() {
                         <div className="patient-list-empty">No matching patients</div>
                       ) : (
                         filteredPatientResults.map(p => {
-                          const numericId = p.id ? parseInt(p.id.replace(/^P/i, ''), 10) : null;
+                          // Defensive id parsing: server may return 'P123' or numeric 123
+                          const rawIdStr = (p.id !== undefined && p.id !== null) ? String(p.id) : '';
+                          const numericId = parseInt(rawIdStr.replace(/^P/i, ''), 10) || null;
                           return (
                             <div 
                               key={p.id} 

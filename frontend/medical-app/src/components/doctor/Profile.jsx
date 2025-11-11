@@ -12,11 +12,10 @@ function Profile() {
     lastName: '',
     email: '',
     phone: '',
-    licenseNumber: '',
-    workLocation: '',
-    specialties: [],
+    // License, workLocation and specialties are intentionally omitted
+    // from the editable UI (doctors cannot change these here)
     gender: '',
-    bio: ''
+    // bio: '' // keep in state in case other code relies on it, but not editable
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -43,11 +42,9 @@ function Profile() {
             lastName: p.lastName ?? p.last_name ?? prev.lastName,
             email: p.email ?? p.staff_email ?? prev.email,
             phone: p.phone ?? p.phone_number ?? prev.phone,
-            licenseNumber: p.licenseNumber ?? p.license_number ?? prev.licenseNumber,
-            workLocation: p.workLocation ?? p.work_location ?? p.workLocationName ?? prev.workLocation,
-            specialties: p.specialties ?? (p.specialty ? [p.specialty] : prev.specialties),
             gender: p.gender ?? prev.gender,
-            bio: p.bio ?? ''
+            // // Keep bio in state if present, but do not render as editable
+            // bio: p.bio ?? prev.bio
           }));
         } else {
           console.warn('Unexpected profile response', json);
@@ -69,13 +66,14 @@ function Profile() {
     setSaving(true);
     setStatus(null);
     try {
+      // Only send editable fields. License number, work location,
+      // specialties and bio are not editable by the doctor in this UI.
       const body = {
         doctor_id: auth.user?.doctor_id ?? auth.user?.doctorId ?? profile.doctorId,
         firstName: profile.firstName,
         lastName: profile.lastName,
         email: profile.email,
-        phone: profile.phone,
-        licenseNumber: profile.licenseNumber
+        phone: profile.phone
       };
       const res = await fetch('/doctor_api/profile/update.php', {
         method: 'POST',
@@ -126,26 +124,12 @@ function Profile() {
               <label><Phone size={16}/> Phone</label>
               <input value={profile.phone} onChange={(e) => handleChange('phone', e.target.value)} />
             </div>
-            <div className="form-group">
-              <label>License Number</label>
-              <input value={profile.licenseNumber} onChange={(e) => handleChange('licenseNumber', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>Work Location</label>
-              <input value={profile.workLocation} onChange={(e) => handleChange('workLocation', e.target.value)} disabled />
-            </div>
-            <div className="form-group">
-              <label>Specialties</label>
-              <input value={(profile.specialties || []).join(', ')} disabled />
-            </div>
+            {/* License Number, Work Location and Specialties removed - not editable by doctor */}
             <div className="form-group">
               <label>Gender</label>
               <input value={profile.gender} onChange={(e) => handleChange('gender', e.target.value)} disabled />
             </div>
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label>Bio</label>
-              <textarea value={profile.bio} onChange={(e) => handleChange('bio', e.target.value)} />
-            </div>
+            {/* Bio removed from editable UI per request */}
           </div>
 
           <div style={{ marginTop: 16 }}>
