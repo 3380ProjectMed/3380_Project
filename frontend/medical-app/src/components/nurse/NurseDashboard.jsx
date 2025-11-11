@@ -1,16 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { Calendar, Users, Clock, FileText, Search, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Users, Clock, FileText, Search, Filter, CheckCircle, XCircle, PlayCircle } from 'lucide-react';
 import './NurseDashboard.css';
-import { getNurseDashboardStats, getNurseScheduleToday } from '../../api/nurse';
+import { getNurseDashboardStats, getNurseSchedule } from '../../api/nurse';
 
 export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-
   const [appointments, setAppointments] = useState([]);
   const [stats, setStats] = useState({ total: 0, waiting: 0, upcoming: 0, completed: 0 });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
     let mounted = true;
@@ -19,16 +18,15 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
       setError(null);
       try {
         const today = new Date().toISOString().slice(0, 10);
-        const s = await getNurseDashboardStats(today).catch(() => null);
-        if (s && mounted) {
-          // s is normalized to { total, waiting, upcoming, completed }
-          setStats({ total: s.total ?? 0, waiting: s.waiting ?? 0, upcoming: s.upcoming ?? 0, completed: s.completed ?? 0 });
-        }
-
-        const appts = await getNurseScheduleToday().catch(() => null);
-        if (mounted) {
-          setAppointments(Array.isArray(appts) ? appts : []);
-        }
+        const s = await getNurseDashboardStats(today);
+        if (mounted && s) setStats({
+          total: s.total ?? 0,
+          waiting: s.waiting ?? 0,
+          upcoming: s.upcoming ?? 0,
+          completed: s.completed ?? 0
+        });
+        const appts = await getNurseSchedule({ date: today });
+        if (mounted) setAppointments(Array.isArray(appts) ? appts : []);
       } catch (err) {
         if (mounted) setError(err?.message || 'Failed to load');
       } finally {
@@ -39,26 +37,29 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
     return () => { mounted = false; };
   }, []);
 
-  // Filtering (search + status)
-  const filteredAppointments = (Array.isArray(appointments) ? appointments : []).filter((app) => {
-    const patientName = (app?.patientName || '').toLowerCase();
-    const reason = (app?.reason || '').toLowerCase();
-    const status = String(app?.status || '').toLowerCase();
-
-    const matchesSearch = patientName.includes(searchTerm.toLowerCase()) || reason.includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || status.replace(/\s+/g, '-') === filterStatus;
+  // Filter and search
+  const filteredAppointments = appointments.filter(apt => {
+    const matchesSearch =
+      (apt.patientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (apt.reason || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter =
+      filterStatus === 'all' ||
+      (apt.status || '').toLowerCase() === filterStatus.toLowerCase();
     return matchesSearch && matchesFilter;
   });
 
   const getStatusClass = (status) => {
-    const s = String(status || '').toLowerCase();
     const statusMap = {
-      scheduled: 'status-scheduled',
-      'in waiting': 'status-waiting',
-      'in consultation': 'status-consultation',
-      completed: 'status-completed',
+      'scheduled': 'status-scheduled',
+      'waiting': 'status-waiting',
+      'in progress': 'status-in-progress',
+      'completed': 'status-completed',
+      'cancelled': 'status-cancelled',
+      'no-show': 'status-no-show',
+      'upcoming': 'status-upcoming',
+      'ready': 'status-ready',
     };
-    return statusMap[s] || '';
+    return statusMap[(status || '').toLowerCase()] || 'status-scheduled';
   };
 
   const handleAppointmentRowClick = (appointment) => {
@@ -66,42 +67,60 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
     if (setCurrentPage) setCurrentPage('clinical');
   };
 
+  const getCurrentDate = () => {
+    return new Date().toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
   return (
     <div className="dashboard">
+      {/* ===== WELCOME HEADER ===== */}
       <div className="dashboard-header">
         <div className="welcome-section">
           <h1>Welcome Back, Nurse</h1>
           <p className="office-info">
             <Calendar size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            {new Date().toLocaleDateString()} • <span>Main Clinic, Suite 305</span>
+            {getCurrentDate()} • <span>Main Clinic, Suite 305</span>
           </p>
         </div>
       </div>
 
+      {/* ===== STATS CARDS ===== */}
       <div className="stats-grid">
         <div className="stat-card stat-primary">
-          <div className="stat-icon"><Calendar size={24} /></div>
+          <div className="stat-icon">
+            <Calendar size={24} />
+          </div>
           <div className="stat-content">
             <div className="stat-value">{stats.total}</div>
             <div className="stat-label">Total Appointments</div>
           </div>
         </div>
         <div className="stat-card stat-warning">
-          <div className="stat-icon"><Users size={24} /></div>
+          <div className="stat-icon">
+            <Users size={24} />
+          </div>
           <div className="stat-content">
             <div className="stat-value">{stats.waiting}</div>
             <div className="stat-label">Patients Waiting</div>
           </div>
         </div>
         <div className="stat-card stat-info">
-          <div className="stat-icon"><Clock size={24} /></div>
+          <div className="stat-icon">
+            <Clock size={24} />
+          </div>
           <div className="stat-content">
-            <div className="stat-value">{stats.pending}</div>
+            <div className="stat-value">{stats.upcoming}</div>
             <div className="stat-label">Upcoming Today</div>
           </div>
         </div>
         <div className="stat-card stat-success">
-          <div className="stat-icon"><FileText size={24} /></div>
+          <div className="stat-icon">
+            <FileText size={24} />
+          </div>
           <div className="stat-content">
             <div className="stat-value">{stats.completed}</div>
             <div className="stat-label">Completed</div>
@@ -109,60 +128,126 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
         </div>
       </div>
 
+      {/* ===== QUICK ACTIONS ===== */}
       <div className="quick-actions">
-        <button className="action-btn" onClick={() => setCurrentPage && setCurrentPage('patients')}>
-          <Users size={18} /> View All Patients
+        <button
+          className="action-btn"
+          onClick={() => setCurrentPage && setCurrentPage('patients')}
+        >
+          <Users size={18} />
+          View All Patients
         </button>
-        <button className="action-btn" onClick={() => setCurrentPage && setCurrentPage('schedule')}>
-          <Calendar size={18} /> Full Schedule
+        <button
+          className="action-btn"
+          onClick={() => setCurrentPage && setCurrentPage('schedule')}
+        >
+          <Calendar size={18} />
+          Full Schedule
         </button>
-        <button className="action-btn" onClick={() => setCurrentPage && setCurrentPage('clinical')}>
-          <FileText size={18} /> Clinical / Intake
+        <button
+          className="action-btn"
+          onClick={() => setCurrentPage && setCurrentPage('clinical')}
+        >
+          <FileText size={18} />
+          Clinical Notes
         </button>
       </div>
 
+      {/* ===== TODAY'S SCHEDULE ===== */}
       <div className="schedule-section">
         <div className="section-header">
           <h2>Today's Schedule</h2>
           <div className="section-controls">
+            {/* Search Box */}
             <div className="search-box">
               <Search size={18} />
-              <input type="text" placeholder="Search patients..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} aria-label="Search appointments" />
+              <input
+                type="text"
+                placeholder="Search patients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="Search appointments"
+              />
             </div>
+            {/* Status Filter */}
             <div className="filter-box">
               <Filter size={18} />
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} aria-label="Filter by status">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                aria-label="Filter by status"
+              >
                 <option value="all">All Status</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="in-waiting">In Waiting</option>
-                <option value="in-consultation">In Consultation</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="ready">Ready</option>
+                <option value="waiting">Waiting</option>
+                <option value="in progress">In Progress</option>
                 <option value="completed">Completed</option>
+                <option value="no-show">No-Show</option>
               </select>
             </div>
           </div>
         </div>
 
+        {/* Appointments Table */}
         <div className="appointments-table">
           <div className="table-header">
             <div className="col-time">TIME</div>
+            <div className="col-apptid">APPT ID</div>
             <div className="col-patient">PATIENT'S NAME</div>
             <div className="col-reason">REASON FOR VISIT</div>
             <div className="col-status">STATUS</div>
+            <div className="col-actions">ACTIONS</div>
           </div>
 
           <div className="table-body">
-            {loading && <div className="empty-state">Loading…</div>}
-            {!loading && Array.isArray(filteredAppointments) && filteredAppointments.length > 0 ? (
-              filteredAppointments.map((appointment, idx) => (
-                <div key={appointment.appointmentId ?? idx} className="table-row" role="button" tabIndex={0} onClick={() => handleAppointmentRowClick(appointment)} onKeyPress={(e) => e.key === 'Enter' && handleAppointmentRowClick(appointment)}>
-                  <div className="col-time">{appointment.time ?? ''}</div>
-                  <div className="col-patient"><span className="patient-link">{appointment.patientName ?? 'Unknown'}</span></div>
-                  <div className="col-reason">{appointment.reason ?? ''}</div>
-                  <div className="col-status"><span className={`status-badge ${getStatusClass(appointment.status)}`}>{appointment.status ?? ''}</span></div>
+            {loading && (
+              <div className="empty-state">
+                <div className="spinner"></div>
+                <p>Loading appointments...</p>
+              </div>
+            )}
+            {error && !loading && (
+              <div className="alert alert-error">
+                <strong>Error:</strong> {error}
+                <button onClick={() => window.location.reload()} style={{ marginLeft: '1rem' }}>
+                  Retry
+                </button>
+              </div>
+            )}
+            {!loading && !error && (
+              filteredAppointments.length > 0 ? (
+                filteredAppointments.map((appointment) => (
+                  <div
+                    key={appointment.id}
+                    className="table-row"
+                    onClick={() => handleAppointmentRowClick(appointment)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') handleAppointmentRowClick(appointment);
+                    }}
+                  >
+                    <div className="col-time">{appointment.time}</div>
+                    <div className="col-apptid">{appointment.id}</div>
+                    <div className="col-patient">
+                      <span className="patient-link">{appointment.patientName}</span>
+                    </div>
+                    <div className="col-reason">{appointment.reason}</div>
+                    <div className="col-status">
+                      <span className={`status-badge ${getStatusClass(appointment.status)}`}>{appointment.status}</span>
+                    </div>
+                    <div className="col-actions">
+                      {/* Actions can be added here if needed for nurse */}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="empty-state">
+                  <Calendar size={48} />
+                  <p>No appointments match your search</p>
                 </div>
-              ))
-            ) : (
-              <div className="empty-state"><Calendar size={48} /><p>{error ? error : 'No appointments match your search'}</p></div>
+              )
             )}
           </div>
         </div>

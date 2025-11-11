@@ -12,7 +12,8 @@ function fail(int $code, string $msg, array $extra = []): void {
 try {
     $q = trim((string)($_GET['q'] ?? ''));
     $page = max(1, (int)($_GET['page'] ?? 1));
-    $limit = max(1, min(50, (int)($_GET['limit'] ?? 10)));
+    // Accept pageSize (frontend) or fallback to limit
+    $limit = max(1, min(50, (int)($_GET['pageSize'] ?? $_GET['limit'] ?? 10)));
     $offset = ($page - 1) * $limit;
 
     $params = [];
