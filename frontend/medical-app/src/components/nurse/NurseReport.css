@@ -1,9 +1,55 @@
-.nurse-report{padding:24px;max-width:1000px;margin:0 auto;}
-.nurse-report h1{margin:0 0 12px 0}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px}
-.card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,.06);text-align:center}
-.val{font-size:28px;font-weight:800;color:#0b1f44}
-.lbl{color:#64748b;font-weight:700}
-.table .thead,.table .row{display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:center}
-.table .thead{background:linear-gradient(135deg,#eaf6ff,#fff);padding:12px;border-radius:10px;font-weight:800}
-.table .row{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-top:8px}
+
+/* Nurse Report - Unique Modern UI */
+.nurse-report-root {
+	padding: 2.2rem;
+	max-width: 1000px;
+	margin: 0 auto;
+	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+.nurse-report-title {
+	font-size: 2rem;
+	font-weight: 900;
+	color: #0f3d91;
+	margin: 0 0 1.1rem 0;
+}
+.nurse-report-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 1.1rem;
+	margin-bottom: 1.1rem;
+}
+.nurse-report-card {
+	background: #fff;
+	border-radius: 1.1rem;
+	padding: 1.1rem 1.5rem;
+	box-shadow: 0 4px 12px rgba(15, 61, 145, 0.07);
+	text-align: center;
+}
+.nurse-report-val {
+	font-size: 2rem;
+	font-weight: 900;
+	color: #0b1f44;
+}
+.nurse-report-lbl {
+	color: #64748b;
+	font-weight: 700;
+}
+.nurse-report-table {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0 0.7rem;
+}
+.nurse-report-thead {
+	background: linear-gradient(120deg, #eaf6ff 60%, #fff 100%);
+	font-weight: 800;
+	border-radius: 0.7rem;
+	padding: 1rem;
+}
+.nurse-report-row {
+	background: #fff;
+	border: 1px solid #e5e7eb;
+	border-radius: 0.7rem;
+	padding: 1rem 1.2rem;
+	margin-top: 0.7rem;
+	color: #0b1f44;
+}
