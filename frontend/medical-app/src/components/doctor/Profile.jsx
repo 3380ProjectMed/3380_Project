@@ -6,11 +6,17 @@ import './Profile.css';
 function Profile() {
   const auth = useAuth();
   const [profile, setProfile] = useState({
+    doctorId: null,
+    staffId: null,
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
-    licenseNumber: ''
+    licenseNumber: '',
+    workLocation: '',
+    specialties: [],
+    gender: '',
+    bio: ''
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -21,16 +27,30 @@ function Profile() {
       setLoading(true);
       try {
         if (auth.loading) return;
-        const doctorId = auth.user?.doctor_id ?? null;
-        if (!doctorId) {
-          // No doctor associated with this user
-          setLoading(false);
-          return;
-        }
-        const res = await fetch(`/doctor_api/profile/get.php?doctor_id=${doctorId}`, { credentials: 'include' });
+        // backend `get.php` will use session when no doctor_id is provided, so try both
+        const doctorId = auth.user?.doctor_id ?? auth.user?.doctorId ?? null;
+        const url = doctorId ? `/doctor_api/profile/get.php?doctor_id=${doctorId}` : '/doctor_api/profile/get.php';
+        const res = await fetch(url, { credentials: 'include' });
         const json = await res.json();
         if (json.success && json.profile) {
-          setProfile(prev => ({ ...prev, ...json.profile }));
+          // Normalize backend profile shape into our state keys
+          const p = json.profile;
+          setProfile(prev => ({
+            ...prev,
+            doctorId: p.doctorId ?? p.doctor_id ?? prev.doctorId,
+            staffId: p.staffId ?? p.staff_id ?? prev.staffId,
+            firstName: p.firstName ?? p.first_name ?? prev.firstName,
+            lastName: p.lastName ?? p.last_name ?? prev.lastName,
+            email: p.email ?? p.staff_email ?? prev.email,
+            phone: p.phone ?? p.phone_number ?? prev.phone,
+            licenseNumber: p.licenseNumber ?? p.license_number ?? prev.licenseNumber,
+            workLocation: p.workLocation ?? p.work_location ?? p.workLocationName ?? prev.workLocation,
+            specialties: p.specialties ?? (p.specialty ? [p.specialty] : prev.specialties),
+            gender: p.gender ?? prev.gender,
+            bio: p.bio ?? ''
+          }));
+        } else {
+          console.warn('Unexpected profile response', json);
         }
       } catch (err) {
         console.error('Failed to load profile', err);
@@ -50,7 +70,7 @@ function Profile() {
     setStatus(null);
     try {
       const body = {
-  doctor_id: auth.user?.doctor_id ?? null,
+        doctor_id: auth.user?.doctor_id ?? auth.user?.doctorId ?? profile.doctorId,
         firstName: profile.firstName,
         lastName: profile.lastName,
         email: profile.email,
@@ -109,6 +129,22 @@ function Profile() {
             <div className="form-group">
               <label>License Number</label>
               <input value={profile.licenseNumber} onChange={(e) => handleChange('licenseNumber', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Work Location</label>
+              <input value={profile.workLocation} onChange={(e) => handleChange('workLocation', e.target.value)} disabled />
+            </div>
+            <div className="form-group">
+              <label>Specialties</label>
+              <input value={(profile.specialties || []).join(', ')} disabled />
+            </div>
+            <div className="form-group">
+              <label>Gender</label>
+              <input value={profile.gender} onChange={(e) => handleChange('gender', e.target.value)} disabled />
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label>Bio</label>
+              <textarea value={profile.bio} onChange={(e) => handleChange('bio', e.target.value)} />
             </div>
           </div>
 
