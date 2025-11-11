@@ -1001,34 +1001,56 @@ elseif ($endpoint === 'medical-records') {
 
 // ==================== INSURANCE ====================
 elseif ($endpoint === 'insurance') {
+    $type = $_GET['type'] ?? '';
+    
     if ($method === 'GET') {
         try {
-            $stmt = $mysqli->prepare("
-                SELECT 
-                    pi.id,
-                    pi.member_id,
-                    pi.group_id,
-                    pi.effective_date,
-                    pi.expiration_date,
-                    pi.is_primary,
-                    ipl.copay,
-                    ipl.deductible_individual,
-                    ipl.coinsurance_rate,
-                    ip.NAME as provider_name,
-                    ipl.plan_name,
-                    ipl.plan_type
-                FROM patient_insurance pi
-                LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
-                LEFT JOIN insurance_payer ip ON ipl.payer_id = ip.payer_id
-                WHERE pi.patient_id = ?
-                ORDER BY pi.is_primary DESC, pi.effective_date DESC
-            ");
-            $stmt->bind_param('i', $patient_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $insurance = $result->fetch_all(MYSQLI_ASSOC);
-
-            sendResponse(true, $insurance);
+            switch ($type) {
+                case 'payers':
+                    // Get all available insurance payers for dropdown
+                    $stmt = $mysqli->prepare("
+                        SELECT 
+                            payer_id,
+                            name,
+                            payer_type
+                        FROM insurance_payer
+                        ORDER BY name ASC
+                    ");
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $payers = $result->fetch_all(MYSQLI_ASSOC);
+                    sendResponse(true, $payers);
+                    break;
+                    
+                default:
+                    // Get patient's insurance policies
+                    $stmt = $mysqli->prepare("
+                        SELECT 
+                            pi.id,
+                            pi.member_id,
+                            pi.group_id,
+                            pi.effective_date,
+                            pi.expiration_date,
+                            pi.is_primary,
+                            ipl.copay,
+                            ipl.deductible_individual,
+                            ipl.coinsurance_rate,
+                            ip.NAME as provider_name,
+                            ipl.plan_name,
+                            ipl.plan_type
+                        FROM patient_insurance pi
+                        LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
+                        LEFT JOIN insurance_payer ip ON ipl.payer_id = ip.payer_id
+                        WHERE pi.patient_id = ?
+                        ORDER BY pi.is_primary DESC, pi.effective_date DESC
+                    ");
+                    $stmt->bind_param('i', $patient_id);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $insurance = $result->fetch_all(MYSQLI_ASSOC);
+                    sendResponse(true, $insurance);
+                    break;
+            }
 
         } catch (Exception $e) {
             error_log("Insurance error: " . $e->getMessage());
