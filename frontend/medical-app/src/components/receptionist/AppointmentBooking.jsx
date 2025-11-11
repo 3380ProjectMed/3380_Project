@@ -191,9 +191,9 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, onBack, o
       // Parse time
       const [hours, minutes] = appointmentTime.split(':');
       
-      // Format datetime for API
-      const date = new Date(appointmentDate);
-      const appointmentDateTime = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
+      // Format datetime for API - parse date components directly to avoid timezone issues
+      const [year, month, day] = appointmentDate.split('-');
+      const appointmentDateTime = `${year}-${month}-${day} ${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
 
       const appointmentData = {
         Patient_id: selectedPatient.Patient_ID,
