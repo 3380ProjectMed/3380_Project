@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, DollarSign, User, Check, X, CreditCard, Printer, Heart, AlertCircle } from 'lucide-react';
+import { Search, DollarSign, User, Check, X, CreditCard, Printer, Heart, AlertCircle, Filter } from 'lucide-react';
 import './PaymentProcessing.css';
 
 function SimplePayment() {
@@ -13,6 +13,7 @@ function SimplePayment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
+  const [filter, setFilter] = useState('unpaid'); // 'unpaid' or 'all'
 
   // Search for visits
   const handleSearch = async () => {
@@ -21,7 +22,7 @@ function SimplePayment() {
     setLoading(true);
     try {
       const response = await fetch(
-        `/receptionist_api/payments/search-visits.php?search=${encodeURIComponent(searchTerm)}`,
+        `/receptionist_api/payments/search-visits.php?search=${encodeURIComponent(searchTerm)}&filter=${filter}`,
         { credentials: 'include' }
       );
       const data = await response.json();
@@ -128,7 +129,7 @@ function SimplePayment() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, filter]);
 
   return (
     <div className="payment-page">
@@ -139,6 +140,24 @@ function SimplePayment() {
           {/* SEARCH */}
           {!selectedVisit && (
             <div className="search-section">
+              {/* Filter Toggle */}
+              <div className="filter-toggle">
+                <button
+                  className={filter === 'unpaid' ? 'active' : ''}
+                  onClick={() => setFilter('unpaid')}
+                >
+                  <Filter size={16} />
+                  Needs Payment
+                </button>
+                <button
+                  className={filter === 'all' ? 'active' : ''}
+                  onClick={() => setFilter('all')}
+                >
+                  <Filter size={16} />
+                  All Visits
+                </button>
+              </div>
+
               <div className="search-box">
                 <Search size={20} />
                 <input
@@ -159,7 +178,7 @@ function SimplePayment() {
                   {searchResults.map(visit => (
                     <div 
                       key={visit.visit_id}
-                      className="result-item"
+                      className={`result-item ${visit.is_paid ? 'paid-visit' : ''}`}
                       onClick={() => selectVisit(visit)}
                     >
                       <div>
@@ -167,7 +186,16 @@ function SimplePayment() {
                         <p>Visit: {new Date(visit.visit_date).toLocaleDateString()}</p>
                         {visit.reason && <p className="text-muted">{visit.reason}</p>}
                       </div>
-                      <span className="badge">Collect Copay</span>
+                      <div className="visit-status">
+                        {visit.is_paid ? (
+                          <span className="badge badge-paid">
+                            <Check size={14} />
+                            Paid ${visit.payment}
+                          </span>
+                        ) : (
+                          <span className="badge">Collect Copay</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -189,6 +217,18 @@ function SimplePayment() {
               <button className="btn-back" onClick={reset}>
                 <X size={18} /> Back to Search
               </button>
+
+              {/* Show if already paid */}
+              {visitDetails.visit.already_paid && parseFloat(visitDetails.visit.already_paid) > 0 && (
+                <div className="already-paid-banner">
+                  <Check size={20} />
+                  <div>
+                    <strong>Payment Already Recorded</strong>
+                    <p>This visit was paid on {new Date(visitDetails.visit.last_updated || visitDetails.visit.visit_date).toLocaleDateString()}</p>
+                    <p>Amount: ${visitDetails.visit.already_paid} ({visitDetails.visit.payment_method_used || 'Unknown method'})</p>
+                  </div>
+                </div>
+              )}
 
               {/* Patient Info */}
               <div className="info-card">
@@ -237,69 +277,74 @@ function SimplePayment() {
                 </div>
               )}
 
-              {/* Payment Amount */}
-              <div className="payment-input">
-                <label>Copay Amount Collected</label>
-                <div className="input-group">
-                  <span>$</span>
-                  <input
-                    type="number"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                  />
-                </div>
-                {visitDetails.copay_amount && parseFloat(visitDetails.copay_amount) > 0 && (
-                  <p className="help-text">
-                    Expected copay: ${visitDetails.copay_amount}
-                  </p>
-                )}
-              </div>
+              {/* Only show payment form if not already paid */}
+              {(!visitDetails.visit.already_paid || parseFloat(visitDetails.visit.already_paid) === 0) && (
+                <>
+                  {/* Payment Amount */}
+                  <div className="payment-input">
+                    <label>Copay Amount Collected</label>
+                    <div className="input-group">
+                      <span>$</span>
+                      <input
+                        type="number"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    {visitDetails.copay_amount && parseFloat(visitDetails.copay_amount) > 0 && (
+                      <p className="help-text">
+                        Expected copay: ${visitDetails.copay_amount}
+                      </p>
+                    )}
+                  </div>
 
-              {/* Payment Method */}
-              <div className="payment-methods">
-                <label>Payment Method</label>
-                <div className="method-buttons">
-                  <button
-                    className={paymentMethod === 'cash' ? 'active' : ''}
-                    onClick={() => setPaymentMethod('cash')}
-                  >
-                    <DollarSign size={20} /> Cash
-                  </button>
-                  <button
-                    className={paymentMethod === 'card' ? 'active' : ''}
-                    onClick={() => setPaymentMethod('card')}
-                  >
-                    <CreditCard size={20} /> Card
-                  </button>
-                  <button
-                    className={paymentMethod === 'check' ? 'active' : ''}
-                    onClick={() => setPaymentMethod('check')}
-                  >
-                    <CreditCard size={20} /> Check
-                  </button>
-                </div>
-              </div>
+                  {/* Payment Method */}
+                  <div className="payment-methods">
+                    <label>Payment Method</label>
+                    <div className="method-buttons">
+                      <button
+                        className={paymentMethod === 'cash' ? 'active' : ''}
+                        onClick={() => setPaymentMethod('cash')}
+                      >
+                        <DollarSign size={20} /> Cash
+                      </button>
+                      <button
+                        className={paymentMethod === 'card' ? 'active' : ''}
+                        onClick={() => setPaymentMethod('card')}
+                      >
+                        <CreditCard size={20} /> Card
+                      </button>
+                      <button
+                        className={paymentMethod === 'check' ? 'active' : ''}
+                        onClick={() => setPaymentMethod('check')}
+                      >
+                        <CreditCard size={20} /> Check
+                      </button>
+                    </div>
+                  </div>
 
-              {/* Error Message */}
-              {error && (
-                <div className="error-message">
-                  <AlertCircle size={20} />
-                  {error}
-                </div>
+                  {/* Error Message */}
+                  {error && (
+                    <div className="error-message">
+                      <AlertCircle size={20} />
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <button 
+                    className="btn-primary btn-large"
+                    onClick={recordPayment}
+                    disabled={loading || !paymentAmount || parseFloat(paymentAmount) <= 0}
+                  >
+                    <Check size={20} />
+                    {loading ? 'Processing...' : `Record Copay Payment - $${paymentAmount || '0.00'}`}
+                  </button>
+                </>
               )}
-
-              {/* Submit Button */}
-              <button 
-                className="btn-primary btn-large"
-                onClick={recordPayment}
-                disabled={loading || !paymentAmount || parseFloat(paymentAmount) <= 0}
-              >
-                <Check size={20} />
-                {loading ? 'Processing...' : `Record Copay Payment - $${paymentAmount || '0.00'}`}
-              </button>
             </div>
           )}
         </>

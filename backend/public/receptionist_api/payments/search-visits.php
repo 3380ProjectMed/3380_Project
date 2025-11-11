@@ -1,7 +1,8 @@
 <?php
 /**
- * Search for visits that need copay payment
- * Receptionists collect copays - that's it!
+ * Search for visits with payment filter option
+ * filter=unpaid (default) - only show visits needing payment
+ * filter=all - show all visits (including paid)
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -17,6 +18,7 @@ try {
     }
 
     $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+    $filter = isset($_GET['filter']) ? $_GET['filter'] : 'unpaid'; // 'unpaid' or 'all'
 
     if (strlen($search) < 1) {
         echo json_encode(['success' => true, 'visits' => [], 'count' => 0]);
@@ -41,7 +43,7 @@ try {
     
     $office_id = (int)$staffRows[0]['office_id'];
 
-    // Search visits that need copay payment
+    // Build query based on filter
     $sql = "SELECT 
                 pv.visit_id,
                 pv.patient_id,
@@ -49,19 +51,29 @@ try {
                 pv.date as visit_date,
                 pv.reason_for_visit,
                 pv.payment,
+                pv.payment_method,
+                pv.copay_amount_due,
+                pv.status,
+                pv.last_updated,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.dob as patient_dob
             FROM patient_visit pv
             INNER JOIN patient p ON pv.patient_id = p.patient_id
             WHERE pv.office_id = ?
-            AND pv.status IN ('Checked In', 'Scheduled')
-            -- AND (pv.payment IS NULL OR pv.payment = 0)
-            AND (
+            AND pv.status IN ('Checked In', 'Scheduled', 'Completed')";
+    
+    // Add payment filter
+    if ($filter === 'unpaid') {
+        $sql .= " AND (pv.payment IS NULL OR pv.payment = 0)";
+    }
+    // If filter is 'all', don't add payment condition
+    
+    $sql .= " AND (
                 CONCAT(p.first_name, ' ', p.last_name) LIKE ?
                 OR pv.appointment_id = ?
             )
             ORDER BY pv.date DESC
-            LIMIT 10";
+            LIMIT 20";
 
     $searchTerm = "%{$search}%";
     $appointmentId = is_numeric($search) ? (int)$search : 0;
@@ -71,6 +83,9 @@ try {
     $results = [];
     if (is_array($visits)) {
         foreach ($visits as $v) {
+            $payment = (float)($v['payment'] ?? 0);
+            $isPaid = $payment > 0;
+            
             $results[] = [
                 'visit_id' => (int)$v['visit_id'],
                 'patient_id' => (int)$v['patient_id'],
@@ -79,7 +94,13 @@ try {
                 'appointment_id' => $v['appointment_id'],
                 'visit_date' => $v['visit_date'],
                 'reason' => $v['reason_for_visit'],
-                'needs_payment' => true
+                'status' => $v['status'],
+                'payment' => $isPaid ? number_format($payment, 2) : null,
+                'payment_method' => $v['payment_method'],
+                'copay_amount' => $v['copay_amount_due'] ? number_format((float)$v['copay_amount_due'], 2) : null,
+                'is_paid' => $isPaid,
+                'needs_payment' => !$isPaid,
+                'paid_date' => $isPaid ? $v['last_updated'] : null
             ];
         }
     }
@@ -89,7 +110,8 @@ try {
     echo json_encode([
         'success' => true,
         'visits' => $results,
-        'count' => count($results)
+        'count' => count($results),
+        'filter' => $filter
     ]);
 
 } catch (Exception $e) {
