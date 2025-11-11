@@ -13,6 +13,7 @@ import './OfficeSchedule.css';
 function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [selectedSlotData, setSelectedSlotData] = useState(null);
   const [doctors, setDoctors] = useState([]);
   const [bookedSlots, setBookedSlots] = useState({});
   const [loading, setLoading] = useState(true);
@@ -35,11 +36,18 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
       const doctorsResult = await doctorsResponse.json();
       
       if (doctorsResult.success) {
-        // Add colors and working hours to doctors
+        // Add colors and working hours to doctors, normalize property names
         const doctorsWithDetails = (doctorsResult.doctors || []).map((doc, index) => {
           const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
           return {
-            ...doc,
+            doctor_id: doc.Doctor_id,
+            Doctor_id: doc.Doctor_id, // Keep both for compatibility
+            first_name: doc.First_Name,
+            First_Name: doc.First_Name,
+            last_name: doc.Last_Name,
+            Last_Name: doc.Last_Name,
+            specialty_name: doc.specialty_name,
+            specialty_id: doc.specialty_id,
             color: colors[index % colors.length],
             workDays: [1, 2, 3, 4, 5], // Monday-Friday (will be fetched from API in production)
             startTime: 9,
@@ -224,14 +232,23 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
     const slotKey = `${doctor.Doctor_id}-${hour}-${minute}`;
     setSelectedSlot(slotKey);
     
-    if (onSelectTimeSlot) {
-      onSelectTimeSlot({
-        doctor: doctor,
-        date: selectedDate,
-        time: formatTimeSlot(hour, minute),
-        hour: hour,
-        minute: minute
-      });
+    const slotData = {
+      doctor: doctor,
+      date: selectedDate,
+      time: formatTimeSlot(hour, minute),
+      hour: hour,
+      minute: minute
+    };
+    
+    setSelectedSlotData(slotData);
+  };
+
+  /**
+   * Handle continue to booking button click
+   */
+  const handleContinueToBooking = () => {
+    if (selectedSlotData && onSelectTimeSlot) {
+      onSelectTimeSlot(selectedSlotData);
     }
   };
 
@@ -411,7 +428,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
               <p>Click "Continue" to proceed with booking this appointment</p>
             </div>
           </div>
-          <button className="btn-continue">
+          <button className="btn-continue" onClick={handleContinueToBooking}>
             Continue to Booking
           </button>
         </div>
