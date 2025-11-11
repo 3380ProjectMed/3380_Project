@@ -9,7 +9,7 @@ import './AppointmentBooking.css';
  * Multi-step appointment booking process
  * Integrated with backend APIs for patients, doctors, and appointments
  */
-function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, officeName }) {
+function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, onBack, onSuccess, officeId, officeName }) {
   const [currentStep, setCurrentStep] = useState(preSelectedPatient ? 2 : 1);
   const [selectedPatient, setSelectedPatient] = useState(preSelectedPatient);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
@@ -39,6 +39,31 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
   }, [officeId]);
 
   /**
+   * Populate form with pre-selected time slot data
+   */
+  useEffect(() => {
+    if (preSelectedTimeSlot) {
+      // Set the doctor
+      if (preSelectedTimeSlot.doctor) {
+        setSelectedDoctor(preSelectedTimeSlot.doctor);
+      }
+      
+      // Set the date (format as YYYY-MM-DD for input field)
+      if (preSelectedTimeSlot.date) {
+        const date = new Date(preSelectedTimeSlot.date);
+        const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        setAppointmentDate(formattedDate);
+      }
+      
+      // Set the time (format as HH:MM for input field)
+      if (preSelectedTimeSlot.hour !== undefined && preSelectedTimeSlot.minute !== undefined) {
+        const formattedTime = `${String(preSelectedTimeSlot.hour).padStart(2, '0')}:${String(preSelectedTimeSlot.minute).padStart(2, '0')}`;
+        setAppointmentTime(formattedTime);
+      }
+    }
+  }, [preSelectedTimeSlot]);
+
+  /**
    * Debounced patient search
    */
   useEffect(() => {
@@ -61,7 +86,18 @@ function AppointmentBooking({ preSelectedPatient, onBack, onSuccess, officeId, o
       const data = await response.json();
       
       if (data.success) {
-        setDoctors(data.doctors || []);
+        // Normalize property names for consistency
+        const normalizedDoctors = (data.doctors || []).map(doc => ({
+          doctor_id: doc.Doctor_id,
+          Doctor_id: doc.Doctor_id,
+          first_name: doc.First_Name,
+          First_Name: doc.First_Name,
+          last_name: doc.Last_Name,
+          Last_Name: doc.Last_Name,
+          specialty_name: doc.specialty_name,
+          specialty_id: doc.specialty_id
+        }));
+        setDoctors(normalizedDoctors);
       }
     } catch (err) {
       console.error('Failed to load doctors:', err);
