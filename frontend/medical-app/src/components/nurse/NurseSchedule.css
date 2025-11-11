@@ -1,11 +1,72 @@
-.nurse-schedule-page{padding:24px;max-width:1100px;margin:0 auto;}
-.nurse-schedule-page h1{margin:0 0 12px 0}
-.nurse-table .thead,.nurse-table .row{
-  display:grid;grid-template-columns:1.2fr 1fr 2fr 1.4fr 2fr;gap:12px;align-items:center;
+/* Sleek, modern card-based UI for Nurse Schedule */
+.nurse-schedule-container {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  padding: 2rem 2.5rem;
+  margin: 2rem auto;
+  max-width: 1100px;
 }
-.nurse-table .thead{
-  background:linear-gradient(135deg,#eaf6ff,#fff);
-  padding:12px;border-radius:10px;font-weight:800;color:#062a5a
+.nurse-schedule-table th,
+.nurse-schedule-table td {
+  padding: 1rem 1.2rem;
+  font-size: 1rem;
+  color: #0b1f44;
 }
-.nurse-table .row{background:#f8fafc;padding:12px;border-radius:10px;margin-top:8px}
-.nurse-table .row:hover{background:#eaf6ff}
+.nurse-schedule-table th {
+  background: #f4f8fc;
+  font-weight: 700;
+  color: #1a237e;
+}
+.nurse-schedule-table tr {
+  background: #f9fbfd;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(58,141,222,0.07);
+  margin-bottom: 1rem;
+}
+.nurse-schedule-table tr:hover {
+  background: #eaf6ff;
+}
+
+/* Nurse Schedule - Unique Modern UI */
+.nurse-schedule-root {
+  padding: 2.2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+.nurse-schedule-header {
+  margin-bottom: 1.7rem;
+}
+.nurse-schedule-title {
+  font-size: 2.1rem;
+  font-weight: 900;
+  color: #0f3d91;
+  margin: 0 0 1rem 0;
+}
+.nurse-schedule-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.7rem;
+}
+.nurse-schedule-thead {
+  background: linear-gradient(120deg, #eaf6ff 60%, #fff 100%);
+  font-weight: 800;
+  color: #062a5a;
+  border-radius: 0.7rem;
+  padding: 1rem;
+}
+.nurse-schedule-row {
+  background: #f8fafc;
+  border-radius: 0.7rem;
+  box-shadow: 0 2px 8px rgba(15, 61, 145, 0.06);
+  transition: background 0.15s;
+}
+.nurse-schedule-row:hover {
+  background: #eaf6ff;
+}
+.nurse-schedule-cell {
+  padding: 1rem 1.2rem;
+  font-size: 1rem;
+  color: #0b1f44;
+}

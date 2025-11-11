@@ -1,3 +1,32 @@
+/* Sleek, modern card-based UI for Nurse Patients */
+.nurse-patients-container {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  padding: 2rem 2.5rem;
+  margin: 2rem auto;
+  max-width: 1100px;
+}
+.nurse-patients-table th,
+.nurse-patients-table td {
+  padding: 1rem 1.2rem;
+  font-size: 1rem;
+  color: #0b1f44;
+}
+.nurse-patients-table th {
+  background: #f4f8fc;
+  font-weight: 700;
+  color: #1a237e;
+}
+.nurse-patients-table tr {
+  background: #f9fbfd;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(58,141,222,0.07);
+  margin-bottom: 1rem;
+}
+.nurse-patients-table tr:hover {
+  background: #eaf6ff;
+}
 .nurse-patients-page{padding:24px;max-width:1100px;margin:0 auto;}
 .nurse-patients-page h1{margin:0 0 12px 0}
 .searchbar{display:flex;gap:8px;margin-bottom:12px}
