@@ -99,8 +99,7 @@ try {
             'workLocation' => $doctor['work_location_name'] ?: 'Not assigned',
             'specialties' => [$doctor['specialty_name']],
             'gender' => $doctor['gender'],
-            'bio' => '',
-            'phone' => $doctor['phone_number'] ?: 'Not provided'
+            'bio' => ''
         ]
     ]);
 

@@ -28,6 +28,7 @@ export default function NurseClinicalWorkSpace() {
   const handleSaveVitals = async () => {
     if (!apptId) return showAlert('Please enter an appointment ID.', 'error');
     try {
+      // The new nurse API client expects normalized vitals fields
       const payload = {
         bp: vitals.bloodPressure,
         hr: vitals.heartRate,

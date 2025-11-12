@@ -51,7 +51,10 @@ $sql = "SELECT a.Status
 
   closeDBConnection($conn);
 
+  error_log(sprintf('[nurse_api] get-stats.php nurse_id=%d date=%s total=%d waiting=%d upcoming=%d completed=%d', $nurse_id, $date, $total, $waiting, $upcoming, $completed));
+
   echo json_encode([
+    'success' => true,
     'date' => $date,
     'totalAppointments' => $total,
     'waitingCount' => $waiting,
@@ -60,6 +63,8 @@ $sql = "SELECT a.Status
   ]);
 } catch (Throwable $e) {
   http_response_code(500);
-  echo json_encode(['error' => 'Failed to load stats', 'message' => $e->getMessage()]);
+  error_log('[nurse_api] get-stats.php error: ' . $e->getMessage());
+  error_log($e->getTraceAsString());
+  echo json_encode(['success' => false, 'error' => 'Failed to load stats', 'message' => $e->getMessage()]);
 }
 ?>

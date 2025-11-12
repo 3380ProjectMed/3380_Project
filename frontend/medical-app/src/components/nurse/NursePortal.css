@@ -6,13 +6,13 @@
   --nurse-portal-bg-top: #e6f7ff;
   --nurse-portal-bg-bottom: #ffffff;
 }
-.nurse-portal-root {
+.nurse-portal {
   min-height: 100vh;
   display: flex;
   background: linear-gradient(180deg, var(--nurse-portal-bg-top), var(--nurse-portal-bg-bottom));
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
-.nurse-portal-main {
+.nurse-main {
   margin-left: var(--nurse-portal-sidebar-width);
   padding: 2.2rem;
   width: 100%;
@@ -20,7 +20,7 @@
   box-sizing: border-box;
 }
 @media (max-width: 1024px) {
-  .nurse-portal-main {
+  .nurse-main {
     margin-left: 0;
     padding: 1.2rem;
   }
