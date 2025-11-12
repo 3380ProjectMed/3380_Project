@@ -69,8 +69,14 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
         // Convert appointments to booked slots lookup
         const slots = {};
         (appointmentsResult.appointments || []).forEach(apt => {
-          const key = `${apt.Doctor_id}-${apt.Appointment_date}`;
-          slots[key] = true;
+          // Extract date and time from Appointment_date (format: "YYYY-MM-DD HH:MM:SS")
+          const appointmentDateTime = apt.Appointment_date; // e.g., "2025-11-11 11:00:00"
+          const key = `${apt.Doctor_id}-${appointmentDateTime}`;
+          slots[key] = {
+            appointment_id: apt.Appointment_id,
+            patient_name: apt.patientName,
+            status: apt.status
+          };
         });
         setBookedSlots(slots);
       }
@@ -195,7 +201,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
     const dateStr = selectedDate.toISOString().split('T')[0];
     const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
     const key = `${doctorId}-${dateStr} ${timeStr}`;
-    return bookedSlots[key] === true;
+    return bookedSlots[key] !== undefined;
   };
 
   /**
