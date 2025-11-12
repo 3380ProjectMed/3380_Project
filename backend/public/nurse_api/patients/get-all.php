@@ -77,9 +77,9 @@ try {
         
         $patients = executeQuery($conn, $sql, 'iii', [$nurse_id, $pageSize, $offset]);
         
-        $countSql = "SELECT COUNT(DISTINCT patient.patient_id) as total 
-                     FROM patient_visit 
-                     WHERE patient_visit.nurse_id = ?";
+    $countSql = "SELECT COUNT(DISTINCT patient_visit.patient_id) as total 
+             FROM patient_visit 
+             WHERE patient_visit.nurse_id = ?";
         $countResult = executeQuery($conn, $countSql, 'i', [$nurse_id]);
     }
 
