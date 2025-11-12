@@ -1,35 +1,33 @@
 <?php
-declare(strict_types=1);
-header('Content-Type: application/json');
 require_once __DIR__ . '/../../../cors.php';
 require_once __DIR__ . '/../../../database.php';
+header('Content-Type: application/json');
 
-function fail(int $code, string $msg, array $extra = []): void {
-  http_response_code($code);
-  echo json_encode(array_merge(['error' => $msg], $extra));
-  exit;
+session_start();
+if (empty($_SESSION['uid'])) { http_response_code(401); echo json_encode(['error' => 'UNAUTHENTICATED']); exit; }
+
+$conn = getDBConnection();
+$email = $_SESSION['email'] ?? '';
+$rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
+if (empty($rows)) { closeDBConnection($conn); http_response_code(404); echo json_encode(['error' => 'NURSE_NOT_FOUND']); exit; }
+$nurse_id = (int)$rows[0]['nurse_id'];
+$date = $_GET['date'] ?? date('Y-m-d');
+
+$sql = "SELECT a.Status FROM appointment a JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id WHERE DATE(a.Appointment_date) = ? AND pv.nurse_id = ?";
+$appointments = executeQuery($conn, $sql, 'si', [$date, $nurse_id]);
+
+$total = count($appointments);
+$waiting = $upcoming = $completed = 0;
+foreach ($appointments as $r) {
+  $s = strtolower($r['Status'] ?? '');
+  if ($s === 'waiting') $waiting++;
+  if (in_array($s, ['scheduled','pending','in progress'], true)) $upcoming++;
+  if ($s === 'completed') $completed++;
 }
 
-try {
-  session_start();
-  if (empty($_SESSION['uid'])) {
-    fail(401, 'UNAUTHENTICATED');
-  }
+closeDBConnection($conn);
+echo json_encode(['date' => $date, 'totalAppointments' => $total, 'waitingCount' => $waiting, 'upcomingCount' => $upcoming, 'completedCount' => $completed]);
 
-  $conn = getDBConnection();
-
-  // Get nurse_id from session
-  $email = $_SESSION['email'] ?? '';
-  $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
-  if (empty($rows)) {
-    closeDBConnection($conn);
-    fail(404, 'NURSE_NOT_FOUND');
-  }
-
-  $nurse_id = (int)$rows[0]['nurse_id'];
-  $date = $_GET['date'] ?? date('Y-m-d');
-
-$sql = "SELECT a.Status 
           FROM appointment a
           JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
           WHERE DATE(a.Appointment_date) = ?
