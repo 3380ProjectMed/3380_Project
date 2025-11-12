@@ -155,13 +155,13 @@ try {
                     ) AS avg_per_visit,
                     COUNT(DISTINCT pv.patient_id) AS unique_patients
                 FROM patient_visit pv
-                JOIN doctors d ON pv.Doctor_id = d.Doctor_id
+                JOIN doctor d ON pv.doctor_id = d.doctor_id
                 LEFT JOIN Appointment a ON pv.appointment_id = a.Appointment_id
                 LEFT JOIN patient_insurance pi ON pv.insurance_policy_id_used = pi.id
                 LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
                 LEFT JOIN insurance_payer ipayer ON ip.payer_id = ipayer.payer_id
                 WHERE $where_clause
-                GROUP BY d.Doctor_id, d.firstName, d.lastName, d.specialty
+                GROUP BY d.doctor_id, d.firstName, d.lastName, d.specialty
                 HAVING total_visits > 0
                 ORDER BY total_revenue DESC
                 LIMIT 20";
