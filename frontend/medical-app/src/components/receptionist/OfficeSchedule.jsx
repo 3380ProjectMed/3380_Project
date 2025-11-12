@@ -203,12 +203,83 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
 
   /**
    * Check if time slot is booked (from backend data)
+   * Checks within a range: appointments within ±14-15 minutes are considered as booking this slot
+   * Prioritizes showing appointments at the nearest slot (earlier slot if equidistant)
    */
   const isSlotBooked = (doctorId, hour, minute) => {
     const dateStr = selectedDate.toISOString().split('T')[0];
-    const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
-    const key = `${doctorId}-${dateStr} ${timeStr}`;
-    return bookedSlots[key] !== undefined;
+    const slotTimeInMinutes = hour * 60 + minute;
+    
+    // Check all booked slots for this doctor on this date
+    for (const key in bookedSlots) {
+      if (!key.startsWith(`${doctorId}-${dateStr}`)) continue;
+      
+      const appointment = bookedSlots[key];
+      const apptDate = new Date(appointment.Appointment_date);
+      const apptTimeInMinutes = apptDate.getHours() * 60 + apptDate.getMinutes();
+      
+      // Calculate time difference
+      const timeDiff = apptTimeInMinutes - slotTimeInMinutes;
+      
+      // If appointment time is within 15 minutes of this slot
+      if (Math.abs(timeDiff) <= 15) {
+        // Check if this is the nearest slot to the appointment
+        // For 10:15 appointment: 10:00 slot is 15 min before, 10:30 slot is 15 min after
+        // We want to show it at the 10:00 slot (prioritize earlier)
+        
+        // If appointment is between this slot and the next slot (30 min intervals)
+        // and is closer to this slot or equidistant, show it here
+        if (timeDiff >= 0 && timeDiff <= 15) {
+          // Appointment is 0-15 minutes after this slot, show it here
+          return true;
+        } else if (timeDiff < 0 && timeDiff >= -15) {
+          // Appointment is 0-15 minutes before this slot
+          // Only show it here if it's not closer to the previous slot
+          // With 30-min intervals, if it's within 15 min before, it should be in previous slot
+          // So we only block this slot if it's very close (within 15 min before)
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  };
+
+  /**
+   * Get the actual appointment for a time slot (if within range)
+   * Prioritizes the closest slot, with preference for earlier slots
+   */
+  const getAppointmentForSlot = (doctorId, hour, minute) => {
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const slotTimeInMinutes = hour * 60 + minute;
+    
+    let closestAppointment = null;
+    let closestDistance = Infinity;
+    
+    // Check all booked slots for this doctor on this date
+    for (const key in bookedSlots) {
+      if (!key.startsWith(`${doctorId}-${dateStr}`)) continue;
+      
+      const appointment = bookedSlots[key];
+      const apptDate = new Date(appointment.Appointment_date);
+      const apptTimeInMinutes = apptDate.getHours() * 60 + apptDate.getMinutes();
+      
+      // Calculate time difference
+      const timeDiff = apptTimeInMinutes - slotTimeInMinutes;
+      const absTimeDiff = Math.abs(timeDiff);
+      
+      // If appointment is within 15 minutes of this slot
+      if (absTimeDiff <= 15) {
+        // For equidistant appointments, prefer showing at the earlier slot
+        // (e.g., 10:15 appointment: show at 10:00, not 10:30)
+        if (absTimeDiff < closestDistance || (absTimeDiff === closestDistance && timeDiff > 0)) {
+          closestDistance = absTimeDiff;
+          closestAppointment = appointment;
+        }
+      }
+    }
+    
+    return closestAppointment;
   };
 
   /**
@@ -242,10 +313,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   const handleSlotClick = (doctor, hour, minute, status) => {
     // If slot is booked, show appointment details
     if (status === 'booked') {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
-      const key = `${doctor.Doctor_id}-${dateStr} ${timeStr}`;
-      const appointmentData = bookedSlots[key];
+      const appointmentData = getAppointmentForSlot(doctor.Doctor_id, hour, minute);
       
       if (appointmentData) {
         setSelectedAppointment(appointmentData);
