@@ -33,7 +33,7 @@ try {
     $q = isset($_GET['q']) ? trim($_GET['q']) : '';
 
     if ($q !== '') {
-        // Search by name, phone or dob
+        // Search by name, phone or dob (supports partial matches for all fields)
         $like = '%' . $q . '%';
         $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact_id,
                        p.primary_doctor,
@@ -45,9 +45,9 @@ try {
                 LEFT JOIN staff pcp_staff ON pcp.staff_id = pcp_staff.staff_id
                 LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
                 LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
-                WHERE p.first_name LIKE ? OR p.last_name LIKE ? OR p.emergency_contact_id LIKE ? OR p.dob = ?
+                WHERE p.first_name LIKE ? OR p.last_name LIKE ? OR p.emergency_contact_id LIKE ? OR p.dob LIKE ?
                 ORDER BY p.last_name, p.first_name";
-        $rows = executeQuery($conn, $sql, 'ssss', [$like, $like, $like, $q]);
+        $rows = executeQuery($conn, $sql, 'ssss', [$like, $like, $like, $like]);
     } else {
         // Return a limited list to avoid huge payloads (pagination could be added later)
         $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact_id,
