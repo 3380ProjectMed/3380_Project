@@ -140,7 +140,7 @@ try {
     $doctor_performance = [];
     if (!$doctor_id || $doctor_id === 'all') {
         $sql = "SELECT
-                    CONCAT(d.firstName, ' ', d.lastName) AS doctor_name,
+                    CONCAT(s.first_name, ' ', s.last_name) AS doctor_name,
                     d.specialty,
                     COUNT(*) AS total_visits,
                     SUM(
@@ -160,6 +160,7 @@ try {
                 LEFT JOIN patient_insurance pi ON pv.insurance_policy_id_used = pi.id
                 LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
                 LEFT JOIN insurance_payer ipayer ON ip.payer_id = ipayer.payer_id
+                LEFT JOIN staff s ON d.doctor_id = d.staff_id
                 WHERE $where_clause
                 GROUP BY d.doctor_id, d.firstName, d.lastName, d.specialty
                 HAVING total_visits > 0
