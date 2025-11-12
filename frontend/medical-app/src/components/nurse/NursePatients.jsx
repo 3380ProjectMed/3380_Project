@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { Search, X, AlertCircle } from 'lucide-react';
 import "./NursePatients.css";
 import { getNursePatients } from '../../api/nurse';
@@ -18,10 +18,20 @@ export default function NursePatients() {
     try {
       // The new nurse API client returns { patients, total }
       const data = await getNursePatients(search, page, pageSize);
+      
+      // DEBUG: Log what we got back
+      console.log('🔍 API Response:', data);
+      console.log('🔍 Patients array:', data?.patients);
+      console.log('🔍 Total:', data?.total);
+      
       const items = Array.isArray(data?.patients) ? data.patients : [];
+      console.log('🔍 Items to display:', items);
+      console.log('🔍 Number of patients:', items.length);
+      
       setPatients(items);
       setTotal(Number.isFinite(data?.total) ? data.total : items.length);
     } catch (e) {
+      console.error('❌ Error loading patients:', e);
       setError(e.message || 'Failed to load patients');
       setPatients([]);
     } finally {
