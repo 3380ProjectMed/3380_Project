@@ -9,6 +9,7 @@ import './PatientPortal.css';
 import Sidebar from './Sidebar.jsx';
 import Dashboard from './Dashboard.jsx';
 import Appointments from './Appointments.jsx';
+import Referrals from './Referrals.jsx';
 import MedicalRecords from './MedicalRecords.jsx';
 import Insurance from './Insurance.jsx';
 import Billing from './Billing.jsx';
@@ -73,6 +74,9 @@ export default function PatientPortal({ onLogout }) {
             if (d.success) setDoctors(d.data ?? []);
             break;
           case 'appointments': await loadAppointments(); break;
+          case 'referrals': 
+            // Referrals component handles its own data loading
+            break;
           case 'records': await loadMedicalRecords(); break;
           case 'insurance': await loadInsurance(); break;
           case 'billing': await loadBilling(); break;
@@ -669,6 +673,7 @@ export default function PatientPortal({ onLogout }) {
         {currentPage === 'dashboard' && <Dashboard {...portalProps} />}
         {currentPage === 'profile' && <Profile {...portalProps} />}
         {currentPage === 'appointments' && <Appointments {...portalProps} />}
+        {currentPage === 'referrals' && <Referrals {...portalProps} />}
         {currentPage === 'records' && <MedicalRecords {...portalProps} onRefresh={loadMedicalRecords} />}
         {currentPage === 'insurance' && <Insurance {...portalProps} />}
         {currentPage === 'billing' && <Billing {...portalProps} />}
