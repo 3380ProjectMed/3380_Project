@@ -44,6 +44,7 @@ try {
     $cntRows = executeQuery($pdo, 'SELECT FOUND_ROWS() AS total');
     $total = isset($cntRows[0]['total']) ? (int)$cntRows[0]['total'] : count($rows ?: []);
 
+    error_log("[nurse_api] get-all.php called with q={$q} page={$page} limit={$limit}");
     $items = array_map(function($r) {
         return [
             'patient_id' => 'p' . $r['patient_id'],
@@ -53,9 +54,11 @@ try {
             'allergies'  => $r['allergies'],
         ];
     }, $rows ?: []);
-
-    echo json_encode(['items' => $items, 'total' => $total]);
+    // Return with a success flag and consistent shape for frontend
+    echo json_encode(['success' => true, 'items' => $items, 'total' => $total]);
 } catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'Failed to load patients', 'message' => $e->getMessage()]);
+    error_log('[nurse_api] get-all.php error: ' . $e->getMessage());
+    error_log($e->getTraceAsString());
+    echo json_encode(['success' => false, 'error' => 'Failed to load patients', 'message' => $e->getMessage()]);
 }
