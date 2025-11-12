@@ -16,11 +16,11 @@ export default function NursePatients() {
     setLoading(true);
     setError(null);
     try {
-      // The new nurse API client returns { patients, total }
-      const data = await getNursePatients(search, page, pageSize);
-      const items = Array.isArray(data?.patients) ? data.patients : [];
-      setPatients(items);
-      setTotal(Number.isFinite(data?.total) ? data.total : items.length);
+  // The nurse API returns { items, total }
+  const data = await getNursePatients(search, page, pageSize);
+  const patientList = data?.items || [];
+  setPatients(Array.isArray(patientList) ? patientList : []);
+  setTotal(Number(data?.total ?? patientList.length));
     } catch (e) {
       setError(e.message || 'Failed to load patients');
       setPatients([]);

@@ -30,7 +30,9 @@ export default function NurseSchedule() {
         for (let d = 1; d <= days; d++) {
           const dateStr = `${year}-${month}-${String(d).padStart(2, '0')}`;
           try {
-            const appts = await getNurseSchedule({ date: dateStr });
+            const apptsRaw = await getNurseSchedule({ date: dateStr });
+            // Normalize payload: accept array or envelope { appointments: [] } or { schedule: [] }
+            const appts = Array.isArray(apptsRaw) ? apptsRaw : (apptsRaw?.appointments || apptsRaw?.schedule || []);
             if (Array.isArray(appts) && appts.length > 0) {
               all = all.concat(appts.map(a => ({ ...a, _date: dateStr })));
             }

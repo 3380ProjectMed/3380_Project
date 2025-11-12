@@ -34,10 +34,8 @@ export default function NurseClinicalWorkSpace() {
         hr: vitals.heartRate,
         temp: vitals.temperature,
         spo2: vitals.oxygenSaturation,
-        weight: vitals.weight,
-        height: vitals.height,
-        reason,
-        history
+          weight: vitals.weight,
+          height: vitals.height
       };
       await saveNurseVitals(apptId, payload);
       showAlert('Vitals and intake saved!', 'success');

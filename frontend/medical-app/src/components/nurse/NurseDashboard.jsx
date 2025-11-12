@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Users, Clock, FileText, Search, Filter, ClipboardList } from 'lucide-react';
 import './NurseDashboard.css';
-import { getNurseDashboardStats, getNurseSchedule, getNurseProfile } from '../../api/nurse';
+import { getNurseDashboardStats, getNurseScheduleToday, getNurseProfile } from '../../api/nurse';
 
 export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
   const [appointments, setAppointments] = useState([]);
@@ -23,16 +23,17 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
         // Unified, robust API calls
         const [s, appts, profile] = await Promise.all([
           getNurseDashboardStats(today),
-          getNurseSchedule({ date: today }),
+          // use the specialized today endpoint for a quick preview
+          getNurseScheduleToday(),
           getNurseProfile()
         ]);
         if (mounted && s) setStats({
-          total: s.total ?? 0,
-          waiting: s.waiting ?? 0,
-          upcoming: s.upcoming ?? 0,
-          completed: s.completed ?? 0
+          total: s.total,
+          waiting: s.waiting,
+          upcoming: s.upcoming,
+          completed: s.completed
         });
-        if (mounted) setAppointments(Array.isArray(appts) ? appts : []);
+  if (mounted) setAppointments(Array.isArray(appts) ? appts : []);
         if (mounted && profile && profile.lastName) setNurseName(profile.lastName);
         if (mounted) setTasks({
           pendingNotes: (appts || []).filter(a => a.status && a.status.toLowerCase() === 'in progress').length,
