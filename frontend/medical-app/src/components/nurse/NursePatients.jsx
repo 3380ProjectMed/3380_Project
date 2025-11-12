@@ -16,8 +16,9 @@ export default function NursePatients() {
     setLoading(true);
     setError(null);
     try {
+      // The new nurse API client returns { patients, total }
       const data = await getNursePatients(search, page, pageSize);
-      const items = Array.isArray(data?.items) ? data.items : [];
+      const items = Array.isArray(data?.patients) ? data.patients : [];
       setPatients(items);
       setTotal(Number.isFinite(data?.total) ? data.total : items.length);
     } catch (e) {
@@ -101,12 +102,12 @@ export default function NursePatients() {
               </div>
             ) : (
               patients.map((p) => (
-                <div key={p.id} className="table-row">
-                  <div>{p.id}</div>
-                  <div>{p.name}</div>
+                <div key={p.patient_id || p.id} className="table-row">
+                  <div>{p.patient_id || p.id}</div>
+                  <div>{p.first_name || ''} {p.last_name || ''}</div>
                   <div>{p.dob ? new Date(p.dob).toLocaleDateString() : 'N/A'}</div>
-                  <div className={`patient-list__allergies ${p.allergies === 'None' || p.allergies === 'No Known Allergies' ? 'patient-list__allergies--none' : 'patient-list__allergies--has'}`}>
-                    {p.allergies === 'None' || p.allergies === 'No Known Allergies' ? (
+                  <div className={`patient-list__allergies ${!p.allergies || p.allergies === 'None' || p.allergies === 'No Known Allergies' ? 'patient-list__allergies--none' : 'patient-list__allergies--has'}`}>
+                    {!p.allergies || p.allergies === 'None' || p.allergies === 'No Known Allergies' ? (
                       <span>✓ None</span>
                     ) : (
                       <span><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px' }} />{p.allergies}</span>

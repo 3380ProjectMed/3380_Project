@@ -20,22 +20,23 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
       setError(null);
       try {
         const today = new Date().toISOString().slice(0, 10);
-        const s = await getNurseDashboardStats(today);
+        // Unified, robust API calls
+        const [s, appts, profile] = await Promise.all([
+          getNurseDashboardStats(today),
+          getNurseSchedule({ date: today }),
+          getNurseProfile()
+        ]);
         if (mounted && s) setStats({
           total: s.total ?? 0,
           waiting: s.waiting ?? 0,
           upcoming: s.upcoming ?? 0,
           completed: s.completed ?? 0
         });
-        const appts = await getNurseSchedule({ date: today });
         if (mounted) setAppointments(Array.isArray(appts) ? appts : []);
-        // Fetch nurse name for welcome banner
-        const profile = await getNurseProfile();
         if (mounted && profile && profile.lastName) setNurseName(profile.lastName);
-        // Mock task counts (replace with real API if available)
         if (mounted) setTasks({
           pendingNotes: (appts || []).filter(a => a.status && a.status.toLowerCase() === 'in progress').length,
-          referrals: 1 // Placeholder
+          referrals: 1 // Placeholder, replace with real API if available
         });
       } catch (err) {
         if (mounted) setError(err?.message || 'Failed to load');
