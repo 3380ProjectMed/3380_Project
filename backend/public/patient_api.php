@@ -217,7 +217,7 @@ if ($endpoint === 'dashboard') {
             $result = $stmt->get_result();
             $recent_activity = $result->fetch_all(MYSQLI_ASSOC);
 
-            // Get approved referrals (notifications)
+            // Get approved referrals (notifications) with expiration info
             $stmt = $mysqli->prepare("
                 SELECT 
                     r.referral_id as visit_id,
@@ -229,7 +229,14 @@ if ($endpoint === 'dashboard') {
                     r.reason as description,
                     d.doctor_id as specialist_id,
                     CONCAT(spec_staff.first_name, ' ', spec_staff.last_name) as specialist_name,
-                    s.specialty_name as specialty
+                    s.specialty_name as specialty,
+                    DATE_ADD(r.date_of_approval, INTERVAL 90 DAY) as expiration_date,
+                    DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) as days_remaining,
+                    CASE 
+                        WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 7 THEN 'urgent'
+                        WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 30 THEN 'warning'
+                        ELSE 'normal'
+                    END as urgency_level
                 FROM referral r
                 LEFT JOIN doctor d ON r.specialist_doctor_staff_id = d.doctor_id
                 LEFT JOIN staff spec_staff ON d.staff_id = spec_staff.staff_id
@@ -237,7 +244,14 @@ if ($endpoint === 'dashboard') {
                 WHERE r.patient_id = ?
                 AND r.date_of_approval IS NOT NULL
                 AND r.appointment_id IS NULL
-                ORDER BY r.date_of_approval DESC
+                AND DATE_ADD(r.date_of_approval, INTERVAL 90 DAY) >= CURDATE()
+                ORDER BY 
+                    CASE 
+                        WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 7 THEN 0
+                        WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 30 THEN 1
+                        ELSE 2
+                    END,
+                    r.date_of_approval DESC
                 LIMIT 3
             ");
             $stmt->bind_param('i', $patient_id);
@@ -1361,7 +1375,15 @@ elseif ($endpoint === 'referrals') {
                 $active = [];
                 $used = [];
                 
-                foreach ($referrals as $ref) {
+                    foreach ($referrals as $ref) {
+                    $days_remaining = (int)$ref['days_remaining'];
+                    $urgency_level = 'normal';
+                    if ($days_remaining <= 7) {
+                        $urgency_level = 'urgent';
+                    } elseif ($days_remaining <= 30) {
+                        $urgency_level = 'warning';
+                    }
+                    
                     $formatted = [
                         'referral_id' => $ref['referral_id'],
                         'specialist_id' => $ref['specialist_id'],
@@ -1371,7 +1393,8 @@ elseif ($endpoint === 'referrals') {
                         'reason' => $ref['reason'] ?? 'No reason provided',
                         'date_issued' => $ref['date_of_approval'],
                         'expiration_date' => $ref['expiration_date'],
-                        'days_remaining' => (int)$ref['days_remaining'],
+                        'days_remaining' => $days_remaining,
+                        'urgency_level' => $urgency_level,
                         'is_used' => $ref['appointment_id'] !== null,
                         'appointment_id' => $ref['appointment_id']
                     ];
@@ -1381,9 +1404,7 @@ elseif ($endpoint === 'referrals') {
                     } else {
                         $used[] = $formatted;
                     }
-                }
-                
-                sendResponse(true, [
+                }                sendResponse(true, [
                     'active_referrals' => $active,
                     'used_referrals' => $used,
                     'active_count' => count($active),
