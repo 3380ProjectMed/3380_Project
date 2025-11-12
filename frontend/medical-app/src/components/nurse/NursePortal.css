@@ -1,38 +1,38 @@
-:root {
-  --nurse-sidebar-w: 264px;
-  --page-max-w: 1200px;
-  --shell-bg-top: #e6f7ff;
-  --shell-bg-bottom: #ffffff;
-}
 
+/* Nurse Portal - Unique Modern UI */
+:root {
+  --nurse-portal-sidebar-width: 264px;
+  --nurse-portal-max-width: 1200px;
+  --nurse-portal-bg-top: #e6f7ff;
+  --nurse-portal-bg-bottom: #ffffff;
+}
 .nurse-portal {
   min-height: 100vh;
   display: flex;
-  background: linear-gradient(180deg, var(--fifth-color), #ffffff);
+  background: linear-gradient(180deg, var(--nurse-portal-bg-top), var(--nurse-portal-bg-bottom));
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
-
 .nurse-main {
-  margin-left: var(--nurse-sidebar-w);
-  padding: 24px;
+  margin-left: var(--nurse-portal-sidebar-width);
+  padding: 2.2rem;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
-
 @media (max-width: 1024px) {
   .nurse-main {
     margin-left: 0;
-    padding: 18px;
+    padding: 1.2rem;
   }
 }
-
-.nurse-page {
-  max-width: var(--page-max-w);
+.nurse-portal-page {
+  max-width: var(--nurse-portal-max-width);
   margin: 0 auto;
 }
-/* page header*/
-.section-header {
+.nurse-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 0.7rem;
   flex-wrap: wrap;
 }

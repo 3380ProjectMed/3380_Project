@@ -41,8 +41,8 @@ try {
                 st.first_name,
                 st.last_name,
                 st.staff_email as staff_email,
-                st.phone as staff_phone,
-                d.license_number,
+                d.phone as staff_phone,
+                st.license_number,
                 s.specialty_name,
                 cg.gender_text as gender
             FROM doctor d

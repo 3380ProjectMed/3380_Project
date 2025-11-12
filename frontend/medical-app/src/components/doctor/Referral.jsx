@@ -76,24 +76,20 @@ function Referral() {
         const doctorId = auth.user?.doctor_id ?? null;
         console.log('👨‍⚕️ Doctor ID:', doctorId);
         
-        if (!doctorId) {
-          console.warn('❌ No doctor_id available');
-          setLoadingData(false);
-          return;
-        }
-        
         console.log('🔍 Fetching patients and specialists...');
-        
-        const [pRes, sRes] = await Promise.all([
-          fetch(`/doctor_api/patients/get-all.php?doctor_id=${doctorId}`, { credentials: 'include' }),
-          fetch('/doctor_api/referrals/get-specialists.php', { credentials: 'include' })
-        ]);
+
+        // Always fetch specialists and patients. Let the server resolve the
+        // current doctor via session when no explicit doctor_id is provided.
+        const specialistsFetch = fetch('/doctor_api/referrals/get-specialists.php', { credentials: 'include' });
+        const patientsFetch = fetch('/doctor_api/patients/get-all.php', { credentials: 'include' });
+
+        const [sRes, pRes] = await Promise.all([specialistsFetch, patientsFetch]);
 
         console.log('📥 Patients response status:', pRes.status);
         console.log('📥 Specialists response status:', sRes.status);
 
-        const pText = await pRes.text();
-        const sText = await sRes.text();
+  const pText = await pRes.text();
+  const sText = await sRes.text();
         
         console.log('📄 Raw patients response:', pText.substring(0, 200));
         console.log('📄 Raw specialists response:', sText.substring(0, 200));
@@ -209,7 +205,7 @@ function Referral() {
     <div className="referral-page">
       <h2 className="page-title">Referrals</h2>
       
-      {/* Debug Panel - shows data loading status */}
+      {/* Debug Panel - shows data loading status
       <div style={{ 
         background: loadingData ? '#fef3c7' : '#d1fae5', 
         padding: '12px', 
@@ -232,7 +228,7 @@ function Referral() {
             <strong>Doctor ID:</strong> {auth.user?.doctor_id || 'None'}
           </div>
         </div>
-      </div>
+      </div> */}
       
       <div className="referral-grid">
         {/* ===== RECEIVED REFERRALS ===== */}
@@ -319,7 +315,7 @@ function Referral() {
               
               {/* Patient Autocomplete */}
               <label>
-                Patient * <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>({patients.length} available)</span>
+                Patient
                 <div className="patient-select">
                   <input
                     type="text"
@@ -339,7 +335,9 @@ function Referral() {
                         <div className="patient-list-empty">No matching patients</div>
                       ) : (
                         filteredPatientResults.map(p => {
-                          const numericId = p.id ? parseInt(p.id.replace(/^P/i, ''), 10) : null;
+                          // Defensive id parsing: server may return 'P123' or numeric 123
+                          const rawIdStr = (p.id !== undefined && p.id !== null) ? String(p.id) : '';
+                          const numericId = parseInt(rawIdStr.replace(/^P/i, ''), 10) || null;
                           return (
                             <div 
                               key={p.id} 
@@ -367,7 +365,7 @@ function Referral() {
 
               {/* Specialist Dropdown */}
               <label>
-                Specialist * <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>({specialists.length} available)</span>
+                Specialist
                 <select 
                   value={form.specialist_doctor_id} 
                   onChange={e => {
@@ -382,9 +380,12 @@ function Referral() {
                   ) : (
                     specialists.map(s => {
                       console.log('Rendering option for specialist:', s);
+                      const id = s.id || s.doctor_id || s.doctorId || '';
+                      const name = s.name || s.fullName || ((s.firstName || s.lastName) ? `${s.firstName || ''} ${s.lastName || ''}`.trim() : 'Unknown');
+                      const specialty = s.specialty_name || s.specialtyName || 'Specialist';
                       return (
-                        <option key={s.id} value={s.id}>
-                          {s.name} — {s.specialty_name}
+                        <option key={id} value={id}>
+                          {name} — {specialty}
                         </option>
                       );
                     })
@@ -394,7 +395,7 @@ function Referral() {
 
               {/* Reason */}
               <label>
-                Reason for Referral *
+                Reason for Referral 
                 <textarea 
                   value={form.reason} 
                   onChange={e => setForm({...form, reason: e.target.value})} 

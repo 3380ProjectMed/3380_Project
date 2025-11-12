@@ -1,91 +1,77 @@
-const BASE_URL = '/api/nurse_api';
 
-async function getJSON(url) {
-  const resp = await fetch(url, { credentials: 'include' });
-  if (!resp.ok) {
-    let msg = `HTTP ${resp.status}`;
-    try { const data = await resp.json(); msg = data.error || data.message || msg; } catch (e) {}
-    throw new Error(msg);
-  }
-  return resp.json();
+import { apiRequest, makeUrl } from './http.js';
+const BASE_URL = 'nurse_api';
+
+export async function getNurseDashboardStats(date) {
+  const d = date || new Date().toISOString().slice(0, 10);
+  const data = await apiRequest(makeUrl(`${BASE_URL}/dashboard/get-stats.php`, { date: d }));
+  return {
+    total: data.total ?? data.totalAppointments ?? 0,
+    waiting: data.waiting ?? data.waitingCount ?? 0,
+    upcoming: data.upcoming ?? data.upcomingCount ?? 0,
+    completed: data.completed ?? data.completedCount ?? 0,
+  };
 }
 
-// Dashboard stats
-export function getNurseDashboardStats(date = new Date().toISOString().slice(0,10)) {
-  return getJSON(`${BASE_URL}/dashboard/get-stats.php?date=${encodeURIComponent(date)}`);
+export async function getNurseSchedule({ date } = {}) {
+  const d = date || new Date().toISOString().slice(0, 10);
+  const data = await apiRequest(makeUrl(`${BASE_URL}/schedule/get-by-date.php`, { date: d }));
+  if (Array.isArray(data)) return data;
+  return data.appointments || data.data || [];
 }
 
-// Schedule by date (for dashboard appointments) - FIXED to handle both response formats
-export async function getNurseSchedule(params) {
-  // Handle both object { date: '...' } and string date
-  const dateStr = typeof params === 'string' ? params : (params?.date || new Date().toISOString().slice(0,10));
-  const data = await getJSON(`${BASE_URL}/schedule/get-by-date.php?date=${encodeURIComponent(dateStr)}`);
-  
-  // Handle both response formats: plain array or { appointments: [...] }
-  if (Array.isArray(data)) {
-    return data;
-  }
-  return data.appointments || [];
-}
-
-// Schedule today (weekly recurring schedule for Schedule page)
 export async function getNurseScheduleToday() {
-  const data = await getJSON(`${BASE_URL}/schedule/get-today.php`);
-  
-  // Handle response format: { success: true, schedule: [...] } or plain array
-  if (data.schedule) {
-    return data.schedule;
-  }
-  return Array.isArray(data) ? data : [];
+  const today = new Date().toISOString().slice(0, 10);
+  return getNurseSchedule({ date: today });
 }
 
-// Profile
-export function getNurseProfile() {
-  return getJSON(`${BASE_URL}/profile/get.php`);
+export async function getNurseProfile() {
+  return apiRequest(makeUrl(`${BASE_URL}/profile/get.php`));
 }
 
-// Patients with pagination
-export function getNursePatients(query = '', page = 1, pageSize = 10) {
-  const params = new URLSearchParams({ q: query, page: String(page), limit: String(pageSize) });
-  return getJSON(`${BASE_URL}/patients/get-all.php?${params.toString()}`);
+export async function getNursePatients(query = '', page = 1, pageSize = 10) {
+  const params = { q: query, page: String(page), pageSize: String(pageSize) };
+  const data = await apiRequest(makeUrl(`${BASE_URL}/patients/get-all.php`, params));
+  const items = Array.isArray(data.items) ? data.items : [];
+  const normalized = items.map(r => {
+    const name = String(r.name ?? r.fullName ?? '');
+    const parts = name.split(' ').filter(Boolean);
+    const first = parts.shift() || '';
+    const last = parts.join(' ');
+    return {
+      patient_id: r.id ?? r.Patient_ID ?? r.patientId ?? '',
+      first_name: r.firstName ?? first,
+      last_name: r.lastName ?? last,
+      dob: r.dob ?? r.DOB ?? null,
+      allergies: r.allergies ?? '',
+      email: r.email ?? '',
+      phone: r.phone ?? ''
+    };
+  });
+  return { patients: normalized, total: data.total ?? normalized.length };
 }
 
-// Clinical - Save Nurse Note
 export async function saveNurseNote(appointmentId, noteBody) {
-  const response = await fetch(`${BASE_URL}/clinical/save-note.php?apptId=${appointmentId}`, {
+  const body = typeof noteBody === 'string' ? { body: noteBody } : { body: noteBody?.body };
+  return apiRequest(makeUrl(`${BASE_URL}/clinical/save-note.php`, { apptId: appointmentId }), {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      body: noteBody,
-    }),
+    body,
+    json: true
   });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
 }
 
-// Clinical - Save Nurse Vitals
 export async function saveNurseVitals(appointmentId, vitals) {
-  const response = await fetch(`${BASE_URL}/clinical/save-vitals.php?apptId=${appointmentId}`, {
+  const payload = {
+    bp: vitals.bp ?? vitals.bloodPressure ?? '',
+    hr: vitals.hr ?? vitals.heartRate ?? '',
+    temp: vitals.temp ?? vitals.temperature ?? '',
+    spo2: vitals.spo2 ?? vitals.oxygenSaturation ?? '',
+    height: vitals.height ?? '',
+    weight: vitals.weight ?? ''
+  };
+  return apiRequest(makeUrl(`${BASE_URL}/clinical/save-vitals.php`, { apptId: appointmentId }), {
     method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(vitals),
+    body: payload,
+    json: true
   });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
 }

@@ -24,8 +24,7 @@ try {
         $conn = getDBConnection();
         $rows = executeQuery($conn, 'SELECT d.doctor_id 
             FROM user_account ua
-            JOIN staff s ON ua.user_id = s.staff_id
-            JOIN doctor d ON s.staff_id = d.staff_id
+            JOIN doctor d ON ua.email = d.email
             WHERE ua.user_id = ? 
             LIMIT 1
             ', 'i', [$user_id]);
@@ -35,7 +34,7 @@ try {
             closeDBConnection($conn);
             exit;
         }
-        $referring_doctor_id = (int)$rows[0]['Doctor_id'];
+        $referring_doctor_id = (int)$rows[0]['doctor_id'];
     }
     
     $conn = getDBConnection();

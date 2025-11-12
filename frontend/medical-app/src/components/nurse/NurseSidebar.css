@@ -1,5 +1,8 @@
+
+
+/* Nurse Sidebar - Modern, vertical, fixed left */
 :root {
-  --nurse-sidebar-w: 264px; /* keep in sync with NursePortal.css */
+  --nurse-sidebar-w: 264px;
   --sidebar-border: #e6eef8;
   --brand-color: #0f3d91;
   --link-hover: #f2f7ff;
@@ -7,7 +10,6 @@
   --active-grad-b: #3db2ff;
   --active-shadow: 0 8px 18px rgba(15, 98, 254, .20);
 }
-
 .nurse-sidebar {
   position: fixed;
   top: 0; left: 0; bottom: 0;
@@ -18,14 +20,12 @@
   flex-direction: column;
   z-index: 1000;
 }
-
 .nurse-sidebar__brand {
   font-weight: 800;
   font-size: 20px;
   color: var(--brand-color);
   padding: 18px 16px;
 }
-
 .nurse-sidebar__nav {
   display: flex;
   flex-direction: column;
@@ -33,7 +33,6 @@
   padding: 0 10px;
   overflow: auto;
 }
-
 .nurse-sidebar__link {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px;
@@ -41,31 +40,36 @@
   border-radius: 10px; cursor: pointer;
   text-align: left;
   color: #0b1f44; font-weight: 700;
+  font-size: 1.05rem;
+  transition: background 0.15s, color 0.15s;
 }
 .nurse-sidebar__link:hover { background: var(--link-hover); }
-
 .nurse-sidebar__link.active {
   background: linear-gradient(135deg, var(--active-grad-a), var(--active-grad-b));
   color: #fff;
   box-shadow: var(--active-shadow);
 }
-
 .nurse-sidebar__footer {
   margin-top: auto;
   padding: 10px;
 }
-
 .nurse-sidebar__logout {
   width: 100%;
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px;
+  background: #fff;
+  border: 1.5px solid #e6eef8;
   border-radius: 10px;
-  border: 2px solid #fecaca;
-  color: #b91c1c; background: #fff;
-  font-weight: 800; cursor: pointer;
+  color: #b91c1c;
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
-.nurse-sidebar__logout:hover { background: #fee2e2; }
-
+.nurse-sidebar__logout:hover {
+  background: #fee2e2;
+  color: #991b1b;
+}
 @media (max-width: 1024px) {
   .nurse-sidebar { transform: translateX(-100%); transition: .3s ease; }
   .nurse-sidebar.mobile-open { transform: translateX(0); }

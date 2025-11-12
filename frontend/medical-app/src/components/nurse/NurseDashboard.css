@@ -1,6 +1,7 @@
-/* ========== DASHBOARD COMPONENT ========== */
-.dashboard {
-  padding: 2rem;
+
+/* Nurse Dashboard - Unique Modern UI */
+.nurse-dashboard-root {
+  padding: 2.5rem;
   background: transparent;
   min-height: 100vh;
   width: 100%;
@@ -8,54 +9,45 @@
   margin: 0 auto;
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
-
-/* Dashboard Header Section */
-.dashboard-header {
-  margin-bottom: 2rem;
+.nurse-dashboard-header {
+  margin-bottom: 2.2rem;
 }
-
-.welcome-section {
-  background: linear-gradient(135deg, #03045e, #0077b6);
-  color: white;
-  padding: 2rem 2.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 8px 16px rgba(3, 4, 94, 0.15);
+.nurse-dashboard-welcome {
+  background: linear-gradient(120deg, #0f3d91 60%, #3db2ff 100%);
+  color: #fff;
+  padding: 2.2rem 2.7rem;
+  border-radius: 1.2rem;
+  box-shadow: 0 8px 18px rgba(15, 61, 145, 0.13);
 }
-
-.welcome-section h1 {
-  margin: 0 0 0.5rem 0;
-  font-size: 2.5rem;
-  font-weight: 700;
+.nurse-dashboard-welcome h1 {
+  margin: 0 0 0.6rem 0;
+  font-size: 2.6rem;
+  font-weight: 900;
 }
-
-.office-info {
+.nurse-dashboard-office {
   margin: 0;
-  opacity: 0.95;
-  font-size: 1.1rem;
+  opacity: 0.97;
+  font-size: 1.13rem;
   color: #caf0f8;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
-
-.office-info a {
+.nurse-dashboard-office a {
   color: #90e0ef;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
   border-bottom: 2px solid transparent;
   transition: border-color 0.2s;
 }
-
-.office-info a:hover {
+.nurse-dashboard-office a:hover {
   border-bottom-color: #90e0ef;
 }
-
-/* Stats Grid */
-.stats-grid {
+.nurse-dashboard-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  gap: 1.7rem;
+  margin-bottom: 2.2rem;
 }
 
 .stat-card {

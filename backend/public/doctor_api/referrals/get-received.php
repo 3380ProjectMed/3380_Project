@@ -18,7 +18,7 @@ try {
         $user_id = intval($_SESSION['uid']);
         $rows = executeQuery($conn, 'SELECT d.doctor_id 
             FROM user_account ua
-            JOIN staff s ON ua.user_id = s.staff_id
+            JOIN staff s ON ua.email = s.staff_email
             JOIN doctor d ON s.staff_id = d.staff_id
             WHERE ua.user_id = ? 
             LIMIT 1
@@ -36,15 +36,15 @@ try {
                 r.referral_id,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.patient_id,
-                CONCAT(st.first_name, ' ', st.last_name) as specialist_name,
+                CONCAT(sd.first_name, ' ', sd.last_name) as specialist_name,
                 s.specialty_name,
                 r.reason,
                 r.date_of_approval
             FROM referral r
             INNER JOIN patient p ON r.patient_id = p.patient_id
-            LEFT JOIN staff st ON r.specialist_doctor_staff_id = st.staff_id
-            LEFT JOIN doctor d2 ON st.staff_id = d2.staff_id
-            LEFT JOIN specialty s ON d2.specialty = s.specialty_id
+            LEFT JOIN doctor spec_doc ON r.specialist_doctor_staff_id = spec_doc.doctor_id
+            LEFT JOIN staff sd ON spec_doc.staff_id = sd.staff_id
+            LEFT JOIN specialty s ON spec_doc.specialty = s.specialty_id
             WHERE r.specialist_doctor_staff_id = ?
             ORDER BY r.referral_id DESC";
 

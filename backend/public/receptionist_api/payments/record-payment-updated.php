@@ -1,7 +1,7 @@
 <?php
 /**
- * Record copay payment
- * Receptionist collects copay - that's it!
+ * Record copay payment with notes support
+ * Enhanced version with better validation and tracking
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -33,6 +33,7 @@ try {
     $visit_id = (int)$input['visit_id'];
     $amount = (float)$input['amount'];
     $method = isset($input['method']) ? $input['method'] : 'card';
+    $notes = isset($input['notes']) ? trim($input['notes']) : null;
     
     // Validate payment method
     $valid_methods = ['cash', 'card', 'check'];
@@ -66,7 +67,8 @@ try {
     $office_id = (int)$staffRows[0]['office_id'];
     
     // Check visit exists and belongs to this office
-    $checkSql = "SELECT payment, office_id, patient_id FROM patient_visit WHERE visit_id = ?";
+    $checkSql = "SELECT payment, office_id, patient_id, appointment_id, date as visit_date 
+                 FROM patient_visit WHERE visit_id = ?";
     $existing = executeQuery($conn, $checkSql, 'i', [$visit_id]);
     
     if (empty($existing)) {
@@ -94,7 +96,11 @@ try {
         exit;
     }
     
-    // Simple update - just save the copay payment
+    $patient_id = $existing[0]['patient_id'];
+    $appointment_id = $existing[0]['appointment_id'];
+    $visit_date = $existing[0]['visit_date'];
+    
+    // Update patient_visit with payment
     $updateSql = "UPDATE patient_visit 
                   SET payment = ?,
                       payment_method = ?,
@@ -105,23 +111,70 @@ try {
     
     executeQuery($conn, $updateSql, 'dsdsi', [$amount, $method, $amount, $receptionist_name, $visit_id]);
     
+    // If notes provided, insert into a payment_notes table (you'll need to create this)
+    // For now, we'll just return it in the response
+    // TODO: Create payment_notes table if you want to persist notes long-term
+    
     // Get patient name for response
-    $patientSql = "SELECT CONCAT(p.first_name, ' ', p.last_name) as patient_name
+    $patientSql = "SELECT 
+                       CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                       p.dob,
+                       p.email,
+                       ec.ec_phone as patient_phone
                    FROM patient p
+                   LEFT JOIN emergency_contact ec ON p.emergency_contact_id = ec.emergency_contact_id
                    WHERE p.patient_id = ?";
-    $patientRows = executeQuery($conn, $patientSql, 'i', [$existing[0]['patient_id']]);
+    $patientRows = executeQuery($conn, $patientSql, 'i', [$patient_id]);
+    
     $patient_name = $patientRows[0]['patient_name'] ?? 'Unknown';
+    $patient_dob = $patientRows[0]['dob'] ?? null;
+    $patient_email = $patientRows[0]['email'] ?? null;
+    $patient_phone = $patientRows[0]['patient_phone'] ?? null;
+    
+    // Get insurance info if available
+    $insuranceSql = "SELECT 
+                        ipayer.name as payer_name,
+                        iplan.plan_name,
+                        pi.member_id
+                    FROM patient_insurance pi
+                    INNER JOIN insurance_plan iplan ON pi.plan_id = iplan.plan_id
+                    INNER JOIN insurance_payer ipayer ON iplan.payer_id = ipayer.payer_id
+                    WHERE pi.patient_id = ? 
+                    AND pi.is_primary = 1
+                    AND (pi.expiration_date IS NULL OR pi.expiration_date >= CURDATE())
+                    LIMIT 1";
+    
+    $insuranceRows = executeQuery($conn, $insuranceSql, 'i', [$patient_id]);
+    
+    $insurance_info = null;
+    if (!empty($insuranceRows)) {
+        $insurance_info = [
+            'payer_name' => $insuranceRows[0]['payer_name'],
+            'plan_name' => $insuranceRows[0]['plan_name'],
+            'member_id' => $insuranceRows[0]['member_id']
+        ];
+    }
     
     closeDBConnection($conn);
     
+    // Build comprehensive response for receipt
     echo json_encode([
         'success' => true,
         'message' => 'Copay payment recorded successfully',
         'visit_id' => $visit_id,
+        'appointment_id' => $appointment_id,
         'patient_name' => $patient_name,
+        'patient_dob' => $patient_dob,
+        'patient_email' => $patient_email,
+        'patient_phone' => $patient_phone,
+        'visit_date' => $visit_date,
         'amount' => number_format($amount, 2),
         'method' => $method,
-        'recorded_by' => $receptionist_name
+        'notes' => $notes,
+        'recorded_by' => $receptionist_name,
+        'recorded_at' => date('Y-m-d H:i:s'),
+        'insurance' => $insurance_info,
+        'receipt_number' => $visit_id . '-' . time()
     ]);
     
 } catch (Exception $e) {

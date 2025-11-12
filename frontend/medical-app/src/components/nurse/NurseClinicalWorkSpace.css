@@ -1,25 +1,260 @@
-.nurse-clinical{padding:24px;max-width:1100px;margin:0 auto;}
-.patient-card{
-  display:flex;align-items:center;justify-content:space-between;gap:14px;
-  background:linear-gradient(135deg,#0f62fe,#3db2ff);color:#fff;padding:18px;border-radius:12px;
+/* Sleek, modern card-based UI for Nurse Clinical Workspace */
+.nurse-clinical-container {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  padding: 2rem 2.5rem;
+  margin: 2rem auto;
+  max-width: 900px;
 }
-.avatar{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center}
-.meta .name{font-size:20px;font-weight:800}
-.meta .sub{opacity:.95}
-.right{ text-align:right}
-.badge{background:#fee2e2;color:#991b1b;padding:6px 10px;border-radius:8px;font-weight:800;display:inline-block}
-.tabs{display:flex;gap:8px;margin-top:14px}
-.tabs button{border:2px solid transparent;background:#fff;border-radius:10px;padding:10px 14px;font-weight:800;color:#0b1f44;cursor:pointer}
-.tabs button.active{background:linear-gradient(135deg,#0f62fe,#3db2ff);color:#fff}
-.panel{background:#fff;border-radius:12px;margin-top:10px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,.06)}
-.notes textarea{width:100%;min-height:240px;border:2px solid #e5e7eb;border-radius:10px;padding:12px;font-family:inherit}
-.actions{display:flex;gap:10px;margin-top:12px}
-.primary{background:linear-gradient(135deg,#0f62fe,#3db2ff);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}
-.ghost{background:#fff;border:2px solid #fecaca;color:#b91c1c;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}
-.vitals{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-.vital{background:#f8fafc;border-radius:10px;padding:12px;border:1px solid #e5e7eb}
-.vital label{font-weight:800;color:#0b1f44}
-.vital input{width:100%;border:2px solid #e5e7eb;border-radius:8px;padding:8px;margin-top:8px}
-.unit{display:block;color:#64748b;font-size:12px;margin-top:4px;text-align:right}
-.history .item{display:flex;gap:16px;border-left:4px solid #3db2ff;padding-left:12px;margin:10px 0}
-.history .date{font-weight:800;color:#026aa2;min-width:120px}
+.nurse-clinical-tabs {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.nurse-clinical-tab {
+  background: #f4f8fc;
+  border-radius: 8px 8px 0 0;
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  color: #1a237e;
+  cursor: pointer;
+  border: none;
+  border-bottom: 3px solid transparent;
+  transition: background 0.2s, border-bottom 0.2s;
+}
+.nurse-clinical-tab.active {
+  background: linear-gradient(90deg, #3a8dde 0%, #6fd6ff 100%);
+  color: #fff;
+  border-bottom: 3px solid #1976d2;
+}
+.nurse-clinical-section {
+  background: #f9fbfd;
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(58,141,222,0.07);
+}
+.nurse-clinical-form label {
+  font-weight: 500;
+  color: #1a237e;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+.nurse-clinical-form input,
+.nurse-clinical-form textarea {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 1px solid #dbeafe;
+  border-radius: 7px;
+  background: #f4f8fc;
+  margin-bottom: 1.2rem;
+  font-size: 1rem;
+  transition: border 0.2s;
+}
+.nurse-clinical-form input:focus,
+.nurse-clinical-form textarea:focus {
+  border-color: #3a8dde;
+  outline: none;
+}
+.nurse-clinical-save-btn {
+  background: linear-gradient(90deg, #3a8dde 0%, #6fd6ff 100%);
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 7px;
+  padding: 0.8rem 2.5rem;
+  box-shadow: 0 2px 8px rgba(58,141,222,0.12);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.nurse-clinical-save-btn:hover {
+  background: linear-gradient(90deg, #1976d2 0%, #3a8dde 100%);
+  box-shadow: 0 4px 16px rgba(58,141,222,0.18);
+}
+.nurse-alert-success {
+  background: #e3fcec;
+  color: #137333;
+  border-left: 5px solid #34c759;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+.nurse-alert-error {
+  background: #fdeaea;
+  color: #b00020;
+  border-left: 5px solid #ff5252;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+
+/* Sleek Nurse Clinical Workspace - Dashboard Parity */
+.nurse-clinical-root {
+  padding: 2.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  background: linear-gradient(180deg, #f8fbff 60%, #e6f7ff 100%);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px rgba(15, 61, 145, 0.08);
+}
+.nurse-patient-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.3rem;
+  background: linear-gradient(120deg, #0f3d91 60%, #3db2ff 100%);
+  color: #fff;
+  padding: 1.7rem 2.2rem;
+  border-radius: 1.3rem;
+  box-shadow: 0 6px 24px rgba(15, 61, 145, 0.13);
+}
+.nurse-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 900;
+  box-shadow: 0 2px 8px rgba(61, 178, 255, 0.10);
+}
+.nurse-meta-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+.nurse-meta-sub {
+  opacity: 0.98;
+}
+.nurse-badge {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 0.5rem 1rem;
+  border-radius: 0.8rem;
+  font-weight: 900;
+  display: inline-block;
+  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.06);
+}
+.nurse-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.3rem;
+}
+.nurse-tab-btn {
+  border: 2px solid transparent;
+  background: #fff;
+  border-radius: 0.9rem;
+  padding: 0.9rem 1.3rem;
+  font-weight: 900;
+  color: #0b1f44;
+  cursor: pointer;
+  font-size: 1.08rem;
+  box-shadow: 0 2px 8px rgba(15, 61, 145, 0.04);
+  transition: background 0.15s, color 0.15s;
+}
+.nurse-tab-btn.active {
+  background: linear-gradient(120deg, #0f3d91 60%, #3db2ff 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(15, 61, 145, 0.10);
+}
+.nurse-panel {
+  background: #fff;
+  border-radius: 1.3rem;
+  margin-top: 1.1rem;
+  padding: 1.5rem;
+  box-shadow: 0 6px 24px rgba(15, 61, 145, 0.08);
+}
+.nurse-notes-textarea {
+  width: 100%;
+  min-height: 240px;
+  border: 2px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1.1rem;
+  font-family: inherit;
+  font-size: 1.08rem;
+  background: #f8fafc;
+  box-shadow: 0 2px 8px rgba(15, 61, 145, 0.03);
+}
+.nurse-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.1rem;
+}
+.nurse-btn-primary {
+  background: linear-gradient(120deg, #0f3d91 60%, #3db2ff 100%);
+  color: #fff;
+  border: none;
+  border-radius: 0.9rem;
+  padding: 0.9rem 1.3rem;
+  font-weight: 900;
+  font-size: 1.08rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 61, 145, 0.08);
+  transition: background 0.15s;
+}
+.nurse-btn-ghost {
+  background: #fff;
+  border: 2px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 0.9rem;
+  padding: 0.9rem 1.3rem;
+  font-weight: 900;
+  font-size: 1.08rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.04);
+}
+.nurse-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.nurse-vital {
+  background: #f8fafc;
+  border-radius: 1rem;
+  padding: 1.1rem;
+  border: 1.5px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(15, 61, 145, 0.03);
+}
+.nurse-vital label {
+  font-weight: 900;
+  color: #0b1f44;
+  font-size: 1.05rem;
+}
+.nurse-vital input {
+  width: 100%;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.7rem;
+  padding: 0.7rem;
+  margin-top: 0.3rem;
+  font-size: 1.05rem;
+  background: #fff;
+}
+.nurse-unit {
+  display: block;
+  color: #64748b;
+  font-size: 1em;
+  margin-top: 0.3rem;
+  text-align: right;
+}
+.nurse-history-item {
+  display: flex;
+  gap: 1.3rem;
+  border-left: 4px solid #3db2ff;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  background: #f8fafc;
+  border-radius: 0.7rem;
+  box-shadow: 0 2px 8px rgba(15, 61, 145, 0.03);
+}
+.nurse-history-date {
+  font-weight: 900;
+  color: #026aa2;
+  min-width: 110px;
+  font-size: 1.05rem;
+}

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { Search, X, AlertCircle } from 'lucide-react';
 import "./NursePatients.css";
 import { getNursePatients } from '../../api/nurse';
 
@@ -15,14 +16,12 @@ export default function NursePatients() {
     setLoading(true);
     setError(null);
     try {
-  const data = await getNursePatients(search, page, pageSize);
-  console.log('Patients response:', data);
-
-  const patientList = Array.isArray(data?.patients) ? data.patients : [];
-  setPatients(patientList);
-  setTotal(Number.isFinite(data?.total) ? data.total : patientList.length);
+      // The new nurse API client returns { patients, total }
+      const data = await getNursePatients(search, page, pageSize);
+      const items = Array.isArray(data?.patients) ? data.patients : [];
+      setPatients(items);
+      setTotal(Number.isFinite(data?.total) ? data.total : items.length);
     } catch (e) {
-      console.error('Patients error:', e);
       setError(e.message || 'Failed to load patients');
       setPatients([]);
     } finally {
@@ -32,6 +31,7 @@ export default function NursePatients() {
 
   useEffect(() => {
     loadPatients();
+    // eslint-disable-next-line
   }, [page, search]);
 
   const handleSearch = (e) => {
@@ -44,41 +44,77 @@ export default function NursePatients() {
       <div className="nurse-patients-page">
         <h1>My Patients</h1>
 
+        <div className="patient-list__search">
+          <Search className="patient-list__search-icon" />
+          <input
+            type="text"
+            className="patient-list__search-input"
+            placeholder="Search patients by name or ID..."
+            value={search}
+            onChange={handleSearch}
+            aria-label="Search patients"
+          />
+          {search && (
+            <button
+              className="patient-list__search-clear"
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        {loading && (
+          <div className="patient-list__loading">Loading patients...</div>
+        )}
+
         {error && (
-          <div style={{ padding: '12px', marginBottom: '12px', backgroundColor: '#fee', borderRadius: '4px', color: '#c00' }}>
-            {error}
+          <div className="patient-list__error">
+            Error: {error}
+            <button 
+              onClick={() => { setError(null); setSearch(''); loadPatients(); }} 
+              style={{ marginLeft: '8px'}}
+            >
+              Reload
+            </button>
           </div>
         )}
 
-        <input
-          type="text"
-          placeholder="Search patients by name or ID..."
-          value={search}
-          onChange={handleSearch}
-          className="search-input"
-        />
-
-        <div className="nurse-table">
-          <div className="thead">
+        <div className="patient-list__table-container">
+          <div className="table-header">
             <div>ID</div>
             <div>Name</div>
             <div>Date of Birth</div>
             <div>Allergies</div>
           </div>
-          <div className="tbody">
-            {loading ? (
-              <div className="empty">Loading patients...</div>
-            ) : patients.length > 0 ? (
+          <div className="table-body">
+            {patients.length === 0 && !loading ? (
+              <div className="patient-list__empty">
+                <Search size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                <p>No patients found matching "{search}"</p>
+                <button 
+                  className="btn-clear-search"
+                  onClick={() => setSearch('')}
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : (
               patients.map((p) => (
-                <div key={p.id} className="row">
-                  <div>{p.id}</div>
-                  <div>{p.name}</div>
+                <div key={p.patient_id || p.id} className="table-row">
+                  <div>{p.patient_id || p.id}</div>
+                  <div>{p.first_name || ''} {p.last_name || ''}</div>
                   <div>{p.dob ? new Date(p.dob).toLocaleDateString() : 'N/A'}</div>
-                  <div>{p.allergies || 'None'}</div>
+                  <div className={`patient-list__allergies ${!p.allergies || p.allergies === 'None' || p.allergies === 'No Known Allergies' ? 'patient-list__allergies--none' : 'patient-list__allergies--has'}`}>
+                    {!p.allergies || p.allergies === 'None' || p.allergies === 'No Known Allergies' ? (
+                      <span>✓ None</span>
+                    ) : (
+                      <span><AlertCircle size={14} style={{ display: 'inline', marginRight: '4px' }} />{p.allergies}</span>
+                    )}
+                  </div>
                 </div>
               ))
-            ) : (
-              <div className="empty">No patients found</div>
             )}
           </div>
         </div>

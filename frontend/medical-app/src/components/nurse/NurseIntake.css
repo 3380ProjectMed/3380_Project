@@ -1,0 +1,118 @@
+/* Sleek, modern card-based UI for Nurse Intake */
+.nurse-intake-container {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  padding: 2rem 2.5rem;
+  margin: 2rem auto;
+  max-width: 600px;
+}
+.nurse-intake-form label {
+  font-weight: 500;
+  color: #1a237e;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+.nurse-intake-form input,
+.nurse-intake-form textarea {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 1px solid #dbeafe;
+  border-radius: 7px;
+  background: #f4f8fc;
+  margin-bottom: 1.2rem;
+  font-size: 1rem;
+  transition: border 0.2s;
+}
+.nurse-intake-form input:focus,
+.nurse-intake-form textarea:focus {
+  border-color: #3a8dde;
+  outline: none;
+}
+.nurse-intake-save-btn {
+  background: linear-gradient(90deg, #3a8dde 0%, #6fd6ff 100%);
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 7px;
+  padding: 0.8rem 2.5rem;
+  box-shadow: 0 2px 8px rgba(58,141,222,0.12);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.nurse-intake-save-btn:hover {
+  background: linear-gradient(90deg, #1976d2 0%, #3a8dde 100%);
+  box-shadow: 0 4px 16px rgba(58,141,222,0.18);
+}
+.nurse-alert-success {
+  background: #e3fcec;
+  color: #137333;
+  border-left: 5px solid #34c759;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+.nurse-alert-error {
+  background: #fdeaea;
+  color: #b00020;
+  border-left: 5px solid #ff5252;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+/* Nurse Intake Styles */
+.nurse-intake {
+  max-width: 600px;
+  margin: 2rem auto;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  padding: 2rem;
+}
+.nurse-intake h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+.vitals-form {
+  margin-top: 1.5rem;
+}
+.vital-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.vital-row label {
+  min-width: 140px;
+  font-weight: 500;
+}
+.vital-row input, .vital-row textarea {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+.vital-row .unit {
+  color: #6b7280;
+  font-size: 0.95em;
+  margin-left: 0.5rem;
+}
+.nurse-alert {
+  margin-top: 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+.nurse-alert.success {
+  background: #e6f9f0;
+  color: #15803d;
+}
+.nurse-alert.error {
+  background: #fbeaea;
+  color: #b91c1c;
+}
