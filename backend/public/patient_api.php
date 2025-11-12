@@ -602,7 +602,7 @@ elseif ($endpoint === 'appointments') {
                 
                 // If we get here, log the unmatched error and return 400 with the actual message
                 error_log("Unmatched appointment error: " . $error_msg);
-                sendResponse(false, [], $error_msg, 400);
+                sendResponse(false, [], "Trigger error: " . $error_msg, 400);
                 return;
             }
 
@@ -622,7 +622,7 @@ elseif ($endpoint === 'appointments') {
             if (strpos($error_msg, 'must have a referral') !== false) {
                 sendResponse(false, [], 'You need a referral from your Primary Care Physician to book with this specialist.', 400);
             } else {
-                sendResponse(false, [], 'Failed to book appointment. Please try again.', 500);
+                sendResponse(false, [], 'Exception caught: ' . $error_msg, 500);
             }
         }
     } elseif ($method === 'DELETE') {
