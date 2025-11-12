@@ -9,7 +9,6 @@ import './PatientPortal.css';
 import Sidebar from './Sidebar.jsx';
 import Dashboard from './Dashboard.jsx';
 import Appointments from './Appointments.jsx';
-import Referrals from './Referrals.jsx';
 import MedicalRecords from './MedicalRecords.jsx';
 import Insurance from './Insurance.jsx';
 import Billing from './Billing.jsx';
@@ -41,6 +40,7 @@ export default function PatientPortal({ onLogout }) {
   const [appointmentHistory, setAppointmentHistory] = useState([]);
   const [pcp, setPcp] = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [referrals, setReferrals] = useState({ active: [], used: [] });
   const [doctors, setDoctors] = useState([]);
   const [offices, setOffices] = useState([]);
   const [doctorsLoadError, setDoctorsLoadError] = useState(null);
@@ -66,7 +66,10 @@ export default function PatientPortal({ onLogout }) {
     (async () => {
       try {
         switch (currentPage) {
-          case 'dashboard': await loadDashboard(); break;
+          case 'dashboard': 
+            await loadDashboard(); 
+            await loadReferrals(); 
+            break;
           case 'profile': 
             await loadProfile(); 
             // Load doctors for PCP selection dropdown
@@ -74,9 +77,6 @@ export default function PatientPortal({ onLogout }) {
             if (d.success) setDoctors(d.data ?? []);
             break;
           case 'appointments': await loadAppointments(); break;
-          case 'referrals': 
-            // Referrals component handles its own data loading
-            break;
           case 'records': await loadMedicalRecords(); break;
           case 'insurance': await loadInsurance(); break;
           case 'billing': await loadBilling(); break;
@@ -98,6 +98,23 @@ export default function PatientPortal({ onLogout }) {
       setRecentActivity(r.data.recent_activity ?? []);
     } else {
       console.error('Dashboard API failed:', r);
+    }
+  }
+
+  async function loadReferrals() {
+    console.log('Loading referrals data...');
+    try {
+      const r = await api.referrals.getReferrals();
+      console.log('Referrals API response:', r);
+      if (r.success) {
+        setReferrals(r.data);
+      } else {
+        console.error('Referrals API failed:', r);
+        setReferrals({ active: [], used: [] });
+      }
+    } catch (error) {
+      console.error('Error loading referrals:', error);
+      setReferrals({ active: [], used: [] });
     }
   }
 
@@ -633,6 +650,7 @@ export default function PatientPortal({ onLogout }) {
     appointmentHistory,
     pcp,
     recentActivity,
+    referrals,
     doctors,
     offices,
     vitalsHistory,
@@ -673,7 +691,6 @@ export default function PatientPortal({ onLogout }) {
         {currentPage === 'dashboard' && <Dashboard {...portalProps} />}
         {currentPage === 'profile' && <Profile {...portalProps} />}
         {currentPage === 'appointments' && <Appointments {...portalProps} />}
-        {currentPage === 'referrals' && <Referrals {...portalProps} />}
         {currentPage === 'records' && <MedicalRecords {...portalProps} onRefresh={loadMedicalRecords} />}
         {currentPage === 'insurance' && <Insurance {...portalProps} />}
         {currentPage === 'billing' && <Billing {...portalProps} />}
