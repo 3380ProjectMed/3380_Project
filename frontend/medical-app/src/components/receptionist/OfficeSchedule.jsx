@@ -203,8 +203,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
 
   /**
    * Check if time slot is booked (from backend data)
-   * Checks within a range: appointments within ±14-15 minutes are considered as booking this slot
-   * Prioritizes showing appointments at the nearest slot (earlier slot if equidistant)
+   * Each appointment only shows at ONE slot - the nearest one (earlier if equidistant)
    */
   const isSlotBooked = (doctorId, hour, minute) => {
     const dateStr = selectedDate.toISOString().split('T')[0];
@@ -220,23 +219,30 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       
       // Calculate time difference
       const timeDiff = apptTimeInMinutes - slotTimeInMinutes;
+      const absTimeDiff = Math.abs(timeDiff);
       
-      // If appointment time is within 15 minutes of this slot
-      if (Math.abs(timeDiff) <= 15) {
-        // Check if this is the nearest slot to the appointment
-        // For 10:15 appointment: 10:00 slot is 15 min before, 10:30 slot is 15 min after
-        // We want to show it at the 10:00 slot (prioritize earlier)
-        
-        // If appointment is between this slot and the next slot (30 min intervals)
-        // and is closer to this slot or equidistant, show it here
-        if (timeDiff >= 0 && timeDiff <= 15) {
-          // Appointment is 0-15 minutes after this slot, show it here
+      // Only show if within 15 minutes
+      if (absTimeDiff > 15) continue;
+      
+      // For appointments exactly between two slots (e.g., 10:15 or 10:45)
+      // show at the earlier slot only
+      if (absTimeDiff === 15) {
+        // Only show if appointment is AFTER this slot (not before)
+        // 10:45 appointment: show at 10:30 (timeDiff=15), NOT at 11:00 (timeDiff=-15)
+        if (timeDiff > 0) {
           return true;
-        } else if (timeDiff < 0 && timeDiff >= -15) {
-          // Appointment is 0-15 minutes before this slot
-          // Only show it here if it's not closer to the previous slot
-          // With 30-min intervals, if it's within 15 min before, it should be in previous slot
-          // So we only block this slot if it's very close (within 15 min before)
+        }
+      } else {
+        // For other appointments, show at whichever slot is closer
+        // Check if this is the closest slot
+        const prevSlotTime = slotTimeInMinutes - 30;
+        const nextSlotTime = slotTimeInMinutes + 30;
+        
+        const distToPrev = Math.abs(apptTimeInMinutes - prevSlotTime);
+        const distToNext = Math.abs(apptTimeInMinutes - nextSlotTime);
+        
+        // Show here if this slot is closer than both neighbors
+        if (absTimeDiff <= distToPrev && absTimeDiff < distToNext) {
           return true;
         }
       }
