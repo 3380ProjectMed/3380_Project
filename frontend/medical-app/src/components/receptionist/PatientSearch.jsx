@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, User, Phone, Mail, Calendar, CreditCard, DollarSign } from 'lucide-react';
+import { Search, X, User, Phone, Mail, Calendar, CreditCard, DollarSign, AlertCircle, UserCheck } from 'lucide-react';
 // Removed API import as we'll use fetch directly
 import './PatientSearch.css';
 
@@ -219,11 +219,25 @@ function PatientSearch({ onBookAppointment }) {
                     </div>
                   )}
                   
-                  {patient.Email && (
+                  {patient.pcp_name && (
                     <div className="detail-item">
-                      <Mail size={16} />
-                      <span className="detail-label">Email</span>
-                      <span className="detail-value detail-email">{patient.Email}</span>
+                      <UserCheck size={16} />
+                      <span className="detail-label">PCP</span>
+                      <span className="detail-value">{patient.pcp_name}</span>
+                    </div>
+                  )}
+                  
+                  {patient.insurance_expiration && (
+                    <div className="detail-item">
+                      <AlertCircle size={16} />
+                      <span className="detail-label">Insurance Exp</span>
+                      <span className={`detail-value ${new Date(patient.insurance_expiration) < new Date() ? 'text-expired' : ''}`}>
+                        {new Date(patient.insurance_expiration).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -239,6 +253,15 @@ function PatientSearch({ onBookAppointment }) {
                       <p className="insurance-copay">
                         <DollarSign size={14} />
                         Copay: ${patient.copay.toFixed(2)}
+                      </p>
+                    )}
+                    {patient.insurance_expiration && (
+                      <p className={`insurance-expiration ${new Date(patient.insurance_expiration) < new Date() ? 'expired' : ''}`}>
+                        {new Date(patient.insurance_expiration) < new Date() ? '⚠ EXPIRED' : 'Expires'}: {' '}
+                        {new Date(patient.insurance_expiration).toLocaleDateString('en-US', {
+                          month: 'short',
+                          year: 'numeric'
+                        })}
                       </p>
                     )}
                   </div>
@@ -304,6 +327,15 @@ function PatientSearch({ onBookAppointment }) {
                       </a>
                     </div>
                   )}
+                  
+                  {selectedPatient.pcp_first_name && selectedPatient.pcp_last_name && (
+                    <div className="info-field">
+                      <span className="field-label">Primary Care Physician</span>
+                      <span className="field-value">
+                        Dr. {selectedPatient.pcp_first_name} {selectedPatient.pcp_last_name}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -327,6 +359,19 @@ function PatientSearch({ onBookAppointment }) {
                         <span className="insurance-label">Plan Type</span>
                         <span className="insurance-value">{selectedPatient.insurance.plan_type}</span>
                       </div>
+                      {selectedPatient.insurance.expiration_date && (
+                        <div className="insurance-detail">
+                          <span className="insurance-label">Expiration Date</span>
+                          <span className={`insurance-value ${new Date(selectedPatient.insurance.expiration_date) < new Date() ? 'insurance-expired' : ''}`}>
+                            {new Date(selectedPatient.insurance.expiration_date).toLocaleDateString('en-US', {
+                              month: 'long',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                            {new Date(selectedPatient.insurance.expiration_date) < new Date() && ' ⚠ EXPIRED'}
+                          </span>
+                        </div>
+                      )}
                       {selectedPatient.insurance.copay && (
                         <div className="insurance-detail">
                           <span className="insurance-label">Copay</span>
