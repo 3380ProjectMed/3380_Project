@@ -9,41 +9,42 @@ require_once '/home/site/wwwroot/database.php';
 
 try {
     session_start();
-    
+
     // Verify authentication and role first
     if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     $conn = getDBConnection();
-    
+
     // Get logged-in user's doctor_id (if they're a doctor)
     $logged_in_doctor_id = null;
     if ($_SESSION['role'] === 'DOCTOR') {
-        $staff_id = (int)$_SESSION['uid'];
-        $rows = executeQuery($conn, 
-            'SELECT doctor_id FROM doctor WHERE staff_id = ? LIMIT 1', 
-            'i', 
+        $staff_id = (int) $_SESSION['uid'];
+        $rows = executeQuery(
+            $conn,
+            'SELECT doctor_id FROM doctor WHERE staff_id = ? LIMIT 1',
+            'i',
             [$staff_id]
         );
         if (!empty($rows)) {
-            $logged_in_doctor_id = (int)$rows[0]['doctor_id'];
+            $logged_in_doctor_id = (int) $rows[0]['doctor_id'];
         }
     }
-    
+
     // Determine which doctor profile to fetch
     if (isset($_GET['doctor_id'])) {
         $requested_doctor_id = intval($_GET['doctor_id']);
-        
+
         // Security: Only allow viewing own profile or if admin/receptionist
         if ($_SESSION['role'] === 'DOCTOR' && $requested_doctor_id !== $logged_in_doctor_id) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'Cannot view other doctor profiles']);
             exit;
         }
-        
+
         $doctor_id = $requested_doctor_id;
     } else {
         // No parameter - use logged-in doctor
@@ -52,10 +53,10 @@ try {
             echo json_encode(['success' => false, 'error' => 'Doctor access required']);
             exit;
         }
-        
+
         $doctor_id = $logged_in_doctor_id;
     }
-    
+
     // SQL query for doctor info
     $sql = "SELECT 
                 d.doctor_id,
@@ -68,7 +69,7 @@ try {
                 o.name as work_location_name,
                 sp.specialty_name,
                 cg.gender_text as gender,
-                d.phone as phone_number
+                COALESCE(NULLIF(d.phone, ''), NULLIF(s.phone, '')) as phone_number
             FROM doctor d
             INNER JOIN staff s ON d.staff_id = s.staff_id
             LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
@@ -77,15 +78,15 @@ try {
             WHERE d.doctor_id = ?";
 
     $result = executeQuery($conn, $sql, 'i', [$doctor_id]);
-    
+
     if (empty($result)) {
         throw new Exception('Doctor not found');
     }
-    
+
     $doctor = $result[0];
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'profile' => [
@@ -102,7 +103,7 @@ try {
             'phone' => $doctor['phone_number'] ?: 'Not provided'
         ]
     ]);
-    
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

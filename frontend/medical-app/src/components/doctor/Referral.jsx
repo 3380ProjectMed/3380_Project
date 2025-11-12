@@ -315,7 +315,7 @@ function Referral() {
               
               {/* Patient Autocomplete */}
               <label>
-                Patient * <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>({patients.length} available)</span>
+                Patient
                 <div className="patient-select">
                   <input
                     type="text"
@@ -365,7 +365,7 @@ function Referral() {
 
               {/* Specialist Dropdown */}
               <label>
-                Specialist * <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>({specialists.length} available)</span>
+                Specialist
                 <select 
                   value={form.specialist_doctor_id} 
                   onChange={e => {
@@ -395,7 +395,7 @@ function Referral() {
 
               {/* Reason */}
               <label>
-                Reason for Referral *
+                Reason for Referral 
                 <textarea 
                   value={form.reason} 
                   onChange={e => setForm({...form, reason: e.target.value})} 
