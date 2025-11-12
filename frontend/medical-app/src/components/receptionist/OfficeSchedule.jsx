@@ -10,7 +10,7 @@ import './OfficeSchedule.css';
  * Shows available time slots per doctor for selected date
  * Integrated with backend APIs for real-time availability
  */
-function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
+function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointment }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedSlotData, setSelectedSlotData] = useState(null);
@@ -76,7 +76,12 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
           const key = `${apt.Doctor_id}-${appointmentDateTime}`;
           slots[key] = {
             appointment_id: apt.Appointment_id,
+            Patient_id: apt.Patient_id,
+            Doctor_id: apt.Doctor_id,
             patient_name: apt.patientName,
+            doctor_name: apt.doctorName,
+            Appointment_date: apt.Appointment_date,
+            reason: apt.reason,
             status: apt.status
           };
         });
@@ -315,6 +320,19 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
     } finally {
       setCanceling(false);
     }
+  };
+
+  /**
+   * Edit appointment - pass appointment data to parent for editing
+   */
+  const handleEditAppointment = () => {
+    if (!selectedAppointment || !onEditAppointment) return;
+    
+    // Close the modal
+    setSelectedAppointment(null);
+    
+    // Pass the appointment data to the parent for editing
+    onEditAppointment(selectedAppointment);
   };
 
   /**
@@ -590,6 +608,14 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
             </div>
 
             <div className="modal-footer">
+              <button 
+                className="btn btn-primary"
+                onClick={handleEditAppointment}
+                disabled={selectedAppointment.status === 'Cancelled' || selectedAppointment.status === 'Completed'}
+              >
+                <Edit size={18} />
+                Edit Appointment
+              </button>
               <button 
                 className="btn btn-danger"
                 onClick={handleCancelAppointment}
