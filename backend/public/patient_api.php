@@ -576,23 +576,34 @@ elseif ($endpoint === 'appointments') {
                 $error_msg = $stmt->error;
                 $mysqli->rollback();
 
+                // Debug: Log the full error message to see exact format
+                error_log("Full appointment booking error: '" . $error_msg . "'");
+
                 // Match exact trigger error messages
                 if (strpos($error_msg, 'Cannot create appointment in the past') !== false) {
                     sendResponse(false, [], 'Cannot schedule an appointment in the past. Please select a future date and time.', 400);
+                    return;
                 } elseif (strpos($error_msg, 'Cannot schedule appointment more than 1 year in advance') !== false) {
                     sendResponse(false, [], 'Cannot schedule appointments more than 1 year in advance.', 400);
+                    return;
                 } elseif (strpos($error_msg, 'Appointments must be scheduled between 8 AM and 6 PM') !== false) {
                     sendResponse(false, [], 'Appointments must be scheduled during business hours (8 AM - 6 PM).', 400);
+                    return;
                 } elseif (strpos($error_msg, 'Appointments cannot be scheduled on weekends') !== false) {
                     sendResponse(false, [], 'Appointments cannot be scheduled on weekends. Please select a weekday.', 400);
+                    return;
                 } elseif (strpos($error_msg, 'This time slot is already booked') !== false) {
                     sendResponse(false, [], 'This time slot is already booked. Please select a different time.', 400);
+                    return;
                 } elseif (strpos($error_msg, 'must have a referral') !== false) {
                     sendResponse(false, [], 'You need a referral from your Primary Care Physician to book with this specialist.', 400);
-                } else {
-                    error_log("Book appointment error: " . $error_msg);
-                    sendResponse(false, [], 'Failed to book appointment. Please try again.', 500);
+                    return;
                 }
+                
+                // If we get here, log the unmatched error and return 400 with the actual message
+                error_log("Unmatched appointment error: " . $error_msg);
+                sendResponse(false, [], $error_msg, 400);
+                return;
             }
 
             if ($stmt->affected_rows === 0) {
