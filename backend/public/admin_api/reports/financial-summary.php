@@ -162,7 +162,7 @@ try {
                 LEFT JOIN insurance_payer ipayer ON ip.payer_id = ipayer.payer_id
                 LEFT JOIN staff s ON d.doctor_id = d.staff_id
                 WHERE $where_clause
-                GROUP BY d.doctor_id, d.firstName, d.lastName, d.specialty
+                GROUP BY d.doctor_id, s.first_name, d.last_name, d.specialty
                 HAVING total_visits > 0
                 ORDER BY total_revenue DESC
                 LIMIT 20";
