@@ -74,7 +74,7 @@ try {
     }
     
     if (isset($input['Status'])) {
-        $validStatuses = ['Scheduled', 'Waiting', 'In Progress', 'Completed', 'Cancelled', 'No-Show'];
+        $validStatuses = ['Scheduled', 'Pending', 'Waiting', 'In Progress', 'Completed', 'Cancelled', 'No-Show'];
         if (in_array($input['Status'], $validStatuses)) {
             $updateFields[] = 'Status = ?';
             $types .= 's';
