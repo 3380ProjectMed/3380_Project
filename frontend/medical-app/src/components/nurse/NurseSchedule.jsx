@@ -25,7 +25,6 @@ export default function NurseSchedule() {
       try {
         const year = currentDate.getFullYear();
         const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        // Get all days in month
         const days = getDaysInMonth(currentDate);
         let all = [];
         for (let d = 1; d <= days; d++) {
@@ -35,7 +34,9 @@ export default function NurseSchedule() {
             if (Array.isArray(appts) && appts.length > 0) {
               all = all.concat(appts.map(a => ({ ...a, _date: dateStr })));
             }
-          } catch {}
+          } catch (err) {
+            // Optionally log or handle per-day errors
+          }
         }
         if (mounted) setAppointments(all);
       } catch (e) {
