@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Clock, User, Check } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, User, Check, X, Edit, AlertCircle } from 'lucide-react';
 // Removed API import as we'll use fetch directly
 import './OfficeSchedule.css';
 
@@ -14,9 +14,11 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedSlotData, setSelectedSlotData] = useState(null);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [doctors, setDoctors] = useState([]);
   const [bookedSlots, setBookedSlots] = useState({});
   const [loading, setLoading] = useState(true);
+  const [canceling, setCanceling] = useState(false);
 
   /**
    * Load doctors and appointments when component mounts or date changes
@@ -69,8 +71,14 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
         // Convert appointments to booked slots lookup
         const slots = {};
         (appointmentsResult.appointments || []).forEach(apt => {
-          const key = `${apt.Doctor_id}-${apt.Appointment_date}`;
-          slots[key] = true;
+          // Extract date and time from Appointment_date (format: "YYYY-MM-DD HH:MM:SS")
+          const appointmentDateTime = apt.Appointment_date; // e.g., "2025-11-11 11:00:00"
+          const key = `${apt.Doctor_id}-${appointmentDateTime}`;
+          slots[key] = {
+            appointment_id: apt.Appointment_id,
+            patient_name: apt.patientName,
+            status: apt.status
+          };
         });
         setBookedSlots(slots);
       }
@@ -195,7 +203,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
     const dateStr = selectedDate.toISOString().split('T')[0];
     const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
     const key = `${doctorId}-${dateStr} ${timeStr}`;
-    return bookedSlots[key] === true;
+    return bookedSlots[key] !== undefined;
   };
 
   /**
@@ -227,6 +235,20 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
    * Handle slot selection
    */
   const handleSlotClick = (doctor, hour, minute, status) => {
+    // If slot is booked, show appointment details
+    if (status === 'booked') {
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+      const key = `${doctor.Doctor_id}-${dateStr} ${timeStr}`;
+      const appointmentData = bookedSlots[key];
+      
+      if (appointmentData) {
+        setSelectedAppointment(appointmentData);
+      }
+      return;
+    }
+    
+    // If slot is available, select it for booking
     if (status !== 'available') return;
     
     const slotKey = `${doctor.Doctor_id}-${hour}-${minute}`;
@@ -250,6 +272,68 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
     if (selectedSlotData && onSelectTimeSlot) {
       onSelectTimeSlot(selectedSlotData);
     }
+  };
+
+  /**
+   * Cancel appointment
+   */
+  const handleCancelAppointment = async () => {
+    if (!selectedAppointment || !selectedAppointment.appointment_id) return;
+    
+    if (!window.confirm('Are you sure you want to cancel this appointment?')) {
+      return;
+    }
+    
+    try {
+      setCanceling(true);
+      
+      const response = await fetch('/receptionist_api/appointments/cancel.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          Appointment_id: selectedAppointment.appointment_id,
+          cancellation_reason: 'Cancelled by receptionist'
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Close modal
+        setSelectedAppointment(null);
+        // Reload schedule data
+        loadScheduleData();
+      } else {
+        alert('Failed to cancel appointment: ' + (result.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to cancel appointment:', err);
+      alert('Failed to cancel appointment. Please try again.');
+    } finally {
+      setCanceling(false);
+    }
+  };
+
+  /**
+   * Get status badge class
+   */
+  const getStatusClass = (status) => {
+    const normalizedStatus = (status || 'scheduled').toLowerCase();
+    const statusMap = {
+      'scheduled': 'status-scheduled',
+      'ready': 'status-ready',
+      'waiting': 'status-waiting',
+      'checked in': 'status-checked-in',
+      'in progress': 'status-in-progress',
+      'completed': 'status-completed',
+      'cancelled': 'status-cancelled',
+      'canceled': 'status-cancelled',
+      'no-show': 'status-noshow'
+    };
+    return statusMap[normalizedStatus] || 'status-scheduled';
   };
 
   /**
@@ -431,6 +515,94 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot }) {
           <button className="btn-continue" onClick={handleContinueToBooking}>
             Continue to Booking
           </button>
+        </div>
+      )}
+
+      {/* ===== APPOINTMENT DETAILS MODAL ===== */}
+      {selectedAppointment && (
+        <div className="modal-overlay" onClick={() => setSelectedAppointment(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Appointment Details</h2>
+                <p className="modal-subtitle">ID: {selectedAppointment.appointment_id}</p>
+              </div>
+              <button className="modal-close" onClick={() => setSelectedAppointment(null)}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="appointment-details-grid">
+                <div className="detail-section">
+                  <label className="detail-label">
+                    <User size={16} />
+                    Patient
+                  </label>
+                  <p className="detail-value">
+                    {selectedAppointment.patient_name}
+                  </p>
+                </div>
+
+                <div className="detail-section">
+                  <label className="detail-label">
+                    <User size={16} />
+                    Doctor
+                  </label>
+                  <p className="detail-value">
+                    {selectedAppointment.doctor_name}
+                  </p>
+                </div>
+
+                <div className="detail-section">
+                  <label className="detail-label">
+                    <Calendar size={16} />
+                    Date & Time
+                  </label>
+                  <p className="detail-value">
+                    {new Date(selectedAppointment.Appointment_date).toLocaleString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+
+                <div className="detail-section">
+                  <label className="detail-label">Status</label>
+                  <p className="detail-value">
+                    <span className={`status-badge ${getStatusClass(selectedAppointment.status)}`}>
+                      {selectedAppointment.status || 'Scheduled'}
+                    </span>
+                  </p>
+                </div>
+
+                {selectedAppointment.reason && (
+                  <div className="detail-section detail-section-full">
+                    <label className="detail-label">Reason for Visit</label>
+                    <p className="detail-value">{selectedAppointment.reason}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="btn btn-danger"
+                onClick={handleCancelAppointment}
+                disabled={canceling || selectedAppointment.status === 'Cancelled' || selectedAppointment.status === 'Completed'}
+              >
+                <X size={18} />
+                {canceling ? 'Canceling...' : 'Cancel Appointment'}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setSelectedAppointment(null)}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

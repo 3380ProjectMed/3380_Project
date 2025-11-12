@@ -375,6 +375,27 @@
   font-weight: 800;
 }
 
+.insurance-expiration {
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  color: #6b7280;
+}
+
+.insurance-expiration.expired {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.text-expired {
+  color: #dc2626 !important;
+  font-weight: 700;
+}
+
+.insurance-expired {
+  color: #dc2626;
+  font-weight: 700;
+}
+
 /* Visit History */
 .visit-history-grid {
   display: grid;
