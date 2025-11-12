@@ -9,7 +9,7 @@ import './AppointmentBooking.css';
  * Multi-step appointment booking process
  * Integrated with backend APIs for patients, doctors, and appointments
  */
-function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, onBack, onSuccess, officeId, officeName }) {
+function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAppointment, onBack, onSuccess, officeId, officeName }) {
   const [currentStep, setCurrentStep] = useState(preSelectedPatient ? 2 : 1);
   const [selectedPatient, setSelectedPatient] = useState(preSelectedPatient);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
@@ -17,6 +17,8 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, onBack, o
   const [appointmentTime, setAppointmentTime] = useState('');
   const [reasonForVisit, setReasonForVisit] = useState('');
   const [bookingChannel, setBookingChannel] = useState('walk-in');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [appointmentId, setAppointmentId] = useState(null);
   
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,6 +39,56 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, onBack, o
   useEffect(() => {
     loadDoctors();
   }, [officeId]);
+
+  /**
+   * Populate form when editing an existing appointment
+   */
+  useEffect(() => {
+    if (editingAppointment) {
+      setIsEditMode(true);
+      setAppointmentId(editingAppointment.appointment_id);
+      
+      // Set patient
+      if (editingAppointment.Patient_id) {
+        setSelectedPatient({
+          patient_id: editingAppointment.Patient_id,
+          Patient_ID: editingAppointment.Patient_id,
+          first_name: editingAppointment.patient_name?.split(' ')[0] || '',
+          last_name: editingAppointment.patient_name?.split(' ').slice(1).join(' ') || ''
+        });
+      }
+      
+      // Set date and time
+      if (editingAppointment.Appointment_date) {
+        const apptDate = new Date(editingAppointment.Appointment_date);
+        const formattedDate = `${apptDate.getFullYear()}-${String(apptDate.getMonth() + 1).padStart(2, '0')}-${String(apptDate.getDate()).padStart(2, '0')}`;
+        setAppointmentDate(formattedDate);
+        
+        const formattedTime = `${String(apptDate.getHours()).padStart(2, '0')}:${String(apptDate.getMinutes()).padStart(2, '0')}`;
+        setAppointmentTime(formattedTime);
+      }
+      
+      // Set reason
+      if (editingAppointment.reason) {
+        setReasonForVisit(editingAppointment.reason);
+      }
+      
+      // Start at step 2 since patient is already selected
+      setCurrentStep(2);
+    }
+  }, [editingAppointment]);
+
+  /**
+   * Set the selected doctor once doctors are loaded (for edit mode)
+   */
+  useEffect(() => {
+    if (isEditMode && editingAppointment && doctors.length > 0 && editingAppointment.Doctor_id) {
+      const doctor = doctors.find(d => d.Doctor_id === editingAppointment.Doctor_id);
+      if (doctor) {
+        setSelectedDoctor(doctor);
+      }
+    }
+  }, [doctors, editingAppointment, isEditMode]);
 
   /**
    * Populate form with pre-selected time slot data
@@ -146,7 +198,7 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, onBack, o
   /**
    * Validate form before proceeding to confirmation
    */
-  const validateForm = () => {
+  const validateForm = async () => {
     if (!selectedDoctor) {
       setError('Please select a doctor');
       return false;
@@ -167,14 +219,104 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, onBack, o
       return false;
     }
     
+    // Check for time conflicts with buffer zone
+    const timeSlotAvailable = await isTimeSlotAvailable();
+    if (!timeSlotAvailable) {
+      return false;
+    }
+    
     return true;
+  };
+
+  /**
+   * Check if the selected time slot is available with buffer zone
+   * Buffer: ±14-15 minutes during working hours (9 AM - 4:30 PM)
+   */
+  const isTimeSlotAvailable = async () => {
+    try {
+      const [hours, minutes] = appointmentTime.split(':').map(Number);
+      const selectedTimeInMinutes = hours * 60 + minutes;
+      
+      // Define working hours (9 AM = 540 minutes, 4:30 PM = 990 minutes)
+      const workingHoursStart = 9 * 60; // 9:00 AM
+      const workingHoursEnd = 16 * 60 + 30; // 4:30 PM
+      
+      // Determine buffer based on working hours
+      let bufferBefore = 0;
+      let bufferAfter = 0;
+      
+      if (selectedTimeInMinutes >= workingHoursStart && selectedTimeInMinutes <= workingHoursEnd) {
+        bufferBefore = 14; // 14 minutes before
+        bufferAfter = 15;  // 15 minutes after
+      }
+      
+      // Fetch existing appointments for this date at this office
+      const dateStr = appointmentDate;
+      const response = await fetch(
+        `/receptionist_api/appointments/get-by-date.php?date=${dateStr}`,
+        { credentials: 'include' }
+      );
+      
+      if (!response.ok) {
+        // If endpoint fails, skip validation
+        return true;
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.appointments) {
+        // Filter appointments for the selected doctor
+        const doctorAppointments = data.appointments.filter(
+          appt => appt.Doctor_id === selectedDoctor.Doctor_id
+        );
+        
+        // Check each appointment for conflicts
+        for (const appt of doctorAppointments) {
+          const apptDate = new Date(appt.Appointment_date);
+          const apptHours = apptDate.getHours();
+          const apptMinutes = apptDate.getMinutes();
+          const apptTimeInMinutes = apptHours * 60 + apptMinutes;
+          
+          // Calculate the time difference
+          const timeDiff = Math.abs(selectedTimeInMinutes - apptTimeInMinutes);
+          
+          // Check if within buffer zone (only if buffer is active)
+          if (bufferBefore > 0 || bufferAfter > 0) {
+            if (timeDiff < bufferBefore || timeDiff < bufferAfter) {
+              const apptTimeStr = `${String(apptHours).padStart(2, '0')}:${String(apptMinutes).padStart(2, '0')}`;
+              setError(
+                `Time slot too close to existing appointment at ${apptTimeStr}. ` +
+                `During working hours (9 AM - 4:30 PM), please select a time at least ${Math.max(bufferBefore, bufferAfter)} minutes away from other appointments.`
+              );
+              return false;
+            }
+          } else {
+            // Outside working hours, check for exact time match only
+            if (timeDiff === 0) {
+              const apptTimeStr = `${String(apptHours).padStart(2, '0')}:${String(apptMinutes).padStart(2, '0')}`;
+              setError(
+                `This time slot (${apptTimeStr}) is already booked. Please select a different time.`
+              );
+              return false;
+            }
+          }
+        }
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Error checking time slot availability:', err);
+      // If check fails, allow booking (fail gracefully)
+      return true;
+    }
   };
 
   /**
    * Move to confirmation step
    */
-  const handleProceedToConfirmation = () => {
-    if (validateForm()) {
+  const handleProceedToConfirmation = async () => {
+    const isValid = await validateForm();
+    if (isValid) {
       setError(null);
       setCurrentStep(3);
     }
@@ -195,36 +337,66 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, onBack, o
       const [year, month, day] = appointmentDate.split('-');
       const appointmentDateTime = `${year}-${month}-${day} ${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
 
-      const appointmentData = {
-        Patient_id: selectedPatient.Patient_ID,
-        Doctor_id: selectedDoctor.Doctor_id,
-        Office_id: officeId,
-        Appointment_date: appointmentDateTime,
-        Reason_for_visit: reasonForVisit,
-        booking_channel: bookingChannel
-      };
+      if (isEditMode && appointmentId) {
+        // Update existing appointment
+        const updateData = {
+          Appointment_id: appointmentId,
+          Doctor_id: selectedDoctor.Doctor_id,
+          Appointment_date: appointmentDateTime,
+          Reason_for_visit: reasonForVisit
+        };
 
-      const response = await fetch(`/receptionist_api/appointments/create.php`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(appointmentData)
-      });
-      const result = await response.json();
-      
-      if (result.success) {
-        // Success! Navigate back
-        if (onSuccess) {
-          onSuccess();
+        const response = await fetch(`/receptionist_api/appointments/update.php`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(updateData)
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          // Success! Navigate back
+          if (onSuccess) {
+            onSuccess();
+          }
+        } else {
+          setError(result.error || 'Failed to update appointment');
         }
       } else {
-        setError(result.error || 'Failed to create appointment');
+        // Create new appointment
+        const appointmentData = {
+          Patient_id: selectedPatient.Patient_ID,
+          Doctor_id: selectedDoctor.Doctor_id,
+          Office_id: officeId,
+          Appointment_date: appointmentDateTime,
+          Reason_for_visit: reasonForVisit,
+          booking_channel: bookingChannel
+        };
+
+        const response = await fetch(`/receptionist_api/appointments/create.php`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(appointmentData)
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          // Success! Navigate back
+          if (onSuccess) {
+            onSuccess();
+          }
+        } else {
+          setError(result.error || 'Failed to create appointment');
+        }
       }
     } catch (err) {
-      console.error('Failed to create appointment:', err);
-      setError('Failed to create appointment. Please try again.');
+      console.error(`Failed to ${isEditMode ? 'update' : 'create'} appointment:`, err);
+      setError(`Failed to ${isEditMode ? 'update' : 'create'} appointment. Please try again.`);
     } finally {
       setCreating(false);
     }
@@ -246,7 +418,7 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, onBack, o
           Back
         </button>
         <div className="header-info">
-          <h1 className="page-title">Book Appointment</h1>
+          <h1 className="page-title">{isEditMode ? 'Edit Appointment' : 'Book Appointment'}</h1>
           <p className="page-subtitle">{officeName}</p>
         </div>
       </div>
@@ -628,7 +800,10 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, onBack, o
                 disabled={creating}
               >
                 <Check size={20} />
-                {creating ? 'Creating Appointment...' : 'Confirm & Create Appointment'}
+                {creating 
+                  ? (isEditMode ? 'Updating Appointment...' : 'Creating Appointment...') 
+                  : (isEditMode ? 'Confirm & Update Appointment' : 'Confirm & Create Appointment')
+                }
               </button>
             </div>
           </div>

@@ -1,40 +1,39 @@
 <?php
-declare(strict_types=1);
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
 header('Content-Type: application/json');
-require_once __DIR__ . '/../_bootstrap.php';
 
-function fail(int $code, string $msg, array $extra = []): void {
-  http_response_code($code);
-  echo json_encode(array_merge(['error' => $msg], $extra));
-  exit;
-}
+session_start();
+if (empty($_SESSION['uid'])) { http_response_code(401); echo json_encode(['error' => 'UNAUTHENTICATED']); exit; }
 
-try {
-    $id = $_GET['id'] ?? null;
-    if (!$id) fail(400, 'Missing id');
+$conn = getDBConnection();
+$email = $_SESSION['email'] ?? '';
+$rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
+if (empty($rows)) { closeDBConnection($conn); http_response_code(404); echo json_encode(['error' => 'NURSE_NOT_FOUND']); exit; }
+$nurse_id = (int)$rows[0]['nurse_id'];
 
-    // accept formats like p5 or 5
-    if (preg_match('/^p?(\d+)$/i', $id, $m)) {
-        $idNum = (int)$m[1];
-    } else {
-        fail(400, 'Invalid id');
-    }
+$id = $_GET['id'] ?? null;
+if (!$id) { closeDBConnection($conn); http_response_code(400); echo json_encode(['error' => 'Missing id']); exit; }
 
-    $sql = "SELECT p.patient_id, p.first_name, p.last_name, DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.allergies, p.email
-            FROM patient p WHERE p.patient_id = ? LIMIT 1";
-    $rows = executeQuery($pdo, $sql, 'i', [$idNum]);
-    if (empty($rows)) fail(404, 'Patient not found');
+if (preg_match('/^p?(\d+)$/i', $id, $m)) {
+    $idNum = (int)$m[1];
+} else { closeDBConnection($conn); http_response_code(400); echo json_encode(['error' => 'Invalid id']); exit; }
 
-    $r = $rows[0];
-    echo json_encode([
-        'id' => 'p' . $r['patient_id'],
-        'firstName' => $r['first_name'] ?? '',
-        'lastName' => $r['last_name'] ?? '',
-        'dob' => $r['dob'] ?? null,
-        'allergies' => $r['allergies'] ?? '',
-        'email' => $r['email'] ?? null
-    ]);
-} catch (Throwable $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Failed to load patient', 'message' => $e->getMessage()]);
-}
+// Ensure the patient is associated with this nurse via patient_visit
+$sql = "SELECT p.patient_id, p.first_name, p.last_name, DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.allergies, p.email
+        FROM patient p
+        JOIN patient_visit pv ON pv.patient_id = p.patient_id
+        WHERE p.patient_id = ? AND pv.nurse_id = ? LIMIT 1";
+$rows = executeQuery($conn, $sql, 'ii', [$idNum, $nurse_id]);
+if (empty($rows)) { closeDBConnection($conn); http_response_code(404); echo json_encode(['error' => 'Patient not found']); exit; }
+
+$r = $rows[0];
+closeDBConnection($conn);
+echo json_encode([
+    'id' => 'p' . $r['patient_id'],
+    'firstName' => $r['first_name'] ?? '',
+    'lastName' => $r['last_name'] ?? '',
+    'dob' => $r['dob'] ?? null,
+    'allergies' => $r['allergies'] ?? '',
+    'email' => $r['email'] ?? null
+]);
