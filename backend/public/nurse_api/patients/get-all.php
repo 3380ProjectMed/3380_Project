@@ -17,21 +17,16 @@ try {
     $conn = getDBConnection();
     $email = $_SESSION['email'] ?? '';
     
-    // Debug: Log the email
-    error_log("Nurse patients: Looking up nurse with email: " . $email);
-    
     $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
     
     if (empty($rows)) {
-        error_log("Nurse patients: No nurse found for email: " . $email);
         closeDBConnection($conn);
         http_response_code(404);
-        echo json_encode(['error' => 'NURSE_NOT_FOUND', 'email' => $email]);
+        echo json_encode(['error' => 'NURSE_NOT_FOUND']);
         exit;
     }
     
     $nurse_id = (int)$rows[0]['nurse_id'];
-    error_log("Nurse patients: Found nurse_id: " . $nurse_id);
 
     $search = $_GET['q'] ?? '';
     $page = max(1, (int)($_GET['page'] ?? 1));
@@ -40,37 +35,55 @@ try {
 
     if (!empty($search)) {
         $searchParam = "%{$search}%";
-        $sql = "SELECT DISTINCT p.patient_id, p.first_name, p.last_name, DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.email, ca.allergies_text as allergies
-                FROM patient_visit pv
-                JOIN patient p ON pv.patient_id = p.patient_id
-                LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
-                WHERE pv.nurse_id = ? AND (p.first_name LIKE ? OR p.last_name LIKE ?)
-                ORDER BY p.last_name, p.first_name
+        // Fixed: Use explicit column names without ambiguity
+        $sql = "SELECT DISTINCT 
+                    patient.patient_id, 
+                    patient.first_name, 
+                    patient.last_name, 
+                    DATE_FORMAT(patient.dob, '%Y-%m-%d') AS dob, 
+                    patient.email, 
+                    codes_allergies.allergies_text as allergies
+                FROM patient_visit
+                JOIN patient ON patient_visit.patient_id = patient.patient_id
+                LEFT JOIN codes_allergies ON patient.allergies = codes_allergies.allergies_code
+                WHERE patient_visit.nurse_id = ? 
+                AND (patient.first_name LIKE ? OR patient.last_name LIKE ?)
+                ORDER BY patient.last_name, patient.first_name
                 LIMIT ? OFFSET ?";
         
-        error_log("Nurse patients: Executing search query with nurse_id=$nurse_id, search='$search'");
         $patients = executeQuery($conn, $sql, 'issii', [$nurse_id, $searchParam, $searchParam, $pageSize, $offset]);
         
-        $countSql = "SELECT COUNT(DISTINCT p.patient_id) as total FROM patient_visit pv JOIN patient p ON pv.patient_id = p.patient_id WHERE pv.nurse_id = ? AND (p.first_name LIKE ? OR p.last_name LIKE ?)";
+        $countSql = "SELECT COUNT(DISTINCT patient.patient_id) as total 
+                     FROM patient_visit 
+                     JOIN patient ON patient_visit.patient_id = patient.patient_id 
+                     WHERE patient_visit.nurse_id = ? 
+                     AND (patient.first_name LIKE ? OR patient.last_name LIKE ?)";
         $countResult = executeQuery($conn, $countSql, 'iss', [$nurse_id, $searchParam, $searchParam]);
     } else {
-        $sql = "SELECT DISTINCT p.patient_id, p.first_name, p.last_name, DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.email, ca.allergies_text as allergies
-                FROM patient_visit pv
-                JOIN patient p ON pv.patient_id = p.patient_id
-                LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
-                WHERE pv.nurse_id = ?
-                ORDER BY p.last_name, p.first_name
+        // Fixed: Use explicit table names
+        $sql = "SELECT DISTINCT 
+                    patient.patient_id, 
+                    patient.first_name, 
+                    patient.last_name, 
+                    DATE_FORMAT(patient.dob, '%Y-%m-%d') AS dob, 
+                    patient.email, 
+                    codes_allergies.allergies_text as allergies
+                FROM patient_visit
+                JOIN patient ON patient_visit.patient_id = patient.patient_id
+                LEFT JOIN codes_allergies ON patient.allergies = codes_allergies.allergies_code
+                WHERE patient_visit.nurse_id = ?
+                ORDER BY patient.last_name, patient.first_name
                 LIMIT ? OFFSET ?";
         
-        error_log("Nurse patients: Executing query with nurse_id=$nurse_id");
         $patients = executeQuery($conn, $sql, 'iii', [$nurse_id, $pageSize, $offset]);
         
-        $countSql = "SELECT COUNT(DISTINCT p.patient_id) as total FROM patient_visit pv WHERE pv.nurse_id = ?";
+        $countSql = "SELECT COUNT(DISTINCT patient.patient_id) as total 
+                     FROM patient_visit 
+                     WHERE patient_visit.nurse_id = ?";
         $countResult = executeQuery($conn, $countSql, 'i', [$nurse_id]);
     }
 
     $total = (int)($countResult[0]['total'] ?? 0);
-    error_log("Nurse patients: Found " . count($patients) . " patients, total=$total");
 
     closeDBConnection($conn);
     
@@ -84,7 +97,6 @@ try {
 
 } catch (Throwable $e) {
     error_log("Nurse patients ERROR: " . $e->getMessage());
-    error_log("Stack trace: " . $e->getTraceAsString());
     
     if (isset($conn)) {
         closeDBConnection($conn);
