@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Calendar, FileText, Shield, CreditCard, User, LogOut } from 'lucide-react';
+import { Home, Calendar, FileText, Shield, CreditCard, User, LogOut, UserCheck } from 'lucide-react';
 import './Sidebar.css';
 
 function Sidebar({ currentPage, setCurrentPage, onLogout }) {
@@ -7,6 +7,7 @@ function Sidebar({ currentPage, setCurrentPage, onLogout }) {
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'appointments', label: 'Appointments', icon: Calendar },
+    { id: 'referrals', label: 'Referrals', icon: UserCheck },
     { id: 'records', label: 'Medical Records', icon: FileText },
     { id: 'insurance', label: 'Insurance', icon: Shield },
     { id: 'billing', label: 'Billing', icon: CreditCard },

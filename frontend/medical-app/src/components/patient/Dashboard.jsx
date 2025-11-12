@@ -79,12 +79,16 @@ export default function Dashboard(props) {
                     const ActivityIcon = isReferral ? UserCheck : (activity.status === 'Completed' ? Check : FileText);
                     const iconClass = isReferral ? 'activity-icon referral' : 'activity-icon success';
                     
+                    // Show urgency styling for referrals with expiration data
+                    const urgencyClass = isReferral && activity.urgency_level ? activity.urgency_level : '';
+                    
                     return (
                       <div 
                         key={idx} 
-                        className={`activity-item ${isReferral ? 'referral-notification' : ''}`}
+                        className={`activity-item ${isReferral ? 'referral-notification' : ''} ${urgencyClass}`}
                         data-status={activity.status?.toLowerCase()}
                         data-type={activity.activity_type}
+                        data-urgency={activity.urgency_level}
                       >
                         <ActivityIcon className={iconClass} />
                         <div className="activity-content">
@@ -100,14 +104,26 @@ export default function Dashboard(props) {
                               {activity.description}
                             </p>
                           )}
+                          {isReferral && activity.days_remaining !== undefined && (
+                            <div className={`referral-expiration ${activity.urgency_level}`}>
+                              <span className="expiration-text">
+                                {activity.urgency_level === 'urgent' && activity.days_remaining <= 7 
+                                  ? `⚠️ Expires in ${activity.days_remaining} day${activity.days_remaining === 1 ? '' : 's'} - Book soon!`
+                                  : activity.urgency_level === 'warning' && activity.days_remaining <= 30
+                                  ? `⏰ Expires in ${activity.days_remaining} days`
+                                  : `✅ ${activity.days_remaining} days remaining`
+                                }
+                              </span>
+                            </div>
+                          )}
                           {isReferral && (
                             <button 
-                              className="btn btn-referral-action"
+                              className={`btn btn-referral-action ${activity.urgency_level === 'urgent' ? 'urgent' : ''}`}
                               onClick={() => setShowBookingModal(true)}
                               title={`Book appointment with ${activity.specialist_name || 'specialist'}`}
                             >
                               <Calendar className="small-icon" />
-                              Book Appointment
+                              {activity.urgency_level === 'urgent' ? 'Book Now - Urgent!' : 'Book Appointment'}
                             </button>
                           )}
                         </div>

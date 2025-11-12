@@ -1351,7 +1351,12 @@ elseif ($endpoint === 'referrals') {
                         sp.specialty_name,
                         r.appointment_id,
                         CONCAT(ref_s.first_name, ' ', ref_s.last_name) as referring_doctor_name,
-                        DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) as days_remaining
+                        DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) as days_remaining,
+                        CASE 
+                            WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 7 THEN 'urgent'
+                            WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 30 THEN 'warning'
+                            ELSE 'normal'
+                        END as urgency_level
                     FROM referral r
                     LEFT JOIN doctor d ON r.specialist_doctor_staff_id = d.doctor_id
                     LEFT JOIN staff s ON d.staff_id = s.staff_id
@@ -1363,6 +1368,11 @@ elseif ($endpoint === 'referrals') {
                     AND DATE_ADD(r.date_of_approval, INTERVAL 90 DAY) >= CURDATE()
                     ORDER BY 
                         CASE WHEN r.appointment_id IS NULL THEN 0 ELSE 1 END,
+                        CASE 
+                            WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 7 THEN 0
+                            WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 30 THEN 1
+                            ELSE 2
+                        END,
                         DATE_ADD(r.date_of_approval, INTERVAL 90 DAY) ASC
                 ");
                 
@@ -1376,14 +1386,6 @@ elseif ($endpoint === 'referrals') {
                 $used = [];
                 
                     foreach ($referrals as $ref) {
-                    $days_remaining = (int)$ref['days_remaining'];
-                    $urgency_level = 'normal';
-                    if ($days_remaining <= 7) {
-                        $urgency_level = 'urgent';
-                    } elseif ($days_remaining <= 30) {
-                        $urgency_level = 'warning';
-                    }
-                    
                     $formatted = [
                         'referral_id' => $ref['referral_id'],
                         'specialist_id' => $ref['specialist_id'],
@@ -1393,8 +1395,8 @@ elseif ($endpoint === 'referrals') {
                         'reason' => $ref['reason'] ?? 'No reason provided',
                         'date_issued' => $ref['date_of_approval'],
                         'expiration_date' => $ref['expiration_date'],
-                        'days_remaining' => $days_remaining,
-                        'urgency_level' => $urgency_level,
+                        'days_remaining' => (int)$ref['days_remaining'],
+                        'urgency_level' => $ref['urgency_level'],
                         'is_used' => $ref['appointment_id'] !== null,
                         'appointment_id' => $ref['appointment_id']
                     ];
