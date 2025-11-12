@@ -1,19 +1,10 @@
-const BASE_URL = '/nurse_api';
 
-function asJsonOrThrow(resp) {
-  return resp.json().catch(() => ({})).then(data => {
-    if (!resp.ok) {
-      const msg = data.error || data.message || `${resp.status} ${resp.statusText}`;
-      throw new Error(msg);
-    }
-    return data;
-  });
-}
+import { apiRequest, makeUrl } from './http.js';
+const BASE_URL = 'nurse_api';
 
 export async function getNurseDashboardStats(date) {
   const d = date || new Date().toISOString().slice(0, 10);
-  const resp = await fetch(`${BASE_URL}/dashboard/get-stats.php?date=${encodeURIComponent(d)}`, { credentials: 'include' });
-  const data = await asJsonOrThrow(resp);
+  const data = await apiRequest(makeUrl(`${BASE_URL}/dashboard/get-stats.php`, { date: d }));
   return {
     total: data.total ?? data.totalAppointments ?? 0,
     waiting: data.waiting ?? data.waitingCount ?? 0,
@@ -24,8 +15,7 @@ export async function getNurseDashboardStats(date) {
 
 export async function getNurseSchedule({ date } = {}) {
   const d = date || new Date().toISOString().slice(0, 10);
-  const resp = await fetch(`${BASE_URL}/schedule/get-by-date.php?date=${encodeURIComponent(d)}`, { credentials: 'include' });
-  const data = await asJsonOrThrow(resp);
+  const data = await apiRequest(makeUrl(`${BASE_URL}/schedule/get-by-date.php`, { date: d }));
   if (Array.isArray(data)) return data;
   return data.appointments || data.data || [];
 }
@@ -36,14 +26,12 @@ export async function getNurseScheduleToday() {
 }
 
 export async function getNurseProfile() {
-  const resp = await fetch(`${BASE_URL}/profile/get.php`, { credentials: 'include' });
-  return asJsonOrThrow(resp);
+  return apiRequest(makeUrl(`${BASE_URL}/profile/get.php`));
 }
 
 export async function getNursePatients(query = '', page = 1, pageSize = 10) {
-  const params = new URLSearchParams({ q: query, page: String(page), pageSize: String(pageSize) });
-  const resp = await fetch(`${BASE_URL}/patients/get-all.php?${params.toString()}`, { credentials: 'include' });
-  const data = await asJsonOrThrow(resp);
+  const params = { q: query, page: String(page), pageSize: String(pageSize) };
+  const data = await apiRequest(makeUrl(`${BASE_URL}/patients/get-all.php`, params));
   const items = Array.isArray(data.items) ? data.items : [];
   const normalized = items.map(r => {
     const name = String(r.name ?? r.fullName ?? '');
@@ -65,13 +53,11 @@ export async function getNursePatients(query = '', page = 1, pageSize = 10) {
 
 export async function saveNurseNote(appointmentId, noteBody) {
   const body = typeof noteBody === 'string' ? { body: noteBody } : { body: noteBody?.body };
-  const resp = await fetch(`${BASE_URL}/clinical/save-note.php?apptId=${encodeURIComponent(appointmentId)}`, {
+  return apiRequest(makeUrl(`${BASE_URL}/clinical/save-note.php`, { apptId: appointmentId }), {
     method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body,
+    json: true
   });
-  return asJsonOrThrow(resp);
 }
 
 export async function saveNurseVitals(appointmentId, vitals) {
@@ -83,11 +69,9 @@ export async function saveNurseVitals(appointmentId, vitals) {
     height: vitals.height ?? '',
     weight: vitals.weight ?? ''
   };
-  const resp = await fetch(`${BASE_URL}/clinical/save-vitals.php?apptId=${encodeURIComponent(appointmentId)}`, {
+  return apiRequest(makeUrl(`${BASE_URL}/clinical/save-vitals.php`, { apptId: appointmentId }), {
     method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: payload,
+    json: true
   });
-  return asJsonOrThrow(resp);
 }
