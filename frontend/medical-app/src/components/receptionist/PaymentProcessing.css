@@ -392,6 +392,14 @@
   padding: 1.5rem;
 }
 
+/* Ensure card text is readable even if a global color is forcing white
+   (some deployments set a dark root color). Enforce visible foreground
+   specifically for the patient card and the large patient name. */
+.patient-card,
+.patient-card * {
+  color: #043a57 !important;
+}
+
 .card-header {
   display: flex;
   align-items: center;
