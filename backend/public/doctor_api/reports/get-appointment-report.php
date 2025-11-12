@@ -161,7 +161,7 @@ try {
         pv.visit_id as visit_id,
         pv.status as status,
         pv.diagnosis as diagnosis,
-        pv.treatment as treatment_notes,
+        // pv.treatment as treatment_notes,
         pv.present_illnesses as present_illnesses,
         pv.start_at as visit_start,
         pv.end_at as visit_end,
