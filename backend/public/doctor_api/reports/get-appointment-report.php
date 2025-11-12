@@ -1,16 +1,19 @@
 <?php
 /**
- * Appointment & Visit Summary Report API
+ * Doctor-Focused Appointment Report API
  * Location: /doctor_api/reports/get-appointment-report.php
  * 
- * Fetches appointments with comprehensive filtering options
- * Supports both doctor-specific and admin-level reporting
+ * Provides clinical insights for doctors:
+ * - Patient volume and scheduling patterns
+ * - Completion rates and no-show tracking
+ * - Common diagnoses and visit reasons
+ * - Visit duration analytics
  */
 
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
-error_log("=== Appointment Report API Called ===");
+error_log("=== Doctor Appointment Report API Called ===");
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -37,7 +40,7 @@ try {
     
     $user_id = intval($_SESSION['uid']);
     
-    // Get user role and associated doctor/admin info - FIXED FOR NEW SCHEMA
+    // Get user role and associated doctor info
     $userQuery = "SELECT ua.role, d.doctor_id 
               FROM user_account ua 
               LEFT JOIN staff s ON ua.user_id = s.staff_id
@@ -54,7 +57,7 @@ try {
     }
     
     $userRole = $userInfo[0]['role'];
-    $loggedInDoctorId = $userInfo[0]['doctor_id'];  // FIXED: Use doctor_id from query
+    $loggedInDoctorId = $userInfo[0]['doctor_id'];
     
     // Verify user has permission to access reports
     if (!in_array($userRole, ['DOCTOR', 'ADMIN'])) {
@@ -73,13 +76,12 @@ try {
     $startDate = isset($_GET['StartDate']) ? $_GET['StartDate'] : date('Y-m-01');
     $endDate = isset($_GET['EndDate']) ? $_GET['EndDate'] : date('Y-m-t');
     
-    // Note: appointment table has mixed case: Appointment_date, Patient_id, Doctor_id, Office_id
     $whereConditions[] = "DATE(a.Appointment_date) BETWEEN ? AND ?";
     $params[] = $startDate;
     $params[] = $endDate;
     $types .= 'ss';
     
-    // 2. Doctor Filter
+    // 2. Doctor Filter (doctors only see their own data)
     if ($userRole === 'DOCTOR') {
         if ($loggedInDoctorId === null) {
             http_response_code(403);
@@ -103,7 +105,7 @@ try {
         $types .= 'i';
     }
     
-    // 4. Appointment Status (from patient_visit table)
+    // 4. Appointment Status
     if (isset($_GET['Status']) && $_GET['Status'] !== '' && $_GET['Status'] !== 'all') {
         $whereConditions[] = "pv.status = ?";
         $params[] = $_GET['Status'];
@@ -131,27 +133,22 @@ try {
         $types .= 'i';
     }
     
-    // 8. Insurance Policy
-    if (isset($_GET['InsurancePolicyID']) && $_GET['InsurancePolicyID'] !== '' && $_GET['InsurancePolicyID'] !== 'all') {
-        $whereConditions[] = "pv.insurance_policy_id_used = ?";
-        $params[] = intval($_GET['InsurancePolicyID']);
-        $types .= 'i';
-    }
-    
     // Build WHERE clause
     $whereClause = count($whereConditions) > 0 ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
     
-    // Main query - FIXED FOR NEW SCHEMA
+    // Main query - DOCTOR-FOCUSED FIELDS
     $sql = "SELECT 
         a.Appointment_id as appointment_id,
         DATE(a.Appointment_date) as appointment_date,
         DATE_FORMAT(a.Appointment_date, '%H:%i') as appointment_time,
+        DATE_FORMAT(a.Appointment_date, '%W') as day_of_week,
         a.Date_created as date_created,
         a.Reason_for_visit as reason,
         CONCAT(p.first_name, ' ', p.last_name) as patient_name,
         p.patient_id as patient_id,
         p.dob as patient_dob,
-        p.emergency_contact_id as patient_ec_id,
+        TIMESTAMPDIFF(YEAR, p.dob, CURDATE()) as patient_age,
+        cg.gender_text as patient_gender,
         CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as doctor_name,
         d.doctor_id as doctor_id,
         s.specialty_name as doctor_specialty,
@@ -164,14 +161,20 @@ try {
         pv.visit_id as visit_id,
         pv.status as status,
         pv.diagnosis as diagnosis,
-        -- pv.amount_due as total_bill,
-        -- pv.total_due as total_due,
-        pv.payment as payment,
-        ip.id as insurance_policy_id,
+        pv.treatment as treatment_notes,
+        pv.present_illnesses as present_illnesses,
+        pv.start_at as visit_start,
+        pv.end_at as visit_end,
+        CASE 
+            WHEN pv.start_at IS NOT NULL AND pv.end_at IS NOT NULL 
+            THEN TIMESTAMPDIFF(MINUTE, pv.start_at, pv.end_at)
+            ELSE NULL 
+        END as visit_duration_minutes,
         iplan.plan_name as insurance_plan_name,
         ipayer.name as insurance_company
     FROM appointment a
     LEFT JOIN patient p ON a.Patient_id = p.patient_id
+    LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
     LEFT JOIN doctor d ON a.Doctor_id = d.doctor_id
     LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
     LEFT JOIN specialty s ON d.specialty = s.specialty_id
@@ -195,15 +198,21 @@ try {
     // Execute query
     $appointments = executeQuery($conn, $sql, $types, $params);
     
-    // Get summary statistics
+    // Get comprehensive statistics for doctors
     $statsQuery = "SELECT 
         COUNT(DISTINCT a.Appointment_id) as total_appointments,
+        COUNT(DISTINCT a.Patient_id) as unique_patients,
         SUM(CASE WHEN pv.status = 'Completed' THEN 1 ELSE 0 END) as completed_count,
         SUM(CASE WHEN pv.status = 'Scheduled' THEN 1 ELSE 0 END) as scheduled_count,
         SUM(CASE WHEN pv.status = 'Canceled' THEN 1 ELSE 0 END) as canceled_count,
         SUM(CASE WHEN pv.status = 'No-Show' THEN 1 ELSE 0 END) as noshow_count,
         COUNT(CASE WHEN a.Appointment_date < NOW() THEN 1 END) as past_appointments,
-        COUNT(CASE WHEN a.Appointment_date >= NOW() THEN 1 END) as upcoming_appointments
+        COUNT(CASE WHEN a.Appointment_date >= NOW() THEN 1 END) as upcoming_appointments,
+        AVG(CASE 
+            WHEN pv.start_at IS NOT NULL AND pv.end_at IS NOT NULL 
+            THEN TIMESTAMPDIFF(MINUTE, pv.start_at, pv.end_at)
+            ELSE NULL 
+        END) as avg_visit_duration
     FROM appointment a
     LEFT JOIN (
         SELECT appointment_id, MAX(visit_id) as max_visit_id
@@ -215,6 +224,63 @@ try {
     
     $stats = executeQuery($conn, $statsQuery, $types, $params);
     
+    // Get top diagnoses
+    $diagnosisQuery = "SELECT 
+        pv.diagnosis,
+        COUNT(*) as diagnosis_count
+    FROM appointment a
+    LEFT JOIN (
+        SELECT appointment_id, MAX(visit_id) as max_visit_id
+        FROM patient_visit
+        GROUP BY appointment_id
+    ) pvmax_diag ON a.Appointment_id = pvmax_diag.appointment_id
+    LEFT JOIN patient_visit pv ON pv.visit_id = pvmax_diag.max_visit_id
+    $whereClause
+    AND pv.diagnosis IS NOT NULL 
+    AND pv.diagnosis != ''
+    GROUP BY pv.diagnosis
+    ORDER BY diagnosis_count DESC
+    LIMIT 10";
+    
+    $topDiagnoses = executeQuery($conn, $diagnosisQuery, $types, $params);
+    
+    // Get top visit reasons
+    $reasonQuery = "SELECT 
+        a.Reason_for_visit as reason,
+        COUNT(*) as reason_count
+    FROM appointment a
+    LEFT JOIN (
+        SELECT appointment_id, MAX(visit_id) as max_visit_id
+        FROM patient_visit
+        GROUP BY appointment_id
+    ) pvmax_reason ON a.Appointment_id = pvmax_reason.appointment_id
+    LEFT JOIN patient_visit pv ON pv.visit_id = pvmax_reason.max_visit_id
+    $whereClause
+    AND a.Reason_for_visit IS NOT NULL 
+    AND a.Reason_for_visit != ''
+    GROUP BY a.Reason_for_visit
+    ORDER BY reason_count DESC
+    LIMIT 10";
+    
+    $topReasons = executeQuery($conn, $reasonQuery, $types, $params);
+    
+    // Get appointments by day of week
+    $dayOfWeekQuery = "SELECT 
+        DATE_FORMAT(a.Appointment_date, '%W') as day_name,
+        COUNT(*) as appointment_count
+    FROM appointment a
+    LEFT JOIN (
+        SELECT appointment_id, MAX(visit_id) as max_visit_id
+        FROM patient_visit
+        GROUP BY appointment_id
+    ) pvmax_day ON a.Appointment_id = pvmax_day.appointment_id
+    LEFT JOIN patient_visit pv ON pv.visit_id = pvmax_day.max_visit_id
+    $whereClause
+    GROUP BY day_name
+    ORDER BY FIELD(day_name, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
+    
+    $appointmentsByDay = executeQuery($conn, $dayOfWeekQuery, $types, $params);
+    
     // Cast numeric types for frontend consistency
     foreach ($appointments as &$apt) {
         if (isset($apt['appointment_id'])) $apt['appointment_id'] = (int)$apt['appointment_id'];
@@ -222,18 +288,24 @@ try {
         if (isset($apt['doctor_id'])) $apt['doctor_id'] = (int)$apt['doctor_id'];
         if (isset($apt['nurse_id'])) $apt['nurse_id'] = (int)$apt['nurse_id'];
         if (isset($apt['visit_id'])) $apt['visit_id'] = (int)$apt['visit_id'];
-        if (isset($apt['total_bill'])) $apt['total_bill'] = $apt['total_bill'] === null ? null : (float)$apt['total_bill'];
+        if (isset($apt['patient_age'])) $apt['patient_age'] = (int)$apt['patient_age'];
+        if (isset($apt['visit_duration_minutes'])) $apt['visit_duration_minutes'] = $apt['visit_duration_minutes'] === null ? null : (int)$apt['visit_duration_minutes'];
     }
     unset($apt);
 
     $statsRow = (isset($stats[0]) && is_array($stats[0])) ? $stats[0] : [];
-    $numericStats = ['total_appointments','completed_count','scheduled_count','canceled_count','noshow_count','past_appointments','upcoming_appointments'];
+    $numericStats = ['total_appointments','unique_patients','completed_count','scheduled_count','canceled_count','noshow_count','past_appointments','upcoming_appointments'];
     foreach ($numericStats as $k) {
         if (isset($statsRow[$k])) {
             $statsRow[$k] = (int)$statsRow[$k];
         } else {
             $statsRow[$k] = 0;
         }
+    }
+    
+    // Round average visit duration
+    if (isset($statsRow['avg_visit_duration'])) {
+        $statsRow['avg_visit_duration'] = round((float)$statsRow['avg_visit_duration'], 1);
     }
 
     closeDBConnection($conn);
@@ -243,6 +315,9 @@ try {
         'data' => [
             'appointments' => $appointments,
             'statistics' => $statsRow,
+            'top_diagnoses' => $topDiagnoses ?? [],
+            'top_reasons' => $topReasons ?? [],
+            'appointments_by_day' => $appointmentsByDay ?? [],
             'filters' => [
                 'start_date' => $startDate,
                 'end_date' => $endDate,

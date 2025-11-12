@@ -69,7 +69,7 @@ try {
                 o.name as work_location_name,
                 sp.specialty_name,
                 cg.gender_text as gender,
-                COALESCE(NULLIF(d.phone, ''), NULLIF(s.phone, '')) as phone_number
+                d.phone as phone_number
             FROM doctor d
             INNER JOIN staff s ON d.staff_id = s.staff_id
             LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
