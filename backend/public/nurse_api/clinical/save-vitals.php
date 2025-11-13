@@ -49,7 +49,8 @@ try {
     }
 
     // 3) Parse JSON body for vitals
-    $payload = json_decode(file_get_contents('php://input'), true);
+    $raw = file_get_contents('php://input');
+    $payload = json_decode($raw, true) ?? [];
     if (!is_array($payload)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid JSON body']);
@@ -57,15 +58,21 @@ try {
         exit;
     }
 
-    // Extract vitals from payload
-    $bp    = trim($payload['bp']    ?? '');
-    $hr    = trim($payload['hr']    ?? '');
-    $temp  = trim($payload['temp']  ?? '');
-    $spo2  = trim($payload['spo2']  ?? '');
-    $weight= trim($payload['weight']?? '');
-    $height= trim($payload['height']?? '');
+    // Extract vitals from payload (normalize input keys)
+    $bp     = trim($payload['bp']     ?? '');
+    $hr     = trim($payload['hr']     ?? '');
+    $temp   = trim($payload['temp']   ?? '');
+    $spo2   = trim($payload['spo2']   ?? '');
+    $weight = trim($payload['weight'] ?? '');
+    $height = trim($payload['height'] ?? '');
     
-    error_log('[save-vitals] Vitals - BP: ' . $bp . ', Temp: ' . $temp);
+    error_log('[save-vitals] Vitals - BP: ' . $bp . ', Temp: ' . $temp . ', HR: ' . $hr . ', SpO2: ' . $spo2);
+    
+    // Validate that we have at least some vitals to save
+    if (empty($bp) && empty($temp)) {
+        error_log('[save-vitals] No vitals provided (BP and Temp both empty)');
+        // Still proceed - we'll update audit columns at minimum
+    }
 
     // 4) Get or create patient_visit
     $visitId = null;
@@ -113,7 +120,7 @@ try {
         $doctorId = isset($apptRows[0]['Doctor_id']) ? (int)$apptRows[0]['Doctor_id'] : null;
         $officeId = isset($apptRows[0]['Office_id']) ? (int)$apptRows[0]['Office_id'] : null;
 
-        // Insert new patient_visit row (using pattern from create-or-get.php)
+        // Insert new patient_visit row (using exact schema column names)
         executeQuery(
             $conn,
             "INSERT INTO patient_visit (appointment_id, patient_id, date, doctor_id, nurse_id, office_id, status, created_by) 
@@ -143,45 +150,32 @@ try {
     }
     if (!empty($temp)) {
         $updates[] = 'temperature = ?';
-        $types .= 's';
-        $params[] = $temp;
+        $types .= 'd'; // decimal type for temperature
+        $params[] = (float)$temp; // convert to numeric
     }
 
-    // Check if we have any substantial updates (beyond just audit columns)
-    $hasSubstantialUpdates = !empty($bp) || !empty($temp);
-    
-    if (!$hasSubstantialUpdates) {
-        // Nothing substantial to update, but still return success
-        closeDBConnection($conn);
-        echo json_encode([
-            'success' => true,
-            'visitId' => $visitId,
-            'appointmentId' => $appointmentId,
-            'patientId' => $patientId,
-            'vitals' => [
-                'bp' => $bp,
-                'hr' => $hr,  // Note: HR not stored in DB (no column exists)
-                'temp' => $temp,
-                'spo2' => $spo2,  // Note: SpO2 not stored in DB (no column exists)
-                'weight' => $weight,  // Note: Weight not stored in DB (no column exists)
-                'height' => $height   // Note: Height not stored in DB (no column exists)
-            ]
-        ]);
-        exit;
-    }
-
-    // Add audit columns to the updates
+    // Always add audit columns 
     $updates[] = 'updated_by = ?';
     $types .= 's';
     $params[] = $email;
+
+    // Ensure we always have at least one update (the audit column)
+    if (empty($updates)) {
+        throw new Exception('No updates to perform');
+    }
 
     // Execute the update
     $sql = "UPDATE patient_visit SET " . implode(', ', $updates) . ", last_updated = NOW() WHERE visit_id = ?";
     $types .= 'i';
     $params[] = $visitId;
     
-    error_log('[save-vitals] Executing SQL: ' . $sql . ' with params: ' . json_encode($params));
+    error_log('[save-vitals] Executing SQL: ' . $sql);
+    error_log('[save-vitals] SQL params: ' . json_encode($params));
+    error_log('[save-vitals] SQL types: ' . $types);
+    
     executeQuery($conn, $sql, $types, $params);
+    
+    error_log('[save-vitals] SQL executed successfully');
 
     closeDBConnection($conn);
 
@@ -204,6 +198,18 @@ try {
         closeDBConnection($conn);
     }
     http_response_code(500);
-    error_log('[nurse_api] save-vitals.php error: ' . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString());
-    echo json_encode(['success' => false, 'error' => 'FAILED_TO_SAVE_VITALS']);
+    error_log('[nurse_api] save-vitals.php error: ' . $e->getMessage());
+    error_log('[nurse_api] save-vitals.php stack trace: ' . $e->getTraceAsString());
+    
+    // Include error details for debugging (remove in production)
+    echo json_encode([
+        'success' => false, 
+        'error' => 'FAILED_TO_SAVE_VITALS',
+        'message' => $e->getMessage(),
+        'debug' => [
+            'appointmentId' => $appointmentId ?? 'unknown',
+            'nurseId' => $nurseId ?? 'unknown',
+            'visitId' => $visitId ?? 'unknown'
+        ]
+    ]);
 }

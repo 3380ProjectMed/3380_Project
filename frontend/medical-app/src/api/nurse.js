@@ -103,3 +103,27 @@ export async function getAppointmentsForPatient(patientId, scope = 'today') {
   // normalize shape
   return Array.isArray(data?.appointments) ? data.appointments : [];
 }
+
+export async function getNurseDashboardStats() {
+  return fetchJson(`${BASE_URL}/dashboard/get-stats.php`);
+}
+
+export async function getNurseTodaySchedule() {
+  return fetchJson(`${BASE_URL}/dashboard/get-today-schedule.php`);
+}
+
+export async function getNurseWorkSchedule() {
+  return fetchJson(`${BASE_URL}/schedule/get-work-schedule.php`);
+}
+
+export async function getNurseMonthAppointments(year, month) {
+  return fetchJson(`${BASE_URL}/schedule/get-month-appointments.php`, {
+    params: { year: year.toString(), month: month.toString() }
+  });
+}
+
+export async function getPatientDetail(patientId) {
+  return fetchJson(`${BASE_URL}/patients/get-patient-detail.php`, {
+    params: { patient_id: patientId.toString() }
+  });
+}
