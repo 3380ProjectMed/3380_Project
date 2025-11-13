@@ -175,6 +175,13 @@
   font-size: 1.1rem;
 }
 
+.loading-text {
+  color: #0077b6;
+  font-size: 0.875rem;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
 /* ========== DASHBOARD ========== */
 .dashboard-grid {
   display: grid;
