@@ -168,7 +168,7 @@ function Report() {
       setLoading(true);
       setError(null);
       const res = await fetch(
-        `/admin_api/reports/get-new-patients.php?${buildQueryParams()}`,
+        `/admin_api/reports/new-patients.php?${buildQueryParams()}`,
         { credentials: 'include' }
       );
       const data = await res.json();
@@ -914,32 +914,154 @@ function Report() {
   );
 }
 
-// Simple chart component using CSS
+// Enhanced chart component with gridlines, axis, and tooltips
 const SimpleChart = ({ data }) => {
+  const [hoveredBar, setHoveredBar] = React.useState(null);
+  const [clickedBar, setClickedBar] = React.useState(null);
+  
   if (!data || data.length === 0) return null;
 
   const maxRevenue = Math.max(...data.map(d => Number(d.gross_revenue || 0)));
   
+  // Round up to nearest nice number for Y-axis
+  const getYAxisMax = (max) => {
+    const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
+    const normalized = max / magnitude;
+    const nice = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+    return nice * magnitude;
+  };
+  
+  const yAxisMax = getYAxisMax(maxRevenue);
+  const yAxisSteps = 5;
+  const yAxisValues = Array.from({ length: yAxisSteps + 1 }, (_, i) => 
+    Math.round((yAxisMax * i / yAxisSteps) * 100) / 100
+  );
+
+  const formatCurrency = (value) => {
+    if (value >= 1000) {
+      return `$${(value / 1000).toFixed(1)}k`;
+    }
+    return `$${value.toFixed(0)}`;
+  };
+
+  const handleBarClick = (item, idx) => {
+    setClickedBar(clickedBar === idx ? null : idx);
+  };
+
+  const handleOutsideClick = () => {
+    setClickedBar(null);
+  };
+
+  React.useEffect(() => {
+    if (clickedBar !== null) {
+      document.addEventListener('click', handleOutsideClick);
+      return () => document.removeEventListener('click', handleOutsideClick);
+    }
+  }, [clickedBar]);
+  
   return (
     <div className="simple-chart">
-      <div className="chart-bars">
-        {data.map((item, idx) => {
-          const height = maxRevenue > 0 ? (Number(item.gross_revenue || 0) / maxRevenue) * 100 : 0;
-          const collected = Number(item.collected_payments || 0);
-          const collectedHeight = maxRevenue > 0 ? (collected / maxRevenue) * 100 : 0;
-          
-          return (
-            <div key={idx} className="chart-bar-group">
-              <div className="chart-bar-container">
-                <div className="chart-bar chart-bar-gross" style={{ height: `${height}%` }}>
-                  <div className="chart-bar-collected" style={{ height: `${height ? (collectedHeight / height) * 100 : 0}%` }} />
-                </div>
-              </div>
-              <div className="chart-label">{item.period_label}</div>
+      <div className="chart-wrapper">
+        {/* Y-Axis */}
+        <div className="chart-y-axis">
+          {yAxisValues.reverse().map((value, idx) => (
+            <div key={idx} className="y-axis-label">
+              {formatCurrency(value)}
             </div>
-          );
-        })}
+          ))}
+        </div>
+        
+        {/* Chart Area */}
+        <div className="chart-area">
+          {/* Gridlines */}
+          <div className="chart-gridlines">
+            {yAxisValues.map((_, idx) => (
+              <div key={idx} className="gridline" />
+            ))}
+          </div>
+          
+          {/* Bars */}
+          <div className="chart-bars">
+            {data.map((item, idx) => {
+              const grossRevenue = Number(item.gross_revenue || 0);
+              const collected = Number(item.collected_payments || 0);
+              const outstanding = Number(item.outstanding_balance || 0);
+              const height = yAxisMax > 0 ? (grossRevenue / yAxisMax) * 100 : 0;
+              const collectedHeight = yAxisMax > 0 ? (collected / yAxisMax) * 100 : 0;
+              
+              return (
+                <div 
+                  key={idx} 
+                  className="chart-bar-group"
+                  onMouseEnter={() => setHoveredBar(idx)}
+                  onMouseLeave={() => setHoveredBar(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBarClick(item, idx);
+                  }}
+                >
+                  <div className="chart-bar-container">
+                    <div 
+                      className={`chart-bar chart-bar-gross ${hoveredBar === idx ? 'hovered' : ''}`}
+                      style={{ height: `${height}%` }}
+                    >
+                      <div 
+                        className="chart-bar-collected" 
+                        style={{ height: `${height ? (collectedHeight / height) * 100 : 0}%` }} 
+                      />
+                    </div>
+                    
+                    {/* Tooltip */}
+                    {(hoveredBar === idx || clickedBar === idx) && (
+                      <div className={`chart-tooltip ${clickedBar === idx ? 'clicked' : ''}`}>
+                        <div className="tooltip-header">{item.period_label}</div>
+                        <div className="tooltip-row">
+                          <span className="tooltip-label">
+                            <span className="tooltip-dot gross" />
+                            Gross Revenue:
+                          </span>
+                          <span className="tooltip-value">${grossRevenue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="tooltip-row">
+                          <span className="tooltip-label">
+                            <span className="tooltip-dot collected" />
+                            Collected:
+                          </span>
+                          <span className="tooltip-value">${collected.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="tooltip-row">
+                          <span className="tooltip-label">
+                            <span className="tooltip-dot outstanding" />
+                            Outstanding:
+                          </span>
+                          <span className="tooltip-value">${outstanding.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="tooltip-divider" />
+                        <div className="tooltip-row small">
+                          <span className="tooltip-label">Visits:</span>
+                          <span className="tooltip-value">{item.total_visits}</span>
+                        </div>
+                        <div className="tooltip-row small">
+                          <span className="tooltip-label">Patients:</span>
+                          <span className="tooltip-value">{item.unique_patients}</span>
+                        </div>
+                        <div className="tooltip-row small">
+                          <span className="tooltip-label">Collection Rate:</span>
+                          <span className="tooltip-value">
+                            {grossRevenue > 0 ? ((collected / grossRevenue) * 100).toFixed(1) : '0.0'}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="chart-label">{item.period_label}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
+      
       <div className="chart-legend">
         <div className="legend-item">
           <span className="legend-color legend-gross" />
@@ -948,6 +1070,10 @@ const SimpleChart = ({ data }) => {
         <div className="legend-item">
           <span className="legend-color legend-collected" />
           <span>Collected</span>
+        </div>
+        <div className="legend-hint">
+          <AlertCircle size={14} />
+          <span>Click bars for details</span>
         </div>
       </div>
     </div>
