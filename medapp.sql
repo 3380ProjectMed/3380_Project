@@ -82,6 +82,15 @@ DELIMITER ;;
         
         IF has_approved_referral > 0 THEN
             SET NEW.Status = 'Scheduled';
+            -- Link the referral to this appointment
+            UPDATE referral 
+            SET appointment_id = NEW.Appointment_id 
+            WHERE patient_id = NEW.Patient_id 
+            AND specialist_doctor_staff_id = NEW.Doctor_id 
+            AND date_of_approval IS NOT NULL 
+            AND appointment_id IS NULL 
+            ORDER BY date_of_approval ASC 
+            LIMIT 1;
         ELSE
             -- No referral found
             SIGNAL SQLSTATE '45000'

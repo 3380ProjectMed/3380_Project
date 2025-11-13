@@ -418,7 +418,9 @@ export default function PatientPortal({ onLogout }) {
         setAppointmentReason(''); 
         setNeedsReferral(false);
         setBookingLoading(false);
+        // Refresh both appointments and referrals data
         loadAppointments();
+        loadReferrals();
       } else {
         const msg = r?.message || 'Failed to book appointment';
         setBookingError(msg);
@@ -466,7 +468,9 @@ export default function PatientPortal({ onLogout }) {
       if (r.success) {
         // Show success toast instead of alert
         setToast({ message: 'Appointment cancelled successfully', type: 'success' });
+        // Refresh both appointments and referrals data
         loadAppointments();
+        loadReferrals();
       } else {
         setToast({ message: r?.message || 'Failed to cancel appointment', type: 'error' });
       }
@@ -668,6 +672,8 @@ export default function PatientPortal({ onLogout }) {
     handleBookingBack,
     handleBookingSubmit,
     handleCancelAppointment,
+    selectedDoctor,
+    setSelectedDoctor,
     formData,
     setFormData,
     profileErrors,
