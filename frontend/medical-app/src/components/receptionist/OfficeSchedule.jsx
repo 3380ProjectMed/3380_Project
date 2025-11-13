@@ -19,6 +19,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   const [bookedSlots, setBookedSlots] = useState({});
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(false);
 
   /**
    * Load doctors and appointments when component mounts or date changes
@@ -69,8 +70,14 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       
       if (appointmentsResult.success) {
         // Convert appointments to booked slots lookup
+        // Filter out cancelled appointments so those slots become available
         const slots = {};
         (appointmentsResult.appointments || []).forEach(apt => {
+          // Skip cancelled appointments - they don't block slots
+          if (apt.status === 'Cancelled' || apt.status === 'Canceled') {
+            return;
+          }
+          
           // Extract date and time from Appointment_date (format: "YYYY-MM-DD HH:MM:SS")
           const appointmentDateTime = apt.Appointment_date; // e.g., "2025-11-11 11:00:00"
           const key = `${apt.Doctor_id}-${appointmentDateTime}`;
@@ -410,6 +417,49 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   };
 
   /**
+   * Check in patient for appointment
+   */
+  const handleCheckInAppointment = async () => {
+    if (!selectedAppointment || !selectedAppointment.appointment_id) return;
+    
+    if (!window.confirm('Check in this patient?')) {
+      return;
+    }
+    
+    try {
+      setCheckingIn(true);
+      
+      const response = await fetch('/receptionist_api/appointments/check-in.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          Appointment_id: selectedAppointment.appointment_id
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Close modal
+        setSelectedAppointment(null);
+        // Reload schedule data
+        loadScheduleData();
+        alert('Patient checked in successfully');
+      } else {
+        alert('Failed to check in patient: ' + (result.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to check in patient:', err);
+      alert('Failed to check in patient. Please try again.');
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
+  /**
    * Get status badge class
    */
   const getStatusClass = (status) => {
@@ -418,6 +468,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       'scheduled': 'status-scheduled',
       'ready': 'status-ready',
       'waiting': 'status-waiting',
+      'checked-in': 'status-checked-in',
       'checked in': 'status-checked-in',
       'in progress': 'status-in-progress',
       'completed': 'status-completed',
@@ -682,6 +733,14 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             </div>
 
             <div className="modal-footer">
+              <button 
+                className="btn btn-success"
+                onClick={handleCheckInAppointment}
+                disabled={checkingIn || selectedAppointment.status === 'Checked-in' || selectedAppointment.status === 'Cancelled' || selectedAppointment.status === 'Completed'}
+              >
+                <Check size={18} />
+                {checkingIn ? 'Checking In...' : 'Check In'}
+              </button>
               <button 
                 className="btn btn-primary"
                 onClick={handleEditAppointment}

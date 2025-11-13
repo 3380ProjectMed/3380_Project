@@ -13,6 +13,14 @@ export default function NurseVitalsModal({ patient, appointment, appointmentId, 
     setTemp(initialVitals.temperature || initialVitals.temp || '');
   }, [initialVitals]);
 
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') onClose && onClose();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   async function handleSave(e) {
     e.preventDefault();
     setError(null);
@@ -25,7 +33,7 @@ export default function NurseVitalsModal({ patient, appointment, appointmentId, 
       const payload = { bp, temp };
       await saveNurseVitals(appointmentId, payload);
       if (onSaved) onSaved({ appointmentId, visitId, blood_pressure: bp, temperature: temp });
-      onClose();
+      onClose && onClose();
     } catch (err) {
       setError(err?.message || 'Failed to save vitals');
     } finally {
@@ -34,12 +42,15 @@ export default function NurseVitalsModal({ patient, appointment, appointmentId, 
   }
 
   return (
-    <div className="nurse-modal-backdrop">
-      <div className="nurse-modal" role="dialog" aria-modal="true">
-        <h2>Edit Vitals — {patient.first_name} {patient.last_name}</h2>
+    <div className="modal-overlay" onClick={() => onClose && onClose()}>
+      <div className="modal-content" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Edit Vitals — {patient.first_name} {patient.last_name}</h2>
+          <button className="modal-close" onClick={() => onClose && onClose()} aria-label="Close">✕</button>
+        </div>
         <div style={{ color: '#666', marginBottom: 8 }}>Appointment #{appointmentId} — {appointment?.Appointment_date ? new Date(appointment.Appointment_date).toLocaleString() : ''} {appointment?.office_name ? `@ ${appointment.office_name}` : ''}</div>
         {error && <div className="alert error" style={{ marginTop: 8 }}>{error}</div>}
-        <form className="vitals-form" onSubmit={handleSave}>
+        <form className="modal-form vitals-form" onSubmit={handleSave}>
           <div className="vitals-grid">
             <label>
               Blood Pressure
@@ -51,8 +62,8 @@ export default function NurseVitalsModal({ patient, appointment, appointmentId, 
             </label>
           </div>
           <div className="modal-actions">
-            <button type="button" onClick={onClose} disabled={saving}>Cancel</button>
-            <button type="submit" className="primary" disabled={saving}>{saving ? 'Saving...' : 'Save Vitals'}</button>
+            <button type="button" onClick={() => onClose && onClose()} disabled={saving}>Cancel</button>
+            <button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Vitals'}</button>
           </div>
         </form>
       </div>

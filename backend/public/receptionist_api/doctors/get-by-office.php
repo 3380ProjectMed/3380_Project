@@ -19,12 +19,14 @@ try {
 
     $conn = getDBConnection();
 
+    // Get doctors who have had appointments at this office
     $sql = "SELECT DISTINCT d.doctor_id, doc_staff.first_name as first_name, doc_staff.last_name as last_name,
              s.specialty_name, s.specialty_id
          FROM doctor d
          LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
          JOIN specialty s ON d.specialty = s.specialty_id
-    WHERE doc_staff.work_location = ?
+         JOIN appointment a ON d.doctor_id = a.Doctor_id
+    WHERE a.Office_id = ?
     ORDER BY doc_staff.last_name, doc_staff.first_name";
 
     $rows = executeQuery($conn, $sql, 'i', [$officeId]);

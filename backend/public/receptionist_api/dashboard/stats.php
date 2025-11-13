@@ -4,7 +4,7 @@
  * IMPROVED VERSION: Uses intelligent time-based status calculation
  * 
  * DATABASE SCHEMA NOTES:
- * - staff.work_location -> office.office_id (receptionist's office)
+ * - work_schedule.office_id (receptionist's office via staff_id)
  * - appointment.Patient_id -> patient.patient_id (case-sensitive join)
  * - appointment.Doctor_id -> doctor.doctor_id
  * - appointment.Office_id -> office.office_id
@@ -36,11 +36,13 @@ try {
 
     try {
         $rows = executeQuery($conn, '
-            SELECT s.work_location as office_id, o.name as office_name, o.address, o.phone
+            SELECT ws.office_id, o.name as office_name, o.address, o.phone
             FROM staff s
             JOIN user_account ua ON ua.email = s.staff_email
-            JOIN office o ON s.work_location = o.office_id
-            WHERE ua.user_id = ?', 'i', [$user_id]);
+            JOIN work_schedule ws ON ws.staff_id = s.staff_id
+            LEFT JOIN office o ON ws.office_id = o.office_id
+            WHERE ua.user_id = ?
+            LIMIT 1', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
         throw $ex;
