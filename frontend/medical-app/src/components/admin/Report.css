@@ -851,6 +851,7 @@
 .chart-bar-container {
 	width: 100%;
 	position: absolute;
+	top: 0; /* CRITICAL: Define both top and bottom */
 	bottom: 30px; /* Above the label */
 	left: 0;
 	right: 0;
@@ -1186,6 +1187,7 @@
 	}
 
 	.chart-bar-container {
+		top: 0; /* CRITICAL: Define both top and bottom */
 		bottom: 35px; /* Match padding-bottom */
 	}
 
