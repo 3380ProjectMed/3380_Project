@@ -56,6 +56,17 @@ function Report() {
     fetchFilterOptions();
   }, []);
 
+  // Fetch report data when activeReport changes
+  useEffect(() => {
+    if (activeReport === 'financial') {
+      fetchFinancialReport();
+    } else if (activeReport === 'office') {
+      fetchOfficeUtilization();
+    } else if (activeReport === 'newPatients') {
+      fetchNewPatientsReport();
+    }
+  }, [activeReport]);
+
   const fetchFilterOptions = async () => {
     try {
       const [officesRes, doctorsRes, insurancesRes] = await Promise.all([
@@ -324,14 +335,6 @@ function Report() {
       </div>
     );
   }
-
-  // Main report view
-  useEffect(() => {
-    if (activeReport === 'financial') fetchFinancialReport();
-    if (activeReport === 'office') fetchOfficeUtilization();
-    if (activeReport === 'newPatients') fetchNewPatientsReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeReport]);
 
   const headerTitle =
     activeReport === 'financial'
