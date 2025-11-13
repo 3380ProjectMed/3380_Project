@@ -698,7 +698,7 @@ elseif ($endpoint === 'doctors') {
         try {
             $specialty_filter = $_GET['specialty'] ?? null;
 
-            $query = "
+            $base_query = "
                 SELECT DISTINCT
                     d.doctor_id,
                     CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as name,
@@ -710,14 +710,13 @@ elseif ($endpoint === 'doctors') {
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
                 LEFT JOIN work_schedule ws ON doc_staff.staff_id = ws.staff_id
                 LEFT JOIN office o ON ws.office_id = o.office_id
-                GROUP BY d.doctor_id, doc_staff.first_name, doc_staff.last_name, s.specialty_name
             ";
 
             if ($specialty_filter) {
-                $query .= " WHERE s.specialty_name = ?";
+                $query = $base_query . " WHERE s.specialty_name = ? GROUP BY d.doctor_id, doc_staff.first_name, doc_staff.last_name, s.specialty_name ORDER BY doc_staff.last_name, doc_staff.first_name";
+            } else {
+                $query = $base_query . " GROUP BY d.doctor_id, doc_staff.first_name, doc_staff.last_name, s.specialty_name ORDER BY doc_staff.last_name, doc_staff.first_name";
             }
-
-            $query .= " ORDER BY doc_staff.last_name, doc_staff.first_name";
 
             if ($specialty_filter) {
                 $stmt = $mysqli->prepare($query);
