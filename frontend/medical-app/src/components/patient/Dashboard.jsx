@@ -3,7 +3,7 @@ import { Calendar, User, Activity, Clock, MapPin, Phone, Mail, Check, Plus, Stet
 import './Dashboard.css';
 
 export default function Dashboard(props) {
-  const { displayName, loading, upcomingAppointments = [], pcp, recentActivity = [], referrals = { active: [], used: [] }, setShowBookingModal, handleCancelAppointment } = props;
+  const { displayName, loading, upcomingAppointments = [], pcp, recentActivity = [], referrals = { active: [], used: [] }, setShowBookingModal, handleCancelAppointment, setSelectedDoctor } = props;
 
   const getUrgencyIcon = (urgencyLevel) => {
     switch (urgencyLevel) {
@@ -39,6 +39,17 @@ export default function Dashboard(props) {
   const nonReferralActivity = recentActivity.filter(activity => 
     activity.activity_type !== 'referral' && activity.status !== 'Referral Approved'
   );
+
+  const handleReferralBooking = (referral) => {
+    // Pre-select the specialist doctor for this referral
+    const doctorInfo = {
+      doctor_id: referral.specialist_id,
+      name: referral.specialist_name,
+      specialty_name: referral.specialty_name
+    };
+    setSelectedDoctor(doctorInfo);
+    setShowBookingModal(true);
+  };
 
   return (
     <div className="portal-content">
@@ -133,7 +144,7 @@ export default function Dashboard(props) {
                       {!referral.is_used ? (
                         <button 
                           className={`btn btn-sm btn-referral-action ${referral.urgency_level === 'urgent' ? 'urgent' : ''}`}
-                          onClick={() => setShowBookingModal(true)}
+                          onClick={() => handleReferralBooking(referral)}
                         >
                           <Calendar className="small-icon" />
                           {referral.urgency_level === 'urgent' ? 'Book Now!' : 'Book Appointment'}
