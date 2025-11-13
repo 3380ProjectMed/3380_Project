@@ -83,7 +83,7 @@ export async function saveNurseVitals(appointmentId, vitals) {
   if (vitals.weight) payload.weight = vitals.weight;
   return fetchJson(`${BASE_URL}/clinical/save-vitals.php`, {
     method: 'POST',
-    params: { apptId: appointmentId },
+    params: { appointment_id: appointmentId },
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
@@ -95,4 +95,11 @@ export async function createOrGetNurseVisit(appointmentId) {
   return fetchJson(`${BASE_URL}/visits/create-or-get.php`, {
     params: { appointment_id: appointmentId }
   });
+}
+
+export async function getAppointmentsForPatient(patientId, scope = 'today') {
+  if (!patientId) throw new Error('patientId required');
+  const data = await fetchJson(`${BASE_URL}/appointments/get-for-patient.php`, { params: { patient_id: patientId, scope } });
+  // normalize shape
+  return Array.isArray(data?.appointments) ? data.appointments : [];
 }

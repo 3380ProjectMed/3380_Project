@@ -60,24 +60,38 @@ try {
     }
 
     // If no visit, get appointment info to populate patient_id/date
-    $arows = executeQuery($conn, 'SELECT Appointment_id, Patient_id, Appointment_date FROM appointment WHERE Appointment_id = ? LIMIT 1', 'i', [$appointment_id]);
+    $arows = executeQuery($conn, 'SELECT Appointment_id, Patient_id, Appointment_date, Doctor_id, Office_id FROM appointment WHERE Appointment_id = ? LIMIT 1', 'i', [$appointment_id]);
     if (empty($arows)) {
         closeDBConnection($conn);
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'Appointment not found']);
         exit;
     }
-
     $appt = $arows[0];
     $patient_id = isset($appt['Patient_id']) ? intval($appt['Patient_id']) : 0;
     $appt_date = $appt['Appointment_date'] ?? null;
+    $doctor_id = isset($appt['Doctor_id']) ? intval($appt['Doctor_id']) : null;
+    $office_id = isset($appt['Office_id']) ? intval($appt['Office_id']) : null;
 
-    // Insert a new patient_visit row
-    $sql = 'INSERT INTO patient_visit (appointment_id, patient_id, date, nurse_id, status, created_by) VALUES (?, ?, ?, ?, ?, ?)';
-    $param_types = 'iiisss';
+    // Insert a new patient_visit row (use status that's valid in schema)
+    $sql = 'INSERT INTO patient_visit (appointment_id, patient_id, date, doctor_id, nurse_id, office_id, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+    // types: appointment_id(i), patient_id(i), date(s), doctor_id(i), nurse_id(i), office_id(i), status(s), created_by(s)
+    $param_types = 'iisiiiss';
     $created_by = $nurse_name ?: $email;
-    executeQuery($conn, $sql, $param_types, [$appointment_id, $patient_id, $appt_date, $nurse_id, 'NURSE_INTAKE', $created_by]);
+    executeQuery($conn, $sql, $param_types, [$appointment_id, $patient_id, $appt_date, $doctor_id, $nurse_id, $office_id, 'Scheduled', $created_by]);
     $visit_id = $conn->insert_id;
+
+    // Try to return any initial vitals from patient_visit (likely empty immediately after insert)
+    $pv = executeQuery($conn, 'SELECT visit_id, appointment_id, blood_pressure, temperature, present_illnesses FROM patient_visit WHERE visit_id = ? LIMIT 1', 'i', [$visit_id]);
+    $existingVitals = [];
+    if (!empty($pv)) {
+        $r = $pv[0];
+        $existingVitals = [
+            'blood_pressure' => $r['blood_pressure'] ?? null,
+            'temperature' => $r['temperature'] ?? null,
+            'present_illnesses' => $r['present_illnesses'] ?? null
+        ];
+    }
 
     closeDBConnection($conn);
 
@@ -86,7 +100,8 @@ try {
         'visitId' => (int)$visit_id,
         'appointmentId' => (int)$appointment_id,
         'nurseId' => $nurse_id,
-        'status' => 'NURSE_INTAKE'
+        'status' => 'Scheduled',
+        'existingVitals' => $existingVitals
     ]);
 
 } catch (Throwable $e) {

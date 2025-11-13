@@ -46,9 +46,10 @@ try {
     $appointment_id = (int)$_GET['appointment_id'];
 
     // 3) Make sure a patient_visit exists for this appointment
+    // 3) Find patient_visit for this appointment
     $visitRows = executeQuery(
         $conn,
-        "SELECT Visit_id
+        "SELECT visit_id, nurse_id
            FROM patient_visit
           WHERE appointment_id = ?
           LIMIT 1",
@@ -57,14 +58,14 @@ try {
     );
 
     if (empty($visitRows)) {
-        // For now, we require the visit to be created elsewhere
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'VISIT_NOT_FOUND_FOR_APPOINTMENT']);
         closeDBConnection($conn);
         exit;
     }
 
-    $visit_id = (int)$visitRows[0]['Visit_id'];
+    $visit_id = (int)$visitRows[0]['visit_id'];
+    $visit_nurse_id = isset($visitRows[0]['nurse_id']) ? (int)$visitRows[0]['nurse_id'] : null;
 
     // 4) Parse JSON body for vitals
     $body = json_decode(file_get_contents('php://input'), true);
@@ -75,22 +76,53 @@ try {
         exit;
     }
 
-    // Frontend sends these keys; we map to columns we KNOW exist
-    $bp   = $body['bp']   ?? null; // stored in patient_visit.blood_pressure
-    $temp = $body['temp'] ?? null; // stored in patient_visit.temperature
 
-    // If you later add more columns (hr, spo2, etc.), extend this UPDATE
-    executeQuery(
-        $conn,
-        "UPDATE patient_visit
-            SET blood_pressure = ?,
-                temperature   = ?,
-                updated_by    = ?,
-                updated_at    = NOW()
-          WHERE Visit_id = ?",
-        'ssii',
-        [$bp, $temp, $nurse_id, $visit_id]
-    );
+    // Map known keys to columns that exist in schema
+    $bp   = isset($body['bp']) ? $body['bp'] : null; // patient_visit.blood_pressure
+    $temp = isset($body['temp']) ? $body['temp'] : null; // patient_visit.temperature
+
+    // Determine which column updates to perform
+    $updates = [];
+    $params = [];
+    $types = '';
+
+    if (!is_null($bp)) {
+        $updates[] = 'blood_pressure = ?';
+        $types .= 's';
+        $params[] = $bp;
+    }
+    if (!is_null($temp)) {
+        $updates[] = 'temperature = ?';
+        $types .= 's';
+        $params[] = $temp;
+    }
+
+    // Always update audit columns
+    $updates[] = 'updated_by = ?';
+    $types .= 's';
+    $params[] = $nurse_name ?: $email;
+
+    // Build WHERE clause to ensure nurse owns the visit (or allow if null)
+    // Use appointment_id and nurse_id to be safe
+    $sql = "UPDATE patient_visit SET " . implode(', ', $updates) . " , last_updated = NOW() WHERE appointment_id = ?";
+    $types .= 'i';
+    $params[] = $appointment_id;
+
+    // If patient_visit has a nurse_id, require it matches current nurse; otherwise allow update
+    if (!is_null($visit_nurse_id)) {
+        $sql .= ' AND nurse_id = ?';
+        $types .= 'i';
+        $params[] = $nurse_id;
+    }
+
+    if (empty($updates)) {
+        // Nothing to update
+        closeDBConnection($conn);
+        echo json_encode(['success' => true, 'message' => 'No vitals to update', 'visitId' => $visit_id, 'appointmentId' => $appointment_id]);
+        exit;
+    }
+
+    executeQuery($conn, $sql, $types, $params);
 
     closeDBConnection($conn);
 
