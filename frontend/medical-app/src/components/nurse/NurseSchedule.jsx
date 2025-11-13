@@ -1,19 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './NurseSchedule.css';
-import { getNurseSchedule, createOrGetNurseVisit } from '../../api/nurse';
+import { getNurseScheduleToday } from '../../api/nurse';
 
-// Helper: get days in month
-function getDaysInMonth(date) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-}
-function getStartingDay(date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function normalizeDayName(d) {
+  if (!d && d !== 0) return null;
+  // If numeric (0=Sunday?), try to map
+  if (typeof d === 'number') {
+    // If stored as 0=Sunday, shift to Monday..Sunday mapping
+    const names = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    return names[d];
+  }
+  // Normalize common short names
+  const dd = String(d).toLowerCase();
+  if (dd.startsWith('mon')) return 'Monday';
+  if (dd.startsWith('tue')) return 'Tuesday';
+  if (dd.startsWith('wed')) return 'Wednesday';
+  if (dd.startsWith('thu')) return 'Thursday';
+  if (dd.startsWith('fri')) return 'Friday';
+  if (dd.startsWith('sat')) return 'Saturday';
+  if (dd.startsWith('sun')) return 'Sunday';
+  // If it's full name already
+  return d;
 }
 
-export default function NurseSchedule(props) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [appointments, setAppointments] = useState([]);
+function formatTime(t) {
+  if (!t) return '';
+  // accept HH:MM:SS or HH:MM
+  const m = String(t).match(/(\d{1,2}):(\d{2})(:?\d{0,2})?/);
+  if (!m) return t;
+  let hh = parseInt(m[1], 10);
+  const mm = m[2];
+  const ampm = hh >= 12 ? 'PM' : 'AM';
+  hh = ((hh + 11) % 12) + 1;
+  return `${hh}:${mm} ${ampm}`;
+}
+
+export default function NurseSchedule() {
+  const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -23,132 +48,92 @@ export default function NurseSchedule(props) {
       setLoading(true);
       setError(null);
       try {
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        const days = getDaysInMonth(currentDate);
-        let all = [];
-        for (let d = 1; d <= days; d++) {
-          const dateStr = `${year}-${month}-${String(d).padStart(2, '0')}`;
-          try {
-            const apptsRaw = await getNurseSchedule({ date: dateStr });
-            // Normalize payload: accept array or envelope { appointments: [] } or { schedule: [] }
-            const appts = Array.isArray(apptsRaw) ? apptsRaw : (apptsRaw?.appointments || apptsRaw?.schedule || []);
-            if (Array.isArray(appts) && appts.length > 0) {
-              all = all.concat(appts.map(a => ({ ...a, _date: dateStr })));
-            }
-          } catch (err) {
-            // Optionally log or handle per-day errors
-          }
+        const data = await getNurseScheduleToday();
+        // Expect { schedule: [...] } or { data: ... }
+        const raw = data?.schedule || data?.data || data || [];
+        if (!Array.isArray(raw)) {
+          setShifts([]);
+        } else {
+          // normalize day names
+          const normalized = raw.map(s => ({
+            day_of_week: normalizeDayName(s.day_of_week ?? s.day ?? s.weekday),
+            start_time: s.start_time || s.start || s.startTime,
+            end_time: s.end_time || s.end || s.endTime,
+            office_name: s.office_name || s.office || s.location || '',
+            address: s.address || s.addr || '',
+            city: s.city || '',
+            state: s.state || ''
+          }));
+          if (mounted) setShifts(normalized);
         }
-        if (mounted) setAppointments(all);
       } catch (e) {
-        if (mounted) setError(e.message || 'Failed to load schedule');
+        if (mounted) setError(e.message || 'Failed to load work schedule');
       } finally {
         if (mounted) setLoading(false);
       }
     }
     load();
     return () => { mounted = false; };
-  }, [currentDate]);
+  }, []);
 
-  // Calendar helpers
-  const days = Array.from({ length: getDaysInMonth(currentDate) }, (_, i) => i + 1);
-  const startingDay = getStartingDay(currentDate);
-
-  // Group appointments by date
-  const apptByDate = {};
-  appointments.forEach(a => {
-    if (!apptByDate[a._date]) apptByDate[a._date] = [];
-    apptByDate[a._date].push(a);
+  // Build a map day => array of shifts
+  const shiftsByDay = {};
+  WEEK_DAYS.forEach(d => { shiftsByDay[d] = []; });
+  shifts.forEach(s => {
+    const d = s.day_of_week || null;
+    if (d && shiftsByDay[d]) shiftsByDay[d].push(s);
   });
-
-  // Navigation
-  const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  };
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  };
-
-  // Month/year display
-  const currentMonthName = currentDate.toLocaleString('default', { month: 'long' });
-  const currentYear = currentDate.getFullYear();
 
   return (
     <div className="nurse-page">
       <div className="nurse-schedule-page">
-        <h1>My Schedule</h1>
-        <div className="schedule-header">
-          <div className="month-navigation">
-            <button onClick={goToPreviousMonth} className="nav-arrow" aria-label="Previous month">
-              <ChevronLeft size={24} />
-            </button>
-            <h2 className="month-title">{currentMonthName} {currentYear}</h2>
-            <button onClick={goToNextMonth} className="nav-arrow" aria-label="Next month">
-              <ChevronRight size={24} />
-            </button>
+        <h1>My Work Schedule</h1>
+
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+            Loading schedule...
           </div>
-        </div>
-        <div className="calendar-container">
-          {loading && (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-              Loading appointments...
+        )}
+
+        {error && (
+          <div style={{ padding: '12px', marginBottom: '12px', backgroundColor: '#fee', borderRadius: '4px', color: '#c00' }}>{error}</div>
+        )}
+
+        {!loading && !error && (
+          <div className="schedule-table">
+            <div className="schedule-row header">
+              <div className="col day">Day</div>
+              <div className="col hours">Shift Hours</div>
+              <div className="col location">Location</div>
             </div>
-          )}
-          {error && (
-            <div style={{ padding: '12px', marginBottom: '12px', backgroundColor: '#fee', borderRadius: '4px', color: '#c00' }}>{error}</div>
-          )}
-          <div className="calendar-grid">
-            {/* Weekday Headers */}
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="weekday-header">{day}</div>
-            ))}
-            {/* Empty cells before first day of month */}
-            {Array.from({ length: startingDay }).map((_, i) => (
-              <div key={`empty-${i}`} className="calendar-day empty-day"></div>
-            ))}
-            {/* Calendar Days */}
-            {days.map(day => {
-              const dateStr = `${currentYear}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              const appts = apptByDate[dateStr] || [];
+            {WEEK_DAYS.map(day => {
+              const dayShifts = shiftsByDay[day] || [];
+              if (dayShifts.length === 0) {
+                return (
+                  <div key={day} className="schedule-row">
+                    <div className="col day">{day}</div>
+                    <div className="col hours">Off</div>
+                    <div className="col location">-</div>
+                  </div>
+                );
+              }
+              // Render first shift; if multiple, join
+              const hours = dayShifts.map(s => `${formatTime(s.start_time)} - ${formatTime(s.end_time)}`).join(' / ');
+              const loc = dayShifts.map(s => {
+                const parts = [s.office_name, s.address, s.city, s.state].filter(Boolean);
+                return parts.join(', ');
+              }).join(' / ');
+
               return (
-                <div key={day} className={`calendar-day${appts.length === 0 ? ' no-appts' : ''}`}>
-                  <div className="day-header">
-                    <span className="day-number">{day}</span>
-                  </div>
-                  <div className="day-content">
-                    {appts.length === 0 ? (
-                      <p className="no-appointments">No appointments</p>
-                    ) : (
-                      <div className="appointments">
-                        {appts.map((a, i) => {
-                          const apptId = a.appointmentId || a.Appointment_id || a.id;
-                          return (
-                            <div key={apptId ?? i} className="appointment-item" onClick={async () => {
-                                if (!apptId) return;
-                                try {
-                                  const resp = await createOrGetNurseVisit(apptId);
-                                  const visitId = resp?.visitId || resp?.visit_id || null;
-                                  if (typeof props?.onOpenClinical === 'function') {
-                                    props.onOpenClinical(apptId, visitId);
-                                  }
-                                } catch (err) {
-                                  console.error('Failed to open clinical for appointment', err);
-                                }
-                              }}>
-                              <p className="appointment-time">{a.time ? a.time.substring(0,5) : ''}</p>
-                              <p className="appointment-patient">{a.patientName || a.patientName || '-'}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                <div key={day} className="schedule-row">
+                  <div className="col day">{day}</div>
+                  <div className="col hours">{hours}</div>
+                  <div className="col location">{loc}</div>
                 </div>
               );
             })}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
