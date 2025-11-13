@@ -47,9 +47,6 @@ export const appointmentsAPI = {
     return j(url);
   },
 
-  getDoctorSchedule: (doctorId) =>
-    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=schedule&doctor_id=${doctorId}`),
-
   getOffices: () => 
     j(`${PATIENT_API_BASE}/patient_api.php?endpoint=offices`)
 }
