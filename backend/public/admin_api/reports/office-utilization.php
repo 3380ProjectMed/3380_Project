@@ -6,13 +6,30 @@
     try {
         session_start();
         
-        if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'Admin access required']);
+        if (empty($_SESSION['uid'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Not authenticated']);
             exit;
         }
-        
+
         $conn = getDBConnection();
+
+        // Fetch role from DB using uid
+        $userRows = executeQuery(
+            $conn,
+            "SELECT role FROM user_account WHERE user_id = ?",
+            "i",
+            [$_SESSION['uid']]
+        );
+
+        $userRole = $userRows[0]['role'] ?? null;
+
+        if ($userRole !== 'ADMIN') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Admin access required']);
+            closeDBConnection($conn);
+            exit;
+        }
         
         // Get and validate parameters
         $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-30 days'));
