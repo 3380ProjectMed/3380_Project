@@ -767,6 +767,17 @@ function Report() {
               subtitle="Across all offices"
             />
           </div>
+          {officeData.office_stats && officeData.office_stats.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>Utilization by Office</h3>
+                <p className="section-subtitle">
+                  Share of total appointments in this period
+                </p>
+              </div>
+              <OfficeUtilizationPie offices={officeData.office_stats} />
+            </section>
+          )}
 
           <section className="report-section">
             <div className="section-header">
@@ -959,6 +970,68 @@ function Report() {
     </div>
   );
 }
+const OfficeUtilizationPie = ({ offices }) => {
+  const total = offices.reduce(
+    (sum, o) => sum + (o.total_appointments || 0),
+    0
+  );
+
+  if (!total) {
+    return <p className="chart-empty">No appointment data for this period.</p>;
+  }
+
+  const radius = 16;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <div className="office-pie-card">
+      <svg viewBox="0 0 40 40" className="pie-chart-svg">
+        {/* background circle */}
+        <circle
+          cx="20"
+          cy="20"
+          r={radius}
+          className="pie-background"
+        />
+        {offices.map((office, idx) => {
+          const value = office.total_appointments || 0;
+          const fraction = value / total;
+          const dash = fraction * circumference;
+          const gap = circumference - dash;
+          const slice = (
+            <circle
+              key={office.office_id || idx}
+              cx="20"
+              cy="20"
+              r={radius}
+              className={`pie-slice pie-slice-${idx % 6}`}
+              strokeDasharray={`${dash} ${gap}`}
+              strokeDashoffset={-offset}
+            />
+          );
+          offset += dash;
+          return slice;
+        })}
+      </svg>
+
+      <div className="pie-legend">
+        {offices.map((office, idx) => (
+          <div key={office.office_id || idx} className="pie-legend-row">
+            <span className={`pie-legend-color pie-slice-${idx % 6}`} />
+            <div className="pie-legend-text">
+              <div className="pie-legend-title">{office.office_name}</div>
+              <div className="pie-legend-sub">
+                {office.total_appointments} appts · {office.utilization_rate}%
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 
 // Enhanced chart component with gridlines, axis, and tooltips
 const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
