@@ -1,94 +1,107 @@
 <?php
-/**
- * Save vitals for an appointment (nurse)
- * Also updates patient_visit.blood_pressure and patient_visit.temperature
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
 header('Content-Type: application/json');
 
+session_start();
+if (empty($_SESSION['uid'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'UNAUTHENTICATED']);
+    exit;
+}
+
 try {
-    session_start();
-    if (empty($_SESSION['uid'])) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-        exit;
-    }
-
+    $conn  = getDBConnection();
     $email = $_SESSION['email'] ?? '';
-    if (empty($email)) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'No session email']);
-        exit;
-    }
 
-    $apptId = isset($_GET['apptId']) ? intval($_GET['apptId']) : 0;
-    if ($apptId <= 0) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'apptId required']);
-        exit;
-    }
+    // 1) Resolve nurse_id from staff email
+    $rows = executeQuery(
+        $conn,
+        "SELECT n.nurse_id
+           FROM nurse n
+           JOIN staff s ON n.staff_id = s.staff_id
+          WHERE s.staff_email = ?
+          LIMIT 1",
+        's',
+        [$email]
+    );
 
-    $input = json_decode(file_get_contents('php://input'), true) ?? [];
-    $bp = isset($input['bp']) ? trim($input['bp']) : null;
-    $hr = isset($input['hr']) ? trim($input['hr']) : null;
-    $temp = isset($input['temp']) ? trim($input['temp']) : null;
-    $spo2 = isset($input['spo2']) ? trim($input['spo2']) : null;
-    $height = isset($input['height']) ? trim($input['height']) : null;
-    $weight = isset($input['weight']) ? trim($input['weight']) : null;
-
-    $conn = getDBConnection();
-
-    // Resolve nurse/staff for audit fields
-    $nrows = executeQuery($conn, 'SELECT n.nurse_id, CONCAT(s.first_name, " ", s.last_name) AS nurse_name FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1', 's', [$email]);
-    if (empty($nrows)) {
-        closeDBConnection($conn);
+    if (empty($rows)) {
         http_response_code(404);
-        echo json_encode(['success' => false, 'error' => 'Nurse not found']);
+        echo json_encode(['success' => false, 'error' => 'NURSE_NOT_FOUND']);
+        closeDBConnection($conn);
         exit;
     }
-    $nurse_id = (int)$nrows[0]['nurse_id'];
-    $nurse_name = $nrows[0]['nurse_name'] ?? $email;
 
-    // Upsert into vitals table (if exists), otherwise create
-    $exists = executeQuery($conn, 'SELECT id FROM vitals WHERE appointment_id = ? LIMIT 1', 'i', [$apptId]);
-    if (!empty($exists)) {
-        // Update
-        $sql = 'UPDATE vitals SET bp = ?, hr = ?, temp = ?, spo2 = ?, height = ?, weight = ?, recorded_by = ?, recorded_at = NOW() WHERE appointment_id = ?';
-        executeQuery($conn, $sql, 'ssssssis', [$bp, $hr, $temp, $spo2, $height, $weight, $nurse_name, $apptId]);
-    } else {
-        // Insert
-        $sql = 'INSERT INTO vitals (appointment_id, bp, hr, temp, spo2, height, weight, recorded_by, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())';
-        executeQuery($conn, $sql, 'isssssss', [$apptId, $bp, $hr, $temp, $spo2, $height, $weight, $nurse_name]);
+    $nurse_id = (int)$rows[0]['nurse_id'];
+
+    // 2) Validate appointment_id
+    if (empty($_GET['appointment_id'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Missing appointment_id']);
+        closeDBConnection($conn);
+        exit;
     }
 
-    // Also update patient_visit blood_pressure and temperature so doctor APIs can read them
-    if ($bp !== null || $temp !== null) {
-        $updateSql = 'UPDATE patient_visit SET ';
-        $parts = [];
-        $params = [];
-        $types = '';
-        if ($bp !== null) { $parts[] = 'blood_pressure = ?'; $params[] = $bp; $types .= 's'; }
-        if ($temp !== null) { $parts[] = 'temperature = ?'; $params[] = $temp; $types .= 's'; }
-        // updated_by / last_updated
-        $parts[] = 'last_updated = NOW()';
-        $parts[] = 'updated_by = ?'; $params[] = $nurse_name; $types .= 's';
+    $appointment_id = (int)$_GET['appointment_id'];
 
-        $sql = $updateSql . implode(', ', $parts) . ' WHERE appointment_id = ?';
-        $params[] = $apptId; $types .= 'i';
+    // 3) Make sure a patient_visit exists for this appointment
+    $visitRows = executeQuery(
+        $conn,
+        "SELECT Visit_id
+           FROM patient_visit
+          WHERE appointment_id = ?
+          LIMIT 1",
+        'i',
+        [$appointment_id]
+    );
 
-        executeQuery($conn, $sql, $types, $params);
+    if (empty($visitRows)) {
+        // For now, we require the visit to be created elsewhere
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'VISIT_NOT_FOUND_FOR_APPOINTMENT']);
+        closeDBConnection($conn);
+        exit;
     }
+
+    $visit_id = (int)$visitRows[0]['Visit_id'];
+
+    // 4) Parse JSON body for vitals
+    $body = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($body)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid JSON body']);
+        closeDBConnection($conn);
+        exit;
+    }
+
+    // Frontend sends these keys; we map to columns we KNOW exist
+    $bp   = $body['bp']   ?? null; // stored in patient_visit.blood_pressure
+    $temp = $body['temp'] ?? null; // stored in patient_visit.temperature
+
+    // If you later add more columns (hr, spo2, etc.), extend this UPDATE
+    executeQuery(
+        $conn,
+        "UPDATE patient_visit
+            SET blood_pressure = ?,
+                temperature   = ?,
+                updated_by    = ?,
+                updated_at    = NOW()
+          WHERE Visit_id = ?",
+        'ssii',
+        [$bp, $temp, $nurse_id, $visit_id]
+    );
 
     closeDBConnection($conn);
 
-    echo json_encode(['success' => true, 'message' => 'Vitals saved']);
-
+    echo json_encode([
+        'success' => true,
+        'message' => 'Vitals saved to patient_visit',
+        'visitId' => $visit_id,
+        'appointmentId' => $appointment_id
+    ]);
 } catch (Throwable $e) {
-    if (isset($conn)) closeDBConnection($conn);
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    error_log('[nurse_api] save-vitals.php error: ' . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'INTERNAL_ERROR', 'message' => $e->getMessage()]);
 }
-
-?>
