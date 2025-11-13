@@ -1,8 +1,18 @@
 /* Billing styles */
 .billing-summary { margin-bottom: 2rem; }
-.balance-card { background: linear-gradient(135deg,#03045e,#0077b6); color: white; padding:2.5rem; border-radius:1rem; box-shadow:0 8px 16px rgba(3,4,94,0.15); text-align:center; max-width:500px; margin:0 auto; }
-.balance-card h3 { margin:0 0 0.5rem 0; font-size:1.1rem; opacity:0.9; font-weight:600; }
-.balance-amount { font-size:3.5rem; font-weight:800; margin:1rem 0; color:white; }
+.balance-card {
+  background: linear-gradient(135deg, var(--primary-color, #03045e), var(--secondary-color, #0077b6));
+  color: white;
+  padding: 2.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 8px 16px rgba(3, 4, 94, 0.12);
+  text-align: center;
+  max-width: 560px;
+  margin: 0 auto;
+  border: 2px solid var(--fifth-color, rgba(202,240,248,0.2));
+}
+.balance-card h3 { margin: 0 0 0.5rem 0; font-size: 1.1rem; opacity: 0.95; font-weight: 600; }
+.balance-amount { font-size: 3.25rem; font-weight: 800; margin: 1rem 0; color: white; }
 
 /* Billing statements specific styles */
 .billing-statements {
@@ -14,10 +24,10 @@
 
 .billing-statement-card {
   background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 2px solid var(--fifth-color, rgba(226,232,240,0.6));
+  border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 18px rgba(0, 119, 182, 0.06);
   width: 100%;
 }
 
@@ -31,15 +41,15 @@
 .billing-statement-header h3 {
   margin: 0;
   font-size: 1.1rem;
-  font-weight: 600;
-  color: #2d3748;
+  font-weight: 700;
+  color: var(--primary-color, #03045e);
   flex: 1;
 }
 
 .billing-statement-amount {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  color: #2b6cb0;
+  color: var(--third-color, #00b4d8);
 }
 
 .billing-statement-body {
@@ -50,8 +60,8 @@
 
 .billing-statement-body p {
   margin: 0;
-  color: #718096;
-  font-size: 0.9rem;
+  color: #6b7280;
+  font-size: 0.95rem;
 }
 
 /* Fix alignment for appointments and general card layouts */
@@ -65,10 +75,10 @@
 
 .appointment-card {
   background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 2px solid var(--fifth-color, rgba(226,232,240,0.7));
+  border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 18px rgba(0, 119, 182, 0.06);
   width: 100%;
   text-align: left;
   display: flex;
