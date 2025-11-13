@@ -530,16 +530,26 @@ function Report() {
   }
 
   // Main report view
-  useEffect(() => {
-    if (activeReport === 'financial') fetchFinancialReport();
-    if (activeReport === 'office') fetchOfficeUtilization();
-    if (activeReport === 'newPatients') fetchNewPatientsReport();
-    if (activeReport === 'doctorPerformance') fetchDoctorPerformance();      // NEW
-    if (activeReport === 'retention') fetchPatientRetention();               // NEW
-    if (activeReport === 'referrals') fetchReferralAnalysis();               // NEW
-    if (activeReport === 'demographics') fetchPatientDemographics();         // NEW
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeReport]);
+useEffect(() => {
+  if (!activeReport) return;  
+
+  if (activeReport === 'financial') fetchFinancialReport();
+  if (activeReport === 'office') fetchOfficeUtilization();
+  if (activeReport === 'newPatients') fetchNewPatientsReport();
+  if (activeReport === 'doctorPerformance') fetchDoctorPerformance();
+  if (activeReport === 'retention') fetchPatientRetention();
+  if (activeReport === 'referrals') fetchReferralAnalysis();
+  if (activeReport === 'demographics') fetchPatientDemographics();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [activeReport]);
+
+if (!activeReport) {
+  return (
+    <div className="report-container">
+      {/* selector UI */}
+    </div>
+  );
+}
 
   const headerTitle =
     activeReport === 'financial'
