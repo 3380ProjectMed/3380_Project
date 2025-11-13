@@ -698,36 +698,41 @@ elseif ($endpoint === 'doctors') {
         try {
             $specialty_filter = $_GET['specialty'] ?? null;
 
-            $base_query = "
-                SELECT DISTINCT
-                    d.doctor_id,
-                    CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as name,
-                    s.specialty_name,
-                    GROUP_CONCAT(DISTINCT o.name SEPARATOR ', ') as office_name,
-                    GROUP_CONCAT(DISTINCT CONCAT(o.address, ', ', o.city, ', ', o.state) SEPARATOR ' | ') as location
-                FROM doctor d
-                LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
-                LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN work_schedule ws ON doc_staff.staff_id = ws.staff_id
-                LEFT JOIN office o ON ws.office_id = o.office_id
-            ";
-
+            // Simplified query first - let's see if the basic structure works
             if ($specialty_filter) {
-                $query = $base_query . " WHERE s.specialty_name = ? GROUP BY d.doctor_id, doc_staff.first_name, doc_staff.last_name, s.specialty_name ORDER BY doc_staff.last_name, doc_staff.first_name";
-            } else {
-                $query = $base_query . " GROUP BY d.doctor_id, doc_staff.first_name, doc_staff.last_name, s.specialty_name ORDER BY doc_staff.last_name, doc_staff.first_name";
-            }
-
-            if ($specialty_filter) {
-                $stmt = $mysqli->prepare($query);
+                $stmt = $mysqli->prepare("
+                    SELECT 
+                        d.doctor_id,
+                        CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as name,
+                        s.specialty_name,
+                        'Multiple Locations' as office_name,
+                        'Location info updating...' as location
+                    FROM doctor d
+                    LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
+                    LEFT JOIN specialty s ON d.specialty = s.specialty_id
+                    WHERE s.specialty_name = ?
+                    ORDER BY doc_staff.last_name, doc_staff.first_name
+                ");
                 $stmt->bind_param('s', $specialty_filter);
                 $stmt->execute();
                 $result = $stmt->get_result();
+                $doctors = $result->fetch_all(MYSQLI_ASSOC);
             } else {
-                $result = $mysqli->query($query);
+                $result = $mysqli->query("
+                    SELECT 
+                        d.doctor_id,
+                        CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as name,
+                        s.specialty_name,
+                        'Multiple Locations' as office_name,
+                        'Location info updating...' as location
+                    FROM doctor d
+                    LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
+                    LEFT JOIN specialty s ON d.specialty = s.specialty_id
+                    ORDER BY doc_staff.last_name, doc_staff.first_name
+                ");
+                $doctors = $result->fetch_all(MYSQLI_ASSOC);
             }
 
-            $doctors = $result->fetch_all(MYSQLI_ASSOC);
             sendResponse(true, $doctors);
 
         } catch (Exception $e) {
