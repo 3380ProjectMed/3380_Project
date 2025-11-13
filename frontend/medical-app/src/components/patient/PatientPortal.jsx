@@ -47,6 +47,8 @@ export default function PatientPortal({ onLogout }) {
   const [officesLoadError, setOfficesLoadError] = useState(null);
   const [bookingError, setBookingError] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
   const [vitalsHistory, setVitalsHistory] = useState([]);
   const [medications, setMedications] = useState([]);
   const [allergies, setAllergies] = useState([]);
@@ -115,6 +117,33 @@ export default function PatientPortal({ onLogout }) {
     } catch (error) {
       console.error('Error loading referrals:', error);
       setReferrals({ active: [], used: [] });
+    }
+  }
+
+  async function loadAvailableTimeSlots(doctorId, date) {
+    if (!doctorId || !date) {
+      setAvailableTimeSlots([]);
+      return;
+    }
+
+    setLoadingTimeSlots(true);
+    try {
+      const response = await api.appointments.getAvailableTimeSlots(doctorId, date);
+      if (response.success) {
+        setAvailableTimeSlots(response.data.available_slots || []);
+        // Clear selected time if it's no longer available
+        if (selectedTime && !response.data.available_slots.includes(selectedTime)) {
+          setSelectedTime('');
+        }
+      } else {
+        setAvailableTimeSlots([]);
+        console.error('Failed to load time slots:', response.message);
+      }
+    } catch (error) {
+      console.error('Error loading time slots:', error);
+      setAvailableTimeSlots([]);
+    } finally {
+      setLoadingTimeSlots(false);
     }
   }
 
@@ -332,6 +361,16 @@ export default function PatientPortal({ onLogout }) {
       });
     }
   }, [showBookingModal]);
+
+  // Load available time slots when doctor and date are selected
+  useEffect(() => {
+    if (selectedDoctor && selectedDate) {
+      loadAvailableTimeSlots(selectedDoctor.doctor_id, selectedDate);
+    } else {
+      setAvailableTimeSlots([]);
+      setSelectedTime('');
+    }
+  }, [selectedDoctor, selectedDate]);
 
   // Fetch doctors and offices separately with UI-friendly errors
   async function loadDoctorsAndOffices() {
@@ -602,10 +641,20 @@ export default function PatientPortal({ onLogout }) {
           <input className="form-input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
 
           <label style={{ marginTop: 8 }}>Time</label>
-          <select className="form-input" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
-            <option value="">Select time</option>
-            {timeSlots.map(t => (<option key={t} value={t}>{t}</option>))}
+          <select className="form-input" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)} disabled={!selectedDoctor || !selectedDate || loadingTimeSlots}>
+            <option value="">
+              {loadingTimeSlots ? 'Loading available times...' : 
+               !selectedDoctor ? 'Select a doctor first' :
+               !selectedDate ? 'Select a date first' : 
+               'Select time'}
+            </option>
+            {availableTimeSlots.map(t => (<option key={t} value={t}>{t}</option>))}
           </select>
+          {availableTimeSlots.length === 0 && selectedDoctor && selectedDate && !loadingTimeSlots && (
+            <div className="form-info" style={{ marginTop: 4, fontSize: '0.875rem', color: '#d97706' }}>
+              No available time slots for this date. Please select a different date.
+            </div>
+          )}
 
           <label style={{ marginTop: 8 }}>Reason</label>
           <textarea className="form-input" rows={3} value={appointmentReason} onChange={(e) => setAppointmentReason(e.target.value)} />
