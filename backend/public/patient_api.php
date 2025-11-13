@@ -28,7 +28,16 @@ function requireAuth($allowed_roles = ['PATIENT'])
     error_log("=== PATIENT API AUTH DEBUG ===");
     error_log("Patient API: Full session data = " . json_encode($_SESSION));
     error_log("Patient API: Session ID = " . session_id());
+    error_log("Patient API: HTTP Headers = " . json_encode(getallheaders()));
     error_log("===============================");
+
+    // Check if session data is completely empty but we have a session ID
+    if (empty($_SESSION) && session_id()) {
+        error_log("Patient API: Empty session but session ID exists - possible session storage issue");
+        // Try to regenerate session ID in case of corruption
+        session_regenerate_id(false);
+        error_log("Patient API: Regenerated session ID: " . session_id());
+    }
 
     if (!isset($_SESSION['uid']) || !isset($_SESSION['email'])) {
         error_log("Patient API: Missing basic session data");
@@ -1282,11 +1291,12 @@ elseif ($endpoint === 'billing') {
                     error_log("Billing balance query for patient_id: " . $patient_id);
                     $stmt = $mysqli->prepare("
                         SELECT 
-                            COALESCE(SUM(COALESCE(copay_amount_due, 0)), 0) as outstanding_balance,
+                            COALESCE(SUM(COALESCE(copay_amount_due, 0) - COALESCE(payment, 0)), 0) as outstanding_balance,
                             COUNT(*) as visit_count
                         FROM patient_visit
                         WHERE patient_id = ?
                         AND COALESCE(copay_amount_due, 0) > 0
+                        AND (COALESCE(copay_amount_due, 0) - COALESCE(payment, 0)) > 0
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
@@ -1337,8 +1347,14 @@ elseif ($endpoint === 'billing') {
         }
     } elseif ($method === 'POST') {
         try {
+            error_log("=== PAYMENT DEBUG ===");
+            error_log("Payment request - Session ID: " . session_id());
+            error_log("Payment request - Session data: " . json_encode($_SESSION));
+            error_log("Payment request - Patient ID: " . ($patient_id ?? 'NULL'));
+            
             // Process a payment for a visit
             $input = json_decode(file_get_contents('php://input'), true);
+            error_log("Payment request - Input data: " . json_encode($input));
             $visit_id = isset($input['visit_id']) ? (int) $input['visit_id'] : null;
             $amount = isset($input['amount']) ? floatval($input['amount']) : 0;
 
@@ -1504,7 +1520,8 @@ elseif ($endpoint === 'schedule') {
                             ws.end_time
                         FROM work_schedule ws
                         JOIN office o ON ws.office_id = o.office_id
-                        WHERE ws.doctor_id = ?
+                        JOIN doctor d ON ws.staff_id = d.staff_id
+                        WHERE d.doctor_id = ?
                         AND (
                             (ws.days = ? AND ws.days IS NOT NULL)
                             OR (ws.day_of_week = ? AND ws.days IS NULL)
@@ -1523,7 +1540,8 @@ elseif ($endpoint === 'schedule') {
                             o.phone
                         FROM work_schedule ws
                         JOIN office o ON ws.office_id = o.office_id
-                        WHERE ws.doctor_id = ?
+                        JOIN doctor d ON ws.staff_id = d.staff_id
+                        WHERE d.doctor_id = ?
                         ORDER BY o.name
                     ");
                     
@@ -1559,6 +1577,38 @@ elseif ($endpoint === 'schedule') {
                 $datetime = DateTime::createFromFormat('Y-m-d', $date);
                 if (!$datetime) {
                     sendResponse(false, [], 'Invalid date format. Use YYYY-MM-DD', 400);
+                    return;
+                }
+                
+                $day_of_week = $datetime->format('l'); // Monday, Tuesday, etc.
+                
+                // First check if doctor works on this day
+                $stmt = $mysqli->prepare("
+                    SELECT COUNT(*) as schedule_count, 
+                           MIN(ws.start_time) as earliest_start,
+                           MAX(ws.end_time) as latest_end
+                    FROM work_schedule ws
+                    JOIN doctor d ON ws.staff_id = d.staff_id
+                    WHERE d.doctor_id = ?
+                    AND (
+                        (ws.days = ? AND ws.days IS NOT NULL)
+                        OR (ws.day_of_week = ? AND ws.days IS NULL)
+                    )
+                ");
+                
+                $stmt->bind_param('iss', $doctor_id, $date, $day_of_week);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $schedule_check = $result->fetch_assoc();
+                
+                if ($schedule_check['schedule_count'] == 0) {
+                    sendResponse(true, [
+                        'available_slots' => [],
+                        'booked_slots' => [],
+                        'date' => $date,
+                        'doctor_id' => $doctor_id,
+                        'message' => 'Doctor is not scheduled to work on this date'
+                    ], 'No available time slots for this date');
                     return;
                 }
                 
@@ -1614,7 +1664,8 @@ elseif ($endpoint === 'schedule') {
                         return in_array($time, $booked_times);
                     })),
                     'date' => $date,
-                    'doctor_id' => $doctor_id
+                    'doctor_id' => $doctor_id,
+                    'schedule_info' => $schedule_check
                 ], 'Available time slots retrieved successfully');
                 
             } catch (Exception $e) {
