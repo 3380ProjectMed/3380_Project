@@ -129,19 +129,6 @@ export default function PatientPortal({ onLogout }) {
     
     if (!doctor) return;
 
-    // Check if this doctor requires a referral
-    if (pcp && doctor.doctor_id !== pcp.pcp_id) {
-      // Check if patient has an active referral for this specialist
-      const hasActiveReferral = referrals.active.some(ref => 
-        ref.specialist_id === doctor.doctor_id && !ref.is_used
-      );
-      
-      if (!hasActiveReferral) {
-        setBookingError(`You need a referral from your Primary Care Physician to book with ${doctor.name}. Please contact your PCP first.`);
-        return;
-      }
-    }
-
     // Load doctor's schedule and available time slots
     setLoadingSchedule(true);
     try {
