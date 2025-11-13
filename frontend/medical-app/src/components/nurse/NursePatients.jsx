@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Search, X, AlertCircle } from 'lucide-react';
+import { Search, X, AlertCircle, Calendar, Mail, FileText, Activity } from 'lucide-react';
 import "./NursePatients.css";
-import { getNursePatients, getAppointmentsForPatient, createOrGetNurseVisit } from '../../api/nurse';
+import { getNursePatients, getAppointmentsForPatient, createOrGetNurseVisit, getPatientDetail } from '../../api/nurse';
 import NurseVitalsModal from './NurseVitalsModal';
 
 export default function NursePatients() {
