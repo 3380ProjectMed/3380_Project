@@ -70,3 +70,52 @@
   font-size: 1rem;
   color: #0b1f44;
 }
+
+/* New schedule-table styles used by NurseSchedule.jsx */
+.schedule-table {
+  max-width: 980px;
+  margin: 0 auto;
+  background: transparent;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.schedule-row {
+  display: grid;
+  grid-template-columns: 220px 1fr 360px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid rgba(15,61,145,0.04);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 6px 18px rgba(10, 36, 99, 0.04);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.schedule-row.header {
+  background: linear-gradient(90deg, rgba(234,246,255,0.9), #fff);
+  font-weight: 800;
+  color: #06305a;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.schedule-row.header .col { padding: 12px 8px; }
+.schedule-row:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(10,36,99,0.06); }
+
+.col { display: flex; flex-direction: column; }
+.col.day { font-weight: 700; font-size: 1rem; color: #07204a; }
+.col.hours { font-size: 1rem; color: #0b3a73; }
+.col.location { font-size: 0.95rem; color: #4b5563; }
+
+.schedule-row .col.hours.off { color: #9ca3af; font-style: italic; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .schedule-row { grid-template-columns: 1fr; padding: 12px; }
+  .schedule-row.header { display: none; }
+  .col.location { margin-top: 6px; }
+}
+
+/* small helpers */
+.nurse-schedule-page h1 { margin-bottom: 16px; color: #0f3d91; }
+

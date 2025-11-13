@@ -1,9 +1,44 @@
 import React from 'react';
-import { Calendar, User, Activity, Clock, MapPin, Phone, Mail, Check, Plus, Stethoscope, UserCheck, FileText } from 'lucide-react';
+import { Calendar, User, Activity, Clock, MapPin, Phone, Mail, Check, Plus, Stethoscope, UserCheck, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import './Dashboard.css';
 
 export default function Dashboard(props) {
-  const { displayName, loading, upcomingAppointments = [], pcp, recentActivity = [], setShowBookingModal, handleCancelAppointment } = props;
+  const { displayName, loading, upcomingAppointments = [], pcp, recentActivity = [], referrals = { active: [], used: [] }, setShowBookingModal, handleCancelAppointment } = props;
+
+  const getUrgencyIcon = (urgencyLevel) => {
+    switch (urgencyLevel) {
+      case 'urgent':
+        return <AlertTriangle className="urgency-icon urgent" />;
+      case 'warning':
+        return <Clock className="urgency-icon warning" />;
+      default:
+        return <CheckCircle className="urgency-icon normal" />;
+    }
+  };
+
+  const getUrgencyMessage = (urgencyLevel, daysRemaining) => {
+    switch (urgencyLevel) {
+      case 'urgent':
+        return `Expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'} - Book soon!`;
+      case 'warning':
+        return `Expires in ${daysRemaining} days`;
+      default:
+        return `${daysRemaining} days remaining`;
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Filter out referrals from recent activity since they'll have their own section
+  const nonReferralActivity = recentActivity.filter(activity => 
+    activity.activity_type !== 'referral' && activity.status !== 'Referral Approved'
+  );
 
   return (
     <div className="portal-content">
@@ -67,22 +102,85 @@ export default function Dashboard(props) {
 
           <div className="dashboard-card">
             <div className="card-header">
+              <h2><UserCheck className="icon" /> Active Referrals</h2>
+            </div>
+            <div className="card-content">
+              {referrals.active.length === 0 ? (
+                <p className="text-gray">No active referrals</p>
+              ) : (
+                <div className="referrals-list">
+                  {referrals.active.slice(0, 3).map(referral => (
+                    <div key={referral.referral_id} className={`referral-item ${referral.urgency_level}`}>
+                      <div className="referral-header">
+                        <div className="referral-info">
+                          <h4>{referral.specialist_name}</h4>
+                          <p className="specialty-text">{referral.specialty_name}</p>
+                        </div>
+                        <div className="urgency-indicator">
+                          {getUrgencyIcon(referral.urgency_level)}
+                        </div>
+                      </div>
+                      <div className="referral-details">
+                        <p className="referral-reason">
+                          <FileText className="small-icon" />
+                          {referral.reason}
+                        </p>
+                        <div className={`expiration-notice ${referral.urgency_level}`}>
+                          {getUrgencyIcon(referral.urgency_level)}
+                          <span>{getUrgencyMessage(referral.urgency_level, referral.days_remaining)}</span>
+                        </div>
+                      </div>
+                      {!referral.is_used ? (
+                        <button 
+                          className={`btn btn-sm btn-referral-action ${referral.urgency_level === 'urgent' ? 'urgent' : ''}`}
+                          onClick={() => setShowBookingModal(true)}
+                        >
+                          <Calendar className="small-icon" />
+                          {referral.urgency_level === 'urgent' ? 'Book Now!' : 'Book Appointment'}
+                        </button>
+                      ) : (
+                        <div className="appointment-booked-notice">
+                          <CheckCircle className="small-icon success" />
+                          <span>Appointment Scheduled</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {referrals.used.length > 0 && (
+                    <div className="used-referrals-summary">
+                      <p className="text-gray">
+                        <CheckCircle className="small-icon success" />
+                        {referrals.used.length} completed referral{referrals.used.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  )}
+                  {referrals.active.length > 3 && (
+                    <div className="referrals-summary">
+                      <p className="text-gray">+{referrals.active.length - 3} more active referral{referrals.active.length - 3 !== 1 ? 's' : ''}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="dashboard-card">
+            <div className="card-header">
               <h2><Activity className="icon" /> Recent Activity</h2>
             </div>
             <div className="card-content">
-              {recentActivity.length === 0 ? (
+              {nonReferralActivity.length === 0 ? (
                 <p className="text-gray">No recent activity</p>
               ) : (
                 <div className="activity-list">
-                  {recentActivity.map((activity, idx) => {
-                    const isReferral = activity.activity_type === 'referral' || activity.status === 'Referral Approved';
-                    const ActivityIcon = isReferral ? UserCheck : (activity.status === 'Completed' ? Check : FileText);
-                    const iconClass = isReferral ? 'activity-icon referral' : 'activity-icon success';
+                  {nonReferralActivity.map((activity, idx) => {
+                    const ActivityIcon = activity.status === 'Completed' ? Check : FileText;
+                    const iconClass = 'activity-icon success';
                     
                     return (
                       <div 
                         key={idx} 
-                        className={`activity-item ${isReferral ? 'referral-notification' : ''}`}
+                        className="activity-item"
                         data-status={activity.status?.toLowerCase()}
                         data-type={activity.activity_type}
                       >
@@ -99,16 +197,6 @@ export default function Dashboard(props) {
                             <p className="activity-description text-small">
                               {activity.description}
                             </p>
-                          )}
-                          {isReferral && (
-                            <button 
-                              className="btn btn-referral-action"
-                              onClick={() => setShowBookingModal(true)}
-                              title={`Book appointment with ${activity.specialist_name || 'specialist'}`}
-                            >
-                              <Calendar className="small-icon" />
-                              Book Appointment
-                            </button>
                           )}
                         </div>
                       </div>

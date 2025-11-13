@@ -3,7 +3,7 @@ import { FileText, Activity, Clock, User, Save, X, AlertCircle } from "lucide-re
 import "./NurseClinicalWorkSpace.css";
 import { saveNurseVitals, saveNurseNote } from '../../api/nurse';
 
-export default function NurseClinicalWorkSpace() {
+export default function NurseClinicalWorkSpace({ appointmentId, visitId }) {
   const [tab, setTab] = useState("vitals");
   const [note, setNote] = useState("");
   const [vitals, setVitals] = useState({
@@ -11,7 +11,6 @@ export default function NurseClinicalWorkSpace() {
   });
   const [reason, setReason] = useState("");
   const [history, setHistory] = useState("");
-  const [apptId, setApptId] = useState("");
   const [alert, setAlert] = useState(null);
 
   // Mock patient context (replace with real data if available)
@@ -26,7 +25,7 @@ export default function NurseClinicalWorkSpace() {
   };
 
   const handleSaveVitals = async () => {
-    if (!apptId) return showAlert('Please enter an appointment ID.', 'error');
+    if (!appointmentId) return showAlert('No appointment selected.', 'error');
     try {
       // The new nurse API client expects normalized vitals fields
       const payload = {
@@ -35,11 +34,9 @@ export default function NurseClinicalWorkSpace() {
         temp: vitals.temperature,
         spo2: vitals.oxygenSaturation,
         weight: vitals.weight,
-        height: vitals.height,
-        reason,
-        history
+        height: vitals.height
       };
-      await saveNurseVitals(apptId, payload);
+      await saveNurseVitals(appointmentId, payload);
       showAlert('Vitals and intake saved!', 'success');
     } catch (e) {
       showAlert('Failed to save vitals: ' + (e.message || e), 'error');
@@ -47,9 +44,9 @@ export default function NurseClinicalWorkSpace() {
   };
 
   const handleSaveNote = async () => {
-    if (!apptId) return showAlert('Please enter an appointment ID.', 'error');
+    if (!appointmentId) return showAlert('No appointment selected.', 'error');
     try {
-      await saveNurseNote(apptId, note);
+      await saveNurseNote(appointmentId, note);
       setNote("");
       showAlert('Clinical note saved!', 'success');
     } catch (e) {
@@ -72,17 +69,11 @@ export default function NurseClinicalWorkSpace() {
           </div>
         </div>
 
-        <div className="appt-id-box">
-          <label htmlFor="appt-id">Appointment ID:</label>
-          <input
-            id="appt-id"
-            type="text"
-            value={apptId}
-            onChange={e => setApptId(e.target.value)}
-            placeholder="Enter appointment ID"
-            style={{ marginLeft: 8, width: 120 }}
-          />
-        </div>
+        {appointmentId ? (
+          <div className="appt-info">Appointment: {appointmentId} {visitId ? `(visit ${visitId})` : ''}</div>
+        ) : (
+          <div className="appt-info warning">No appointment selected. Open an appointment from the schedule.</div>
+        )}
 
         <div className="tabs">
           <button className={tab === "vitals" ? "active" : ""} onClick={() => setTab("vitals")}> <Activity size={16} /> Vitals/Intake</button>
@@ -132,7 +123,7 @@ export default function NurseClinicalWorkSpace() {
                 <textarea placeholder="e.g. Asthma, diabetes" value={history} onChange={e => setHistory(e.target.value)} />
               </div>
               <div style={{ textAlign: "center", marginTop: 16 }}>
-                <button className="primary" onClick={handleSaveVitals}><Save size={16} /> Save Vitals</button>
+                <button className="primary" onClick={handleSaveVitals} disabled={!appointmentId}><Save size={16} /> Save Vitals</button>
               </div>
             </div>
           )}
@@ -145,7 +136,7 @@ export default function NurseClinicalWorkSpace() {
                 onChange={e => setNote(e.target.value)}
               />
               <div className="actions">
-                <button className="primary" onClick={handleSaveNote}><Save size={16} /> Save Note</button>
+                <button className="primary" onClick={handleSaveNote} disabled={!appointmentId}><Save size={16} /> Save Note</button>
                 <button className="ghost" onClick={() => setNote("")}><X size={16} /> Clear</button>
               </div>
             </div>

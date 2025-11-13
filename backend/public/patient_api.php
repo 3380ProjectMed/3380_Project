@@ -217,7 +217,7 @@ if ($endpoint === 'dashboard') {
             $result = $stmt->get_result();
             $recent_activity = $result->fetch_all(MYSQLI_ASSOC);
 
-            // Get approved referrals (notifications)
+            // Get approved referrals (notifications) with expiration info
             $stmt = $mysqli->prepare("
                 SELECT 
                     r.referral_id as visit_id,
@@ -229,7 +229,14 @@ if ($endpoint === 'dashboard') {
                     r.reason as description,
                     d.doctor_id as specialist_id,
                     CONCAT(spec_staff.first_name, ' ', spec_staff.last_name) as specialist_name,
-                    s.specialty_name as specialty
+                    s.specialty_name as specialty,
+                    DATE_ADD(r.date_of_approval, INTERVAL 90 DAY) as expiration_date,
+                    DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) as days_remaining,
+                    CASE 
+                        WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 7 THEN 'urgent'
+                        WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 30 THEN 'warning'
+                        ELSE 'normal'
+                    END as urgency_level
                 FROM referral r
                 LEFT JOIN doctor d ON r.specialist_doctor_staff_id = d.doctor_id
                 LEFT JOIN staff spec_staff ON d.staff_id = spec_staff.staff_id
@@ -237,7 +244,14 @@ if ($endpoint === 'dashboard') {
                 WHERE r.patient_id = ?
                 AND r.date_of_approval IS NOT NULL
                 AND r.appointment_id IS NULL
-                ORDER BY r.date_of_approval DESC
+                AND DATE_ADD(r.date_of_approval, INTERVAL 90 DAY) >= CURDATE()
+                ORDER BY 
+                    CASE 
+                        WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 7 THEN 0
+                        WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 30 THEN 1
+                        ELSE 2
+                    END,
+                    r.date_of_approval DESC
                 LIMIT 3
             ");
             $stmt->bind_param('i', $patient_id);
@@ -585,6 +599,29 @@ elseif ($endpoint === 'appointments') {
                 throw new Exception('Failed to insert appointment');
             }
 
+            // Check if this is a specialist appointment that needs a referral linked
+            $pcp_check = $mysqli->prepare("SELECT Primary_Doctor FROM Patient WHERE Patient_ID = ?");
+            $pcp_check->bind_param('i', $patient_id);
+            $pcp_check->execute();
+            $pcp_result = $pcp_check->get_result();
+            $pcp_data = $pcp_result->fetch_assoc();
+            
+            // If booking with a specialist (not PCP), link the referral
+            if ($pcp_data && $pcp_data['Primary_Doctor'] != $input['doctor_id']) {
+                $referral_update = $mysqli->prepare("
+                    UPDATE referral 
+                    SET appointment_id = ? 
+                    WHERE patient_id = ? 
+                    AND specialist_doctor_staff_id = ? 
+                    AND date_of_approval IS NOT NULL 
+                    AND appointment_id IS NULL 
+                    ORDER BY date_of_approval ASC 
+                    LIMIT 1
+                ");
+                $referral_update->bind_param('iii', $next_id, $patient_id, $input['doctor_id']);
+                $referral_update->execute();
+            }
+
             $mysqli->commit();
             sendResponse(true, ['appointment_id' => $next_id], 'Appointment booked successfully!');
 
@@ -618,6 +655,19 @@ elseif ($endpoint === 'appointments') {
         }
 
         try {
+            // Start transaction
+            $mysqli->begin_transaction();
+            
+            // First, unlink any referral associated with this appointment
+            $referral_update = $mysqli->prepare("
+                UPDATE referral 
+                SET appointment_id = NULL 
+                WHERE appointment_id = ?
+            ");
+            $referral_update->bind_param('i', $appointment_id);
+            $referral_update->execute();
+            
+            // Then delete the appointment
             $stmt = $mysqli->prepare("
                 DELETE FROM appointment 
                 WHERE appointment_id = ? 
@@ -626,9 +676,11 @@ elseif ($endpoint === 'appointments') {
             $stmt->bind_param('ii', $appointment_id, $patient_id);
             $stmt->execute();
 
+            $mysqli->commit();
             sendResponse(true, [], 'Appointment cancelled successfully');
 
         } catch (Exception $e) {
+            $mysqli->rollback();
             error_log("Cancel appointment error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to cancel appointment', 500);
         }
@@ -1313,6 +1365,177 @@ elseif ($endpoint === 'billing') {
         } catch (Exception $e) {
             error_log('payment error: ' . $e->getMessage());
             sendResponse(false, [], 'Failed to process payment', 500);
+        }
+    }
+}
+
+// ==================== REFERRALS ====================
+elseif ($endpoint === 'referrals') {
+    if ($method === 'GET') {
+        $action = $_GET['action'] ?? 'active';
+        
+        if ($action === 'active') {
+            // Get active and used referrals (90-day expiration from date_of_approval)
+            try {
+                $stmt = $mysqli->prepare("
+                    SELECT 
+                        r.referral_id,
+                        r.patient_id,
+                        r.date_of_approval,
+                        DATE_ADD(r.date_of_approval, INTERVAL 90 DAY) as expiration_date,
+                        r.reason,
+                        r.specialist_doctor_staff_id as specialist_id,
+                        CONCAT(s.first_name, ' ', s.last_name) as specialist_name,
+                        sp.specialty_name,
+                        r.appointment_id,
+                        CONCAT(ref_s.first_name, ' ', ref_s.last_name) as referring_doctor_name,
+                        DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) as days_remaining,
+                        CASE 
+                            WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 7 THEN 'urgent'
+                            WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 30 THEN 'warning'
+                            ELSE 'normal'
+                        END as urgency_level
+                    FROM referral r
+                    LEFT JOIN doctor d ON r.specialist_doctor_staff_id = d.doctor_id
+                    LEFT JOIN staff s ON d.staff_id = s.staff_id
+                    LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
+                    LEFT JOIN doctor ref_d ON r.referring_doctor_staff_id = ref_d.doctor_id
+                    LEFT JOIN staff ref_s ON ref_d.staff_id = ref_s.staff_id
+                    WHERE r.patient_id = ?
+                    AND r.date_of_approval IS NOT NULL
+                    AND DATE_ADD(r.date_of_approval, INTERVAL 90 DAY) >= CURDATE()
+                    ORDER BY 
+                        CASE WHEN r.appointment_id IS NULL THEN 0 ELSE 1 END,
+                        CASE 
+                            WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 7 THEN 0
+                            WHEN DATEDIFF(DATE_ADD(r.date_of_approval, INTERVAL 90 DAY), CURDATE()) <= 30 THEN 1
+                            ELSE 2
+                        END,
+                        DATE_ADD(r.date_of_approval, INTERVAL 90 DAY) ASC
+                ");
+                
+                $stmt->bind_param('i', $patient_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $referrals = $result->fetch_all(MYSQLI_ASSOC);
+                
+                // Categorize referrals
+                $active = [];
+                $used = [];
+                
+                    foreach ($referrals as $ref) {
+                    $formatted = [
+                        'referral_id' => $ref['referral_id'],
+                        'specialist_id' => $ref['specialist_id'],
+                        'specialist_name' => $ref['specialist_name'] ?? 'Unknown Specialist',
+                        'specialty_name' => $ref['specialty_name'] ?? 'Specialist',
+                        'referring_doctor' => $ref['referring_doctor_name'] ?? 'Unknown Doctor',
+                        'reason' => $ref['reason'] ?? 'No reason provided',
+                        'date_issued' => $ref['date_of_approval'],
+                        'expiration_date' => $ref['expiration_date'],
+                        'days_remaining' => (int)$ref['days_remaining'],
+                        'urgency_level' => $ref['urgency_level'],
+                        'is_used' => $ref['appointment_id'] !== null,
+                        'appointment_id' => $ref['appointment_id']
+                    ];
+                    
+                    if ($ref['appointment_id'] === null) {
+                        $active[] = $formatted;
+                    } else {
+                        $used[] = $formatted;
+                    }
+                }                sendResponse(true, [
+                    'active' => $active,
+                    'used' => $used,
+                    'active_count' => count($active),
+                    'used_count' => count($used)
+                ], 'Referrals retrieved successfully');
+                
+            } catch (Exception $e) {
+                error_log("Referrals error: " . $e->getMessage());
+                sendResponse(false, [], 'Failed to load referrals: ' . $e->getMessage(), 500);
+            }
+        }
+    }
+}
+
+// ==================== SCHEDULE ====================
+elseif ($endpoint === 'schedule') {
+    if ($method === 'GET') {
+        $action = $_GET['action'] ?? 'availability';
+        
+        if ($action === 'availability') {
+            // Get doctor's available offices based on work schedule
+            $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 0;
+            $date = $_GET['date'] ?? null;
+            
+            if ($doctor_id === 0) {
+                sendResponse(false, [], 'doctor_id required', 400);
+            }
+            
+            try {
+                // If date provided, get offices for that specific day
+                if ($date) {
+                    // Validate date format
+                    $datetime = DateTime::createFromFormat('Y-m-d', $date);
+                    if (!$datetime) {
+                        sendResponse(false, [], 'Invalid date format. Use YYYY-MM-DD', 400);
+                        return;
+                    }
+                    
+                    $day_of_week = $datetime->format('l'); // Monday, Tuesday, etc.
+                    
+                    $stmt = $mysqli->prepare("
+                        SELECT DISTINCT
+                            o.office_id,
+                            o.name as office_name,
+                            CONCAT(o.address, ', ', o.city, ', ', o.state, ' ', o.zipcode) as full_address,
+                            o.phone,
+                            ws.start_time,
+                            ws.end_time
+                        FROM work_schedule ws
+                        JOIN office o ON ws.office_id = o.office_id
+                        WHERE ws.doctor_id = ?
+                        AND (
+                            (ws.days = ? AND ws.days IS NOT NULL)
+                            OR (ws.day_of_week = ? AND ws.days IS NULL)
+                        )
+                        ORDER BY o.name
+                    ");
+                    
+                    $stmt->bind_param('iss', $doctor_id, $date, $day_of_week);
+                } else {
+                    // Get all offices where doctor works (any day)
+                    $stmt = $mysqli->prepare("
+                        SELECT DISTINCT
+                            o.office_id,
+                            o.name as office_name,
+                            CONCAT(o.address, ', ', o.city, ', ', o.state, ' ', o.zipcode) as full_address,
+                            o.phone
+                        FROM work_schedule ws
+                        JOIN office o ON ws.office_id = o.office_id
+                        WHERE ws.doctor_id = ?
+                        ORDER BY o.name
+                    ");
+                    
+                    $stmt->bind_param('i', $doctor_id);
+                }
+                
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $schedules = $result->fetch_all(MYSQLI_ASSOC);
+                
+                sendResponse(true, [
+                    'offices' => $schedules,
+                    'count' => count($schedules),
+                    'date_filtered' => $date !== null,
+                    'selected_date' => $date
+                ], 'Schedule retrieved successfully');
+                
+            } catch (Exception $e) {
+                error_log("Schedule error: " . $e->getMessage());
+                sendResponse(false, [], 'Failed to load schedule: ' . $e->getMessage(), 500);
+            }
         }
     }
 }

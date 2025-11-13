@@ -14,7 +14,8 @@ import {
   ChevronUp,
   BarChart3,
   Users,
-  Clock
+  Clock,
+  UserPlus
 } from 'lucide-react';
 import '../doctor/Dashboard.css';
 import './Report.css';
@@ -40,6 +41,7 @@ function Report() {
   // Data states
   const [financialData, setFinancialData] = useState(null);
   const [officeData, setOfficeData] = useState(null);
+  const [newPatientsData, setNewPatientsData] = useState(null);
   const [offices, setOffices] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [insurances, setInsurances] = useState([]);
@@ -53,6 +55,17 @@ function Report() {
   useEffect(() => {
     fetchFilterOptions();
   }, []);
+
+  // Fetch report data when activeReport changes
+  useEffect(() => {
+    if (activeReport === 'financial') {
+      fetchFinancialReport();
+    } else if (activeReport === 'office') {
+      fetchOfficeUtilization();
+    } else if (activeReport === 'newPatients') {
+      fetchNewPatientsReport();
+    }
+  }, [activeReport]);
 
   const fetchFilterOptions = async () => {
     try {
@@ -150,9 +163,31 @@ function Report() {
     }
   };
 
+  const fetchNewPatientsReport = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(
+        `/admin_api/reports/new-patients.php?${buildQueryParams()}`,
+        { credentials: 'include' }
+      );
+      const data = await res.json();
+      if (data.success) {
+        setNewPatientsData(data);
+      } else {
+        setError(data.error || 'Failed to load new patients report');
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSelectReport = (reportType) => {
     setActiveReport(reportType);
     setShowFilters(false);
+    setSortConfig({ key: null, direction: 'desc' });
   };
 
   const handleRefresh = () => {
@@ -160,6 +195,8 @@ function Report() {
       fetchFinancialReport();
     } else if (activeReport === 'office') {
       fetchOfficeUtilization();
+    } else if (activeReport === 'newPatients') {
+      fetchNewPatientsReport();
     }
   };
 
@@ -172,7 +209,7 @@ function Report() {
   };
 
   const getSortedData = (data, key) => {
-    if (!sortConfig.key) return data;
+    if (!sortConfig.key || !data) return data;
     
     return [...data].sort((a, b) => {
       const aVal = a[key];
@@ -192,7 +229,7 @@ function Report() {
     if (activeReport === 'financial' && financialData) {
       filename = `financial_report_${startDate}_to_${endDate}.csv`;
       csvContent = 'Period,Total Visits,Gross Revenue,Collected Payments,Outstanding Balance,Unique Patients,Collection Rate\n';
-      financialData.daily_revenue.forEach(row => {
+      (financialData.daily_revenue || []).forEach(row => {
         const gross = Number(row.gross_revenue || 0);
         const collected = Number(row.collected_payments || 0);
         const rate = gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
@@ -201,11 +238,19 @@ function Report() {
     } else if (activeReport === 'office' && officeData) {
       filename = `office_utilization_${startDate}_to_${endDate}.csv`;
       csvContent = 'Office Name,Address,Total Appointments,Completed,Cancelled,No-Shows,Scheduled,No-Show Rate,Avg Wait Time (min),Utilization Rate\n';
-      officeData.office_stats.forEach(row => {
+      (officeData.office_stats || []).forEach(row => {
         csvContent += `"${row.office_name}","${row.address}",${row.total_appointments},${row.completed},${row.cancelled},${row.no_shows},${row.scheduled},${row.no_show_rate},${row.avg_wait_minutes || 'N/A'},${row.utilization_rate}\n`;
+      });
+    } else if (activeReport === 'newPatients' && newPatientsData) {
+      filename = `new_patients_${startDate}_to_${endDate}.csv`;
+      csvContent = 'Period,Doctor,Office,New Appointments,Unique New Patients\n';
+      (newPatientsData.rows || []).forEach(row => {
+        csvContent += `${row.period_label},${row.doctor_name},${row.office_name},${row.new_patient_appointments},${row.unique_new_patients}\n`;
       });
     }
     
+    if (!filename) return;
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -273,23 +318,36 @@ function Report() {
               <span><TrendingUp size={14} /> Utilization Trends</span>
             </div>
           </div>
+
+          <div className="report-selector-card" onClick={() => handleSelectReport('newPatients')}>
+            <div className="selector-icon">
+              <UserPlus size={48} />
+            </div>
+            <h3>New Patients</h3>
+            <p>Track first-time visits by doctor and office over time</p>
+            <div className="card-features">
+              <span><Users size={14} /> Patient Growth</span>
+              <span><BarChart3 size={14} /> Trends Over Time</span>
+              <span><Download size={14} /> Export Data</span>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Main report view
-  useEffect(() => {
-    if (activeReport === 'financial') fetchFinancialReport();
-    if (activeReport === 'office') fetchOfficeUtilization();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeReport]);
+  const headerTitle =
+    activeReport === 'financial'
+      ? 'Financial Summary'
+      : activeReport === 'office'
+      ? 'Office Utilization'
+      : 'New Patients';
 
   return (
     <div className="report-container">
       <div className="dashboard-header report-header">
         <div className="report-header-left">
-          <h1>{activeReport === 'financial' ? 'Financial Summary' : 'Office Utilization'}</h1>
+          <h1>{headerTitle}</h1>
           <p className="office-info">
             <Calendar size={16} />
             <span className="date-range">{startDate} — {endDate}</span>
@@ -317,7 +375,11 @@ function Report() {
             <button onClick={handleRefresh} disabled={loading} className="btn btn-sm btn-secondary">
               <RefreshCw size={14} className={loading ? 'spinning' : ''} />
             </button>
-            <button onClick={exportToCSV} disabled={loading || (!financialData && !officeData)} className="btn btn-sm btn-primary">
+            <button 
+              onClick={exportToCSV} 
+              disabled={loading || (!financialData && !officeData && !newPatientsData)}
+              className="btn btn-sm btn-primary"
+            >
               <Download size={14} /> Export
             </button>
           </div>
@@ -373,33 +435,33 @@ function Report() {
               </select>
             </div>
 
-            {activeReport === 'financial' && (
-              <>
-                <div className="filter-group">
-                  <label>Doctor</label>
-                  <select value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)}>
-                    <option value="all">All Doctors</option>
-                    {doctors.map(doctor => (
-                      <option key={doctor.doctor_id} value={doctor.doctor_id}>
-                        Dr. {doctor.first_name} {doctor.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            {(activeReport === 'financial' || activeReport === 'newPatients') && (
+              <div className="filter-group">
+                <label>Doctor</label>
+                <select value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)}>
+                  <option value="all">All Doctors</option>
+                  {doctors.map(doctor => (
+                    <option key={doctor.doctor_id} value={doctor.doctor_id}>
+                      Dr. {doctor.first_name} {doctor.last_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-                <div className="filter-group">
-                  <label>Insurance</label>
-                  <select value={selectedInsurance} onChange={(e) => setSelectedInsurance(e.target.value)}>
-                    <option value="all">All Insurance</option>
-                    <option value="self-pay">Self-Pay Only</option>
-                    {insurances.map(ins => (
-                      <option key={ins.payer_id} value={ins.payer_id}>
-                        {ins.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
+            {activeReport === 'financial' && (
+              <div className="filter-group">
+                <label>Insurance</label>
+                <select value={selectedInsurance} onChange={(e) => setSelectedInsurance(e.target.value)}>
+                  <option value="all">All Insurance</option>
+                  <option value="self-pay">Self-Pay Only</option>
+                  {insurances.map(ins => (
+                    <option key={ins.payer_id} value={ins.payer_id}>
+                      {ins.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
 
             {activeReport === 'office' && (
@@ -439,45 +501,46 @@ function Report() {
         </div>
       )}
 
+      {/* FINANCIAL REPORT VIEW */}
       {!loading && activeReport === 'financial' && financialData && (
         <>
           <div className="stats-grid">
             <StatCard 
-              type="success" 
-              icon={<DollarSign size={20} />} 
-              label="Total Revenue" 
-              value={`$${money(financialData.summary?.total_revenue)}`}
+              type="primary"
+              icon={<DollarSign size={20} />}
+              label="Total Revenue"
+              value={`$${money(financialData.summary?.total_revenue || 0)}`}
               subtitle={`${financialData.summary?.total_visits || 0} visits`}
             />
             <StatCard 
-              type="primary" 
-              icon={<TrendingUp size={20} />} 
-              label="Collected Payments" 
-              value={`$${money(financialData.summary?.total_collected)}`}
+              type="success"
+              icon={<TrendingUp size={20} />}
+              label="Collected"
+              value={`$${money(financialData.summary?.total_collected || 0)}`}
               subtitle={`${financialData.summary?.collection_rate || 0}% collection rate`}
             />
             <StatCard 
-              type="warning" 
-              icon={<AlertCircle size={20} />} 
-              label="Outstanding Balance" 
-              value={`$${money(financialData.summary?.total_outstanding)}`}
-              subtitle={`${financialData.summary?.outstanding_visits || 0} visits with balance`}
+              type="warning"
+              icon={<AlertCircle size={20} />}
+              label="Outstanding"
+              value={`$${money(financialData.summary?.total_outstanding || 0)}`}
+              subtitle={`${financialData.summary?.outstanding_visits || 0} visits pending`}
             />
             <StatCard 
-              type="info" 
-              icon={<Users size={20} />} 
-              label="Unique Patients" 
+              type="info"
+              icon={<Users size={20} />}
+              label="Unique Patients"
               value={financialData.summary?.unique_patients || 0}
-              subtitle={`Avg: $${money(financialData.summary?.avg_revenue_per_patient || 0)} per patient`}
+              subtitle={`$${money(financialData.summary?.avg_revenue_per_patient || 0)} avg per patient`}
             />
           </div>
 
-          {showChart && financialData.daily_revenue?.length > 0 && (
-            <section className="report-section chart-section">
+          {showChart && financialData.daily_revenue && financialData.daily_revenue.length > 0 && (
+            <section className="report-section">
               <div className="section-header">
                 <h3>Revenue Trend</h3>
-                <button onClick={() => setShowChart(false)} className="btn btn-sm btn-ghost">
-                  Hide Chart
+                <button onClick={() => setShowChart(!showChart)} className="btn btn-sm btn-ghost">
+                  {showChart ? 'Hide Chart' : 'Show Chart'}
                 </button>
               </div>
               <SimpleChart data={financialData.daily_revenue} />
@@ -486,19 +549,15 @@ function Report() {
 
           <section className="report-section">
             <div className="section-header">
-              <h3>Revenue Breakdown ({groupBy === 'day' ? 'Daily' : groupBy === 'week' ? 'Weekly' : 'Monthly'})</h3>
-              {!showChart && (
-                <button onClick={() => setShowChart(true)} className="btn btn-sm btn-ghost">
-                  <BarChart3 size={14} /> Show Chart
-                </button>
-              )}
+              <h3>Daily Revenue Breakdown</h3>
+              <p className="section-subtitle">{(financialData.daily_revenue || []).length} periods</p>
             </div>
             <div className="table-container">
               <table className="report-table sortable-table">
                 <thead>
                   <tr>
                     <th onClick={() => handleSort('period_label')}>
-                      Period {sortConfig.key === 'period_label' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      Date {sortConfig.key === 'period_label' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th onClick={() => handleSort('total_visits')}>
                       Visits {sortConfig.key === 'total_visits' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
@@ -513,7 +572,7 @@ function Report() {
                       Outstanding {sortConfig.key === 'outstanding_balance' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th onClick={() => handleSort('unique_patients')}>
-                      Patients {sortConfig.key === 'unique_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      Unique Patients {sortConfig.key === 'unique_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th>Collection Rate</th>
                   </tr>
@@ -522,18 +581,19 @@ function Report() {
                   {getSortedData(financialData.daily_revenue || [], sortConfig.key).map((row, idx) => {
                     const gross = Number(row.gross_revenue || 0);
                     const collected = Number(row.collected_payments || 0);
-                    const rate = gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
+                    const collectionRate = gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
+                    
                     return (
                       <tr key={idx}>
                         <td className="text-bold">{row.period_label}</td>
                         <td>{row.total_visits}</td>
-                        <td>${money(gross)}</td>
-                        <td className="text-success">${money(collected)}</td>
-                        <td className="text-warning">${money(Number(row.outstanding_balance || 0))}</td>
+                        <td className="text-success">${money(row.gross_revenue)}</td>
+                        <td className="text-primary">${money(row.collected_payments)}</td>
+                        <td className="text-warning">${money(row.outstanding_balance)}</td>
                         <td>{row.unique_patients}</td>
                         <td>
-                          <span className={`rate-badge ${parseFloat(rate) >= 80 ? 'rate-good' : parseFloat(rate) >= 60 ? 'rate-fair' : 'rate-poor'}`}>
-                            {rate}%
+                          <span className={`badge ${Number(collectionRate) >= 80 ? 'badge-success' : Number(collectionRate) >= 50 ? 'badge-warning' : 'badge-danger'}`}>
+                            {collectionRate}%
                           </span>
                         </td>
                       </tr>
@@ -544,9 +604,12 @@ function Report() {
             </div>
           </section>
 
-          {financialData.insurance_breakdown?.length > 0 && (
+          {financialData.insurance_breakdown && financialData.insurance_breakdown.length > 0 && (
             <section className="report-section">
-              <h3>Revenue by Insurance Provider</h3>
+              <div className="section-header">
+                <h3>Insurance Breakdown</h3>
+                <p className="section-subtitle">{financialData.insurance_breakdown.length} insurance plans</p>
+              </div>
               <div className="table-container">
                 <table className="report-table">
                   <thead>
@@ -554,31 +617,30 @@ function Report() {
                       <th>Insurance Company</th>
                       <th>Plan Name</th>
                       <th>Visit Count</th>
+                      <th>Total Cost</th>
                       <th>Total Payments</th>
                       <th>Outstanding</th>
-                      <th>Avg Payment</th>
-                      <th>% of Total</th>
+                      <th>Collection Rate</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {financialData.insurance_breakdown.map((row, idx) => {
-                      const avg = row.visit_count > 0 ? (row.total_payments / row.visit_count).toFixed(2) : '0.00';
-                      const pct = financialData.summary?.total_collected > 0 
-                        ? ((row.total_payments / financialData.summary.total_collected) * 100).toFixed(1)
+                    {financialData.insurance_breakdown.map((ins, idx) => {
+                      const collectionRate = Number(ins.total_cost) > 0 
+                        ? ((Number(ins.total_payments) / Number(ins.total_cost)) * 100).toFixed(1) 
                         : '0.0';
+                      
                       return (
                         <tr key={idx}>
-                          <td className="text-bold">{row.insurance_company || 'Self-Pay'}</td>
-                          <td>{row.plan_name || 'N/A'}</td>
-                          <td>{row.visit_count}</td>
-                          <td className="text-success">${money(row.total_payments)}</td>
-                          <td className="text-warning">${money(row.outstanding)}</td>
-                          <td>${avg}</td>
+                          <td className="text-bold">{ins.insurance_company}</td>
+                          <td>{ins.plan_name}</td>
+                          <td>{ins.visit_count}</td>
+                          <td className="text-success">${money(ins.total_cost)}</td>
+                          <td className="text-primary">${money(ins.total_payments)}</td>
+                          <td className="text-warning">${money(ins.outstanding)}</td>
                           <td>
-                            <div className="percentage-bar">
-                              <div className="percentage-fill" style={{width: `${pct}%`}} />
-                              <span className="percentage-text">{pct}%</span>
-                            </div>
+                            <span className={`badge ${Number(collectionRate) >= 80 ? 'badge-success' : Number(collectionRate) >= 50 ? 'badge-warning' : 'badge-danger'}`}>
+                              {collectionRate}%
+                            </span>
                           </td>
                         </tr>
                       );
@@ -589,30 +651,33 @@ function Report() {
             </section>
           )}
 
-          {financialData.doctor_performance?.length > 0 && (
+          {financialData.doctor_performance && financialData.doctor_performance.length > 0 && (
             <section className="report-section">
-              <h3>Doctor Performance</h3>
+              <div className="section-header">
+                <h3>Doctor Performance</h3>
+                <p className="section-subtitle">{financialData.doctor_performance.length} doctors</p>
+              </div>
               <div className="table-container">
                 <table className="report-table">
                   <thead>
                     <tr>
-                      <th>Doctor</th>
-                      <th>Specialty</th>
+                      <th>Doctor Name</th>
                       <th>Total Visits</th>
-                      <th>Revenue Generated</th>
-                      <th>Avg per Visit</th>
-                      <th>Patients Seen</th>
+                      <th>Total Revenue</th>
+                      <th>Collected</th>
+                      <th>Avg Per Visit</th>
+                      <th>Unique Patients</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {financialData.doctor_performance.map((row, idx) => (
+                    {financialData.doctor_performance.map((doc, idx) => (
                       <tr key={idx}>
-                        <td className="text-bold">Dr. {row.doctor_name}</td>
-                        <td>{row.specialty}</td>
-                        <td>{row.total_visits}</td>
-                        <td className="text-success">${money(row.total_revenue)}</td>
-                        <td>${money(row.avg_per_visit)}</td>
-                        <td>{row.unique_patients}</td>
+                        <td className="text-bold">Dr. {doc.doctor_name}</td>
+                        <td>{doc.total_visits}</td>
+                        <td className="text-success">${money(doc.total_revenue)}</td>
+                        <td className="text-primary">${money(doc.collected)}</td>
+                        <td>${money(doc.avg_per_visit)}</td>
+                        <td>{doc.unique_patients}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -623,107 +688,195 @@ function Report() {
         </>
       )}
 
+      {/* OFFICE UTILIZATION REPORT VIEW */}
       {!loading && activeReport === 'office' && officeData && (
         <>
           <div className="stats-grid">
             <StatCard 
-              type="primary" 
-              icon={<Building2 size={20} />} 
-              label="Total Offices" 
-              value={officeData.summary?.total_offices || 0}
-              subtitle={`${officeData.summary?.active_offices || 0} active`}
-            />
-            <StatCard 
-              type="success" 
-              icon={<FileText size={20} />} 
-              label="Total Appointments" 
+              type="primary"
+              icon={<Building2 size={20} />}
+              label="Total Appointments"
               value={officeData.summary?.total_appointments || 0}
-              subtitle={`${officeData.summary?.completed || 0} completed`}
+              subtitle={`${officeData.summary?.total_offices || 0} offices`}
             />
             <StatCard 
-              type="info" 
-              icon={<TrendingUp size={20} />} 
-              label="Avg Utilization" 
-              value={officeData.summary?.avg_utilization ? `${officeData.summary.avg_utilization}%` : 'N/A'}
+              type="success"
+              icon={<TrendingUp size={20} />}
+              label="Completed"
+              value={officeData.summary?.completed || 0}
+              subtitle={`${officeData.summary?.completion_rate || 0}% completion rate`}
+            />
+            <StatCard 
+              type="danger"
+              icon={<AlertCircle size={20} />}
+              label="No-Shows"
+              value={officeData.summary?.no_shows || 0}
+              subtitle={`${officeData.summary?.no_show_rate || 0}% no-show rate`}
+            />
+            <StatCard 
+              type="info"
+              icon={<Clock size={20} />}
+              label="Avg Wait Time"
+              value={officeData.summary?.avg_wait_minutes ? `${officeData.summary.avg_wait_minutes} min` : 'N/A'}
               subtitle="Across all offices"
-            />
-            <StatCard 
-              type="warning" 
-              icon={<AlertCircle size={20} />} 
-              label="Avg No-Show Rate" 
-              value={officeData.summary?.avg_no_show_rate ? `${officeData.summary.avg_no_show_rate}%` : 'N/A'}
-              subtitle={`${officeData.summary?.total_no_shows || 0} total no-shows`}
             />
           </div>
 
           <section className="report-section">
-            <h3>Office Performance Metrics</h3>
+            <div className="section-header">
+              <h3>Office Performance Metrics</h3>
+              <p className="section-subtitle">{(officeData.office_stats || []).length} offices</p>
+            </div>
             <div className="table-container">
               <table className="report-table sortable-table">
                 <thead>
                   <tr>
                     <th onClick={() => handleSort('office_name')}>
-                      Office {sortConfig.key === 'office_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      Office Name {sortConfig.key === 'office_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th>Address</th>
                     <th onClick={() => handleSort('total_appointments')}>
-                      Total {sortConfig.key === 'total_appointments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      Total Appts {sortConfig.key === 'total_appointments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th>Completed</th>
-                    <th>Cancelled</th>
-                    <th>No-Shows</th>
-                    <th>Scheduled</th>
-                    <th onClick={() => handleSort('no_show_rate')}>
-                      No-Show Rate {sortConfig.key === 'no_show_rate' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    <th onClick={() => handleSort('completed')}>
+                      Completed {sortConfig.key === 'completed' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th onClick={() => handleSort('avg_wait_minutes')}>
-                      Avg Wait {sortConfig.key === 'avg_wait_minutes' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    <th onClick={() => handleSort('cancelled')}>
+                      Cancelled {sortConfig.key === 'cancelled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th onClick={() => handleSort('utilization_rate')}>
-                      Utilization {sortConfig.key === 'utilization_rate' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    <th onClick={() => handleSort('no_shows')}>
+                      No-Shows {sortConfig.key === 'no_shows' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('scheduled')}>
+                      Scheduled {sortConfig.key === 'scheduled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th>No-Show Rate</th>
+                    <th>Avg Wait</th>
+                    <th>Utilization</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getSortedData(officeData.office_stats || [], sortConfig.key).map((office, idx) => (
+                    <tr key={idx}>
+                      <td className="text-bold">{office.office_name}</td>
+                      <td className="text-muted">{office.address}</td>
+                      <td>{office.total_appointments}</td>
+                      <td className="text-success">{office.completed}</td>
+                      <td className="text-warning">{office.cancelled}</td>
+                      <td className="text-danger">{office.no_shows}</td>
+                      <td>{office.scheduled}</td>
+                      <td>
+                        <span className={`badge ${Number(office.no_show_rate) < 5 ? 'badge-success' : Number(office.no_show_rate) < 10 ? 'badge-warning' : 'badge-danger'}`}>
+                          {office.no_show_rate}%
+                        </span>
+                      </td>
+                      <td>{office.avg_wait_minutes ? `${office.avg_wait_minutes} min` : 'N/A'}</td>
+                      <td>
+                        <span className={`badge ${Number(office.utilization_rate) >= 80 ? 'badge-success' : Number(office.utilization_rate) >= 60 ? 'badge-warning' : 'badge-danger'}`}>
+                          {office.utilization_rate}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {officeData.doctor_stats && officeData.doctor_stats.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>Doctor Performance by Office</h3>
+                <p className="section-subtitle">{officeData.doctor_stats.length} doctor-office combinations</p>
+              </div>
+              <div className="table-container">
+                <table className="report-table">
+                  <thead>
+                    <tr>
+                      <th>Doctor</th>
+                      <th>Office</th>
+                      <th>Total Appts</th>
+                      <th>Completed</th>
+                      <th>No-Shows</th>
+                      <th>Completion Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {officeData.doctor_stats.map((stat, idx) => (
+                      <tr key={idx}>
+                        <td className="text-bold">Dr. {stat.doctor_name}</td>
+                        <td>{stat.office_name}</td>
+                        <td>{stat.total_appointments}</td>
+                        <td className="text-success">{stat.completed}</td>
+                        <td className="text-danger">{stat.no_shows}</td>
+                        <td>
+                          <span className={`badge ${Number(stat.completion_rate) >= 90 ? 'badge-success' : Number(stat.completion_rate) >= 75 ? 'badge-warning' : 'badge-danger'}`}>
+                            {stat.completion_rate}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </>
+      )}
+
+      {/* NEW PATIENTS REPORT VIEW */}
+      {!loading && activeReport === 'newPatients' && newPatientsData && (
+        <>
+          <div className="stats-grid">
+            <StatCard 
+              type="primary"
+              icon={<UserPlus size={20} />}
+              label="Total New Patient Appointments"
+              value={newPatientsData.summary?.total_new_appointments || 0}
+              subtitle={`${(newPatientsData.rows || []).length} time buckets`}
+            />
+            <StatCard 
+              type="success"
+              icon={<Users size={20} />}
+              label="Unique New Patients"
+              value={newPatientsData.summary?.unique_new_patients || 0}
+              subtitle="First-time visits in period"
+            />
+          </div>
+
+          <section className="report-section">
+            <div className="section-header">
+              <h3>New Patients by Period / Doctor / Office</h3>
+            </div>
+            <div className="table-container">
+              <table className="report-table sortable-table">
+                <thead>
+                  <tr>
+                    <th onClick={() => handleSort('period_label')}>
+                      Period {sortConfig.key === 'period_label' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('doctor_name')}>
+                      Doctor {sortConfig.key === 'doctor_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('office_name')}>
+                      Office {sortConfig.key === 'office_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('new_patient_appointments')}>
+                      New Appts {sortConfig.key === 'new_patient_appointments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('unique_new_patients')}>
+                      Unique New Patients {sortConfig.key === 'unique_new_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {getSortedData(officeData.office_stats || [], sortConfig.key).map((row, idx) => (
+                  {getSortedData(newPatientsData.rows || [], sortConfig.key).map((row, idx) => (
                     <tr key={idx}>
-                      <td className="text-bold">{row.office_name}</td>
-                      <td className="text-muted text-small">{row.address}</td>
-                      <td>{row.total_appointments}</td>
-                      <td className="text-success">{row.completed}</td>
-                      <td className="text-info">{row.cancelled}</td>
-                      <td className="text-warning">{row.no_shows}</td>
-                      <td>{row.scheduled}</td>
-                      <td>
-                        <span className={`rate-badge ${
-                          parseFloat(row.no_show_rate) < 10 ? 'rate-good' : 
-                          parseFloat(row.no_show_rate) < 20 ? 'rate-fair' : 'rate-poor'
-                        }`}>
-                          {row.no_show_rate}%
-                        </span>
-                      </td>
-                      <td>
-                        {row.avg_wait_minutes ? (
-                          <span className={
-                            row.avg_wait_minutes < 15 ? 'text-success' :
-                            row.avg_wait_minutes < 30 ? 'text-warning' : 'text-danger'
-                          }>
-                            {row.avg_wait_minutes} min
-                          </span>
-                        ) : 'N/A'}
-                      </td>
-                      <td>
-                        <div className="utilization-bar">
-                          <div 
-                            className={`utilization-fill ${
-                              parseFloat(row.utilization_rate) >= 70 ? 'util-high' : 
-                              parseFloat(row.utilization_rate) >= 50 ? 'util-medium' : 'util-low'
-                            }`}
-                            style={{ width: `${Math.min(row.utilization_rate, 100)}%` }}
-                          />
-                          <span className="utilization-text">{row.utilization_rate}%</span>
-                        </div>
-                      </td>
+                      <td className="text-bold">{row.period_label}</td>
+                      <td>Dr. {row.doctor_name}</td>
+                      <td>{row.office_name}</td>
+                      <td>{row.new_patient_appointments}</td>
+                      <td>{row.unique_new_patients}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -733,6 +886,7 @@ function Report() {
         </>
       )}
 
+      {/* Empty States */}
       {!loading && !error && activeReport === 'financial' && !financialData && (
         <div className="empty-state">
           <FileText size={56} />
@@ -748,36 +902,169 @@ function Report() {
           <button onClick={resetFilters} className="btn btn-secondary">Reset Filters</button>
         </div>
       )}
+
+      {!loading && !error && activeReport === 'newPatients' && !newPatientsData && (
+        <div className="empty-state">
+          <UserPlus size={56} />
+          <p>No new patient data available for the selected filters</p>
+          <button onClick={resetFilters} className="btn btn-secondary">Reset Filters</button>
+        </div>
+      )}
     </div>
   );
 }
 
-// Simple chart component using CSS
+// Enhanced chart component with gridlines, axis, and tooltips
 const SimpleChart = ({ data }) => {
+  const [hoveredBar, setHoveredBar] = React.useState(null);
+  const [clickedBar, setClickedBar] = React.useState(null);
+  
   if (!data || data.length === 0) return null;
 
-  const maxRevenue = Math.max(...data.map(d => Number(d.gross_revenue || 0)));
+  // Ensure we're working with numbers and find the true maximum
+  const revenues = data.map(d => {
+    const val = parseFloat(d.gross_revenue);
+    return isNaN(val) ? 0 : val;
+  });
+  
+  const maxRevenue = Math.max(...revenues);
+  
+  // Use 10% padding above the max value, or minimum of 100 if data is very small
+  const yAxisMax = Math.max(Math.ceil(maxRevenue * 1.1), 100);
+  
+  const yAxisSteps = 5;
+  const yAxisLabels = [];
+  for (let i = yAxisSteps; i >= 0; i--) {
+    yAxisLabels.push(Math.round((yAxisMax * i / yAxisSteps) * 100) / 100);
+  }
+
+  const formatCurrency = (value) => {
+    if (value >= 1000) {
+      return `$${(value / 1000).toFixed(1)}k`;
+    }
+    return `$${Math.round(value)}`;
+  };
+
+  const handleBarClick = (item, idx) => {
+    setClickedBar(clickedBar === idx ? null : idx);
+  };
+
+  const handleOutsideClick = () => {
+    setClickedBar(null);
+  };
+
+  React.useEffect(() => {
+    if (clickedBar !== null) {
+      document.addEventListener('click', handleOutsideClick);
+      return () => document.removeEventListener('click', handleOutsideClick);
+    }
+  }, [clickedBar]);
   
   return (
     <div className="simple-chart">
-      <div className="chart-bars">
-        {data.map((item, idx) => {
-          const height = maxRevenue > 0 ? (Number(item.gross_revenue || 0) / maxRevenue) * 100 : 0;
-          const collected = Number(item.collected_payments || 0);
-          const collectedHeight = maxRevenue > 0 ? (collected / maxRevenue) * 100 : 0;
-          
-          return (
-            <div key={idx} className="chart-bar-group">
-              <div className="chart-bar-container">
-                <div className="chart-bar chart-bar-gross" style={{ height: `${height}%` }}>
-                  <div className="chart-bar-collected" style={{ height: `${(collectedHeight / height) * 100}%` }} />
-                </div>
-              </div>
-              <div className="chart-label">{item.period_label}</div>
+      <div className="chart-wrapper">
+        {/* Y-Axis */}
+        <div className="chart-y-axis">
+          {yAxisLabels.map((value, idx) => (
+            <div key={idx} className="y-axis-label">
+              {formatCurrency(value)}
             </div>
-          );
-        })}
+          ))}
+        </div>
+        
+        {/* Chart Area */}
+        <div className="chart-area">
+          {/* Gridlines */}
+          <div className="chart-gridlines">
+            {yAxisLabels.map((_, idx) => (
+              <div key={idx} className="gridline" />
+            ))}
+          </div>
+          
+          {/* Bars */}
+          <div className="chart-bars">
+            {data.map((item, idx) => {
+              const grossRevenue = parseFloat(item.gross_revenue) || 0;
+              const collected = parseFloat(item.collected_payments) || 0;
+              const outstanding = parseFloat(item.outstanding_balance) || 0;
+              
+              // Calculate heights as percentages
+              const height = (grossRevenue / yAxisMax) * 100;
+              const collectedHeight = (collected / yAxisMax) * 100;
+              
+              return (
+                <div 
+                  key={idx} 
+                  className="chart-bar-group"
+                  onMouseEnter={() => setHoveredBar(idx)}
+                  onMouseLeave={() => setHoveredBar(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBarClick(item, idx);
+                  }}
+                >
+                  <div className="chart-bar-container">
+                    <div 
+                      className={`chart-bar chart-bar-gross ${hoveredBar === idx ? 'hovered' : ''}`}
+                      style={{ height: `${height}%` }}
+                    >
+                      <div 
+                        className="chart-bar-collected" 
+                        style={{ height: `${grossRevenue > 0 ? (collectedHeight / height) * 100 : 0}%` }} 
+                      />
+                    </div>
+                    
+                    {/* Tooltip */}
+                    {(hoveredBar === idx || clickedBar === idx) && (
+                      <div className={`chart-tooltip ${clickedBar === idx ? 'clicked' : ''}`}>
+                        <div className="tooltip-header">{item.period_label}</div>
+                        <div className="tooltip-row">
+                          <span className="tooltip-label">
+                            <span className="tooltip-dot gross" />
+                            Gross Revenue:
+                          </span>
+                          <span className="tooltip-value">${grossRevenue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="tooltip-row">
+                          <span className="tooltip-label">
+                            <span className="tooltip-dot collected" />
+                            Collected:
+                          </span>
+                          <span className="tooltip-value">${collected.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="tooltip-row">
+                          <span className="tooltip-label">
+                            <span className="tooltip-dot outstanding" />
+                            Outstanding:
+                          </span>
+                          <span className="tooltip-value">${outstanding.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="tooltip-divider" />
+                        <div className="tooltip-row small">
+                          <span className="tooltip-label">Visits:</span>
+                          <span className="tooltip-value">{item.total_visits}</span>
+                        </div>
+                        <div className="tooltip-row small">
+                          <span className="tooltip-label">Patients:</span>
+                          <span className="tooltip-value">{item.unique_patients}</span>
+                        </div>
+                        <div className="tooltip-row small">
+                          <span className="tooltip-label">Collection Rate:</span>
+                          <span className="tooltip-value">
+                            {grossRevenue > 0 ? ((collected / grossRevenue) * 100).toFixed(1) : '0.0'}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="chart-label">{item.period_label}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
+      
       <div className="chart-legend">
         <div className="legend-item">
           <span className="legend-color legend-gross" />
@@ -786,6 +1073,10 @@ const SimpleChart = ({ data }) => {
         <div className="legend-item">
           <span className="legend-color legend-collected" />
           <span>Collected</span>
+        </div>
+        <div className="legend-hint">
+          <AlertCircle size={14} />
+          <span>Click bars for details</span>
         </div>
       </div>
     </div>
