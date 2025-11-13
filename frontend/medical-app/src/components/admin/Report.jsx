@@ -921,16 +921,31 @@ const SimpleChart = ({ data }) => {
   
   if (!data || data.length === 0) return null;
 
-  // Ensure we're working with numbers and find the true maximum
-  const revenues = data.map(d => {
-    const val = parseFloat(d.gross_revenue);
-    return isNaN(val) ? 0 : val;
+  // Parse all revenue values and log for debugging
+  const revenues = data.map((d, idx) => {
+    const raw = d.gross_revenue;
+    const parsed = parseFloat(raw);
+    const final = isNaN(parsed) ? 0 : parsed;
+    
+    // Debug logging (remove after confirming it works)
+    if (idx === 0) {
+      console.log('Chart Debug - First Item:');
+      console.log('  Raw value:', raw, typeof raw);
+      console.log('  Parsed:', parsed);
+      console.log('  Final:', final);
+    }
+    
+    return final;
   });
   
   const maxRevenue = Math.max(...revenues);
-  
-  // Use 10% padding above the max value, or minimum of 100 if data is very small
   const yAxisMax = Math.max(Math.ceil(maxRevenue * 1.1), 100);
+  
+  // More debug logging
+  console.log('Chart Scaling:');
+  console.log('  Max Revenue:', maxRevenue);
+  console.log('  Y-Axis Max:', yAxisMax);
+  console.log('  All revenues:', revenues);
   
   const yAxisSteps = 5;
   const yAxisLabels = [];
@@ -984,13 +999,28 @@ const SimpleChart = ({ data }) => {
           {/* Bars */}
           <div className="chart-bars">
             {data.map((item, idx) => {
+              // Explicitly parse each value
               const grossRevenue = parseFloat(item.gross_revenue) || 0;
               const collected = parseFloat(item.collected_payments) || 0;
               const outstanding = parseFloat(item.outstanding_balance) || 0;
               
-              // Calculate heights as percentages
-              const height = (grossRevenue / yAxisMax) * 100;
-              const collectedHeight = (collected / yAxisMax) * 100;
+              // Calculate heights as percentages with explicit checks
+              const height = yAxisMax > 0 ? (grossRevenue / yAxisMax) * 100 : 0;
+              const collectedHeight = yAxisMax > 0 ? (collected / yAxisMax) * 100 : 0;
+              
+              // Debug first bar
+              if (idx === 0) {
+                console.log(`Bar ${idx} (${item.period_label}):`);
+                console.log('  Gross Revenue:', grossRevenue);
+                console.log('  Calculated Height:', height + '%');
+                console.log('  Y-Axis Max:', yAxisMax);
+              }
+              
+              // Ensure height is a valid number
+              const safeHeight = isNaN(height) || height < 0 ? 0 : Math.min(height, 100);
+              const safeCollectedPct = (grossRevenue > 0 && collectedHeight > 0) 
+                ? Math.min((collectedHeight / height) * 100, 100) 
+                : 0;
               
               return (
                 <div 
@@ -1006,12 +1036,14 @@ const SimpleChart = ({ data }) => {
                   <div className="chart-bar-container">
                     <div 
                       className={`chart-bar chart-bar-gross ${hoveredBar === idx ? 'hovered' : ''}`}
-                      style={{ height: `${height}%` }}
+                      style={{ height: `${safeHeight}%` }}
                     >
-                      <div 
-                        className="chart-bar-collected" 
-                        style={{ height: `${grossRevenue > 0 ? (collectedHeight / height) * 100 : 0}%` }} 
-                      />
+                      {safeHeight > 0 && (
+                        <div 
+                          className="chart-bar-collected" 
+                          style={{ height: `${safeCollectedPct}%` }} 
+                        />
+                      )}
                     </div>
                     
                     {/* Tooltip */}
