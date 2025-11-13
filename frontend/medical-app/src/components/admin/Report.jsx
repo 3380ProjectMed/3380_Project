@@ -921,27 +921,28 @@ const SimpleChart = ({ data }) => {
   
   if (!data || data.length === 0) return null;
 
-  const maxRevenue = Math.max(...data.map(d => Number(d.gross_revenue || 0)));
+  // Ensure we're working with numbers and find the true maximum
+  const revenues = data.map(d => {
+    const val = parseFloat(d.gross_revenue);
+    return isNaN(val) ? 0 : val;
+  });
   
-  // Round up to nearest nice number for Y-axis
-  const getYAxisMax = (max) => {
-    const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
-    const normalized = max / magnitude;
-    const nice = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
-    return nice * magnitude;
-  };
+  const maxRevenue = Math.max(...revenues);
   
-  const yAxisMax = getYAxisMax(maxRevenue);
+  // Use 10% padding above the max value, or minimum of 100 if data is very small
+  const yAxisMax = Math.max(Math.ceil(maxRevenue * 1.1), 100);
+  
   const yAxisSteps = 5;
-  const yAxisValues = Array.from({ length: yAxisSteps + 1 }, (_, i) => 
-    Math.round((yAxisMax * i / yAxisSteps) * 100) / 100
-  );
+  const yAxisLabels = [];
+  for (let i = yAxisSteps; i >= 0; i--) {
+    yAxisLabels.push(Math.round((yAxisMax * i / yAxisSteps) * 100) / 100);
+  }
 
   const formatCurrency = (value) => {
     if (value >= 1000) {
       return `$${(value / 1000).toFixed(1)}k`;
     }
-    return `$${value.toFixed(0)}`;
+    return `$${Math.round(value)}`;
   };
 
   const handleBarClick = (item, idx) => {
@@ -964,7 +965,7 @@ const SimpleChart = ({ data }) => {
       <div className="chart-wrapper">
         {/* Y-Axis */}
         <div className="chart-y-axis">
-          {yAxisValues.reverse().map((value, idx) => (
+          {yAxisLabels.map((value, idx) => (
             <div key={idx} className="y-axis-label">
               {formatCurrency(value)}
             </div>
@@ -975,7 +976,7 @@ const SimpleChart = ({ data }) => {
         <div className="chart-area">
           {/* Gridlines */}
           <div className="chart-gridlines">
-            {yAxisValues.map((_, idx) => (
+            {yAxisLabels.map((_, idx) => (
               <div key={idx} className="gridline" />
             ))}
           </div>
@@ -983,11 +984,13 @@ const SimpleChart = ({ data }) => {
           {/* Bars */}
           <div className="chart-bars">
             {data.map((item, idx) => {
-              const grossRevenue = Number(item.gross_revenue || 0);
-              const collected = Number(item.collected_payments || 0);
-              const outstanding = Number(item.outstanding_balance || 0);
-              const height = yAxisMax > 0 ? (grossRevenue / yAxisMax) * 100 : 0;
-              const collectedHeight = yAxisMax > 0 ? (collected / yAxisMax) * 100 : 0;
+              const grossRevenue = parseFloat(item.gross_revenue) || 0;
+              const collected = parseFloat(item.collected_payments) || 0;
+              const outstanding = parseFloat(item.outstanding_balance) || 0;
+              
+              // Calculate heights as percentages
+              const height = (grossRevenue / yAxisMax) * 100;
+              const collectedHeight = (collected / yAxisMax) * 100;
               
               return (
                 <div 
@@ -1007,7 +1010,7 @@ const SimpleChart = ({ data }) => {
                     >
                       <div 
                         className="chart-bar-collected" 
-                        style={{ height: `${height ? (collectedHeight / height) * 100 : 0}%` }} 
+                        style={{ height: `${grossRevenue > 0 ? (collectedHeight / height) * 100 : 0}%` }} 
                       />
                     </div>
                     
