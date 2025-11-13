@@ -1407,8 +1407,8 @@ elseif ($endpoint === 'referrals') {
                         $used[] = $formatted;
                     }
                 }                sendResponse(true, [
-                    'active_referrals' => $active,
-                    'used_referrals' => $used,
+                    'active' => $active,
+                    'used' => $used,
                     'active_count' => count($active),
                     'used_count' => count($used)
                 ], 'Referrals retrieved successfully');
