@@ -588,9 +588,47 @@
 	font-weight: 500;
 }
 
+.text-primary {
+	color: #0077b6;
+	font-weight: 500;
+}
+
+.text-error {
+	color: #dc2626;
+	font-weight: 500;
+}
+
 /* ============================================================================
    BADGES & INDICATORS
    ============================================================================ */
+
+.badge {
+	display: inline-block;
+	padding: 0.25rem 0.625rem;
+	border-radius: 999px;
+	font-weight: 700;
+	font-size: 0.75rem;
+}
+
+.badge-success {
+	background: #d1fae5;
+	color: #065f46;
+}
+
+.badge-warning {
+	background: #fff9c4;
+	color: #f57f17;
+}
+
+.badge-error {
+	background: #fee2e2;
+	color: #991b1b;
+}
+
+.badge-info {
+	background: #dbeafe;
+	color: #1e40af;
+}
 
 .rate-badge {
 	display: inline-block;
@@ -682,6 +720,22 @@
 	font-weight: 700;
 	color: #023047;
 	z-index: 1;
+}
+
+/* ============================================================================
+   DEMOGRAPHICS GRID LAYOUT (NEW)
+   ============================================================================ */
+
+.demographics-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+	gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+	.demographics-grid {
+		grid-template-columns: 1fr;
+	}
 }
 
 /* ============================================================================
@@ -927,6 +981,10 @@
 	.filter-actions .btn {
 		width: 100%;
 		justify-content: center;
+	}
+
+	.demographics-grid {
+		grid-template-columns: 1fr;
 	}
 }
 
