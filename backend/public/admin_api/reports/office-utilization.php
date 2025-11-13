@@ -90,7 +90,7 @@ try {
                 " . ($status_filter && $status_filter !== 'all' ? "AND a.Status = ?" : "") . "
             LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
             " . ($office_id && $office_id !== 'all' ? "WHERE o.office_id = ?" : "") . "
-            GROUP BY o.office_id
+            GROUP BY o.office_id, o.name, o.address, o.city, o.state, o.phone, o.zipcode
             HAVING total_appointments > 0
             ORDER BY total_appointments DESC";
     
