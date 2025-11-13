@@ -1536,6 +1536,82 @@ elseif ($endpoint === 'schedule') {
                 error_log("Schedule error: " . $e->getMessage());
                 sendResponse(false, [], 'Failed to load schedule: ' . $e->getMessage(), 500);
             }
+        } elseif ($action === 'timeslots') {
+            // Get available time slots for a doctor on a specific date
+            $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 0;
+            $date = $_GET['date'] ?? null;
+            
+            if ($doctor_id === 0 || !$date) {
+                sendResponse(false, [], 'doctor_id and date required', 400);
+            }
+            
+            try {
+                // Validate date format
+                $datetime = DateTime::createFromFormat('Y-m-d', $date);
+                if (!$datetime) {
+                    sendResponse(false, [], 'Invalid date format. Use YYYY-MM-DD', 400);
+                    return;
+                }
+                
+                // Define standard time slots (business hours 8 AM - 6 PM)
+                $all_time_slots = [
+                    '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', 
+                    '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
+                ];
+                
+                // Convert to 24-hour format for database comparison
+                $time_slot_mapping = [
+                    '8:00 AM' => '08:00:00',
+                    '9:00 AM' => '09:00:00', 
+                    '10:00 AM' => '10:00:00',
+                    '11:00 AM' => '11:00:00',
+                    '1:00 PM' => '13:00:00',
+                    '2:00 PM' => '14:00:00',
+                    '3:00 PM' => '15:00:00', 
+                    '4:00 PM' => '16:00:00',
+                    '5:00 PM' => '17:00:00'
+                ];
+                
+                // Get existing appointments for this doctor on this date
+                $stmt = $mysqli->prepare("
+                    SELECT TIME(appointment_date) as appointment_time
+                    FROM appointment 
+                    WHERE doctor_id = ? 
+                    AND DATE(appointment_date) = ?
+                    AND status != 'Cancelled'
+                ");
+                
+                $stmt->bind_param('is', $doctor_id, $date);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                $booked_times = [];
+                while ($row = $result->fetch_assoc()) {
+                    $booked_times[] = $row['appointment_time'];
+                }
+                
+                // Filter out booked time slots
+                $available_slots = [];
+                foreach ($all_time_slots as $slot) {
+                    $slot_time = $time_slot_mapping[$slot];
+                    if (!in_array($slot_time, $booked_times)) {
+                        $available_slots[] = $slot;
+                    }
+                }
+                
+                sendResponse(true, [
+                    'available_slots' => $available_slots,
+                    'booked_slots' => array_keys(array_filter($time_slot_mapping, function($time) use ($booked_times) {
+                        return in_array($time, $booked_times);
+                    })),
+                    'date' => $date,
+                    'doctor_id' => $doctor_id
+                ], 'Available time slots retrieved successfully');
+                
+            } catch (Exception $e) {
+                error_log("Time slots error: " . $e->getMessage());
+                sendResponse(false, [], 'Failed to load time slots: ' . $e->getMessage(), 500);
+            }
         }
     }
 }
