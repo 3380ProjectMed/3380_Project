@@ -1,64 +1,113 @@
 <?php
-declare(strict_types=1);
-header('Content-Type: application/json');
-require_once __DIR__ . '/../_bootstrap.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-function fail(int $code, string $msg, array $extra = []): void {
-  http_response_code($code);
-  echo json_encode(array_merge(['error' => $msg], $extra));
-  exit;
-}
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
+header('Content-Type: application/json');
 
 try {
-    $q = trim((string)($_GET['q'] ?? ''));
-    $page = max(1, (int)($_GET['page'] ?? 1));
-    // Accept pageSize (frontend) or fallback to limit
-    $limit = max(1, min(50, (int)($_GET['pageSize'] ?? $_GET['limit'] ?? 10)));
-    $offset = ($page - 1) * $limit;
-
-    $params = [];
-    $where = '';
-    $types = '';
-    if ($q !== '') {
-        // if query looks like p123 or numeric, search by id
-        if (preg_match('/^p?(\d+)$/i', $q, $m)) {
-            $where = ' WHERE p.patient_id = ?';
-            $types .= 'i';
-            $params[] = (int)$m[1];
-        } else {
-            $like = "%{$q}%";
-            $where = ' WHERE (p.first_name LIKE ? OR p.last_name LIKE ? OR CONCAT(p.first_name, " ", p.last_name) LIKE ?)';
-            $types .= 'sss';
-            $params[] = $like; $params[] = $like; $params[] = $like;
-        }
+    session_start();
+    if (empty($_SESSION['uid'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'UNAUTHENTICATED']);
+        exit;
     }
 
-    $sql = "SELECT SQL_CALC_FOUND_ROWS p.patient_id AS patient_id, p.first_name, p.last_name, DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.allergies
-            FROM patient p {$where} ORDER BY p.last_name, p.first_name LIMIT ? OFFSET ?";
+    $conn = getDBConnection();
+    $email = $_SESSION['email'] ?? '';
+    
+    $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
+    
+    if (empty($rows)) {
+        closeDBConnection($conn);
+        http_response_code(404);
+        echo json_encode(['error' => 'NURSE_NOT_FOUND']);
+        exit;
+    }
+    
+    $nurse_id = (int)$rows[0]['nurse_id'];
 
-    $types .= 'ii';
-    $params[] = $limit; $params[] = $offset;
+    $search = $_GET['q'] ?? '';
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $pageSize = max(1, min(100, (int)($_GET['limit'] ?? 10)));
+    $offset = ($page - 1) * $pageSize;
 
-    $rows = executeQuery($pdo, $sql, $types, $params);
+    if (!empty($search)) {
+        $searchParam = "%{$search}%";
+        // Fixed: Use explicit column names without ambiguity
+        $sql = "SELECT DISTINCT 
+                    patient.patient_id, 
+                    patient.first_name, 
+                    patient.last_name, 
+                    DATE_FORMAT(patient.dob, '%Y-%m-%d') AS dob, 
+                    patient.email, 
+                    codes_allergies.allergies_text as allergies
+                FROM patient_visit
+                JOIN patient ON patient_visit.patient_id = patient.patient_id
+                LEFT JOIN codes_allergies ON patient.allergies = codes_allergies.allergies_code
+                WHERE patient_visit.nurse_id = ? 
+                AND (patient.first_name LIKE ? OR patient.last_name LIKE ?)
+                ORDER BY patient.last_name, patient.first_name
+                LIMIT ? OFFSET ?";
+        
+        $patients = executeQuery($conn, $sql, 'issii', [$nurse_id, $searchParam, $searchParam, $pageSize, $offset]);
+        
+        $countSql = "SELECT COUNT(DISTINCT patient.patient_id) as total 
+                     FROM patient_visit 
+                     JOIN patient ON patient_visit.patient_id = patient.patient_id 
+                     WHERE patient_visit.nurse_id = ? 
+                     AND (patient.first_name LIKE ? OR patient.last_name LIKE ?)";
+        $countResult = executeQuery($conn, $countSql, 'iss', [$nurse_id, $searchParam, $searchParam]);
+    } else {
+        // Fixed: Use explicit table names
+        $sql = "SELECT DISTINCT 
+                    patient.patient_id, 
+                    patient.first_name, 
+                    patient.last_name, 
+                    DATE_FORMAT(patient.dob, '%Y-%m-%d') AS dob, 
+                    patient.email, 
+                    codes_allergies.allergies_text as allergies
+                FROM patient_visit
+                JOIN patient ON patient_visit.patient_id = patient.patient_id
+                LEFT JOIN codes_allergies ON patient.allergies = codes_allergies.allergies_code
+                WHERE patient_visit.nurse_id = ?
+                ORDER BY patient.last_name, patient.first_name
+                LIMIT ? OFFSET ?";
+        
+        $patients = executeQuery($conn, $sql, 'iii', [$nurse_id, $pageSize, $offset]);
+        
+    $countSql = "SELECT COUNT(DISTINCT patient_visit.patient_id) as total 
+             FROM patient_visit 
+             WHERE patient_visit.nurse_id = ?";
+        $countResult = executeQuery($conn, $countSql, 'i', [$nurse_id]);
+    }
 
-    $cntRows = executeQuery($pdo, 'SELECT FOUND_ROWS() AS total');
-    $total = isset($cntRows[0]['total']) ? (int)$cntRows[0]['total'] : count($rows ?: []);
+    $total = (int)($countResult[0]['total'] ?? 0);
 
-    error_log("[nurse_api] get-all.php called with q={$q} page={$page} limit={$limit}");
-    $items = array_map(function($r) {
-        return [
-            'patient_id' => 'p' . $r['patient_id'],
-            'first_name' => $r['first_name'],
-            'last_name'  => $r['last_name'],
-            'dob'        => $r['dob'],
-            'allergies'  => $r['allergies'],
-        ];
-    }, $rows ?: []);
-    // Return with a success flag and consistent shape for frontend
-    echo json_encode(['success' => true, 'items' => $items, 'total' => $total]);
+    closeDBConnection($conn);
+    
+    echo json_encode([
+        'success' => true,
+        'patients' => $patients ?: [],
+        'total' => $total,
+        'page' => $page,
+        'pageSize' => $pageSize
+    ]);
+
 } catch (Throwable $e) {
+    error_log("Nurse patients ERROR: " . $e->getMessage());
+    
+    if (isset($conn)) {
+        closeDBConnection($conn);
+    }
+    
     http_response_code(500);
-    error_log('[nurse_api] get-all.php error: ' . $e->getMessage());
-    error_log($e->getTraceAsString());
-    echo json_encode(['success' => false, 'error' => 'Failed to load patients', 'message' => $e->getMessage()]);
+    echo json_encode([
+        'error' => 'SERVER_ERROR',
+        'message' => $e->getMessage(),
+        'file' => $e->getFile(),
+        'line' => $e->getLine()
+    ]);
 }
+?>
