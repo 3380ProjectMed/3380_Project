@@ -26,11 +26,18 @@ try {
     $scope = isset($_GET['scope']) ? strtolower(trim($_GET['scope'])) : 'today';
 
     if ($scope === 'today') {
-        $sql = "SELECT a.Appointment_id, a.Appointment_date, a.Status, a.Reason_for_visit, o.office_name AS office_name, o.address AS office_address, o.city AS office_city, o.state AS office_state FROM appointment a LEFT JOIN office o ON a.Office_id = o.office_id WHERE a.Patient_id = ? AND DATE(a.Appointment_date) = CURDATE() ORDER BY a.Appointment_date";
+        $sql = "SELECT 
+        a.Appointment_id, a.Appointment_date, a.Status, a.Reason_for_visit, o.name AS office_name, o.address AS office_address, o.city AS office_city, o.state AS office_state 
+        FROM appointment a LEFT JOIN office o ON a.Office_id = o.office_id 
+        WHERE a.Patient_id = ? AND DATE(a.Appointment_date) = CURDATE() 
+        ORDER BY a.Appointment_date";
         $appointments = executeQuery($conn, $sql, 'i', [$patient_id]);
     } else {
         // upcoming: today or future
-        $sql = "SELECT a.Appointment_id, a.Appointment_date, a.Status, a.Reason_for_visit, o.office_name AS office_name, o.address AS office_address, o.city AS office_city, o.state AS office_state FROM appointment a LEFT JOIN office o ON a.Office_id = o.office_id WHERE a.Patient_id = ? AND DATE(a.Appointment_date) >= CURDATE() ORDER BY a.Appointment_date";
+        $sql = "SELECT a.Appointment_id, a.Appointment_date, a.Status, a.Reason_for_visit, o.name AS office_name, o.address AS office_address, o.city AS office_city, o.state AS office_state 
+        FROM appointment a LEFT JOIN office o ON a.Office_id = o.office_id 
+        WHERE a.Patient_id = ? AND DATE(a.Appointment_date) >= CURDATE() 
+        ORDER BY a.Appointment_date";
         $appointments = executeQuery($conn, $sql, 'i', [$patient_id]);
     }
 
