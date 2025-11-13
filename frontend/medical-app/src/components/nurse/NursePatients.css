@@ -42,3 +42,16 @@
 .allergy-none{background:#dcfce7;color:#065f46;padding:6px 10px;border-radius:8px;display:inline-block}
 .allergy-has{background:#fee2e2;color:#b91c1c;padding:6px 10px;border-radius:8px;display:inline-block}
 .empty{text-align:center;color:#7b879b;padding:20px 0}
+
+/* Vitals modal styles */
+.nurse-modal-backdrop{
+  position:fixed;inset:0;background:rgba(3,7,18,0.6);display:flex;align-items:center;justify-content:center;z-index:2000;padding:20px;
+}
+.nurse-modal{background:#fff;border-radius:12px;padding:20px;max-width:600px;width:100%;box-shadow:0 12px 40px rgba(2,6,23,0.2)}
+.vitals-form{display:block;margin-top:12px}
+.vitals-form label{display:flex;flex-direction:column;gap:6px;font-size:14px;margin-bottom:8px}
+.vitals-form input{padding:8px;border:1px solid #e5e7eb;border-radius:8px}
+.vitals-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.alert.error{background:#fee2e2;color:#b91c1c;padding:8px 12px;border-radius:999px;display:inline-block}
+.alert.success{background:#dcfce7;color:#065f46;padding:8px 12px;border-radius:999px;display:inline-block}

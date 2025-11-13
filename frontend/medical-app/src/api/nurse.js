@@ -1,10 +1,8 @@
 
 import { makeUrl } from './http.js';
 
-// Use absolute nurse API base (no /api prefix)
+// Use absolute nurse API base
 const BASE_URL = '/nurse_api';
-
-// Small helper: robust JSON/text parser for backend responses.
 async function fetchJson(path, opts = {}) {
   const init = { credentials: 'include', ...opts };
   const res = await fetch(makeUrl(path, init.params), init);
@@ -16,7 +14,6 @@ async function fetchJson(path, opts = {}) {
       const parsed = JSON.parse(text);
       msg = parsed.message || parsed.error || JSON.stringify(parsed);
     } catch (e) {
-      // leave text as-is (may be HTML)
     }
     throw new Error(`HTTP ${res.status} ${res.statusText} - ${msg}`);
   }
