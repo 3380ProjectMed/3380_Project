@@ -168,7 +168,7 @@ function Report() {
       setLoading(true);
       setError(null);
       const res = await fetch(
-        `/admin_api/reports/new-patients.php?${buildQueryParams()}`,
+        `/admin_api/reports/get-new-patients.php?${buildQueryParams()}`,
         { credentials: 'include' }
       );
       const data = await res.json();
