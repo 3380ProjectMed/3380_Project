@@ -51,6 +51,7 @@ try {
                 o.state
             FROM work_schedule ws
             JOIN office o ON ws.office_id = o.office_id
+            JOIN doctor d ON ws.staff_id = d.staff_id
             WHERE ws.doctor_id = ?
             ORDER BY 
                 FIELD(ws.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
