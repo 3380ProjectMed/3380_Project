@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './NurseSchedule.css';
-import { getNurseSchedule } from '../../api/nurse';
+import { getNurseSchedule, createOrGetNurseVisit } from '../../api/nurse';
 
 // Helper: get days in month
 function getDaysInMonth(date) {
@@ -11,7 +11,7 @@ function getStartingDay(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
 }
 
-export default function NurseSchedule() {
+export default function NurseSchedule(props) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,12 +121,26 @@ export default function NurseSchedule() {
                       <p className="no-appointments">No appointments</p>
                     ) : (
                       <div className="appointments">
-                        {appts.map((a, i) => (
-                          <div key={a.id ?? a.appointmentId ?? i} className="appointment-item">
-                            <p className="appointment-time">{a.time ? a.time.substring(0,5) : ''}</p>
-                            <p className="appointment-patient">{a.patientName || '-'}</p>
-                          </div>
-                        ))}
+                        {appts.map((a, i) => {
+                          const apptId = a.appointmentId || a.Appointment_id || a.id;
+                          return (
+                            <div key={apptId ?? i} className="appointment-item" onClick={async () => {
+                                if (!apptId) return;
+                                try {
+                                  const resp = await createOrGetNurseVisit(apptId);
+                                  const visitId = resp?.visitId || resp?.visit_id || null;
+                                  if (typeof props?.onOpenClinical === 'function') {
+                                    props.onOpenClinical(apptId, visitId);
+                                  }
+                                } catch (err) {
+                                  console.error('Failed to open clinical for appointment', err);
+                                }
+                              }}>
+                              <p className="appointment-time">{a.time ? a.time.substring(0,5) : ''}</p>
+                              <p className="appointment-patient">{a.patientName || a.patientName || '-'}</p>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

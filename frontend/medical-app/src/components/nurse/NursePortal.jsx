@@ -10,6 +10,8 @@ import "./NursePortal.css";
 
 export default function NursePortal() {
   const [currentPage, setCurrentPage] = useState("dashboard");
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
+  const [selectedVisitId, setSelectedVisitId] = useState(null);
   const handleLogout = () => {
     if (confirm("Log out of Nurse Portal?")) {
       window.location.href = "/login";
@@ -22,9 +24,15 @@ export default function NursePortal() {
 
       <main className="nurse-main">
         {currentPage === "dashboard" && <NurseDashboard setCurrentPage={setCurrentPage} />}
-        {currentPage === "schedule" && <NurseSchedule />}
-        {currentPage === "patients" && <NursePatients />}
-        {currentPage === "clinical" && <NurseClinicalWorkSpace />}
+        {currentPage === "schedule" && (
+          <NurseSchedule onOpenClinical={(appointmentId, visitId) => {
+            setSelectedAppointmentId(appointmentId);
+            setSelectedVisitId(visitId ?? null);
+            setCurrentPage('clinical');
+          }} />
+        )}
+        {currentPage === "patients" && <NursePatients onOpenClinical={(appointmentId, visitId) => { setSelectedAppointmentId(appointmentId); setSelectedVisitId(visitId ?? null); setCurrentPage('clinical'); }} />}
+        {currentPage === "clinical" && <NurseClinicalWorkSpace appointmentId={selectedAppointmentId} visitId={selectedVisitId} />}
         {currentPage === "profile" && <NurseProfile />}
         {currentPage === "reports" && <NurseReport />}
       </main>
