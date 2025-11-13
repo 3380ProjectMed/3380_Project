@@ -419,69 +419,7 @@ function Report() {
   };
 
   // Report selector view
-  if (!activeReport) {
-    return (
-      <div className="report-container">
-        <div className="dashboard-header">
-          <div className="welcome-section">
-            <h1>Reports & Analytics (v2)</h1>
-            <p className="office-info">Select a report type to view detailed insights</p>
-          </div>
-        </div>
-
-        <div className="report-selector-grid">
-          <div className="report-selector-card" onClick={() => handleSelectReport('financial')}>
-            <div className="selector-icon">
-              <DollarSign size={48} />
-            </div>
-            <h3>Financial Summary</h3>
-            <p>Revenue tracking, payments collected, outstanding balances, and insurance breakdown</p>
-            <div className="card-features">
-              <span><BarChart3 size={14} /> Charts & Trends</span>
-              <span><Filter size={14} /> Advanced Filters</span>
-              <span><Download size={14} /> Export Data</span>
-            </div>
-          </div>
-
-          <div className="report-selector-card" onClick={() => handleSelectReport('office')}>
-            <div className="selector-icon">
-              <Building2 size={48} />
-            </div>
-            <h3>Office Utilization</h3>
-            <p>Appointment metrics, no-show rates, wait times, and office performance analysis</p>
-            <div className="card-features">
-              <span><Clock size={14} /> Wait Time Analysis</span>
-              <span><Users size={14} /> Staff Performance</span>
-              <span><TrendingUp size={14} /> Utilization Trends</span>
-            </div>
-          </div>
-
-          <div className="report-selector-card" onClick={() => handleSelectReport('newPatients')}>
-            <div className="selector-icon">
-              <UserPlus size={48} />
-            </div>
-            <h3>New Patients</h3>
-            <p>Track first-time visits by doctor and office over time</p>
-            <div className="card-features">
-              <span><Users size={14} /> Patient Growth</span>
-              <span><BarChart3 size={14} /> Trends Over Time</span>
-              <span><Download size={14} /> Export Data</span>
-            </div>
-          </div>
-
-          {/* NEW: Doctor Performance Report */}
-          <div className="report-selector-card" onClick={() => handleSelectReport('doctorPerformance')}>
-            <div className="selector-icon">
-              <Award size={48} />
-            </div>
-            <h3>Doctor Performance</h3>
-            <p>Comprehensive productivity metrics, revenue per doctor, and patient volume analysis</p>
-            <div className="card-features">
-              <span><TrendingUp size={14} /> Productivity Metrics</span>
-              <span><DollarSign size={14} /> Revenue Analysis</span>
-              <span><Users size={14} /> Patient Volume</span>
-            </div>
-          </div>
+ 
 
           {/* NEW: Patient Retention Report */}
           <div className="report-selector-card" onClick={() => handleSelectReport('retention')}>
