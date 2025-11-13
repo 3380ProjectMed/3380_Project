@@ -63,7 +63,18 @@ function Report() {
   useEffect(() => {
     fetchFilterOptions();
   }, []);
+  useEffect(() => {
+  if (!activeReport) return;  
 
+  if (activeReport === 'financial') fetchFinancialReport();
+  if (activeReport === 'office') fetchOfficeUtilization();
+  if (activeReport === 'newPatients') fetchNewPatientsReport();
+  if (activeReport === 'doctorPerformance') fetchDoctorPerformance();
+  if (activeReport === 'retention') fetchPatientRetention();
+  if (activeReport === 'referrals') fetchReferralAnalysis();
+  if (activeReport === 'demographics') fetchPatientDemographics();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [activeReport]);
   const fetchFilterOptions = async () => {
     try {
       const [officesRes, doctorsRes, insurancesRes] = await Promise.all([
@@ -530,27 +541,6 @@ function Report() {
   }
 
   // Main report view
-useEffect(() => {
-  if (!activeReport) return;  
-
-  if (activeReport === 'financial') fetchFinancialReport();
-  if (activeReport === 'office') fetchOfficeUtilization();
-  if (activeReport === 'newPatients') fetchNewPatientsReport();
-  if (activeReport === 'doctorPerformance') fetchDoctorPerformance();
-  if (activeReport === 'retention') fetchPatientRetention();
-  if (activeReport === 'referrals') fetchReferralAnalysis();
-  if (activeReport === 'demographics') fetchPatientDemographics();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [activeReport]);
-
-if (!activeReport) {
-  return (
-    <div className="report-container">
-      {/* selector UI */}
-    </div>
-  );
-}
-
   const headerTitle =
     activeReport === 'financial'
       ? 'Financial Summary'
