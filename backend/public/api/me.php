@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 // Log to a file we can check
@@ -190,15 +191,15 @@ if (method_exists($stmt, 'get_result')) {
     exit;
   }
 
-  if ($fetched === null || $user_id === null) {
-    debug_log('No user found for uid: ' . $_SESSION['uid']);
-    session_destroy();
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-    $stmt->close();
-    $mysqli->close();
-    exit;
-  }
+  // if ($fetched === null || $user_id === null) {
+  //   debug_log('No user found for uid: ' . $_SESSION['uid']);
+  //   session_destroy();
+  //   http_response_code(401);
+  //   echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+  //   $stmt->close();
+  //   $mysqli->close();
+  //   exit;
+  // }
 
   $user = [
     'user_id' => is_numeric($user_id) ? (int) $user_id : $user_id,
@@ -213,15 +214,15 @@ if (method_exists($stmt, 'get_result')) {
   debug_log('User built from bind_result: ' . json_encode($user));
 }
 
-if (!$user) {
-  debug_log('User is null after fetch');
-  session_destroy();
-  http_response_code(401);
-  echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-  $stmt->close();
-  $mysqli->close();
-  exit;
-}
+// if (!$user) {
+//   debug_log('User is null after fetch');
+//   session_destroy();
+//   http_response_code(401);
+//   echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+//   $stmt->close();
+//   $mysqli->close();
+//   exit;
+// }
 
 // Return essential user info only
 $response = [
