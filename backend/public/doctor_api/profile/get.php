@@ -65,7 +65,7 @@ try {
                 s.last_name,
                 s.staff_email,
                 s.license_number,
-                s.office_id,
+                ws.office_id,
                 o.name as work_location_name,
                 sp.specialty_name,
                 cg.gender_text as gender,
@@ -74,7 +74,7 @@ try {
             INNER JOIN staff s ON d.staff_id = s.staff_id
             LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
             LEFT JOIN codes_gender cg ON s.gender = cg.gender_code
-            LEFT JOIN office o ON s.office_id = o.office_id
+            LEFT JOIN office o ON ws.office_id = o.office_id
             WHERE d.doctor_id = ?";
 
     $result = executeQuery($conn, $sql, 'i', [$doctor_id]);
