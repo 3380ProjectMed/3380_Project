@@ -24,16 +24,18 @@ try {
     $date = $_GET['date'];
     $user_id = (int) $_SESSION['uid'];
 
-    // Resolve the receptionist's office ID
+    // Resolve the receptionist's office ID from work_schedule
     $conn = getDBConnection();
 
     try {
         $rows = executeQuery($conn, '
-            SELECT s.work_location as office_id, o.name as office_name
+            SELECT ws.office_id, o.name as office_name
             FROM staff s
             JOIN user_account ua ON ua.email = s.staff_email
-            LEFT JOIN office o ON s.work_location = o.office_id
-            WHERE ua.user_id = ?', 'i', [$user_id]);
+            JOIN work_schedule ws ON ws.staff_id = s.staff_id
+            LEFT JOIN office o ON ws.office_id = o.office_id
+            WHERE ua.user_id = ?
+            LIMIT 1', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
         throw $ex;
