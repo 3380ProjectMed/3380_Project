@@ -100,7 +100,7 @@ export async function createOrGetNurseVisit(appointmentId) {
 export async function getAppointmentsForPatient(patientId, scope = 'today') {
   if (!patientId) throw new Error('patientId required');
   const data = await fetchJson(`${BASE_URL}/appointments/get-for-patient.php`, { params: { patient_id: patientId, scope } });
-  // normalize shape
+  
   return Array.isArray(data?.appointments) ? data.appointments : [];
 }
 
