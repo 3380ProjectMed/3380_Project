@@ -315,7 +315,7 @@ function Report() {
       return sortConfig.direction === 'asc' ? comparison : -comparison;
     });
   };
-<h1>Reports & Analytics (v2)</h1>
+
 
   const exportToCSV = () => {
     let csvContent = '';
@@ -424,7 +424,7 @@ function Report() {
       <div className="report-container">
         <div className="dashboard-header">
           <div className="welcome-section">
-            <h1>Reports & Analytics</h1>
+            <h1>Reports & Analytics (v2)</h1>
             <p className="office-info">Select a report type to view detailed insights</p>
           </div>
         </div>
