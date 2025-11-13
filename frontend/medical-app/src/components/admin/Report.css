@@ -823,15 +823,16 @@
 }
 
 .chart-bars {
-	position: relative;
-	display: flex;
-	align-items: flex-end;
-	justify-content: space-around;
-	gap: 0.5rem;
-	height: 280px;
-	padding: 0 0.75rem;
-	overflow-x: auto;
-	z-index: 2;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 0.5rem;
+  height: 280px;
+  padding: 0 0.75rem;
+  overflow-x: auto;
+  overflow-y: visible;
+  z-index: 2;
 }
 
 .chart-bar-group {
@@ -849,15 +850,15 @@
 }
 
 .chart-bar-container {
-	width: 100%;
-	position: absolute;
-	top: 0; /* CRITICAL: Define both top and bottom */
-	bottom: 30px; /* Above the label */
-	left: 0;
-	right: 0;
-	display: flex;
-	align-items: flex-end;
-	justify-content: center;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  bottom: 30px; 
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .chart-bar {
@@ -1280,4 +1281,72 @@
 	.report-table td {
 		padding: 0.5rem;
 	}
+}
+
+.office-pie-card {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pie-chart-svg {
+  width: 180px;
+  height: 180px;
+  transform: rotate(-90deg); /* start at top */
+}
+
+.pie-background {
+  fill: none;
+  stroke: rgba(15, 23, 42, 0.06);
+  stroke-width: 8;
+}
+
+.pie-slice {
+  fill: none;
+  stroke-width: 8;
+  transition: stroke-dashoffset 0.3s ease, opacity 0.2s;
+}
+
+.pie-slice-0 { stroke: #4f46e5; }
+.pie-slice-1 { stroke: #22c55e; }
+.pie-slice-2 { stroke: #f97316; }
+.pie-slice-3 { stroke: #06b6d4; }
+.pie-slice-4 { stroke: #e11d48; }
+.pie-slice-5 { stroke: #a855f7; }
+
+.pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pie-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pie-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.pie-legend-text {
+  font-size: 0.85rem;
+}
+
+.pie-legend-title {
+  font-weight: 600;
+}
+
+.pie-legend-sub {
+  color: #64748b;
+}
+
+.chart-empty {
+  font-size: 0.875rem;
+  color: #64748b;
 }
