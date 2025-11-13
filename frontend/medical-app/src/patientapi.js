@@ -47,6 +47,9 @@ export const appointmentsAPI = {
     return j(url);
   },
 
+  getDoctorSchedule: (doctorId) =>
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=schedule&doctor_id=${doctorId}`),
+
   getOffices: () => 
     j(`${PATIENT_API_BASE}/patient_api.php?endpoint=offices`)
 }
@@ -141,6 +144,12 @@ export const billingAPI = {
     })
 };
 
+// ==================== REFERRALS ====================
+export const referralsAPI = {
+  getReferrals: () => 
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=referrals`)
+};
+
 // Export grouped API object
 export default {
   dashboard: dashboardAPI,
@@ -149,5 +158,6 @@ export default {
   medicalRecords: medicalRecordsAPI,
   visits: visitAPI,
   insurance: insuranceAPI,
-  billing: billingAPI
+  billing: billingAPI,
+  referrals: referralsAPI
 };

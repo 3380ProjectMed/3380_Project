@@ -182,7 +182,7 @@ export default function MedicalRecords(props) {
               className="btn btn-primary btn-sm record-add-btn"
               onClick={() => setShowAllergyModal(true)}
             >
-              Update Allergy
+              Add Allergy
             </button>
             
             {allergies.length === 0 ? <p className="text-gray">No allergies recorded</p> : (

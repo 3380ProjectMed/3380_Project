@@ -24,7 +24,8 @@ try {
         $conn = getDBConnection();
         $rows = executeQuery($conn, 'SELECT d.doctor_id 
             FROM user_account ua
-            JOIN doctor d ON ua.email = d.email
+            JOIN staff s ON ua.user_id = s.staff_id
+            JOIN doctor d ON s.staff_id = d.staff_id
             WHERE ua.user_id = ? 
             LIMIT 1
             ', 'i', [$user_id]);

@@ -28,17 +28,23 @@ export function AuthProvider({ children }) {
   useEffect(() => { refreshUser(); }, []);
 
   const checkAuth = async () => {
-  try {
-    const response = await fetch('/api/me.php');
-    if (response.ok) {
-      const data = await response.json();
-      setUser(data.user); // Will be null if not authenticated
+    try {
+      const response = await fetch('/api/me.php', { credentials: 'include' });
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data); 
+      } else if (response.status === 401) {
+        // not authenticated
+        setUser(null);
+      } else {
+        console.warn('Unexpected /api/me.php status in checkAuth:', response.status);
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      setUser(null);
     }
-  } catch (error) {
-    console.error('Auth check failed:', error);
-    setUser(null);
-  }
-};
+  };
 
   async function login(email, password) {
     const r = await fetch('/api/login.php', {
