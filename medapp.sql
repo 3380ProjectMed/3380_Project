@@ -61,20 +61,105 @@ UNLOCK TABLES;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `trg_appointment_check_referral` BEFORE INSERT ON `appointment` FOR EACH ROW BEGIN
     DECLARE patient_pcp_id INT;
+    DECLARE has_approved_referral INT;
     
     -- Get the patient's Primary Care Physician
     SELECT Primary_Doctor INTO patient_pcp_id
     FROM Patient
     WHERE Patient_ID = NEW.Patient_id;
     
-    -- If trying to book with a doctor who is NOT their PCP, block it
-    IF patient_pcp_id IS NOT NULL AND NEW.Doctor_id != patient_pcp_id THEN
+    -- Check if booking with PCP
+    IF NEW.Doctor_id = patient_pcp_id THEN
+        SET NEW.Status = 'Scheduled';
+    ELSE
+        -- Not PCP, check if they have an approved referral for this specialist
+        SELECT COUNT(*) INTO has_approved_referral
+        FROM referral
+        WHERE patient_id = NEW.Patient_id
+        AND specialist_doctor_staff_id = NEW.Doctor_id
+        AND date_of_approval IS NOT NULL
+        AND appointment_id IS NULL;
+        
+        IF has_approved_referral > 0 THEN
+            SET NEW.Status = 'Scheduled';
+            -- Link the referral to this appointment
+            UPDATE referral 
+            SET appointment_id = NEW.Appointment_id 
+            WHERE patient_id = NEW.Patient_id 
+            AND specialist_doctor_staff_id = NEW.Doctor_id 
+            AND date_of_approval IS NOT NULL 
+            AND appointment_id IS NULL 
+            ORDER BY date_of_approval ASC 
+            LIMIT 1;
+        ELSE
+            -- No referral found
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'You must have a referral to book an appointment with a specialist. Please contact your primary care physician.';
+        END IF;
+    END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `trg_appointment_validate_date` BEFORE INSERT ON `appointment` FOR EACH ROW BEGIN
+    DECLARE conflicting_appointments INT;
+    DECLARE appointment_hour INT;
+    DECLARE appointment_day INT;
+    DECLARE chicago_time DATETIME;
+    
+    -- Get current Chicago time
+    SET chicago_time = CONVERT_TZ(NOW(), 'SYSTEM', 'America/Chicago');
+    
+    -- Extract hour and day once from the appointment date
+    SET appointment_hour = HOUR(NEW.Appointment_date);
+    SET appointment_day = DAYOFWEEK(NEW.Appointment_date);
+    
+    -- Check if appointment is in the past
+    IF NEW.Appointment_date < chicago_time THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'You must have a referral to book an appointment with a specialist. Please contact your primary care physician.';
+        SET MESSAGE_TEXT = 'Cannot create appointment in the past';
     END IF;
     
-    -- Set status to Confirmed
-    SET NEW.Status = 'Scheduled';
+    -- Check if appointment is too far in the future (e.g., max 1 year out)
+    IF NEW.Appointment_date > DATE_ADD(chicago_time, INTERVAL 1 YEAR) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cannot schedule appointment more than 1 year in advance';
+    END IF;
+    
+    -- Check if appointment is during business hours (8 AM - 6 PM)
+    IF appointment_hour < 8 OR appointment_hour >= 18 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Appointments must be scheduled between 8 AM and 6 PM';
+    END IF;
+    
+    -- Check if appointment is on a weekend
+    IF appointment_day IN (1, 7) THEN -- 1=Sunday, 7=Saturday
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Appointments cannot be scheduled on weekends';
+    END IF;
+    
+    -- Check for double-booking: same doctor, same time
+    SELECT COUNT(*) INTO conflicting_appointments
+    FROM appointment
+    WHERE Doctor_id = NEW.Doctor_id
+    AND Appointment_date = NEW.Appointment_date
+    AND Status != 'Cancelled';
+    
+    IF conflicting_appointments > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'This time slot is already booked. Please select a different time.';
+    END IF;
 END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;

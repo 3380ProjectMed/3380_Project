@@ -828,7 +828,7 @@
 	align-items: flex-end;
 	justify-content: space-around;
 	gap: 0.5rem;
-	height: 280px; /* Explicit height matching chart-area */
+	height: 280px;
 	padding: 0 0.75rem;
 	overflow-x: auto;
 	z-index: 2;
@@ -844,11 +844,16 @@
 	max-width: 90px;
 	cursor: pointer;
 	position: relative;
+	height: 280px; /* CRITICAL: Explicit height for percentage calculations */
+	padding-bottom: 30px; /* Space for label */
 }
 
 .chart-bar-container {
 	width: 100%;
-	height: 100%;
+	position: absolute;
+	bottom: 30px; /* Above the label */
+	left: 0;
+	right: 0;
 	display: flex;
 	align-items: flex-end;
 	justify-content: center;
@@ -885,14 +890,19 @@
 }
 
 .chart-label {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
 	font-size: 0.6875rem;
 	color: #6b7280;
 	text-align: center;
 	font-weight: 500;
-	max-width: 100%;
-	word-wrap: break-word;
 	line-height: 1.2;
-	margin-top: 0.5rem;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 /* Tooltip Styles */
@@ -911,6 +921,7 @@
 	opacity: 0;
 	animation: tooltipFadeIn 0.2s ease forwards;
 	pointer-events: none;
+	white-space: nowrap; /* Prevent wrapping issues */
 }
 
 .chart-tooltip.clicked {
@@ -1170,6 +1181,17 @@
 
 	.chart-bar-group {
 		min-width: 40px;
+		height: 240px; /* Smaller height for mobile */
+		padding-bottom: 35px; /* More space for wrapped labels */
+	}
+
+	.chart-bar-container {
+		bottom: 35px; /* Match padding-bottom */
+	}
+
+	.chart-label {
+		height: 35px;
+		font-size: 0.625rem;
 	}
 
 	.chart-y-axis {
