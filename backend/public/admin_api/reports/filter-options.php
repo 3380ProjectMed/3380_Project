@@ -38,7 +38,8 @@ try {
                         CONCAT(s.first_name, ' ', s.last_name, ' - ', d.specialty) AS display_name
                     FROM doctor d
                     JOIN staff s ON d.staff_id = s.staff_id
-                    WHERE s.is_active = 1
+                    JOIN user_account ua ON s.staff_id = ua.user_id
+                    WHERE ua.is_active = 1
                     ORDER BY s.last_name, s.first_name";
             $data = executeQuery($conn, $sql, '', []);
             break;
@@ -47,8 +48,7 @@ try {
             $sql = "SELECT 
                         payer_id,
                         name,
-                        contact_phone,
-                        contact_email
+                        payer_type
                     FROM insurance_payer 
                     ORDER BY name";
             $data = executeQuery($conn, $sql, '', []);
