@@ -315,6 +315,7 @@ function Report() {
       return sortConfig.direction === 'asc' ? comparison : -comparison;
     });
   };
+<h1>Reports & Analytics (v2)</h1>
 
   const exportToCSV = () => {
     let csvContent = '';
