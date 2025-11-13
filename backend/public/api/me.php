@@ -120,7 +120,7 @@ $sql = "SELECT
             o.office_id
         FROM user_account ua
         LEFT JOIN staff s ON ua.user_id = s.staff_id AND ua.role IN ('DOCTOR', 'NURSE', 'RECEPTIONIST', 'ADMIN')
-        LEFT JOIN work_schedule ws ON s.work_schedule = ws.schedule_id
+        LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
         LEFT JOIN office o ON ws.office_id = o.office_id
         LEFT JOIN patient p ON ua.user_id = p.patient_id AND ua.role = 'PATIENT'
         WHERE ua.user_id = ?";
@@ -171,8 +171,8 @@ if (method_exists($stmt, 'get_result')) {
     $role,
     $first_name,
     $last_name,
-    $work_location,
-    $office_name
+    $schedule_id,
+    $office_id
   );
 
   if ($bound === false) {
@@ -194,15 +194,6 @@ if (method_exists($stmt, 'get_result')) {
     exit;
   }
 
-  // if ($fetched === null || $user_id === null) {
-  //   debug_log('No user found for uid: ' . $_SESSION['uid']);
-  //   session_destroy();
-  //   http_response_code(401);
-  //   echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-  //   $stmt->close();
-  //   $mysqli->close();
-  //   exit;
-  // }
 
   $user = [
     'user_id' => is_numeric($user_id) ? (int) $user_id : $user_id,
@@ -211,21 +202,13 @@ if (method_exists($stmt, 'get_result')) {
     'role' => $role,
     'first_name' => $first_name,
     'last_name' => $last_name,
-    'work_location' => $work_location,
-    'office_name' => $office_name
+    'work_schedule' => $schedule_id,
+    'office_id' => $office_id
   ];
   debug_log('User built from bind_result: ' . json_encode($user));
 }
 
-// if (!$user) {
-//   debug_log('User is null after fetch');
-//   session_destroy();
-//   http_response_code(401);
-//   echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-//   $stmt->close();
-//   $mysqli->close();
-//   exit;
-// }
+
 
 // Return essential user info only
 $response = [
@@ -235,8 +218,8 @@ $response = [
   'role' => $user['role'],
   'first_name' => $user['first_name'],
   'last_name' => $user['last_name'],
-  'work_location' => $user['work_location'] ?? null,
-  'office_name' => $user['office_name'] ?? null
+  'work_schedule' => $user['work_schedule'] ?? null,
+  'office_id' => $user['office_id'] ?? null
 ];
 
 debug_log('Returning user successfully');
