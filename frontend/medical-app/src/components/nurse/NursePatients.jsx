@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Search, X, AlertCircle } from 'lucide-react';
 import "./NursePatients.css";
-import { getNursePatients, saveNurseVitals } from '../../api/nurse';
+import { getNursePatients, saveNurseVitals, getAppointmentsForPatient, createOrGetNurseVisit } from '../../api/nurse';
+import NurseVitalsModal from './NurseVitalsModal';
 
 export default function NursePatients() {
   const [patients, setPatients] = useState([]);
@@ -15,8 +16,10 @@ export default function NursePatients() {
   // Vitals modal state
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showVitalsModal, setShowVitalsModal] = useState(false);
-  const [appointmentId, setAppointmentId] = useState('');
-  const [vitals, setVitals] = useState({ bp: '', hr: '', temp: '', spo2: '', height: '', weight: '' });
+  const [appointmentId, setAppointmentId] = useState(null);
+  const [appointmentOptions, setAppointmentOptions] = useState([]);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [vitals, setVitals] = useState({ bp: '', temp: '' });
   const [savingVitals, setSavingVitals] = useState(false);
   const [vitalsError, setVitalsError] = useState(null);
   const [vitalsSuccess, setVitalsSuccess] = useState(null);
@@ -50,12 +53,22 @@ export default function NursePatients() {
 
   function openVitalsModal(patient) {
     setSelectedPatient(patient);
-    setAppointmentId('');
-    setVitals({ bp: '', hr: '', temp: '', spo2: '', height: '', weight: '' });
+    setAppointmentId(null);
+    setAppointmentOptions([]);
+    setSelectedAppointment(null);
+    setVitals({ bp: '', temp: '' });
     setVitalsError(null);
     setVitalsSuccess(null);
     setShowVitalsModal(true);
   }
+
+  // when modal opens, fetch appointments for that patient
+  React.useEffect(() => {
+    if (showVitalsModal && selectedPatient) {
+      fetchAppointmentsForPatient(selectedPatient);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showVitalsModal, selectedPatient]);
 
   function closeVitalsModal() {
     setShowVitalsModal(false);
@@ -65,23 +78,59 @@ export default function NursePatients() {
     setVitalsSuccess(null);
   }
 
-  async function handleSaveVitals(e) {
-    e.preventDefault();
-    setVitalsError(null);
-    setVitalsSuccess(null);
-    if (!appointmentId) {
-      setVitalsError('Appointment ID is required to save vitals.');
-      return;
-    }
-    setSavingVitals(true);
+  // New flow: fetch appointments for patient (today/upcoming) when opening modal
+  async function fetchAppointmentsForPatient(patient) {
     try {
-      await saveNurseVitals(appointmentId, vitals);
-      setVitalsSuccess('Vitals saved successfully.');
-    } catch (err) {
-      setVitalsError(err?.message || 'Failed to save vitals.');
+      setLoading(true);
+      const appts = await getAppointmentsForPatient(patient.patient_id, 'today');
+      setAppointmentOptions(appts || []);
+      if (!appts || appts.length === 0) {
+        setVitalsError('This patient has no appointments today. Please schedule an appointment before recording vitals.');
+        return;
+      }
+      if (appts.length === 1) {
+        // auto-select
+        const a = appts[0];
+        setSelectedAppointment(a);
+        setAppointmentId(a.Appointment_id || a.appointment_id);
+        // create or get visit and open modal with any existing vitals
+        const v = await createOrGetNurseVisit(a.Appointment_id || a.appointment_id);
+        const existing = v?.existingVitals || {};
+        setVitals({ bp: existing.blood_pressure || '', temp: existing.temperature || '' });
+      } else {
+        // multiple appointments, show selector UI (we keep modal open)
+        setVitalsError(null);
+      }
+    } catch (e) {
+      setVitalsError(e?.message || 'Failed to fetch appointments for patient');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Called when nurse picks one appointment from list
+  async function pickAppointmentAndOpen(a) {
+    setSelectedAppointment(a);
+    const apptId = a.Appointment_id || a.appointment_id;
+    setAppointmentId(apptId);
+    try {
+      setSavingVitals(true);
+      const v = await createOrGetNurseVisit(apptId);
+      const existing = v?.existingVitals || {};
+      setVitals({ bp: existing.blood_pressure || '', temp: existing.temperature || '' });
+      setVitalsError(null);
+    } catch (e) {
+      setVitalsError(e?.message || 'Failed to create or get visit');
     } finally {
       setSavingVitals(false);
     }
+  }
+
+  async function handleSaveVitalsFromModal(data) {
+    // data contains updated vitals; show success
+    setVitalsSuccess('Vitals saved successfully.');
+    // Optionally refresh patient list or other UI
+    loadPatients();
   }
 
   return (
@@ -175,50 +224,43 @@ export default function NursePatients() {
         </div>
         {/* Vitals modal */}
         {showVitalsModal && selectedPatient && (
-          <div className="nurse-modal-backdrop">
-            <div className="nurse-modal" role="dialog" aria-modal="true">
-              <h2>Edit Vitals – {selectedPatient.first_name} {selectedPatient.last_name} (ID: {selectedPatient.patient_id})</h2>
-              {vitalsError && <div className="alert error" style={{ marginTop: 8 }}>{vitalsError}</div>}
-              {vitalsSuccess && <div className="alert success" style={{ marginTop: 8 }}>{vitalsSuccess}</div>}
-              <form className="vitals-form" onSubmit={handleSaveVitals}>
-                <label>
-                  Appointment ID
-                  <input type="text" value={appointmentId} onChange={e => setAppointmentId(e.target.value)} />
-                </label>
-                <div className="vitals-grid">
-                  <label>
-                    BP
-                    <input value={vitals.bp} onChange={e => setVitals({ ...vitals, bp: e.target.value })} />
-                  </label>
-                  <label>
-                    HR
-                    <input value={vitals.hr} onChange={e => setVitals({ ...vitals, hr: e.target.value })} />
-                  </label>
-                  <label>
-                    Temp
-                    <input value={vitals.temp} onChange={e => setVitals({ ...vitals, temp: e.target.value })} />
-                  </label>
-                  <label>
-                    SpO2
-                    <input value={vitals.spo2} onChange={e => setVitals({ ...vitals, spo2: e.target.value })} />
-                  </label>
-                  <label>
-                    Weight
-                    <input value={vitals.weight} onChange={e => setVitals({ ...vitals, weight: e.target.value })} />
-                  </label>
-                  <label>
-                    Height
-                    <input value={vitals.height} onChange={e => setVitals({ ...vitals, height: e.target.value })} />
-                  </label>
+          <div>
+            { /* If there are multiple appointments and none selected yet, show a small picker */ }
+            {(!selectedAppointment && Array.isArray(appointmentOptions) && appointmentOptions.length > 1) && (
+              <div className="nurse-modal-backdrop">
+                <div className="nurse-modal" role="dialog" aria-modal="true">
+                  <h2>Select Appointment — {selectedPatient.first_name} {selectedPatient.last_name}</h2>
+                  {vitalsError && <div className="alert error" style={{ marginTop: 8 }}>{vitalsError}</div>}
+                  <div style={{ marginTop: 12 }}>
+                    {appointmentOptions.map(a => (
+                      <div key={a.Appointment_id || a.appointment_id} style={{ padding: 8, borderBottom: '1px solid #eee' }}>
+                        <div><strong>{new Date(a.Appointment_date).toLocaleString()}</strong> — {a.Status || a.status}</div>
+                        <div style={{ color: '#666' }}>{a.office_name || a.office_address || ''}</div>
+                        <div style={{ marginTop: 6 }}>
+                          <button onClick={() => pickAppointmentAndOpen(a)}>Use this appointment</button>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: 12 }}>
+                      <button onClick={closeVitalsModal}>Cancel</button>
+                    </div>
+                  </div>
                 </div>
-                <div className="modal-actions">
-                  <button type="button" onClick={closeVitalsModal} disabled={savingVitals}>Cancel</button>
-                  <button type="submit" className="primary" disabled={savingVitals}>
-                    {savingVitals ? 'Saving...' : 'Save Vitals'}
-                  </button>
-                </div>
-              </form>
-            </div>
+              </div>
+            )}
+
+            { /* If one appointment auto-selected or nurse picked one, render full vitals modal component */ }
+            {(selectedAppointment || (appointmentOptions && appointmentOptions.length === 1)) && (
+              <NurseVitalsModal
+                patient={selectedPatient}
+                appointment={selectedAppointment || (appointmentOptions && appointmentOptions[0])}
+                appointmentId={appointmentId}
+                visitId={null}
+                initialVitals={vitals}
+                onClose={closeVitalsModal}
+                onSaved={handleSaveVitalsFromModal}
+              />
+            )}
           </div>
         )}
       </div>
