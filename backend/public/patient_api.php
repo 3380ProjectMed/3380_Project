@@ -179,16 +179,18 @@ if ($endpoint === 'dashboard') {
                     d.doctor_id,
                     CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as name,
                     s.specialty_name,
-                    o.name as office_name,
+                    GROUP_CONCAT(DISTINCT o.name SEPARATOR ', ') as office_name,
                     d.phone,
                     doc_staff.staff_email,
-                    CONCAT(o.address, ', ', o.city, ', ', o.state) as location
+                    GROUP_CONCAT(DISTINCT CONCAT(o.address, ', ', o.city, ', ', o.state) SEPARATOR ' | ') as location
                 FROM patient p
                 LEFT JOIN doctor d ON p.primary_doctor = d.doctor_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN office o ON doc_staff.work_location = o.office_id
+                LEFT JOIN work_schedule ws ON doc_staff.staff_id = ws.staff_id
+                LEFT JOIN office o ON ws.office_id = o.office_id
                 WHERE p.patient_id = ?
+                GROUP BY d.doctor_id, doc_staff.staff_id, s.specialty_id
             ");
             $stmt->bind_param('i', $patient_id);
             $stmt->execute();
@@ -302,10 +304,10 @@ elseif ($endpoint === 'profile') {
                     CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as pcp_name,
                     d.doctor_id as pcp_id,
                     s.specialty_name as pcp_specialty,
-                    o.name as pcp_office,
+                    GROUP_CONCAT(DISTINCT o.name SEPARATOR ', ') as pcp_office,
                     d.phone as pcp_phone,
                     doc_staff.staff_email as pcp_email,
-                    CONCAT(o.address, ', ', o.city, ', ', o.state) as pcp_location,
+                    GROUP_CONCAT(DISTINCT CONCAT(o.address, ', ', o.city, ', ', o.state) SEPARATOR ' | ') as pcp_location,
                     cg.gender_text as Gender_Text,
                     cag.gender_text as AssignedAtBirth_Gender_Text,
                     ce.ethnicity_text as Ethnicity_Text,
@@ -315,12 +317,15 @@ elseif ($endpoint === 'profile') {
                 LEFT JOIN doctor d ON p.primary_doctor = d.doctor_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN office o ON doc_staff.work_location = o.office_id
+                LEFT JOIN work_schedule ws ON doc_staff.staff_id = ws.staff_id
+                LEFT JOIN office o ON ws.office_id = o.office_id
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
                 LEFT JOIN codes_assigned_at_birth_gender cag ON p.assigned_at_birth_gender = cag.gender_code
                 LEFT JOIN codes_ethnicity ce ON p.ethnicity = ce.ethnicity_code
                 LEFT JOIN codes_race cr ON p.race = cr.race_code
-                WHERE p.patient_id = ?"
+                WHERE p.patient_id = ?
+                GROUP BY p.patient_id, d.doctor_id, doc_staff.staff_id, s.specialty_id, 
+                        cg.gender_code, cag.gender_code, ce.ethnicity_code, cr.race_code"
             );
             $stmt->bind_param('i', $patient_id);
             $stmt->execute();
@@ -694,16 +699,18 @@ elseif ($endpoint === 'doctors') {
             $specialty_filter = $_GET['specialty'] ?? null;
 
             $query = "
-                SELECT 
+                SELECT DISTINCT
                     d.doctor_id,
                     CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as name,
                     s.specialty_name,
-                    o.name as office_name,
-                    CONCAT(o.address, ', ', o.city, ', ', o.state) as location
+                    GROUP_CONCAT(DISTINCT o.name SEPARATOR ', ') as office_name,
+                    GROUP_CONCAT(DISTINCT CONCAT(o.address, ', ', o.city, ', ', o.state) SEPARATOR ' | ') as location
                 FROM doctor d
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN office o ON doc_staff.work_location = o.office_id
+                LEFT JOIN work_schedule ws ON doc_staff.staff_id = ws.staff_id
+                LEFT JOIN office o ON ws.office_id = o.office_id
+                GROUP BY d.doctor_id, doc_staff.first_name, doc_staff.last_name, s.specialty_name
             ";
 
             if ($specialty_filter) {
