@@ -111,15 +111,24 @@ $sql = "SELECT
             CASE 
                 WHEN ua.role = 'PATIENT' THEN p.first_name
                 ELSE s.first_name
-            END as first_name,
+            END AS first_name,
             CASE 
                 WHEN ua.role = 'PATIENT' THEN p.last_name
                 ELSE s.last_name
-            END as last_name
-  FROM user_account ua
-  LEFT JOIN staff s ON ua.user_id = s.staff_id AND ua.role IN ('DOCTOR', 'NURSE', 'RECEPTIONIST', 'ADMIN')
-  LEFT JOIN office o ON s.work_location = o.office_id
-  LEFT JOIN patient p ON ua.user_id = p.patient_id AND ua.role = 'PATIENT'
+            END AS last_name,
+            s.work_location,
+            o.name AS office_name
+        FROM user_account ua
+        LEFT JOIN staff s 
+          ON ua.user_id = s.staff_id 
+        AND ua.role IN ('DOCTOR', 'NURSE', 'RECEPTIONIST', 'ADMIN')
+        LEFT JOIN work_schedule ws 
+          ON s.work_schedule = ws.schedule_id
+        LEFT JOIN office o 
+          ON ws.office_id = o.office_id
+        LEFT JOIN patient p 
+          ON ua.user_id = p.patient_id 
+        AND ua.role = 'PATIENT'
         WHERE ua.user_id = ?";
 
 debug_log('Preparing statement');
