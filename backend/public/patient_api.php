@@ -1282,11 +1282,11 @@ elseif ($endpoint === 'billing') {
                     error_log("Billing balance query for patient_id: " . $patient_id);
                     $stmt = $mysqli->prepare("
                         SELECT 
-                            COALESCE(SUM(COALESCE(copay_amount_due, 0) + COALESCE(treatment_cost_due, 0)), 0) as outstanding_balance,
+                            COALESCE(SUM(COALESCE(copay_amount_due, 0)), 0) as outstanding_balance,
                             COUNT(*) as visit_count
                         FROM patient_visit
                         WHERE patient_id = ?
-                        AND (COALESCE(copay_amount_due, 0) + COALESCE(treatment_cost_due, 0)) > 0
+                        AND COALESCE(copay_amount_due, 0) > 0
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
@@ -1302,18 +1302,20 @@ elseif ($endpoint === 'billing') {
                         SELECT 
                             v.visit_id as id,
                             DATE(v.date) as date,
-                            v.reason_for_visit as service,
-                            (COALESCE(v.copay_amount_due, 0) + COALESCE(v.treatment_cost_due, 0)) as amount,
-                            (COALESCE(v.copay_amount_due, 0) + COALESCE(v.treatment_cost_due, 0) - COALESCE(v.payment, 0)) as balance,
+                            CONCAT('Appointment with Dr. ', doc_staff.last_name, ' on ', DATE_FORMAT(v.date, '%M %d, %Y')) as service,
+                            COALESCE(v.copay_amount_due, 0) as amount,
+                            (COALESCE(v.copay_amount_due, 0) - COALESCE(v.payment, 0)) as balance,
                             CASE 
-                                WHEN (COALESCE(v.copay_amount_due, 0) + COALESCE(v.treatment_cost_due, 0) - COALESCE(v.payment, 0)) <= 0 THEN 'Paid'
+                                WHEN (COALESCE(v.copay_amount_due, 0) - COALESCE(v.payment, 0)) <= 0 THEN 'Paid'
                                 WHEN v.payment > 0 THEN 'Partial payment'
                                 ELSE 'Unpaid'
                             END as status,
                             v.payment
                         FROM patient_visit v
+                        LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
+                        LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                         WHERE v.patient_id = ?
-                        AND (COALESCE(v.copay_amount_due, 0) + COALESCE(v.treatment_cost_due, 0)) > 0
+                        AND COALESCE(v.copay_amount_due, 0) > 0
                         ORDER BY v.date DESC
                         LIMIT 50
                     ");
@@ -1345,7 +1347,7 @@ elseif ($endpoint === 'billing') {
             }
 
             if ($visit_id) {
-                $stmt = $mysqli->prepare("SELECT copay_amount_due, treatment_cost_due, payment FROM patient_visit WHERE visit_id = ? AND patient_id = ? LIMIT 1");
+                $stmt = $mysqli->prepare("SELECT copay_amount_due, payment FROM patient_visit WHERE visit_id = ? AND patient_id = ? LIMIT 1");
                 $stmt->bind_param('ii', $visit_id, $patient_id);
                 $stmt->execute();
                 $res = $stmt->get_result();
@@ -1355,7 +1357,7 @@ elseif ($endpoint === 'billing') {
                 }
 
                 $currentpayment = floatval($row['payment'] ?? 0);
-                $currentDue = floatval($row['copay_amount_due'] ?? 0) + floatval($row['treatment_cost_due'] ?? 0);
+                $currentDue = floatval($row['copay_amount_due'] ?? 0);
                 $newpayment = $currentpayment + $amount;
                 $newDue = max(0, $currentDue - $amount);
 
