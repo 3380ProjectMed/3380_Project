@@ -202,7 +202,7 @@ if (method_exists($stmt, 'get_result')) {
     'role' => $role,
     'first_name' => $first_name,
     'last_name' => $last_name,
-    'work_schedule' => $schedule_id,
+    'schedule_id' => $schedule_id,
     'office_id' => $office_id
   ];
   debug_log('User built from bind_result: ' . json_encode($user));
@@ -214,11 +214,11 @@ if (method_exists($stmt, 'get_result')) {
 $response = [
   'user_id' => $user['user_id'],
   'username' => $user['username'],
-  'email' => $user['email'],
+  'email' => $user['email'],  
   'role' => $user['role'],
   'first_name' => $user['first_name'],
   'last_name' => $user['last_name'],
-  'work_schedule' => $user['work_schedule'] ?? null,
+  'schedule_id' => $user['schedule_id'] ?? null,
   'office_id' => $user['office_id'] ?? null
 ];
 
