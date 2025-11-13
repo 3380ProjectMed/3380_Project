@@ -160,13 +160,16 @@ try {
     // Get status breakdown
     $sql = "SELECT 
                 a.Status,
-                COUNT(*) as count,
-                ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM Appointment a2 $where_clause), 1) as percentage
+                COUNT(*) AS count,
+                ROUND(
+                    COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (),
+                    1
+                ) AS percentage
             FROM Appointment a
             $where_clause
             GROUP BY a.Status
             ORDER BY count DESC";
-    
+
     $status_breakdown = executeQuery($conn, $sql, $param_types, $params);
     
     $summary = [
