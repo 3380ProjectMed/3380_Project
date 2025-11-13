@@ -14,7 +14,6 @@ async function fetchJson(path, opts = {}) {
       const parsed = JSON.parse(text);
       msg = parsed.message || parsed.error || JSON.stringify(parsed);
     } catch (e) {
-      // leave text as-is (may be HTML)
     }
     throw new Error(`HTTP ${res.status} ${res.statusText} - ${msg}`);
   }

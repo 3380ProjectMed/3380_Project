@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Search, X, AlertCircle } from 'lucide-react';
 import "./NursePatients.css";
-import { getNursePatients } from '../../api/nurse';
+import { getNursePatients, saveNurseVitals } from '../../api/nurse';
 
 export default function NursePatients() {
   const [patients, setPatients] = useState([]);
@@ -11,6 +11,15 @@ export default function NursePatients() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const pageSize = 10;
+
+  // Vitals modal state
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showVitalsModal, setShowVitalsModal] = useState(false);
+  const [appointmentId, setAppointmentId] = useState('');
+  const [vitals, setVitals] = useState({ bp: '', hr: '', temp: '', spo2: '', height: '', weight: '' });
+  const [savingVitals, setSavingVitals] = useState(false);
+  const [vitalsError, setVitalsError] = useState(null);
+  const [vitalsSuccess, setVitalsSuccess] = useState(null);
 
   const loadPatients = async () => {
     setLoading(true);
@@ -38,6 +47,42 @@ export default function NursePatients() {
     setSearch(e.target.value);
     setPage(1);
   };
+
+  function openVitalsModal(patient) {
+    setSelectedPatient(patient);
+    setAppointmentId('');
+    setVitals({ bp: '', hr: '', temp: '', spo2: '', height: '', weight: '' });
+    setVitalsError(null);
+    setVitalsSuccess(null);
+    setShowVitalsModal(true);
+  }
+
+  function closeVitalsModal() {
+    setShowVitalsModal(false);
+    setSelectedPatient(null);
+    setAppointmentId('');
+    setVitalsError(null);
+    setVitalsSuccess(null);
+  }
+
+  async function handleSaveVitals(e) {
+    e.preventDefault();
+    setVitalsError(null);
+    setVitalsSuccess(null);
+    if (!appointmentId) {
+      setVitalsError('Appointment ID is required to save vitals.');
+      return;
+    }
+    setSavingVitals(true);
+    try {
+      await saveNurseVitals(appointmentId, vitals);
+      setVitalsSuccess('Vitals saved successfully.');
+    } catch (err) {
+      setVitalsError(err?.message || 'Failed to save vitals.');
+    } finally {
+      setSavingVitals(false);
+    }
+  }
 
   return (
     <div className="nurse-page">
@@ -102,7 +147,7 @@ export default function NursePatients() {
               </div>
             ) : (
               patients.map((p) => (
-                <div key={p.patient_id || p.id} className="table-row">
+                <div key={p.patient_id || p.id} className="table-row" onClick={() => openVitalsModal(p)} style={{ cursor: 'pointer' }}>
                   <div>{p.patient_id || p.id}</div>
                   <div>{p.first_name || ''} {p.last_name || ''}</div>
                   <div>{p.dob ? new Date(p.dob).toLocaleDateString() : 'N/A'}</div>
@@ -128,6 +173,54 @@ export default function NursePatients() {
             Next
           </button>
         </div>
+        {/* Vitals modal */}
+        {showVitalsModal && selectedPatient && (
+          <div className="nurse-modal-backdrop">
+            <div className="nurse-modal" role="dialog" aria-modal="true">
+              <h2>Edit Vitals – {selectedPatient.first_name} {selectedPatient.last_name} (ID: {selectedPatient.patient_id})</h2>
+              {vitalsError && <div className="alert error" style={{ marginTop: 8 }}>{vitalsError}</div>}
+              {vitalsSuccess && <div className="alert success" style={{ marginTop: 8 }}>{vitalsSuccess}</div>}
+              <form className="vitals-form" onSubmit={handleSaveVitals}>
+                <label>
+                  Appointment ID
+                  <input type="text" value={appointmentId} onChange={e => setAppointmentId(e.target.value)} />
+                </label>
+                <div className="vitals-grid">
+                  <label>
+                    BP
+                    <input value={vitals.bp} onChange={e => setVitals({ ...vitals, bp: e.target.value })} />
+                  </label>
+                  <label>
+                    HR
+                    <input value={vitals.hr} onChange={e => setVitals({ ...vitals, hr: e.target.value })} />
+                  </label>
+                  <label>
+                    Temp
+                    <input value={vitals.temp} onChange={e => setVitals({ ...vitals, temp: e.target.value })} />
+                  </label>
+                  <label>
+                    SpO2
+                    <input value={vitals.spo2} onChange={e => setVitals({ ...vitals, spo2: e.target.value })} />
+                  </label>
+                  <label>
+                    Weight
+                    <input value={vitals.weight} onChange={e => setVitals({ ...vitals, weight: e.target.value })} />
+                  </label>
+                  <label>
+                    Height
+                    <input value={vitals.height} onChange={e => setVitals({ ...vitals, height: e.target.value })} />
+                  </label>
+                </div>
+                <div className="modal-actions">
+                  <button type="button" onClick={closeVitalsModal} disabled={savingVitals}>Cancel</button>
+                  <button type="submit" className="primary" disabled={savingVitals}>
+                    {savingVitals ? 'Saving...' : 'Save Vitals'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
