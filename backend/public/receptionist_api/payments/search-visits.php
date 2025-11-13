@@ -29,10 +29,12 @@ try {
 
     // Get receptionist's office
     $staffRows = executeQuery($conn, '
-        SELECT s.work_location as office_id
+        SELECT ws.office_id
         FROM staff s
         JOIN user_account ua ON ua.email = s.staff_email
-        WHERE ua.user_id = ?', 'i', [(int)$_SESSION['uid']]);
+        JOIN work_schedule ws ON ws.staff_id = s.staff_id
+        WHERE ua.user_id = ?
+        LIMIT 1', 'i', [(int)$_SESSION['uid']]);
     
     if (empty($staffRows)) {
         closeDBConnection($conn);

@@ -30,10 +30,12 @@ try {
 
     try {
         $rows = executeQuery($conn, '
-            SELECT s.work_location as office_id
+            SELECT ws.office_id
             FROM staff s
             JOIN user_account ua ON ua.email = s.staff_email
-            WHERE ua.user_id = ?', 'i', [$user_id]);
+            JOIN work_schedule ws ON ws.staff_id = s.staff_id
+            WHERE ua.user_id = ?
+            LIMIT 1', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
         throw $ex;
