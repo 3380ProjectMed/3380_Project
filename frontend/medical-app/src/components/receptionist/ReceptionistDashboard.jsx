@@ -149,6 +149,43 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     }
   };
 
+  /**
+   * Handle check-in appointment
+   */
+  const handleCheckInAppointment = async () => {
+    if (!selectedAppointment) return;
+    
+    if (!confirm(`Check in patient ${selectedAppointment.Patient_First} ${selectedAppointment.Patient_Last} for their appointment?`)) {
+      return;
+    }
+    
+    setCheckingIn(true);
+    try {
+      const response = await fetch('/receptionist_api/appointments/check-in.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ Appointment_id: selectedAppointment.Appointment_id })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('Patient checked in successfully!');
+        setSelectedAppointment(null);
+        loadDashboardData(); // Reload today's appointments and stats
+        loadCalendarData(); // Reload calendar data
+      } else {
+        alert('Failed to check in: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Check-in error:', error);
+      alert('Failed to check in patient');
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
   // Calculate dashboard statistics
   const dashStats = stats ? {
     total: stats.total || 0,
@@ -252,6 +289,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       'ready': 'status-ready',
       'waiting': 'status-waiting',
       'checked in': 'status-checked-in',
+      'checked-in': 'status-checked-in',
       'in progress': 'status-in-progress',
       'completed': 'status-completed',
       'cancelled': 'status-cancelled',
@@ -704,6 +742,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             </div>
 
             <div className="modal-footer">
+              <button 
+                className="btn btn-success" 
+                onClick={handleCheckInAppointment}
+                disabled={checkingIn || selectedAppointment.Status === 'Checked-in' || selectedAppointment.Status === 'Cancelled' || selectedAppointment.Status === 'Completed'}
+              >
+                <Check size={18} />
+                {checkingIn ? 'Checking In...' : 'Check In'}
+              </button>
               <button className="btn btn-primary">
                 <Edit size={18} />
                 Edit Appointment

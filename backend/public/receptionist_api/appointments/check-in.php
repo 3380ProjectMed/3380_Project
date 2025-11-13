@@ -60,21 +60,21 @@ try {
         if (empty($existingVisit)) {
             // Create new patient_visit record
             $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, office_id, start_at, status)
-                              SELECT a.Appointment_id, a.Patient_id, a.Doctor_id, a.Office_id, NOW(), 'Scheduled'
+                              SELECT a.Appointment_id, a.Patient_id, a.Doctor_id, a.Office_id, NOW(), 'Checked In'
                               FROM appointment a WHERE a.Appointment_id = ?";
             executeQuery($conn, $insertVisitSql, 'i', [$appointment_id]);
         } else {
             // Update existing record
             $updateVisitSql = "UPDATE patient_visit 
-                              SET start_at = NOW(), status = 'Scheduled'
+                              SET start_at = NOW(), status = 'Checked In'
                               WHERE appointment_id = ?";
             executeQuery($conn, $updateVisitSql, 'i', [$appointment_id]);
         }
         
-        // Update appointment status if needed
+        // Update appointment status to Checked-in
         $updateApptSql = "UPDATE appointment 
-                         SET Status = 'Scheduled'
-                         WHERE Appointment_id = ? AND Status NOT IN ('Completed', 'Cancelled')";
+                         SET Status = 'Checked-in'
+                         WHERE Appointment_id = ? AND Status NOT IN ('Completed', 'Cancelled', 'No-Show')";
         executeQuery($conn, $updateApptSql, 'i', [$appointment_id]);
         
         $conn->commit();
