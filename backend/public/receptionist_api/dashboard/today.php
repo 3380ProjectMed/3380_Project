@@ -128,10 +128,21 @@ try {
         $displayStatus = $dbStatus;
         $waitingTime = 0;
         
+        // Priority 1: Check for final/terminal statuses
         if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
             // Keep the database status
             $displayStatus = $dbStatus;
-        } else {
+        }
+        // Priority 2: Check if patient has checked in (should override time-based status)
+        elseif ($apt['check_in_time'] && !$apt['completion_time']) {
+            if ($dbStatus === 'In Progress') {
+                $displayStatus = 'In Progress';
+            } else {
+                $displayStatus = 'Checked In';
+            }
+        }
+        // Priority 3: Time-based status calculation for appointments that haven't checked in yet
+        else {
             // Calculate time difference in minutes
             $timeDiff = ($currentDateTime->getTimestamp() - $appointmentDateTime->getTimestamp()) / 60;
             
@@ -150,11 +161,6 @@ try {
                     $displayStatus = 'In Progress';
                 }
             }
-        }
-        
-        // Check if checked in (based on patient_visit records)
-        if ($apt['check_in_time'] && !$apt['completion_time'] && $displayStatus !== 'In Progress') {
-            $displayStatus = 'Checked In';
         }
         
         // Update statistics based on final displayStatus
@@ -222,7 +228,8 @@ try {
             'allergies' => $apt['allergies'] ?: 'No Known Allergies',
             'checkInTime' => $apt['check_in_time'],
             'completionTime' => $apt['completion_time'],
-            'copay' => $apt['copay'] ? floatval($apt['copay']) : 0.00,
+            'copay' => $apt['payment'] ? floatval($apt['payment']) : 0.00,
+            'payment' => $apt['payment'] ? floatval($apt['payment']) : 0.00,
             'visitId' => $apt['visit_id']
         ];
     }
