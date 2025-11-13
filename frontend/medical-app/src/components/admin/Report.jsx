@@ -174,10 +174,10 @@ function Report() {
   // NEW: New Patients report fetcher
   const fetchNewPatientsReport = async () => {
     try {
-      setLoading(true);
+      setLoading(true); 
       setError(null);
       const res = await fetch(
-        `/admin_api/reports/new-patients.php?${buildQueryParams()}`,
+        `/admin_api/reports/get-new-patients.php?${buildQueryParams()}`,
         { credentials: 'include' }
       );
       const data = await res.json();
@@ -1547,11 +1547,23 @@ function Report() {
 }
 
 // Simple chart component using CSS
+const parseMoney = (v) => {
+  if (v == null) return 0;
+  if (typeof v === 'number') return v;
+  // strip anything that isn’t digit, dot, or minus
+  const cleaned = v.toString().replace(/[^0-9.-]/g, '');
+  return Number(cleaned) || 0;
+};
+
 const SimpleChart = ({ data }) => {
   if (!data || data.length === 0) return null;
 
-  const maxRevenue = Math.max(...data.map(d => Number(d.gross_revenue || 0)));
-  
+  const values = data.map(d => parseMoney(d.gross_revenue));
+  const maxRevenue = Math.max(...values);
+  if (!Number.isFinite(maxRevenue) || maxRevenue <= 0) {
+    // nothing meaningful to draw
+    return null;
+  }
   return (
     <div className="simple-chart">
       <div className="chart-bars">
