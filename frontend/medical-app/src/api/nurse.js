@@ -104,10 +104,6 @@ export async function getAppointmentsForPatient(patientId, scope = 'today') {
   return Array.isArray(data?.appointments) ? data.appointments : [];
 }
 
-export async function getNurseDashboardStats() {
-  return fetchJson(`${BASE_URL}/dashboard/get-stats.php`);
-}
-
 export async function getNurseTodaySchedule() {
   return fetchJson(`${BASE_URL}/dashboard/get-today-schedule.php`);
 }
