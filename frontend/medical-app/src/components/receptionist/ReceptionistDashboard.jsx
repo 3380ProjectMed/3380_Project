@@ -482,6 +482,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                 <div 
                   key={appointment.Appointment_id || appointment.id} 
                   className="appointment-card"
+                  onClick={() => setSelectedAppointment(appointment)}
+                  style={{ cursor: 'pointer' }}
                 >
                   <div className="appointment-time">
                     <Clock size={20} />
@@ -527,7 +529,13 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
 
                   <div className="appointment-actions">
                     {(appointment.status || appointment.Status) === 'Scheduled' && (
-                      <button className="btn-check-in">
+                      <button 
+                        className="btn-check-in"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Check-in functionality can be added here
+                        }}
+                      >
                         <Check size={16} />
                         Check In
                       </button>
@@ -535,15 +543,18 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     {(appointment.status || appointment.Status) === 'Completed' && appointment.copay && (
                       <button 
                         className="btn-payment"
-                        onClick={() => onProcessPayment({
-                          id: appointment.Appointment_id || appointment.id,
-                          patientId: appointment.Patient_id || appointment.patientId,
-                          patientName: appointment.patientName || `${appointment.Patient_First} ${appointment.Patient_Last}`,
-                          doctor: appointment.doctorName || `Dr. ${appointment.Doctor_First} ${appointment.Doctor_Last}`,
-                          copay: appointment.copay,
-                          reason: appointment.reason || appointment.Reason_for_visit,
-                          time: appointment.time || formatTime(appointment.Appointment_date)
-                        })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onProcessPayment({
+                            id: appointment.Appointment_id || appointment.id,
+                            patientId: appointment.Patient_id || appointment.patientId,
+                            patientName: appointment.patientName || `${appointment.Patient_First} ${appointment.Patient_Last}`,
+                            doctor: appointment.doctorName || `Dr. ${appointment.Doctor_First} ${appointment.Doctor_Last}`,
+                            copay: appointment.copay,
+                            reason: appointment.reason || appointment.Reason_for_visit,
+                            time: appointment.time || formatTime(appointment.Appointment_date)
+                          });
+                        }}
                       >
                         <DollarSign size={16} />
                         ${appointment.copay.toFixed(2)}
