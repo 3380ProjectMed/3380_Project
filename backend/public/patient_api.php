@@ -599,6 +599,29 @@ elseif ($endpoint === 'appointments') {
                 throw new Exception('Failed to insert appointment');
             }
 
+            // Check if this is a specialist appointment that needs a referral linked
+            $pcp_check = $mysqli->prepare("SELECT Primary_Doctor FROM Patient WHERE Patient_ID = ?");
+            $pcp_check->bind_param('i', $patient_id);
+            $pcp_check->execute();
+            $pcp_result = $pcp_check->get_result();
+            $pcp_data = $pcp_result->fetch_assoc();
+            
+            // If booking with a specialist (not PCP), link the referral
+            if ($pcp_data && $pcp_data['Primary_Doctor'] != $input['doctor_id']) {
+                $referral_update = $mysqli->prepare("
+                    UPDATE referral 
+                    SET appointment_id = ? 
+                    WHERE patient_id = ? 
+                    AND specialist_doctor_staff_id = ? 
+                    AND date_of_approval IS NOT NULL 
+                    AND appointment_id IS NULL 
+                    ORDER BY date_of_approval ASC 
+                    LIMIT 1
+                ");
+                $referral_update->bind_param('iii', $next_id, $patient_id, $input['doctor_id']);
+                $referral_update->execute();
+            }
+
             $mysqli->commit();
             sendResponse(true, ['appointment_id' => $next_id], 'Appointment booked successfully!');
 
@@ -632,6 +655,19 @@ elseif ($endpoint === 'appointments') {
         }
 
         try {
+            // Start transaction
+            $mysqli->begin_transaction();
+            
+            // First, unlink any referral associated with this appointment
+            $referral_update = $mysqli->prepare("
+                UPDATE referral 
+                SET appointment_id = NULL 
+                WHERE appointment_id = ?
+            ");
+            $referral_update->bind_param('i', $appointment_id);
+            $referral_update->execute();
+            
+            // Then delete the appointment
             $stmt = $mysqli->prepare("
                 DELETE FROM appointment 
                 WHERE appointment_id = ? 
@@ -640,9 +676,11 @@ elseif ($endpoint === 'appointments') {
             $stmt->bind_param('ii', $appointment_id, $patient_id);
             $stmt->execute();
 
+            $mysqli->commit();
             sendResponse(true, [], 'Appointment cancelled successfully');
 
         } catch (Exception $e) {
+            $mysqli->rollback();
             error_log("Cancel appointment error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to cancel appointment', 500);
         }

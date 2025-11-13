@@ -130,18 +130,33 @@ export default function Dashboard(props) {
                           <span>{getUrgencyMessage(referral.urgency_level, referral.days_remaining)}</span>
                         </div>
                       </div>
-                      <button 
-                        className={`btn btn-sm btn-referral-action ${referral.urgency_level === 'urgent' ? 'urgent' : ''}`}
-                        onClick={() => setShowBookingModal(true)}
-                      >
-                        <Calendar className="small-icon" />
-                        {referral.urgency_level === 'urgent' ? 'Book Now!' : 'Book Appointment'}
-                      </button>
+                      {!referral.is_used ? (
+                        <button 
+                          className={`btn btn-sm btn-referral-action ${referral.urgency_level === 'urgent' ? 'urgent' : ''}`}
+                          onClick={() => setShowBookingModal(true)}
+                        >
+                          <Calendar className="small-icon" />
+                          {referral.urgency_level === 'urgent' ? 'Book Now!' : 'Book Appointment'}
+                        </button>
+                      ) : (
+                        <div className="appointment-booked-notice">
+                          <CheckCircle className="small-icon success" />
+                          <span>Appointment Scheduled</span>
+                        </div>
+                      )}
                     </div>
                   ))}
+                  {referrals.used.length > 0 && (
+                    <div className="used-referrals-summary">
+                      <p className="text-gray">
+                        <CheckCircle className="small-icon success" />
+                        {referrals.used.length} completed referral{referrals.used.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  )}
                   {referrals.active.length > 3 && (
                     <div className="referrals-summary">
-                      <p className="text-gray">+{referrals.active.length - 3} more referral{referrals.active.length - 3 !== 1 ? 's' : ''}</p>
+                      <p className="text-gray">+{referrals.active.length - 3} more active referral{referrals.active.length - 3 !== 1 ? 's' : ''}</p>
                     </div>
                   )}
                 </div>
