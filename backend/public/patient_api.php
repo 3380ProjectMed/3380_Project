@@ -179,16 +179,18 @@ if ($endpoint === 'dashboard') {
                     d.doctor_id,
                     CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as name,
                     s.specialty_name,
-                    o.name as office_name,
+                    GROUP_CONCAT(DISTINCT o.name SEPARATOR ', ') as office_name,
                     d.phone,
                     doc_staff.staff_email,
-                    CONCAT(o.address, ', ', o.city, ', ', o.state) as location
+                    GROUP_CONCAT(DISTINCT CONCAT(o.address, ', ', o.city, ', ', o.state) SEPARATOR ' | ') as location
                 FROM patient p
                 LEFT JOIN doctor d ON p.primary_doctor = d.doctor_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN office o ON doc_staff.work_location = o.office_id
+                LEFT JOIN work_schedule ws ON doc_s.staff_id = ws.staff_id
+                LEFT JOIN office o ON ws.office_id = o.office_id
                 WHERE p.patient_id = ?
+                GROUP BY d.doctor_id, doc_staff.staff_id, s.specialty_id
             ");
             $stmt->bind_param('i', $patient_id);
             $stmt->execute();
@@ -302,10 +304,10 @@ elseif ($endpoint === 'profile') {
                     CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as pcp_name,
                     d.doctor_id as pcp_id,
                     s.specialty_name as pcp_specialty,
-                    o.name as pcp_office,
+                    GROUP_CONCAT(DISTINCT o.name SEPARATOR ', ') as pcp_office,
                     d.phone as pcp_phone,
                     doc_staff.staff_email as pcp_email,
-                    CONCAT(o.address, ', ', o.city, ', ', o.state) as pcp_location,
+                    GROUP_CONCAT(DISTINCT CONCAT(o.address, ', ', o.city, ', ', o.state) SEPARATOR ' | ') as pcp_location,
                     cg.gender_text as Gender_Text,
                     cag.gender_text as AssignedAtBirth_Gender_Text,
                     ce.ethnicity_text as Ethnicity_Text,
@@ -315,12 +317,15 @@ elseif ($endpoint === 'profile') {
                 LEFT JOIN doctor d ON p.primary_doctor = d.doctor_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN office o ON doc_staff.work_location = o.office_id
+                LEFT JOIN work_schedule ws ON doc_staff.staff_id = ws.staff_id
+                LEFT JOIN office o ON ws.office_id = o.office_id
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
                 LEFT JOIN codes_assigned_at_birth_gender cag ON p.assigned_at_birth_gender = cag.gender_code
                 LEFT JOIN codes_ethnicity ce ON p.ethnicity = ce.ethnicity_code
                 LEFT JOIN codes_race cr ON p.race = cr.race_code
-                WHERE p.patient_id = ?"
+                WHERE p.patient_id = ?
+                GROUP BY p.patient_id, d.doctor_id, doc_staff.staff_id, s.specialty_id, 
+                        cg.gender_code, cag.gender_code, ce.ethnicity_code, cr.race_code"
             );
             $stmt->bind_param('i', $patient_id);
             $stmt->execute();
@@ -698,19 +703,21 @@ elseif ($endpoint === 'doctors') {
                     d.doctor_id,
                     CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as name,
                     s.specialty_name,
-                    o.name as office_name,
-                    CONCAT(o.address, ', ', o.city, ', ', o.state) as location
+                    COALESCE(GROUP_CONCAT(DISTINCT o.name SEPARATOR ', '), 'Office TBD') as office_name,
+                    COALESCE(GROUP_CONCAT(DISTINCT CONCAT(o.address, ', ', o.city, ', ', o.state) SEPARATOR ' | '), 'Location TBD') as location
                 FROM doctor d
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN office o ON doc_staff.work_location = o.office_id
+                LEFT JOIN work_schedule ws ON doc_staff.staff_id = ws.staff_id
+                LEFT JOIN office o ON ws.office_id = o.office_id
             ";
 
             if ($specialty_filter) {
                 $query .= " WHERE s.specialty_name = ?";
             }
 
-            $query .= " ORDER BY doc_staff.last_name, doc_staff.first_name";
+            $query .= " GROUP BY d.doctor_id, doc_staff.first_name, doc_staff.last_name, s.specialty_name
+                       ORDER BY doc_staff.last_name, doc_staff.first_name";
 
             if ($specialty_filter) {
                 $stmt = $mysqli->prepare($query);
@@ -1535,6 +1542,82 @@ elseif ($endpoint === 'schedule') {
             } catch (Exception $e) {
                 error_log("Schedule error: " . $e->getMessage());
                 sendResponse(false, [], 'Failed to load schedule: ' . $e->getMessage(), 500);
+            }
+        } elseif ($action === 'timeslots') {
+            // Get available time slots for a doctor on a specific date
+            $doctor_id = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 0;
+            $date = $_GET['date'] ?? null;
+            
+            if ($doctor_id === 0 || !$date) {
+                sendResponse(false, [], 'doctor_id and date required', 400);
+            }
+            
+            try {
+                // Validate date format
+                $datetime = DateTime::createFromFormat('Y-m-d', $date);
+                if (!$datetime) {
+                    sendResponse(false, [], 'Invalid date format. Use YYYY-MM-DD', 400);
+                    return;
+                }
+                
+                // Define standard time slots (business hours 8 AM - 6 PM)
+                $all_time_slots = [
+                    '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', 
+                    '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
+                ];
+                
+                // Convert to 24-hour format for database comparison
+                $time_slot_mapping = [
+                    '8:00 AM' => '08:00:00',
+                    '9:00 AM' => '09:00:00', 
+                    '10:00 AM' => '10:00:00',
+                    '11:00 AM' => '11:00:00',
+                    '1:00 PM' => '13:00:00',
+                    '2:00 PM' => '14:00:00',
+                    '3:00 PM' => '15:00:00', 
+                    '4:00 PM' => '16:00:00',
+                    '5:00 PM' => '17:00:00'
+                ];
+                
+                // Get existing appointments for this doctor on this date
+                $stmt = $mysqli->prepare("
+                    SELECT TIME(appointment_date) as appointment_time
+                    FROM appointment 
+                    WHERE doctor_id = ? 
+                    AND DATE(appointment_date) = ?
+                    AND status != 'Cancelled'
+                ");
+                
+                $stmt->bind_param('is', $doctor_id, $date);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                $booked_times = [];
+                while ($row = $result->fetch_assoc()) {
+                    $booked_times[] = $row['appointment_time'];
+                }
+                
+                // Filter out booked time slots
+                $available_slots = [];
+                foreach ($all_time_slots as $slot) {
+                    $slot_time = $time_slot_mapping[$slot];
+                    if (!in_array($slot_time, $booked_times)) {
+                        $available_slots[] = $slot;
+                    }
+                }
+                
+                sendResponse(true, [
+                    'available_slots' => $available_slots,
+                    'booked_slots' => array_keys(array_filter($time_slot_mapping, function($time) use ($booked_times) {
+                        return in_array($time, $booked_times);
+                    })),
+                    'date' => $date,
+                    'doctor_id' => $doctor_id
+                ], 'Available time slots retrieved successfully');
+                
+            } catch (Exception $e) {
+                error_log("Time slots error: " . $e->getMessage());
+                sendResponse(false, [], 'Failed to load time slots: ' . $e->getMessage(), 500);
             }
         }
     }

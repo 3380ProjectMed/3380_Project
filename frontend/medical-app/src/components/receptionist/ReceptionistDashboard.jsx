@@ -149,6 +149,43 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     }
   };
 
+  /**
+   * Handle check-in appointment
+   */
+  const handleCheckInAppointment = async () => {
+    if (!selectedAppointment) return;
+    
+    if (!confirm(`Check in patient ${selectedAppointment.Patient_First} ${selectedAppointment.Patient_Last} for their appointment?`)) {
+      return;
+    }
+    
+    setCheckingIn(true);
+    try {
+      const response = await fetch('/receptionist_api/appointments/check-in.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ Appointment_id: selectedAppointment.Appointment_id })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('Patient checked in successfully!');
+        setSelectedAppointment(null);
+        loadDashboardData(); // Reload today's appointments and stats
+        loadCalendarData(); // Reload calendar data
+      } else {
+        alert('Failed to check in: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Check-in error:', error);
+      alert('Failed to check in patient');
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
   // Calculate dashboard statistics
   const dashStats = stats ? {
     total: stats.total || 0,
@@ -252,6 +289,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       'ready': 'status-ready',
       'waiting': 'status-waiting',
       'checked in': 'status-checked-in',
+      'checked-in': 'status-checked-in',
       'in progress': 'status-in-progress',
       'completed': 'status-completed',
       'cancelled': 'status-cancelled',
@@ -444,6 +482,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                 <div 
                   key={appointment.Appointment_id || appointment.id} 
                   className="appointment-card"
+                  onClick={() => setSelectedAppointment(appointment)}
+                  style={{ cursor: 'pointer' }}
                 >
                   <div className="appointment-time">
                     <Clock size={20} />
@@ -489,7 +529,13 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
 
                   <div className="appointment-actions">
                     {(appointment.status || appointment.Status) === 'Scheduled' && (
-                      <button className="btn-check-in">
+                      <button 
+                        className="btn-check-in"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Check-in functionality can be added here
+                        }}
+                      >
                         <Check size={16} />
                         Check In
                       </button>
@@ -497,15 +543,18 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     {(appointment.status || appointment.Status) === 'Completed' && appointment.copay && (
                       <button 
                         className="btn-payment"
-                        onClick={() => onProcessPayment({
-                          id: appointment.Appointment_id || appointment.id,
-                          patientId: appointment.Patient_id || appointment.patientId,
-                          patientName: appointment.patientName || `${appointment.Patient_First} ${appointment.Patient_Last}`,
-                          doctor: appointment.doctorName || `Dr. ${appointment.Doctor_First} ${appointment.Doctor_Last}`,
-                          copay: appointment.copay,
-                          reason: appointment.reason || appointment.Reason_for_visit,
-                          time: appointment.time || formatTime(appointment.Appointment_date)
-                        })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onProcessPayment({
+                            id: appointment.Appointment_id || appointment.id,
+                            patientId: appointment.Patient_id || appointment.patientId,
+                            patientName: appointment.patientName || `${appointment.Patient_First} ${appointment.Patient_Last}`,
+                            doctor: appointment.doctorName || `Dr. ${appointment.Doctor_First} ${appointment.Doctor_Last}`,
+                            copay: appointment.copay,
+                            reason: appointment.reason || appointment.Reason_for_visit,
+                            time: appointment.time || formatTime(appointment.Appointment_date)
+                          });
+                        }}
                       >
                         <DollarSign size={16} />
                         ${appointment.copay.toFixed(2)}
@@ -704,6 +753,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             </div>
 
             <div className="modal-footer">
+              <button 
+                className="btn btn-success" 
+                onClick={handleCheckInAppointment}
+                disabled={checkingIn || selectedAppointment.Status === 'Checked-in' || selectedAppointment.Status === 'Cancelled' || selectedAppointment.Status === 'Completed'}
+              >
+                <Check size={18} />
+                {checkingIn ? 'Checking In...' : 'Check In'}
+              </button>
               <button className="btn btn-primary">
                 <Edit size={18} />
                 Edit Appointment

@@ -37,7 +37,7 @@ function Report() {
   const [selectedDoctor, setSelectedDoctor] = useState('all');
   const [selectedInsurance, setSelectedInsurance] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-
+  const [selectedPeriod, setSelectedPeriod] = useState(null);
   // Data states
   const [financialData, setFinancialData] = useState(null);
   const [officeData, setOfficeData] = useState(null);
@@ -168,7 +168,7 @@ function Report() {
       setLoading(true);
       setError(null);
       const res = await fetch(
-        `/admin_api/reports/new-patients.php?${buildQueryParams()}`,
+        `/admin_api/reports/get-new-patients.php?${buildQueryParams()}`,
         { credentials: 'include' }
       );
       const data = await res.json();
@@ -188,9 +188,11 @@ function Report() {
     setActiveReport(reportType);
     setShowFilters(false);
     setSortConfig({ key: null, direction: 'desc' });
+    setSelectedPeriod(null);
   };
 
   const handleRefresh = () => {
+    setSelectedPeriod(null);
     if (activeReport === 'financial') {
       fetchFinancialReport();
     } else if (activeReport === 'office') {
@@ -534,75 +536,119 @@ function Report() {
               subtitle={`$${money(financialData.summary?.avg_revenue_per_patient || 0)} avg per patient`}
             />
           </div>
+            {financialData.daily_revenue && financialData.daily_revenue.length > 0 && (
+              <section className="report-section">
+                <div className="section-header">
+                  <h3>Revenue Trend</h3>
+                  <button onClick={() => setShowChart(!showChart)} className="btn btn-sm btn-ghost">
+                    {showChart ? 'Hide Chart' : 'Show Chart'}
+                  </button>
+                </div>
 
-          {showChart && financialData.daily_revenue && financialData.daily_revenue.length > 0 && (
-            <section className="report-section">
-              <div className="section-header">
-                <h3>Revenue Trend</h3>
-                <button onClick={() => setShowChart(!showChart)} className="btn btn-sm btn-ghost">
-                  {showChart ? 'Hide Chart' : 'Show Chart'}
-                </button>
-              </div>
-              <SimpleChart data={financialData.daily_revenue} />
-            </section>
-          )}
+                {showChart && (
+                  <SimpleChart
+                    data={financialData.daily_revenue}
+                    onBarSelect={setSelectedPeriod}
+                    selectedPeriod={selectedPeriod}
+                  />
+                )}
+              </section>
+            )}
 
-          <section className="report-section">
-            <div className="section-header">
-              <h3>Daily Revenue Breakdown</h3>
-              <p className="section-subtitle">{(financialData.daily_revenue || []).length} periods</p>
-            </div>
-            <div className="table-container">
-              <table className="report-table sortable-table">
-                <thead>
-                  <tr>
-                    <th onClick={() => handleSort('period_label')}>
-                      Date {sortConfig.key === 'period_label' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('total_visits')}>
-                      Visits {sortConfig.key === 'total_visits' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('gross_revenue')}>
-                      Gross Revenue {sortConfig.key === 'gross_revenue' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('collected_payments')}>
-                      Collected {sortConfig.key === 'collected_payments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('outstanding_balance')}>
-                      Outstanding {sortConfig.key === 'outstanding_balance' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('unique_patients')}>
-                      Unique Patients {sortConfig.key === 'unique_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th>Collection Rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getSortedData(financialData.daily_revenue || [], sortConfig.key).map((row, idx) => {
-                    const gross = Number(row.gross_revenue || 0);
-                    const collected = Number(row.collected_payments || 0);
-                    const collectionRate = gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
-                    
-                    return (
-                      <tr key={idx}>
-                        <td className="text-bold">{row.period_label}</td>
-                        <td>{row.total_visits}</td>
-                        <td className="text-success">${money(row.gross_revenue)}</td>
-                        <td className="text-primary">${money(row.collected_payments)}</td>
-                        <td className="text-warning">${money(row.outstanding_balance)}</td>
-                        <td>{row.unique_patients}</td>
-                        <td>
-                          <span className={`badge ${Number(collectionRate) >= 80 ? 'badge-success' : Number(collectionRate) >= 50 ? 'badge-warning' : 'badge-danger'}`}>
-                            {collectionRate}%
-                          </span>
-                        </td>
+              <section className="report-section">
+                <div className="section-header">
+                  <div>
+                    <h3>Daily Revenue Breakdown</h3>
+                    {/* use filtered count here */}
+                    <p className="section-subtitle">
+                      {(
+                        selectedPeriod
+                          ? (financialData.daily_revenue || []).filter(
+                              (r) => r.period_label === selectedPeriod
+                            )
+                          : (financialData.daily_revenue || [])
+                      ).length}{' '}
+                      {selectedPeriod ? 'rows for selected period' : 'periods'}
+                    </p>
+                  </div>
+
+                  {selectedPeriod && (
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => setSelectedPeriod(null)}
+                    >
+                      Clear selection
+                    </button>
+                  )}
+                </div>
+                <div className="table-container">
+                  <table className="report-table sortable-table">
+                    <thead>
+                      <tr>
+                        <th onClick={() => handleSort('period_label')}>
+                          Date {sortConfig.key === 'period_label' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th onClick={() => handleSort('total_visits')}>
+                          Visits {sortConfig.key === 'total_visits' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th onClick={() => handleSort('gross_revenue')}>
+                          Gross Revenue {sortConfig.key === 'gross_revenue' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th onClick={() => handleSort('collected_payments')}>
+                          Collected {sortConfig.key === 'collected_payments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th onClick={() => handleSort('outstanding_balance')}>
+                          Outstanding {sortConfig.key === 'outstanding_balance' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th onClick={() => handleSort('unique_patients')}>
+                          Unique Patients {sortConfig.key === 'unique_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th>Collection Rate</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                    </thead>
+                    <tbody>
+                      {getSortedData(
+                        selectedPeriod
+                          ? (financialData.daily_revenue || []).filter(
+                              (row) => row.period_label === selectedPeriod
+                            )
+                          : (financialData.daily_revenue || []),
+                        sortConfig.key
+                      ).map((row, idx) => {
+                        const gross = Number(row.gross_revenue || 0);
+                        const collected = Number(row.collected_payments || 0);
+                        const collectionRate =
+                          gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
+
+                        return (
+                          <tr key={idx}>
+                            <td className="text-bold">{row.period_label}</td>
+                            <td>{row.total_visits}</td>
+                            <td className="text-success">${money(row.gross_revenue)}</td>
+                            <td className="text-primary">${money(row.collected_payments)}</td>
+                            <td className="text-warning">${money(row.outstanding_balance)}</td>
+                            <td>{row.unique_patients}</td>
+                            <td>
+                              <span
+                                className={`badge ${
+                                  Number(collectionRate) >= 80
+                                    ? 'badge-success'
+                                    : Number(collectionRate) >= 50
+                                    ? 'badge-warning'
+                                    : 'badge-danger'
+                                }`}
+                              >
+                                {collectionRate}%
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
 
           {financialData.insurance_breakdown && financialData.insurance_breakdown.length > 0 && (
             <section className="report-section">
@@ -721,6 +767,17 @@ function Report() {
               subtitle="Across all offices"
             />
           </div>
+          {officeData.office_stats && officeData.office_stats.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>Utilization by Office</h3>
+                <p className="section-subtitle">
+                  Share of total appointments in this period
+                </p>
+              </div>
+              <OfficeUtilizationPie offices={officeData.office_stats} />
+            </section>
+          )}
 
           <section className="report-section">
             <div className="section-header">
@@ -913,9 +970,71 @@ function Report() {
     </div>
   );
 }
+const OfficeUtilizationPie = ({ offices }) => {
+  const total = offices.reduce(
+    (sum, o) => sum + (o.total_appointments || 0),
+    0
+  );
+
+  if (!total) {
+    return <p className="chart-empty">No appointment data for this period.</p>;
+  }
+
+  const radius = 16;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <div className="office-pie-card">
+      <svg viewBox="0 0 40 40" className="pie-chart-svg">
+        {/* background circle */}
+        <circle
+          cx="20"
+          cy="20"
+          r={radius}
+          className="pie-background"
+        />
+        {offices.map((office, idx) => {
+          const value = office.total_appointments || 0;
+          const fraction = value / total;
+          const dash = fraction * circumference;
+          const gap = circumference - dash;
+          const slice = (
+            <circle
+              key={office.office_id || idx}
+              cx="20"
+              cy="20"
+              r={radius}
+              className={`pie-slice pie-slice-${idx % 6}`}
+              strokeDasharray={`${dash} ${gap}`}
+              strokeDashoffset={-offset}
+            />
+          );
+          offset += dash;
+          return slice;
+        })}
+      </svg>
+
+      <div className="pie-legend">
+        {offices.map((office, idx) => (
+          <div key={office.office_id || idx} className="pie-legend-row">
+            <span className={`pie-legend-color pie-slice-${idx % 6}`} />
+            <div className="pie-legend-text">
+              <div className="pie-legend-title">{office.office_name}</div>
+              <div className="pie-legend-sub">
+                {office.total_appointments} appts · {office.utilization_rate}%
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 
 // Enhanced chart component with gridlines, axis, and tooltips
-const SimpleChart = ({ data }) => {
+const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
   const [hoveredBar, setHoveredBar] = React.useState(null);
   const [clickedBar, setClickedBar] = React.useState(null);
   
@@ -961,11 +1080,18 @@ const SimpleChart = ({ data }) => {
   };
 
   const handleBarClick = (item, idx) => {
-    setClickedBar(clickedBar === idx ? null : idx);
-  };
+    const nextIndex = clickedBar === idx ? null : idx;
+    setClickedBar(nextIndex);
 
+    if (onBarSelect) {
+      onBarSelect(nextIndex === null ? null : item.period_label);
+    }
+  };
   const handleOutsideClick = () => {
     setClickedBar(null);
+    if (onBarSelect) {
+      onBarSelect(null);  
+    }
   };
 
   React.useEffect(() => {
@@ -974,6 +1100,11 @@ const SimpleChart = ({ data }) => {
       return () => document.removeEventListener('click', handleOutsideClick);
     }
   }, [clickedBar]);
+  React.useEffect(() => {
+    if (selectedPeriod === null) {
+      setClickedBar(null);
+    }
+  }, [selectedPeriod]);
   
   return (
     <div className="simple-chart">
@@ -1020,31 +1151,36 @@ const SimpleChart = ({ data }) => {
               const safeHeight = isNaN(height) || height < 0 ? 0 : Math.min(height, 100);
               const safeCollectedPct = (grossRevenue > 0 && collectedHeight > 0) 
                 ? Math.min((collectedHeight / height) * 100, 100) 
-                : 0;
-              
+                : 0;  
+              const isActive =
+                hoveredBar === idx ||
+                clickedBar === idx ||
+                selectedPeriod === item.period_label;
               return (
-                <div 
-                  key={idx} 
-                  className="chart-bar-group"
-                  onMouseEnter={() => setHoveredBar(idx)}
-                  onMouseLeave={() => setHoveredBar(null)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleBarClick(item, idx);
-                  }}
-                >
-                  <div className="chart-bar-container">
-                    <div 
-                      className={`chart-bar chart-bar-gross ${hoveredBar === idx ? 'hovered' : ''}`}
-                      style={{ height: `${safeHeight}%` }}
-                    >
-                      {safeHeight > 0 && (
-                        <div 
-                          className="chart-bar-collected" 
-                          style={{ height: `${safeCollectedPct}%` }} 
-                        />
-                      )}
-                    </div>
+                  <div
+                    key={idx}
+                    className="chart-bar-group"
+                    onMouseEnter={() => setHoveredBar(idx)}
+                    onMouseLeave={() => setHoveredBar(null)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBarClick(item, idx);
+                    }}
+                  >
+                    <div className="chart-bar-container">
+                      <div
+                        className={`chart-bar chart-bar-gross ${
+                          isActive ? 'hovered' : ''
+                        }`}
+                        style={{ height: `${safeHeight}%` }}
+                      >
+                        {safeHeight > 0 && (
+                          <div
+                            className="chart-bar-collected"
+                            style={{ height: `${safeCollectedPct}%` }}
+                          />
+                        )}
+                      </div>
                     
                     {/* Tooltip */}
                     {(hoveredBar === idx || clickedBar === idx) && (
@@ -1089,7 +1225,7 @@ const SimpleChart = ({ data }) => {
                       </div>
                     )}
                   </div>
-                  <div className="chart-label">{item.period_label}</div>
+                    <div className="chart-label">{item.period_label}</div>
                 </div>
               );
             })}

@@ -17,16 +17,18 @@ try {
     
     $user_id = (int)$_SESSION['uid'];
     
-    // Resolve the receptionist's office ID from their staff record
+    // Resolve the receptionist's office ID from work_schedule
     $conn = getDBConnection();
     
     try {
         $rows = executeQuery($conn, '
-            SELECT s.work_location as office_id, o.name as office_name
+            SELECT ws.office_id, o.name as office_name
             FROM staff s
             JOIN user_account ua ON ua.email = s.staff_email
-            LEFT JOIN office o ON s.work_location = o.office_id
-            WHERE ua.user_id = ?', 'i', [$user_id]);
+            JOIN work_schedule ws ON ws.staff_id = s.staff_id
+            LEFT JOIN office o ON ws.office_id = o.office_id
+            WHERE ua.user_id = ?
+            LIMIT 1', 'i', [$user_id]);
     } catch (Exception $ex) {
         closeDBConnection($conn);
         throw $ex;
@@ -39,7 +41,7 @@ try {
         exit;
     }
     
-    $office_id = (int)$rows[0]['office_id'];
+    $office_id = (int) $rows[0]['office_id'];
     $office_name = $rows[0]['office_name'] ?? 'Unknown Office';
     
     // Use America/Chicago timezone for all date/time operations
@@ -128,10 +130,21 @@ try {
         $displayStatus = $dbStatus;
         $waitingTime = 0;
         
+        // Priority 1: Check for final/terminal statuses
         if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
             // Keep the database status
             $displayStatus = $dbStatus;
-        } else {
+        }
+        // Priority 2: Check if patient has checked in (should override time-based status)
+        elseif ($apt['check_in_time'] && !$apt['completion_time']) {
+            if ($dbStatus === 'In Progress') {
+                $displayStatus = 'In Progress';
+            } else {
+                $displayStatus = 'Checked In';
+            }
+        }
+        // Priority 3: Time-based status calculation for appointments that haven't checked in yet
+        else {
             // Calculate time difference in minutes
             $timeDiff = ($currentDateTime->getTimestamp() - $appointmentDateTime->getTimestamp()) / 60;
             
@@ -150,11 +163,6 @@ try {
                     $displayStatus = 'In Progress';
                 }
             }
-        }
-        
-        // Check if checked in (based on patient_visit records)
-        if ($apt['check_in_time'] && !$apt['completion_time'] && $displayStatus !== 'In Progress') {
-            $displayStatus = 'Checked In';
         }
         
         // Update statistics based on final displayStatus
@@ -222,7 +230,8 @@ try {
             'allergies' => $apt['allergies'] ?: 'No Known Allergies',
             'checkInTime' => $apt['check_in_time'],
             'completionTime' => $apt['completion_time'],
-            'copay' => $apt['copay'] ? floatval($apt['copay']) : 0.00,
+            'copay' => $apt['payment'] ? floatval($apt['payment']) : 0.00,
+            'payment' => $apt['payment'] ? floatval($apt['payment']) : 0.00,
             'visitId' => $apt['visit_id']
         ];
     }
