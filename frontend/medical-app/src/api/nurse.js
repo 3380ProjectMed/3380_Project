@@ -88,3 +88,11 @@ export async function saveNurseVitals(appointmentId, vitals) {
     body: JSON.stringify(payload)
   });
 }
+
+export async function createOrGetNurseVisit(appointmentId) {
+  if (!appointmentId) throw new Error('appointmentId required');
+  // call visits/create-or-get.php
+  return fetchJson(`${BASE_URL}/visits/create-or-get.php`, {
+    params: { appointment_id: appointmentId }
+  });
+}
