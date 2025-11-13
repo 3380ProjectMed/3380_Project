@@ -47,6 +47,9 @@ export default function PatientPortal({ onLogout }) {
   const [officesLoadError, setOfficesLoadError] = useState(null);
   const [bookingError, setBookingError] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [doctorSchedule, setDoctorSchedule] = useState(null);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
   const [vitalsHistory, setVitalsHistory] = useState([]);
   const [medications, setMedications] = useState([]);
   const [allergies, setAllergies] = useState([]);
@@ -115,6 +118,36 @@ export default function PatientPortal({ onLogout }) {
     } catch (error) {
       console.error('Error loading referrals:', error);
       setReferrals({ active: [], used: [] });
+    }
+  }
+
+  async function handleDoctorSelection(doctor) {
+    setSelectedDoctor(doctor);
+    setBookingError(null);
+    setDoctorSchedule(null);
+    setAvailableTimeSlots([]);
+    
+    if (!doctor) return;
+
+    // Load doctor's schedule and available time slots
+    setLoadingSchedule(true);
+    try {
+      const scheduleResponse = await api.appointments.getDoctorSchedule(doctor.doctor_id);
+      if (scheduleResponse.success) {
+        setDoctorSchedule(scheduleResponse.data);
+        // Filter offices where this doctor works
+        const doctorOffices = offices.filter(office => 
+          scheduleResponse.data.offices?.includes(office.office_id)
+        );
+        if (doctorOffices.length > 0 && !selectedLocation) {
+          setSelectedLocation(doctorOffices[0].office_id);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading doctor schedule:', error);
+      setBookingError('Failed to load doctor schedule. Please try again.');
+    } finally {
+      setLoadingSchedule(false);
     }
   }
 
@@ -418,6 +451,8 @@ export default function PatientPortal({ onLogout }) {
         setAppointmentReason(''); 
         setNeedsReferral(false);
         setBookingLoading(false);
+        setDoctorSchedule(null);
+        setBookingError(null);
         // Refresh both appointments and referrals data
         loadAppointments();
         loadReferrals();
@@ -578,7 +613,7 @@ export default function PatientPortal({ onLogout }) {
               const id = e.target.value;
               // doctor_id from backend may be a string; compare loosely or coerce
               const d = doctors.find(x => String(x.doctor_id) === String(id)) || null;
-              setSelectedDoctor(d);
+              handleDoctorSelection(d);
             }}>
             <option value="">Select doctor</option>
             {doctors.map(d => (
@@ -586,34 +621,57 @@ export default function PatientPortal({ onLogout }) {
             ))}
           </select>
           {doctorsLoadError && <div className="form-error">{doctorsLoadError}</div>}
-
-          <label style={{ marginTop: 8 }}>Office</label>
-            <select className="form-input" value={selectedLocation || ''} onChange={(e) => setSelectedLocation(Number(e.target.value))}>
-            <option value="">Select office</option>
-            {offices.map(o => (
-              <option key={o.office_id} value={o.office_id}>{o.name} — {o.full_address}</option>
-            ))}
-          </select>
-          {officesLoadError && <div className="form-error">{officesLoadError}</div>}
-
-          <label style={{ marginTop: 8 }}>Date</label>
-          <input className="form-input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
-
-          <label style={{ marginTop: 8 }}>Time</label>
-          <select className="form-input" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
-            <option value="">Select time</option>
-            {timeSlots.map(t => (<option key={t} value={t}>{t}</option>))}
-          </select>
-
-          <label style={{ marginTop: 8 }}>Reason</label>
-          <textarea className="form-input" rows={3} value={appointmentReason} onChange={(e) => setAppointmentReason(e.target.value)} />
+          {loadingSchedule && <div className="loading-text">Loading doctor schedule...</div>}
 
           {bookingError && <div className="form-error" style={{ marginTop: 8 }}>{bookingError}</div>}
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-            <button className="btn" onClick={() => { setShowBookingModal(false); setBookingStep(1); }} disabled={bookingLoading}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleBookingSubmit} disabled={bookingLoading || !selectedDoctor || !selectedLocation || !selectedDate || !selectedTime}>
-              {bookingLoading ? 'Booking…' : 'Book Appointment'}
-            </button>
+
+          {selectedDoctor && doctorSchedule && !bookingError && (
+            <>
+              <div className="doctor-schedule-info" style={{ marginTop: 16, padding: 12, background: '#f8f9fa', borderRadius: 8 }}>
+                <h4 style={{ margin: '0 0 8px 0', color: '#03045e' }}>Dr. {selectedDoctor.name}</h4>
+                <p style={{ margin: '0 0 4px 0', color: '#0077b6', fontWeight: 600 }}>{selectedDoctor.specialty_name}</p>
+                {doctorSchedule.schedule && (
+                  <p style={{ margin: '0 0 8px 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                    Available: {doctorSchedule.schedule.join(', ')}
+                  </p>
+                )}
+              </div>
+
+              <label style={{ marginTop: 16 }}>Office</label>
+              <select className="form-input" value={selectedLocation || ''} onChange={(e) => setSelectedLocation(Number(e.target.value))}>
+                <option value="">Select office</option>
+                {offices.filter(o => !doctorSchedule.offices || doctorSchedule.offices.includes(o.office_id)).map(o => (
+                  <option key={o.office_id} value={o.office_id}>{o.name} — {o.full_address}</option>
+                ))}
+              </select>
+
+              <label style={{ marginTop: 8 }}>Date</label>
+              <input className="form-input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+
+              <label style={{ marginTop: 8 }}>Time</label>
+              <select className="form-input" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+                <option value="">Select time</option>
+                {timeSlots.map(t => (<option key={t} value={t}>{t}</option>))}
+              </select>
+
+              <label style={{ marginTop: 8 }}>Reason</label>
+              <textarea className="form-input" rows={3} value={appointmentReason} onChange={(e) => setAppointmentReason(e.target.value)} />
+            </>
+          )}
+
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+            <button className="btn" onClick={() => { 
+              setShowBookingModal(false); 
+              setBookingStep(1);
+              setSelectedDoctor(null);
+              setDoctorSchedule(null);
+              setBookingError(null);
+            }} disabled={bookingLoading}>Cancel</button>
+            {selectedDoctor && doctorSchedule && !bookingError && (
+              <button className="btn btn-primary" onClick={handleBookingSubmit} disabled={bookingLoading || !selectedDoctor || !selectedLocation || !selectedDate || !selectedTime || !appointmentReason.trim()}>
+                {bookingLoading ? 'Booking…' : 'Book Appointment'}
+              </button>
+            )}
           </div>
         </div>
       </div>
