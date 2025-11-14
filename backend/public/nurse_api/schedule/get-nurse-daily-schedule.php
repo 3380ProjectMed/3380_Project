@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Get nurse's daily schedule with assigned patients
  * Path: /backend/public/nurse_api/schedule/get-nurse-daily-schedule.php
@@ -17,42 +18,35 @@ try {
     }
 
     $conn = getDBConnection();
-    
-    // Get nurse_id from session (matching doctor pattern)
-    $nurse_id = null;
-    if (isset($_GET['nurse_id'])) {
-        $nurse_id = intval($_GET['nurse_id']);
-    } else {
-        // Get from session - nurse_id is stored in staff table
-        $user_id = intval($_SESSION['uid']);
-        
-        $rows = executeQuery($conn, 
-            'SELECT n.nurse_id, CONCAT(s.first_name, " ", s.last_name) as nurse_name
-             FROM user_account ua
-             JOIN staff s ON ua.user_id = s.staff_id
-             JOIN nurse n ON s.staff_id = n.staff_id
-             WHERE ua.user_id = ? 
-             LIMIT 1', 
-            'i', [$user_id]);
-        
-        if (empty($rows)) {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'No nurse associated with user']);
-            closeDBConnection($conn);
-            exit;
-        }
-        
-        $nurse_id = (int)$rows[0]['nurse_id'];
-        $nurse_name = $rows[0]['nurse_name'];
+    //$email = $_SESSION['email'] ?? '';
+
+    // Get nurse_id from session
+    $rows = executeQuery(
+        $conn,
+        "SELECT n.nurse_id, CONCAT(s.first_name, ' ', s.last_name) as nurse_name
+         FROM nurse n 
+         JOIN staff s ON n.staff_id = s.staff_id 
+         WHERE n.staff_id = ? LIMIT 1",
+        'i',
+        [$_SESSION['uid']]
+    );
+
+    if (empty($rows)) {
+        closeDBConnection($conn);
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'NURSE_NOT_FOUND']);
+        exit;
     }
-    
+
+    $nurse_id = (int)$rows[0]['nurse_id'];
+    $nurse_name = $rows[0]['nurse_name'];
+
     // Get date parameter (default to today)
     $date = $_GET['date'] ?? date('Y-m-d');
-    
-    // Get the day of week for this date
+
+    // Get the nurse's work schedule for this day of week
     $dayOfWeek = date('l', strtotime($date)); // Monday, Tuesday, etc.
-    
-    // Get nurse's work schedule for this day
+
     $scheduleQuery = "SELECT 
             ws.start_time,
             ws.end_time,
@@ -63,11 +57,11 @@ try {
             o.state
         FROM work_schedule ws
         JOIN office o ON ws.office_id = o.office_id
-        WHERE ws.nurse_id = ? AND ws.day_of_week = ?
+        WHERE ws.staff_id = ? AND ws.day_of_week = ?
         LIMIT 1";
-    
-    $scheduleRows = executeQuery($conn, $scheduleQuery, 'is', [$nurse_id, $dayOfWeek]);
-    
+
+    $scheduleRows = executeQuery($conn, $scheduleQuery, 'is', [$_SESSION['uid'], $dayOfWeek]);
+
     // If nurse doesn't work this day
     if (empty($scheduleRows)) {
         closeDBConnection($conn);
@@ -81,9 +75,9 @@ try {
         ]);
         exit;
     }
-    
+
     $workSchedule = $scheduleRows[0];
-    
+
     // Get all appointments assigned to this nurse for this date
     $sql = "SELECT 
                 a.Appointment_id as appointment_id,
@@ -102,7 +96,7 @@ try {
                 p.dob,
                 TIMESTAMPDIFF(YEAR, p.dob, CURDATE()) as age,
                 cg.gender_text as gender,
-                CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                CONCAT(s.first_name, ' ', s.last_name) as doctor_name,
                 d.doctor_id,
                 sp.specialty_name,
                 o.name as office_name,
@@ -116,15 +110,15 @@ try {
             LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
             LEFT JOIN office o ON pv.office_id = o.office_id
             WHERE pv.nurse_id = ?
-            AND DATE(a.Appointment_date) = ?
+            AND a.Appointment_date = ?
             ORDER BY a.Appointment_date ASC";
-    
     $appointments = executeQuery($conn, $sql, 'is', [$nurse_id, $date]);
-    
-    // Format appointments
-    $formattedAppointments = array_map(function($apt) {
+
+    // Format appointments for frontend
+    $formattedAppointments = array_map(function ($apt) {
+        // Determine visit stage based on vitals
         $hasVitals = !empty($apt['blood_pressure']) || !empty($apt['temperature']);
-        
+
         return [
             'appointment_id' => $apt['appointment_id'],
             'visit_id' => $apt['visit_id'],
@@ -152,13 +146,13 @@ try {
             'ready_for_doctor' => $hasVitals
         ];
     }, $appointments ?: []);
-    
-    // Group by status
+
+    // Group appointments by status for easier nursing workflow
     $waitingForVitals = array_filter($formattedAppointments, fn($a) => !$a['vitals_recorded']);
     $readyForDoctor = array_filter($formattedAppointments, fn($a) => $a['vitals_recorded']);
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'date' => $date,
@@ -185,7 +179,6 @@ try {
             'completed_vitals' => count($readyForDoctor)
         ]
     ]);
-    
 } catch (Exception $e) {
     if (isset($conn)) {
         closeDBConnection($conn);
@@ -193,7 +186,8 @@ try {
     http_response_code(500);
     error_log("Error in get-nurse-daily-schedule.php: " . $e->getMessage());
     echo json_encode([
-        'success' => false, 
-        'error' => $e->getMessage()
+        'success' => false,
+        'error' => 'Internal server error',
+        'message' => $e->getMessage()
     ]);
 }
