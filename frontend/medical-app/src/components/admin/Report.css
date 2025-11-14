@@ -1297,7 +1297,7 @@
 }
 
 /* ============================================================================
-   ENHANCED PIE CHART - Larger with Centered Tooltip
+   ENHANCED PIE CHART - Premium Modern Design
    ============================================================================ */
 
 .office-pie-card {
@@ -1306,7 +1306,15 @@
   align-items: flex-start;
   flex-wrap: wrap;
   position: relative;
-  z-index: 10; /* Establish stacking context */
+  z-index: 10;
+  padding: 2.5rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+  border-radius: 1.5rem;
+  box-shadow: 
+    0 20px 60px rgba(0, 119, 182, 0.1),
+    0 0 0 1px rgba(0, 119, 182, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
 }
 
 .pie-chart-container {
@@ -1314,9 +1322,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 400px;
-  height: 400px;
-  min-width: 400px;
+  width: 420px;
+  height: 420px;
+  min-width: 420px;
+  filter: drop-shadow(0 12px 32px rgba(0, 119, 182, 0.15));
 }
 
 .pie-chart-svg {
@@ -1328,147 +1337,242 @@
 
 .pie-background {
   fill: none;
-  stroke: rgba(15, 23, 42, 0.06);
-  stroke-width: 20;
+  stroke: #e2eef8;
+  stroke-width: 24;
+  stroke-linecap: round;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.06));
 }
 
 .pie-slice {
   fill: none;
-  stroke-width: 20;
-  transition: stroke-dashoffset 0.3s ease, opacity 0.2s, stroke-width 0.2s ease;
+  stroke-width: 24;
+  stroke-linecap: round;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.12));
 }
 
 .pie-slice:hover,
 .pie-slice.pie-slice-active {
-  stroke-width: 24;
-  opacity: 1;
-  filter: brightness(1.15) drop-shadow(0 0 8px currentColor);
+  stroke-width: 32;
+  filter: 
+    drop-shadow(0 8px 24px rgba(0, 0, 0, 0.25))
+    drop-shadow(0 0 28px currentColor);
+  animation: pieGlow 0.6s ease-in-out;
 }
 
-.pie-slice-0 { stroke: #4f46e5; }
-.pie-slice-1 { stroke: #22c55e; }
-.pie-slice-2 { stroke: #f97316; }
-.pie-slice-3 { stroke: #06b6d4; }
-.pie-slice-4 { stroke: #e11d48; }
-.pie-slice-5 { stroke: #a855f7; }
+@keyframes pieGlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.95; }
+}
 
-/* Pie Tooltip - Fits in center hole */
+/* Premium vibrant color palette */
+.pie-slice-0 { 
+  stroke: #6366f1;
+  stroke: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+.pie-slice-1 { 
+  stroke: #10b981;
+  stroke: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+}
+.pie-slice-2 { 
+  stroke: #f59e0b;
+  stroke: linear-gradient(135deg, #f59e0b 0%, #fb923c 100%);
+}
+.pie-slice-3 { 
+  stroke: #0ea5e9;
+  stroke: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+}
+.pie-slice-4 { 
+  stroke: #f43f5e;
+  stroke: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+}
+.pie-slice-5 { 
+  stroke: #a855f7;
+  stroke: linear-gradient(135deg, #a855f7 0%, #c026d3 100%);
+}
+
+/* Enhanced Pie Tooltip - Glass morphism design */
 .pie-tooltip {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border: 3px solid #0077b6;
-  border-radius: 1rem;
-  padding: 1.5rem;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.98) 0%, 
+    rgba(248, 250, 252, 0.98) 100%);
+  border: 3px solid;
+  border-image: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%) 1;
+  border-radius: 1.25rem;
+  padding: 1.75rem 1.5rem;
   box-shadow: 
-    0 10px 40px rgba(0, 119, 182, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+    0 20px 60px rgba(0, 119, 182, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset,
+    0 8px 32px rgba(0, 0, 0, 0.12);
   z-index: 50;
-  width: 220px;
+  width: 240px;
   text-align: center;
   pointer-events: none;
-  animation: pieTooltipFadeIn 0.3s ease;
+  animation: pieTooltipFadeIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(12px);
 }
 
 @keyframes pieTooltipFadeIn {
   from {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.85);
+    transform: translate(-50%, -50%) scale(0.8) rotateY(-10deg);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, -50%) scale(1) rotateY(0deg);
   }
 }
 
 .pie-tooltip-header {
-  font-weight: 700;
+  font-weight: 800;
   color: #03045e;
-  font-size: 1rem;
-  margin-bottom: 0.75rem;
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
   line-height: 1.3;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  letter-spacing: -0.02em;
 }
 
 .pie-tooltip-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  margin: 0.75rem 0;
+  gap: 0.375rem;
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, rgba(0, 119, 182, 0.05) 0%, rgba(0, 180, 216, 0.05) 100%);
+  border-radius: 0.75rem;
 }
 
 .pie-tooltip-number {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: #0077b6;
+  font-size: 2.75rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   line-height: 1;
+  letter-spacing: -0.03em;
 }
 
 .pie-tooltip-unit {
-  font-size: 0.8125rem;
-  color: #6b7280;
-  font-weight: 500;
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .pie-tooltip-percent {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.125rem;
+  font-weight: 700;
   color: #059669;
-  margin: 0.5rem 0;
+  margin: 0.625rem 0;
+  padding: 0.5rem 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 2rem;
+  display: inline-block;
 }
 
 .pie-tooltip-hint {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #94a3b8;
   font-style: italic;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(226, 238, 248, 0.6);
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 2px solid rgba(226, 238, 248, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
 }
 
-/* Pie Legend */
+.pie-tooltip-hint::before {
+  content: "👆";
+  font-size: 1rem;
+}
+
+/* Enhanced Pie Legend */
 .pie-legend {
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: 1rem;
   flex: 1;
-  min-width: 250px;
+  min-width: 280px;
 }
 
 .pie-legend-row {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.625rem;
-  transition: all 0.2s ease;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 0.875rem;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
   border: 2px solid transparent;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(248, 250, 252, 0.5) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.pie-legend-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, transparent 0%, currentColor 50%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .pie-legend-row:hover {
-  background: rgba(202, 240, 248, 0.25);
-  transform: translateX(6px);
-  border-color: rgba(0, 119, 182, 0.2);
+  background: linear-gradient(135deg, rgba(0, 119, 182, 0.08) 0%, rgba(0, 180, 216, 0.08) 100%);
+  transform: translateX(8px) scale(1.02);
+  border-color: rgba(0, 119, 182, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 119, 182, 0.12);
+}
+
+.pie-legend-row:hover::before {
+  opacity: 0.6;
 }
 
 .pie-legend-row.legend-selected {
-  background: rgba(0, 119, 182, 0.12);
+  background: linear-gradient(135deg, rgba(0, 119, 182, 0.15) 0%, rgba(0, 180, 216, 0.15) 100%);
   border-color: #0077b6;
-  transform: translateX(6px);
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.15);
+  transform: translateX(10px) scale(1.03);
+  box-shadow: 
+    0 8px 24px rgba(0, 119, 182, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.pie-legend-row.legend-selected::before {
+  opacity: 1;
 }
 
 .pie-legend-color {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  border: 2px solid white;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  border: 3px solid white;
+  transition: all 0.3s ease;
+}
+
+.pie-legend-row:hover .pie-legend-color {
+  transform: scale(1.25);
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.3),
+    0 0 20px currentColor;
 }
 
 .pie-legend-text {
@@ -1477,42 +1581,47 @@
 }
 
 .pie-legend-title {
-  font-weight: 600;
+  font-weight: 700;
   color: #03045e;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.375rem;
+  letter-spacing: -0.01em;
 }
 
 .pie-legend-sub {
   color: #64748b;
   font-size: 0.875rem;
+  font-weight: 500;
 }
 
-/* Office Detail Card */
+/* Premium Office Detail Card */
 .office-detail-card {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
-  margin-top: 1.5rem;
-  background: white;
-  border: 3px solid #0077b6;
-  border-radius: 1rem;
-  padding: 1.75rem;
+  margin-top: 2rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+  border: 3px solid;
+  border-image: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%) 1;
+  border-radius: 1.5rem;
+  padding: 2rem;
   box-shadow: 
-    0 20px 40px rgba(0, 119, 182, 0.2),
-    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
-  z-index: 1000; /* Increased from 100 to ensure it's above everything */
-  animation: detailSlideIn 0.3s ease;
+    0 30px 80px rgba(0, 119, 182, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset,
+    0 10px 40px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  animation: detailSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(12px);
 }
 
 @keyframes detailSlideIn {
   from {
     opacity: 0;
-    transform: translateY(-16px);
+    transform: translateY(-24px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -1520,62 +1629,70 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 3px solid rgba(0, 119, 182, 0.15);
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 3px solid;
+  border-image: linear-gradient(90deg, #0077b6 0%, transparent 100%) 1;
 }
 
 .office-detail-header h4 {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #03045e;
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #03045e 0%, #0077b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
 }
 
 .btn-close-detail {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
-  background: rgba(220, 38, 38, 0.1);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.15) 100%);
   color: #dc2626;
-  font-size: 1.75rem;
+  font-size: 2rem;
   line-height: 1;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 300;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
 }
 
 .btn-close-detail:hover {
-  background: #dc2626;
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
   color: white;
-  transform: rotate(90deg);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
 }
 
 .office-detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .detail-stat {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem 1.25rem;
-  background: linear-gradient(135deg, rgba(202, 240, 248, 0.2) 0%, rgba(255, 255, 255, 0.5) 100%);
-  border-radius: 0.625rem;
+  gap: 0.625rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, rgba(202, 240, 248, 0.25) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-radius: 0.875rem;
   border-left: 4px solid #0077b6;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 8px rgba(0, 119, 182, 0.08);
 }
 
 .detail-stat:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 119, 182, 0.12);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 28px rgba(0, 119, 182, 0.18);
+  background: linear-gradient(135deg, rgba(202, 240, 248, 0.35) 0%, rgba(255, 255, 255, 0.7) 100%);
 }
 
 .detail-stat-full {
@@ -1585,68 +1702,85 @@
 
 .detail-label {
   font-size: 0.75rem;
-  font-weight: 700;
-  color: #6b7280;
+  font-weight: 800;
+  color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .detail-value {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 800;
   color: #03045e;
-  line-height: 1.2;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .detail-value-small {
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
   line-height: 1.4;
 }
 
 .detail-value.detail-primary {
-  color: #0077b6;
+  background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .detail-value.detail-success {
-  color: #059669;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .detail-value.detail-info {
-  color: #00b4d8;
+  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .detail-value.detail-warning {
-  color: #f59e0b;
+  background: linear-gradient(135deg, #f59e0b 0%, #fb923c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .detail-value.detail-danger {
-  color: #dc2626;
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .chart-empty {
-  font-size: 0.875rem;
+  font-size: 1rem;
   color: #64748b;
   text-align: center;
-  padding: 3rem;
+  padding: 4rem;
   font-style: italic;
+  font-weight: 500;
 }
 
 /* Responsive adjustments */
 @media (max-width: 1024px) {
   .pie-chart-container {
-    width: 320px;
-    height: 320px;
-    min-width: 320px;
+    width: 360px;
+    height: 360px;
+    min-width: 360px;
   }
 
   .pie-tooltip {
-    width: 180px;
-    padding: 1.25rem;
+    width: 200px;
+    padding: 1.5rem 1.25rem;
   }
 
   .pie-tooltip-number {
-    font-size: 2rem;
+    font-size: 2.25rem;
   }
 }
 
@@ -1654,47 +1788,48 @@
   .office-pie-card {
     flex-direction: column;
     gap: 2rem;
+    padding: 1.5rem;
   }
 
   .pie-chart-container {
-    width: 280px;
-    height: 280px;
-    min-width: 280px;
+    width: 300px;
+    height: 300px;
+    min-width: 300px;
     margin: 0 auto;
   }
 
   .pie-background {
-    stroke-width: 16;
+    stroke-width: 20;
   }
 
   .pie-slice {
-    stroke-width: 16;
+    stroke-width: 20;
   }
 
   .pie-slice:hover,
   .pie-slice.pie-slice-active {
-    stroke-width: 19;
+    stroke-width: 24;
   }
 
   .pie-tooltip {
-    width: 160px;
-    padding: 1rem;
+    width: 180px;
+    padding: 1.25rem 1rem;
   }
 
   .pie-tooltip-header {
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 
   .pie-tooltip-number {
-    font-size: 1.75rem;
+    font-size: 2rem;
   }
 
   .pie-tooltip-unit {
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
   }
 
   .pie-tooltip-percent {
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 
   .office-detail-card {
@@ -1714,17 +1849,30 @@
 
 @media (max-width: 480px) {
   .pie-chart-container {
-    width: 240px;
-    height: 240px;
-    min-width: 240px;
+    width: 260px;
+    height: 260px;
+    min-width: 260px;
+  }
+
+  .pie-background {
+    stroke-width: 16;
+  }
+
+  .pie-slice {
+    stroke-width: 16;
+  }
+
+  .pie-slice:hover,
+  .pie-slice.pie-slice-active {
+    stroke-width: 20;
   }
 
   .pie-tooltip {
-    width: 140px;
-    padding: 0.875rem;
+    width: 150px;
+    padding: 1rem 0.875rem;
   }
 
   .pie-tooltip-number {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
   }
 }
