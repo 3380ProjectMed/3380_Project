@@ -970,7 +970,12 @@ function Report() {
     </div>
   );
 }
+// Add this enhanced version to replace the existing OfficeUtilizationPie in Report.jsx
+
 const OfficeUtilizationPie = ({ offices }) => {
+  const [hoveredIndex, setHoveredIndex] = React.useState(null);
+  const [selectedOffice, setSelectedOffice] = React.useState(null);
+
   const total = offices.reduce(
     (sum, o) => sum + (o.total_appointments || 0),
     0
@@ -984,40 +989,89 @@ const OfficeUtilizationPie = ({ offices }) => {
   const circumference = 2 * Math.PI * radius;
   let offset = 0;
 
+  const handleSliceClick = (office, e) => {
+    e.stopPropagation();
+    setSelectedOffice(selectedOffice?.office_id === office.office_id ? null : office);
+  };
+
+  React.useEffect(() => {
+    const handleClickOutside = () => setSelectedOffice(null);
+    if (selectedOffice) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [selectedOffice]);
+
   return (
     <div className="office-pie-card">
-      <svg viewBox="0 0 40 40" className="pie-chart-svg">
-        {/* background circle */}
-        <circle
-          cx="20"
-          cy="20"
-          r={radius}
-          className="pie-background"
-        />
-        {offices.map((office, idx) => {
-          const value = office.total_appointments || 0;
-          const fraction = value / total;
-          const dash = fraction * circumference;
-          const gap = circumference - dash;
-          const slice = (
-            <circle
-              key={office.office_id || idx}
-              cx="20"
-              cy="20"
-              r={radius}
-              className={`pie-slice pie-slice-${idx % 6}`}
-              strokeDasharray={`${dash} ${gap}`}
-              strokeDashoffset={-offset}
-            />
-          );
-          offset += dash;
-          return slice;
-        })}
-      </svg>
+      <div className="pie-chart-container">
+        <svg viewBox="0 0 40 40" className="pie-chart-svg">
+          {/* background circle */}
+          <circle
+            cx="20"
+            cy="20"
+            r={radius}
+            className="pie-background"
+          />
+          {offices.map((office, idx) => {
+            const value = office.total_appointments || 0;
+            const fraction = value / total;
+            const dash = fraction * circumference;
+            const gap = circumference - dash;
+            const currentOffset = offset;
+            offset += dash;
+
+            return (
+              <circle
+                key={office.office_id || idx}
+                cx="20"
+                cy="20"
+                r={radius}
+                className={`pie-slice pie-slice-${idx % 6} ${
+                  hoveredIndex === idx || selectedOffice?.office_id === office.office_id
+                    ? 'pie-slice-active'
+                    : ''
+                }`}
+                strokeDasharray={`${dash} ${gap}`}
+                strokeDashoffset={-currentOffset}
+                onMouseEnter={() => setHoveredIndex(idx)}
+                onMouseLeave={() => setHoveredIndex(null)}
+                onClick={(e) => handleSliceClick(office, e)}
+                style={{ cursor: 'pointer' }}
+              />
+            );
+          })}
+        </svg>
+
+        {/* Hover Tooltip */}
+        {hoveredIndex !== null && (
+          <div className="pie-tooltip">
+            <div className="pie-tooltip-header">
+              {offices[hoveredIndex].office_name}
+            </div>
+            <div className="pie-tooltip-stat">
+              {offices[hoveredIndex].total_appointments} appointments
+            </div>
+            <div className="pie-tooltip-stat">
+              {offices[hoveredIndex].utilization_rate}% of total
+            </div>
+            <div className="pie-tooltip-hint">Click for details</div>
+          </div>
+        )}
+      </div>
 
       <div className="pie-legend">
         {offices.map((office, idx) => (
-          <div key={office.office_id || idx} className="pie-legend-row">
+          <div 
+            key={office.office_id || idx} 
+            className={`pie-legend-row ${
+              selectedOffice?.office_id === office.office_id ? 'legend-selected' : ''
+            }`}
+            onMouseEnter={() => setHoveredIndex(idx)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            onClick={(e) => handleSliceClick(office, e)}
+            style={{ cursor: 'pointer' }}
+          >
             <span className={`pie-legend-color pie-slice-${idx % 6}`} />
             <div className="pie-legend-text">
               <div className="pie-legend-title">{office.office_name}</div>
@@ -1028,10 +1082,131 @@ const OfficeUtilizationPie = ({ offices }) => {
           </div>
         ))}
       </div>
+
+      {/* Detailed Office Stats Modal */}
+      {selectedOffice && (
+        <div className="office-detail-card" onClick={(e) => e.stopPropagation()}>
+          <div className="office-detail-header">
+            <h4>{selectedOffice.office_name}</h4>
+            <button 
+              className="btn-close-detail" 
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedOffice(null);
+              }}
+            >
+              ×
+            </button>
+          </div>
+          
+          <div className="office-detail-grid">
+            <div className="detail-stat">
+              <span className="detail-label">Address</span>
+              <span className="detail-value">{selectedOffice.address}</span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">Total Appointments</span>
+              <span className="detail-value detail-primary">
+                {selectedOffice.total_appointments}
+              </span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">Completed</span>
+              <span className="detail-value detail-success">
+                {selectedOffice.completed}
+              </span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">Scheduled</span>
+              <span className="detail-value detail-info">
+                {selectedOffice.scheduled}
+              </span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">Cancelled</span>
+              <span className="detail-value detail-warning">
+                {selectedOffice.cancelled}
+              </span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">No-Shows</span>
+              <span className="detail-value detail-danger">
+                {selectedOffice.no_shows}
+              </span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">No-Show Rate</span>
+              <span className={`detail-value ${
+                Number(selectedOffice.no_show_rate) < 5 
+                  ? 'detail-success' 
+                  : Number(selectedOffice.no_show_rate) < 10 
+                  ? 'detail-warning' 
+                  : 'detail-danger'
+              }`}>
+                {selectedOffice.no_show_rate}%
+              </span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">Completion Rate</span>
+              <span className={`detail-value ${
+                Number(selectedOffice.completion_rate) >= 90 
+                  ? 'detail-success' 
+                  : Number(selectedOffice.completion_rate) >= 75 
+                  ? 'detail-warning' 
+                  : 'detail-danger'
+              }`}>
+                {selectedOffice.completion_rate}%
+              </span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">Avg Wait Time</span>
+              <span className="detail-value">
+                {selectedOffice.avg_wait_minutes 
+                  ? `${selectedOffice.avg_wait_minutes} min` 
+                  : 'N/A'}
+              </span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">Utilization Rate</span>
+              <span className={`detail-value ${
+                Number(selectedOffice.utilization_rate) >= 80 
+                  ? 'detail-success' 
+                  : Number(selectedOffice.utilization_rate) >= 60 
+                  ? 'detail-warning' 
+                  : 'detail-danger'
+              }`}>
+                {selectedOffice.utilization_rate}%
+              </span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">Unique Doctors</span>
+              <span className="detail-value">
+                {selectedOffice.unique_doctors}
+              </span>
+            </div>
+
+            <div className="detail-stat">
+              <span className="detail-label">Unique Patients</span>
+              <span className="detail-value">
+                {selectedOffice.unique_patients}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-
 
 // Enhanced chart component with gridlines, axis, and tooltips
 const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
