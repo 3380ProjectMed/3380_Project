@@ -1,7 +1,7 @@
 <?php
 
 declare(strict_types=1);
-
+require_once __DIR__ . '/../session.php';
 // Log to a file we can check
 $logFile = '/home/site/wwwroot/me_debug.log';
 function debug_log($message)
@@ -47,11 +47,11 @@ register_shutdown_function(function () {
 });
 
 debug_log('Starting session');
-session_start([
-  'cookie_httponly' => true,
-  'cookie_secure' => !empty($_SERVER['HTTPS']),
-  'cookie_samesite' => 'Lax',
-]);
+// session_start([
+//   'cookie_httponly' => true,
+//   'cookie_secure' => !empty($_SERVER['HTTPS']),
+//   'cookie_samesite' => 'Lax',
+// ]);
 header('Content-Type: application/json');
 
 debug_log('Session UID: ' . ($_SESSION['uid'] ?? 'NOT SET'));
@@ -214,7 +214,7 @@ if (method_exists($stmt, 'get_result')) {
 $response = [
   'user_id' => $user['user_id'],
   'username' => $user['username'],
-  'email' => $user['email'],  
+  'email' => $user['email'],
   'role' => $user['role'],
   'first_name' => $user['first_name'],
   'last_name' => $user['last_name'],

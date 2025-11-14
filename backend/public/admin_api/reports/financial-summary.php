@@ -5,16 +5,16 @@ require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
 try {
-    session_start();
-    
+    //session_start();
+
     if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Admin access required']);
         exit;
     }
-    
+
     $conn = getDBConnection();
-    
+
     // Get and validate parameters
     $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-30 days'));
     $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
@@ -22,37 +22,37 @@ try {
     $office_id = isset($_GET['office_id']) ? $_GET['office_id'] : null;
     $doctor_id = isset($_GET['doctor_id']) ? $_GET['doctor_id'] : null;
     $insurance_id = isset($_GET['insurance_id']) ? $_GET['insurance_id'] : null;
-    
+
     // Validate inputs
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end_date)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid date format. Use YYYY-MM-DD']);
         exit;
     }
-    
+
     if (!in_array($group_by, ['day', 'week', 'month'])) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid group_by value. Use day, week, or month']);
         exit;
     }
-    
+
     // Build WHERE clause for filters
     $where_conditions = ["pv.date BETWEEN ? AND ?"];
     $params = [$start_date, $end_date];
     $param_types = 'ss';
-    
+
     if ($office_id && $office_id !== 'all') {
         $where_conditions[] = "a.Office_id = ?";
         $params[] = $office_id;
         $param_types .= 'i';
     }
-    
+
     if ($doctor_id && $doctor_id !== 'all') {
         $where_conditions[] = "pv.Doctor_id = ?";
         $params[] = $doctor_id;
         $param_types .= 'i';
     }
-    
+
     if ($insurance_id && $insurance_id !== 'all') {
         if ($insurance_id === 'self-pay') {
             $where_conditions[] = "pv.insurance_policy_id_used IS NULL";
@@ -62,13 +62,13 @@ try {
             $param_types .= 'i';
         }
     }
-    
+
     $where_clause = implode(' AND ', $where_conditions);
-    
+
     // Determine date grouping SQL
     $date_group_sql = '';
     $date_label_sql = '';
-    
+
     switch ($group_by) {
         case 'week':
             $date_group_sql = "YEARWEEK(pv.date, 1)";
@@ -84,7 +84,7 @@ try {
             $date_label_sql = "DATE_FORMAT(pv.date, '%M %d, %Y')";
             break;
     }
-    
+
     // Revenue breakdown by period with proper joins for filtering
     $sql = "SELECT 
                 $date_group_sql AS period_group,
@@ -105,14 +105,14 @@ try {
             WHERE $where_clause
             GROUP BY period_group, period_label
             ORDER BY period_group DESC";
-    
+
     $daily_revenue = executeQuery($conn, $sql, $param_types, $params);
-    
+
     // Revenue by insurance with filters
     $insurance_where = $where_clause;
     $insurance_params = $params;
     $insurance_types = $param_types;
-    
+
     $sql = "SELECT
                 COALESCE(ipayer.name, 'Self-Pay') AS insurance_company,
                 COALESCE(ip.plan_name, 'N/A') AS plan_name,
@@ -134,9 +134,9 @@ try {
             WHERE $insurance_where
             GROUP BY ipayer.name, ip.plan_name
             ORDER BY total_payments DESC";
-    
+
     $insurance_breakdown = executeQuery($conn, $sql, $insurance_types, $insurance_params);
-    
+
     // Doctor performance breakdown (if not filtered by specific doctor)
     $doctor_performance = [];
     if (!$doctor_id || $doctor_id === 'all') {
@@ -167,10 +167,10 @@ try {
                 HAVING total_visits > 0
                 ORDER BY total_revenue DESC
                 LIMIT 20";
-        
+
         $doctor_performance = executeQuery($conn, $sql, $param_types, $params);
     }
-    
+
     // Summary totals with collection rate
     $sql = "SELECT 
                 COUNT(*) AS total_visits,
@@ -204,7 +204,7 @@ try {
             LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
             LEFT JOIN insurance_payer ipayer ON ip.payer_id = ipayer.payer_id
             WHERE $where_clause";
-    
+
     $summary_result = executeQuery($conn, $sql, $param_types, $params);
     $summary = $summary_result[0] ?? [
         'total_visits' => 0,
@@ -216,9 +216,9 @@ try {
         'outstanding_visits' => 0,
         'avg_revenue_per_patient' => 0
     ];
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'start_date' => $start_date,
@@ -234,9 +234,7 @@ try {
         'insurance_breakdown' => $insurance_breakdown,
         'doctor_performance' => $doctor_performance
     ], JSON_NUMERIC_CHECK);
-    
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-?>
