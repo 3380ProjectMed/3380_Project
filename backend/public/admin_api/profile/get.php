@@ -21,14 +21,15 @@ try {
                 ua.username,
                 s.ssn,
                 s.gender,
-                s.work_location as workLocation,
+                o.office_id as workLocation,
                 o.name as workLocationName,
                 s.staff_role as role,
                 ua.is_active as isActive,
                 ua.created_at as createdAt
              FROM user_account ua
              LEFT JOIN staff s ON ua.user_id = s.staff_id AND ua.role IN ('DOCTOR', 'NURSE', 'RECEPTIONIST', 'ADMIN')
-             LEFT JOIN office o ON s.work_location = o.office_id
+             LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
+             LEFT JOIN office o ON ws.office_id = o.office_id
              WHERE ua.user_id = ?";
 
     $stmt = $conn->prepare($query);
