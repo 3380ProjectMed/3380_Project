@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
@@ -6,12 +7,8 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/../../error.log');
 
 require_once __DIR__ . '/../cors.php';
-
-session_start([
-  'cookie_httponly' => true,
-  'cookie_secure'   => !empty($_SERVER['HTTPS']),
-  'cookie_samesite' => 'Lax',
-]);
+// Use the centralized session.php instead of calling session_start() directly
+require_once __DIR__ . '/../session.php';
 
 header('Content-Type: application/json');
 
@@ -131,7 +128,7 @@ if ($user['is_active'] == 0) {
 // Verify password
 if (!password_verify($password, $user['password_hash'])) {
     $failedCount = intval($user['failed_login_count']) + 1;
-    
+
     if ($failedCount > 3) {
         $updateStmt = $mysqli->prepare(
             "UPDATE user_account 
@@ -142,7 +139,7 @@ if (!password_verify($password, $user['password_hash'])) {
         $updateStmt->bind_param('ii', $failedCount, $user['user_id']);
         $updateStmt->execute();
         $updateStmt->close();
-        
+
         http_response_code(403);
         echo json_encode([
             'error' => 'Account locked due to too many failed login attempts. Please reset your password.',
@@ -158,14 +155,14 @@ if (!password_verify($password, $user['password_hash'])) {
         $updateStmt->bind_param('ii', $failedCount, $user['user_id']);
         $updateStmt->execute();
         $updateStmt->close();
-        
+
         http_response_code(401);
         echo json_encode([
             'error' => 'Invalid credentials',
             'attemptsRemaining' => 5 - $failedCount
         ]);
     }
-    
+
     $mysqli->close();
     exit;
 }
@@ -204,4 +201,3 @@ echo json_encode([
         'last_name' => $user['last_name']
     ]
 ]);
-?>

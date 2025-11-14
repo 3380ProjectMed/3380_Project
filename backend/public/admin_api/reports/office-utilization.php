@@ -3,10 +3,11 @@
     require_once '/home/site/wwwroot/cors.php';
     require_once '/home/site/wwwroot/database.php';
     require_once '/home/site/wwwroot/session.php';
-    try {    
-        if (empty($_SESSION['uid'])) {
-            http_response_code(401);
-            echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+    try {
+
+        if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Admin access required']);
             exit;
         }
 
@@ -28,39 +29,39 @@
             closeDBConnection($conn);
             exit;
         }
-        
+
         // Get and validate parameters
         $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-30 days'));
         $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-d');
         $office_id = isset($_GET['office_id']) ? $_GET['office_id'] : null;
         $status_filter = isset($_GET['status']) ? $_GET['status'] : null;
-        
+
         // Validate dates
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end_date)) {
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'Invalid date format. Use YYYY-MM-DD']);
             exit;
         }
-        
+
         // Build WHERE clause for appointment filters
         $where_conditions = ["DATE(a.Appointment_date) BETWEEN ? AND ?"];
         $params = [$start_date, $end_date];
         $param_types = 'ss';
-        
+
         if ($office_id && $office_id !== 'all') {
             $where_conditions[] = "a.Office_id = ?";
             $params[] = $office_id;
             $param_types .= 'i';
         }
-        
+
         if ($status_filter && $status_filter !== 'all') {
             $where_conditions[] = "a.Status = ?";
             $params[] = $status_filter;
             $param_types .= 's';
         }
-        
+
         $where_clause = count($where_conditions) > 0 ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
-        
+
         // Office statistics with detailed appointment breakdown
         $sql = "SELECT 
                     o.office_id,
@@ -111,21 +112,21 @@
                 GROUP BY o.office_id, o.name, o.address, o.city, o.state, o.phone, o.zipcode
                 HAVING total_appointments > 0
                 ORDER BY total_appointments DESC";
-        
+
         // Prepare parameters for the query
         $query_params = [$end_date, $start_date, $start_date, $end_date];
         $query_types = 'ssss';
-        
+
         if ($status_filter && $status_filter !== 'all') {
             $query_params[] = $status_filter;
             $query_types .= 's';
         }
-        
+
         if ($office_id && $office_id !== 'all') {
             $query_params[] = $office_id;
             $query_types .= 'i';
         }
-        
+
         $office_stats = executeQuery($conn, $sql, $query_types, $query_params);
 
         // Calculate summary statistics
@@ -162,10 +163,11 @@
 
         $avg_utilization = $total_offices > 0
             ? round($sum_utilization / $total_offices, 1)
-        : 0.0;    $avg_no_show_rate = $total_appointments > 0 ? round(($total_no_shows / $total_appointments) * 100, 1) : 0;
+            : 0.0;
+        $avg_no_show_rate = $total_appointments > 0 ? round(($total_no_shows / $total_appointments) * 100, 1) : 0;
         $avg_wait_time = $wait_time_count > 0 ? round($sum_wait_time / $wait_time_count, 0) : null;
         $completion_rate = $total_appointments > 0 ? round(($total_completed / $total_appointments) * 100, 1) : 0;
-        
+
         // Get daily appointment trends
         $sql = "SELECT 
                     DATE(a.Appointment_date) as appointment_date,
@@ -177,9 +179,9 @@
                 $where_clause
                 GROUP BY DATE(a.Appointment_date)
                 ORDER BY appointment_date DESC";
-        
+
         $daily_trends = executeQuery($conn, $sql, $param_types, $params);
-        
+
         // Get status breakdown
         $sql = "SELECT 
                     a.Status,
@@ -194,7 +196,7 @@
                 ORDER BY count DESC";
 
         $status_breakdown = executeQuery($conn, $sql, $param_types, $params);
-        
+
         $summary = [
             'total_offices'      => $total_offices,
             'active_offices'     => $active_offices,
@@ -207,9 +209,9 @@
             'avg_wait_minutes'   => $avg_wait_time,
             'completion_rate'    => $completion_rate
         ];
-        
+
         closeDBConnection($conn);
-        
+
         echo json_encode([
             'success' => true,
             'start_date' => $start_date,
@@ -223,7 +225,6 @@
             'daily_trends' => $daily_trends,
             'status_breakdown' => $status_breakdown
         ], JSON_NUMERIC_CHECK);
-        
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
