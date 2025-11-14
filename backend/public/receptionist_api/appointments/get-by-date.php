@@ -1,14 +1,15 @@
 <?php
+
 /**
  * Get appointments for a specific date at receptionist's office
  * Uses session-based authentication like doctor API
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
     // Start session and require that the user is logged in
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -124,7 +125,6 @@ try {
             'name' => $office_name
         ]
     ]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -132,4 +132,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>

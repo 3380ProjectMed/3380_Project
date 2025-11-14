@@ -1,25 +1,26 @@
 <?php
+
 /**
  * Get appointments for receptionist's office with intelligent status calculation
  * IMPROVED VERSION: Incorporates best practices from get-today.php and get-by-month.php
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
     // Start session and require authentication
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     $user_id = (int)$_SESSION['uid'];
-    
+
     // Resolve the receptionist's office ID from work_schedule
     $conn = getDBConnection();
-    
+
     try {
         $rows = executeQuery($conn, '
             SELECT ws.office_id, o.name as office_name
@@ -33,26 +34,26 @@ try {
         closeDBConnection($conn);
         throw $ex;
     }
-    
+
     if (empty($rows)) {
         closeDBConnection($conn);
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'No receptionist account associated with the logged-in user']);
         exit;
     }
-    
+
     $office_id = (int) $rows[0]['office_id'];
     $office_name = $rows[0]['office_name'] ?? 'Unknown Office';
-    
+
     // Use America/Chicago timezone for all date/time operations
     $tz = new DateTimeZone('America/Chicago');
     $currentDateTime = new DateTime('now', $tz);
-    
+
     // Determine date filter
     $dateFilter = '';
     $queryParams = [$office_id];
     $queryTypes = 'i';
-    
+
     if (isset($_GET['date'])) {
         // Filter by specific date
         $targetDate = $_GET['date'];
@@ -67,7 +68,7 @@ try {
         $queryTypes .= 's';
     }
     // else: no date filter - show all appointments for this office
-    
+
     // Query appointments with all necessary joins
     $sql = "SELECT
                 a.Appointment_id,
@@ -100,9 +101,9 @@ try {
             LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             WHERE a.Office_id = ? $dateFilter
             ORDER BY a.Appointment_date ASC";
-    
+
     $appointments = executeQuery($conn, $sql, $queryTypes, $queryParams);
-    
+
     // Initialize statistics counters
     $stats = [
         'total' => 0,
@@ -115,21 +116,21 @@ try {
         'cancelled' => 0,
         'no_show' => 0
     ];
-    
+
     $payment_count = 0;
     $total_collected = 0.0;
-    
+
     $formatted_appointments = [];
-    
+
     foreach ($appointments as $apt) {
         // Parse appointment datetime and normalize to Chicago timezone
         $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
         $dbStatus = $apt['Status'] ?? 'Scheduled';
-        
+
         // Determine display status based on time and database status
         $displayStatus = $dbStatus;
         $waitingTime = 0;
-        
+
         // Priority 1: Check for final/terminal statuses
         if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
             // Keep the database status
@@ -147,7 +148,7 @@ try {
         else {
             // Calculate time difference in minutes
             $timeDiff = ($currentDateTime->getTimestamp() - $appointmentDateTime->getTimestamp()) / 60;
-            
+
             if ($timeDiff < -15) {
                 // Appointment is more than 15 minutes in the future
                 $displayStatus = 'Upcoming';
@@ -164,7 +165,7 @@ try {
                 }
             }
         }
-        
+
         // Update statistics based on final displayStatus
         if ($displayStatus === 'Upcoming') {
             $stats['upcoming']++;
@@ -183,20 +184,20 @@ try {
         } elseif ($displayStatus === 'Ready' || $displayStatus === 'Scheduled') {
             $stats['scheduled']++;
         }
-        
+
         // Track payment statistics
         if ($apt['payment'] && $apt['payment'] > 0) {
             $payment_count++;
             $total_collected += (float)$apt['payment'];
         }
-        
+
         // Format appointment data
         $formatted_appointments[] = [
             // ID fields (multiple formats for compatibility)
             'id' => $apt['Appointment_id'],
             'Appointment_id' => $apt['Appointment_id'],
             'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
-            
+
             // Patient fields
             'patientId' => $apt['Patient_id'],
             'Patient_id' => $apt['Patient_id'],
@@ -204,25 +205,25 @@ try {
             'patientName' => $apt['patient_name'],
             'Patient_First' => $apt['patient_first'],
             'Patient_Last' => $apt['patient_last'],
-            
+
             // Doctor fields
             'doctorId' => $apt['Doctor_id'],
             'Doctor_id' => $apt['Doctor_id'],
             'doctorName' => $apt['doctor_name'],
             'Doctor_First' => $apt['doctor_first'],
             'Doctor_Last' => $apt['doctor_last'],
-            
+
             // Time fields
             'time' => date('g:i A', strtotime($apt['Appointment_date'])),
             'appointmentDateTime' => $apt['Appointment_date'],
             'Appointment_date' => $apt['Appointment_date'],
-            
+
             // Status fields
             'status' => $displayStatus,
             'Status' => $displayStatus,
             'dbStatus' => $dbStatus,
             'waitingMinutes' => $waitingTime,
-            
+
             // Other fields
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
             'Reason_for_visit' => $apt['Reason_for_visit'] ?: 'General Visit',
@@ -235,18 +236,18 @@ try {
             'visitId' => $apt['visit_id']
         ];
     }
-    
+
     $stats['total'] = count($formatted_appointments);
-    
+
     // Add payment statistics to stats
     $stats['payment'] = [
         'count' => $payment_count,
         'total_collected' => number_format($total_collected, 2),
         'total_collected_raw' => $total_collected
     ];
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'appointments' => $formatted_appointments,
@@ -262,7 +263,6 @@ try {
             'date' => isset($_GET['date']) ? $_GET['date'] : (isset($_GET['show_all']) && $_GET['show_all'] === 'true' ? 'all' : $currentDateTime->format('Y-m-d'))
         ]
     ]);
-    
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -270,4 +270,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>

@@ -1,13 +1,14 @@
 <?php
+
 /**
  * Admin API: deactivate (soft-delete) a user
  * Accepts `user_id` (POST JSON) or `user_id` param
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Forbidden']);
@@ -40,10 +41,7 @@ try {
 
     closeDBConnection($conn);
     echo json_encode(['success' => true, 'affected' => $affected]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-
-?>

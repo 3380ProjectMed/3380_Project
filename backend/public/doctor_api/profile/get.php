@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Get doctor profile
  * Updated for new table structure
@@ -6,9 +7,9 @@
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
-    session_start();
+    //session_start();
 
     // Verify authentication and role first
     if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
@@ -65,16 +66,17 @@ try {
                 s.last_name,
                 s.staff_email,
                 s.license_number,
-                s.work_location,
+                ws.office_id,
                 o.name as work_location_name,
                 sp.specialty_name,
                 cg.gender_text as gender,
                 d.phone as phone_number
             FROM doctor d
             INNER JOIN staff s ON d.staff_id = s.staff_id
+            LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
             LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
             LEFT JOIN codes_gender cg ON s.gender = cg.gender_code
-            LEFT JOIN office o ON s.work_location = o.office_id
+            LEFT JOIN office o ON ws.office_id = o.office_id
             WHERE d.doctor_id = ?";
 
     $result = executeQuery($conn, $sql, 'i', [$doctor_id]);
@@ -102,7 +104,6 @@ try {
             'bio' => ''
         ]
     ]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -110,4 +111,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>

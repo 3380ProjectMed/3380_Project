@@ -1,12 +1,12 @@
 <?php
+header('Content-Type: application/json');
 // public/nurse_api/dashboard/get-stats.php
-
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/session.php';
 
-header('Content-Type: application/json');
 
-session_start();
+// session_start();
 
 try {
     if (empty($_SESSION['uid'])) {
@@ -92,7 +92,7 @@ try {
     echo json_encode([
         'success'          => true,
         'date'             => $date,
-        'totalAppointments'=> $total,
+        'totalAppointments' => $total,
         'waitingCount'     => $waiting,
         'upcomingCount'    => $upcoming,
         'completedCount'   => $completed,

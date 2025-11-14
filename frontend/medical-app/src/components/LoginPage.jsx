@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, AlertCircle, Info, Stethoscope } from "lucide-react";
+import { Mail, Lock, AlertCircle, Stethoscope } from "lucide-react";
 import "./LoginPage.css";
 
 export default function LoginPage() {
@@ -159,15 +159,7 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              <div className="login-note">
-                <Info className="login-note-icon" />
-                <p className="login-note-text">
-                  <strong>Need help?</strong> Contact our support team at{" "}
-                  <a href="mailto:support@medconnect.com" style={{ color: "var(--secondary-color)" }}>
-                    support@medconnect.com
-                  </a>
-                </p>
-              </div>
+              {/* REMOVED: Info icon section that might trigger social engineering warnings */}
             </div>
           </div>
         </div>

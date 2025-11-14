@@ -56,6 +56,8 @@ jobs:
 
           [ -f backend/database.php ] && cp backend/database.php "$WEBROOT/" || true
           [ -f backend/cors.php ] && cp backend/cors.php "$WEBROOT/" || true
+          [ -f backend/googled2cb58f40febde66.html ] && cp backend/googled2cb58f40febde66.html "$WEBROOT/" || true
+          [ -f backend/public/api/session.php ] && cp backend/public/api/session.php "$WEBROOT/" || true
           if [ -f DigiCertGlobalRootG2.crt ]; then
             mkdir -p "$WEBROOT/certs"
             cp DigiCertGlobalRootG2.crt "$WEBROOT/certs/"

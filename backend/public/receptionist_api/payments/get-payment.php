@@ -1,15 +1,16 @@
 <?php
+header('Content-Type: application/json');
 /**
  * Get copay info for visit
  * Receptionists collect copays - show insurance copay amount
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/session.php';
 
-header('Content-Type: application/json');
 
 try {
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -81,7 +82,7 @@ try {
     if (!empty($insuranceRows)) {
         $ins = $insuranceRows[0];
         $copay_amount = (float)($ins['copay'] ?? 0);
-        
+
         $insurance_info = [
             'has_insurance' => true,
             'payer_name' => $ins['payer_name'],
@@ -122,9 +123,7 @@ try {
         'copay_amount' => number_format($copay_amount, 2),
         'needs_payment' => $already_paid == 0
     ]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-?>

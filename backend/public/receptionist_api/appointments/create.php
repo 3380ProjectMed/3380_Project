@@ -1,28 +1,29 @@
 <?php
+
 /**
  * Create a new appointment
  * Uses session-based authentication like doctor API
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
     // Start session and require that the user is logged in
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         http_response_code(405);
         echo json_encode(['success' => false, 'error' => 'Method not allowed']);
         exit;
     }
-    
+
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     // Validate required fields
     $required = ['Patient_id', 'Doctor_id', 'Appointment_date', 'Office_id'];
     foreach ($required as $field) {
@@ -32,51 +33,51 @@ try {
             exit;
         }
     }
-    
+
     $user_id = (int)$_SESSION['uid'];
-    
+
     $conn = getDBConnection();
-    
+
     // Verify receptionist works at the specified office
     $verifySql = "SELECT ws.office_id
                   FROM staff s
                   JOIN user_account ua ON ua.email = s.staff_email
                   JOIN work_schedule ws ON ws.staff_id = s.staff_id
                   WHERE ua.user_id = ? AND ws.office_id = ?";
-    
+
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$user_id, $input['Office_id']]);
-    
+
     if (empty($verifyResult)) {
         closeDBConnection($conn);
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Access denied - you can only create appointments for your office']);
         exit;
     }
-    
+
     // Verify doctor exists and works at this office
     $doctorSql = "SELECT doctor_id FROM doctor WHERE doctor_id = ?";
     $doctorResult = executeQuery($conn, $doctorSql, 'i', [$input['Doctor_id']]);
-    
+
     if (empty($doctorResult)) {
         closeDBConnection($conn);
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid doctor ID']);
         exit;
     }
-    
+
     // Verify patient exists
     $patientSql = "SELECT patient_id FROM patient WHERE patient_id = ?";
     $patientResult = executeQuery($conn, $patientSql, 'i', [$input['Patient_id']]);
-    
+
     if (empty($patientResult)) {
         closeDBConnection($conn);
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid patient ID']);
         exit;
     }
-    
+
     $conn->begin_transaction();
-    
+
     try {
         // Insert appointment
         $insertSql = "INSERT INTO appointment (
@@ -88,9 +89,9 @@ try {
                         Status,
                         Date_created
                       ) VALUES (?, ?, ?, ?, ?, 'Scheduled', NOW())";
-        
+
         $reason = $input['Reason_for_visit'] ?? 'General Visit';
-        
+
         executeQuery($conn, $insertSql, 'iissi', [
             $input['Patient_id'],
             $input['Doctor_id'],
@@ -98,25 +99,23 @@ try {
             $reason,
             $input['Office_id']
         ]);
-        
+
         $appointment_id = $conn->insert_id;
-        
+
         $conn->commit();
         closeDBConnection($conn);
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Appointment created successfully',
             'appointment_id' => $appointment_id,
             'appointmentIdFormatted' => 'A' . str_pad($appointment_id, 4, '0', STR_PAD_LEFT)
         ]);
-        
     } catch (Exception $ex) {
         $conn->rollback();
         closeDBConnection($conn);
         throw $ex;
     }
-    
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -124,4 +123,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>
