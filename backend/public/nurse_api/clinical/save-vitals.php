@@ -1,9 +1,9 @@
 <?php
+header('Content-Type: application/json');
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-header('Content-Type: application/json');
-
-session_start();
+require_once '/home/site/wwwroot/session.php';
+//session_start();
 if (empty($_SESSION['uid'])) {
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'UNAUTHENTICATED']);
@@ -13,7 +13,7 @@ if (empty($_SESSION['uid'])) {
 try {
     $conn = getDBConnection();
     $email = $_SESSION['email'] ?? '';
-    
+
     error_log('[save-vitals] Starting save vitals for email: ' . $email);
 
     // 1) Resolve nurse_id from staff email
@@ -65,9 +65,9 @@ try {
     $spo2   = trim($payload['spo2']   ?? '');
     $weight = trim($payload['weight'] ?? '');
     $height = trim($payload['height'] ?? '');
-    
+
     error_log('[save-vitals] Vitals - BP: ' . $bp . ', Temp: ' . $temp . ', HR: ' . $hr . ', SpO2: ' . $spo2);
-    
+
     // Validate that we have at least some vitals to save
     if (empty($bp) && empty($temp)) {
         error_log('[save-vitals] No vitals provided (BP and Temp both empty)');
@@ -168,13 +168,13 @@ try {
     $sql = "UPDATE patient_visit SET " . implode(', ', $updates) . ", last_updated = NOW() WHERE visit_id = ?";
     $types .= 'i';
     $params[] = $visitId;
-    
+
     error_log('[save-vitals] Executing SQL: ' . $sql);
     error_log('[save-vitals] SQL params: ' . json_encode($params));
     error_log('[save-vitals] SQL types: ' . $types);
-    
+
     executeQuery($conn, $sql, $types, $params);
-    
+
     error_log('[save-vitals] SQL executed successfully');
 
     closeDBConnection($conn);
@@ -200,10 +200,10 @@ try {
     http_response_code(500);
     error_log('[nurse_api] save-vitals.php error: ' . $e->getMessage());
     error_log('[nurse_api] save-vitals.php stack trace: ' . $e->getTraceAsString());
-    
+
     // Include error details for debugging (remove in production)
     echo json_encode([
-        'success' => false, 
+        'success' => false,
         'error' => 'FAILED_TO_SAVE_VITALS',
         'message' => $e->getMessage(),
         'debug' => [

@@ -1,10 +1,12 @@
 <?php
+header('Content-Type: application/json');
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-header('Content-Type: application/json');
+require_once '/home/site/wwwroot/session.php';
+
 
 try {
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'UNAUTHENTICATED']);
@@ -44,12 +46,9 @@ try {
     closeDBConnection($conn);
 
     echo json_encode(['success' => true, 'appointments' => $appointments]);
-
 } catch (Throwable $e) {
     if (isset($conn)) closeDBConnection($conn);
     http_response_code(500);
     error_log('[nurse_api] get-for-patient.php error: ' . $e->getMessage());
     echo json_encode(['success' => false, 'error' => 'INTERNAL_ERROR', 'message' => $e->getMessage()]);
 }
-
-?>

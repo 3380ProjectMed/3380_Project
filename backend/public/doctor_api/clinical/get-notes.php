@@ -1,7 +1,7 @@
 <?php
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 // Set JSON content type header  
 header('Content-Type: application/json');
 
@@ -11,7 +11,7 @@ header('Content-Type: application/json');
 
 try {
     $patient_id = isset($_GET['patient_id']) ? intval($_GET['patient_id']) : 0;
-    
+
     // Handle appointment IDs - strip "A" prefix if present
     $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
     $appointment_id = 0;
@@ -22,32 +22,32 @@ try {
         }
         $appointment_id = intval($cleaned_id);
     }
-    
+
     if ($patient_id === 0 && $appointment_id === 0) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'patient_id or appointment_id is required']);
         exit;
     }
-    
-    session_start();
+
+    //session_start();
     if (!isset($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     $conn = getDBConnection();
-    
+
     // If appointment_id provided, get patient_id
     if ($appointment_id > 0) {
         $apptSql = "SELECT Patient_id FROM appointment WHERE Appointment_id = ?";
         $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
-        
+
         if (!empty($apptRows)) {
             $patient_id = $apptRows[0]['Patient_id'];
         }
     }
-    
+
     // Get all visits for this patient
     $sql = "SELECT 
                 pv.visit_id,
@@ -71,14 +71,14 @@ try {
             WHERE pv.patient_id = ?
             ORDER BY pv.date DESC
             LIMIT 50";
-    
+
     $rows = executeQuery($conn, $sql, 'i', [$patient_id]);
-    
+
     if (!is_array($rows)) $rows = [];
-    
-    $notes = array_map(function($r) use ($conn) {
+
+    $notes = array_map(function ($r) use ($conn) {
         $visit_id = $r['visit_id'] ?? null;
-        
+
         // Fetch treatments for this visit
         $treatments = [];
         if ($visit_id) {
@@ -94,11 +94,11 @@ try {
                 $treatments = $treatRows;
             }
         }
-        
+
         // Build treatment summary for note_text
         $treatmentText = '';
         if (!empty($treatments)) {
-            $treatmentLines = array_map(function($t) {
+            $treatmentLines = array_map(function ($t) {
                 $line = $t['treatment_name'];
                 if ($t['quantity'] > 1) {
                     $line .= ' (x' . $t['quantity'] . ')';
@@ -110,7 +110,7 @@ try {
             }, $treatments);
             $treatmentText = implode(', ', $treatmentLines);
         }
-        
+
         return [
             'id' => $visit_id,
             'visit_id' => $visit_id,
@@ -133,12 +133,10 @@ try {
             'created_by' => $r['created_by'] ?? null,
         ];
     }, $rows);
-    
+
     closeDBConnection($conn);
     echo json_encode(['success' => true, 'notes' => $notes]);
-    
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-?>

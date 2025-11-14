@@ -1,9 +1,9 @@
 <?php
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
-    session_start();
+    //session_start();
 
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
@@ -19,13 +19,13 @@ try {
     } else {
         $user_id = (int)$_SESSION['uid'];
         // Azure: lowercase tables, lowercase columns in doctor
-            $rows = executeQuery($conn, 'SELECT d.doctor_id 
+        $rows = executeQuery($conn, 'SELECT d.doctor_id 
                         FROM user_account ua
                         JOIN staff s ON ua.user_id = s.staff_id
                         JOIN doctor d ON s.staff_id = d.staff_id
                         WHERE ua.user_id = ? 
-                        LIMIT 1', 'i', [$user_id]);         
-            if (empty($rows)) {
+                        LIMIT 1', 'i', [$user_id]);
+        if (empty($rows)) {
             closeDBConnection($conn);
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'No doctor associated with the logged-in user']);
@@ -47,7 +47,7 @@ try {
         echo json_encode(['success' => false, 'error' => 'Invalid year']);
         exit;
     }
-    
+
     // Get all appointments for the month
     // appointment table has mixed case: Appointment_id, Patient_id, Doctor_id, Appointment_date
     // patient, office, codes_allergies are all lowercase
@@ -68,9 +68,9 @@ try {
             AND MONTH(a.Appointment_date) = ?
             AND YEAR(a.Appointment_date) = ?
             ORDER BY a.Appointment_date";
-    
+
     $appointments = executeQuery($conn, $sql, 'iii', [$doctor_id, $month, $year]);
-    
+
     // Group by date
     $grouped = [];
     foreach ($appointments as $apt) {
@@ -78,7 +78,7 @@ try {
         if (!isset($grouped[$date])) {
             $grouped[$date] = [];
         }
-        
+
         $grouped[$date][] = [
             'id' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
             'patientId' => 'P' . str_pad($apt['patient_id'], 3, '0', STR_PAD_LEFT),
@@ -92,9 +92,9 @@ try {
             'allergies' => $apt['allergies'] ?: 'No Known Allergies'
         ];
     }
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'month' => $month,
@@ -102,9 +102,7 @@ try {
         'appointments' => $grouped,
         'total_count' => count($appointments)
     ]);
-    
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-?>

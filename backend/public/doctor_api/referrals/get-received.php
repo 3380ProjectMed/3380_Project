@@ -1,14 +1,14 @@
 <?php
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
     $conn = getDBConnection();
     $doctor_id = null;
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
     } else {
-        session_start();
+        //session_start();
         if (!isset($_SESSION['uid'])) {
             http_response_code(401);
             echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -31,7 +31,7 @@ try {
         }
         $doctor_id = (int)$rows[0]['doctor_id'];
     }
-    
+
     $sql = "SELECT 
                 r.referral_id,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
@@ -50,15 +50,13 @@ try {
 
     $results = executeQuery($conn, $sql, 'i', [$doctor_id]);
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'referrals' => $results,
         'count' => count($results)
     ]);
-    
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-?>

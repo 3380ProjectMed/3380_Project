@@ -1,11 +1,12 @@
 <?php
+
 /**
  * Get all patients for a doctor
  */
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
     error_reporting(E_ALL);
     error_log("=== Get All Patients API Called ===");
@@ -18,7 +19,7 @@ try {
         $doctor_id = intval($_GET['doctor_id']);
         error_log("Using doctor_id from query param: " . $doctor_id);
     } else {
-        session_start();
+        //session_start();
         if (!isset($_SESSION['uid'])) {
             http_response_code(401);
             echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -34,12 +35,12 @@ try {
             JOIN doctor d ON s.staff_id = d.staff_id
             WHERE ua.user_id = ? 
             LIMIT 1
-            ', 'i', [$user_id]);        
+            ', 'i', [$user_id]);
         if (!is_array($rows) || count($rows) === 0) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
-        closeDBConnection($conn);
-        exit;
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'No doctor associated with user']);
+            closeDBConnection($conn);
+            exit;
         }
         $doctor_id = (int) $rows[0]['doctor_id'];
     }
@@ -164,7 +165,6 @@ try {
         'patients' => $formatted_patients,
         'count' => count($formatted_patients)
     ]);
-
 } catch (Exception $e) {
     error_log("Fatal error in get-all.php: " . $e->getMessage());
     error_log("Stack trace: " . $e->getTraceAsString());
@@ -174,4 +174,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>

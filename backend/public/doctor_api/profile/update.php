@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Update doctor profile
  * Expects JSON body with fields: firstName, lastName, email, phone, licenseNumber
@@ -6,9 +7,9 @@
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -42,15 +43,35 @@ try {
     }
 
     // Validate required fields (at least one field to update)
-    $allowed = ['firstName','lastName','email','phone','licenseNumber'];
+    $allowed = ['firstName', 'lastName', 'email', 'phone', 'licenseNumber'];
     $updates = [];
     $params = [];
     $types = '';
-    if (isset($input['firstName'])) { $updates[] = 'first_name = ?'; $params[] = $input['firstName']; $types .= 's'; }
-    if (isset($input['lastName'])) { $updates[] = 'last_name = ?'; $params[] = $input['lastName']; $types .= 's'; }
-    if (isset($input['email'])) { $updates[] = 'email = ?'; $params[] = $input['email']; $types .= 's'; }
-    if (isset($input['phone'])) { $updates[] = 'phone = ?'; $params[] = $input['phone']; $types .= 's'; }
-    if (isset($input['licenseNumber'])) { $updates[] = 'license_number = ?'; $params[] = $input['licenseNumber']; $types .= 's'; }
+    if (isset($input['firstName'])) {
+        $updates[] = 'first_name = ?';
+        $params[] = $input['firstName'];
+        $types .= 's';
+    }
+    if (isset($input['lastName'])) {
+        $updates[] = 'last_name = ?';
+        $params[] = $input['lastName'];
+        $types .= 's';
+    }
+    if (isset($input['email'])) {
+        $updates[] = 'email = ?';
+        $params[] = $input['email'];
+        $types .= 's';
+    }
+    if (isset($input['phone'])) {
+        $updates[] = 'phone = ?';
+        $params[] = $input['phone'];
+        $types .= 's';
+    }
+    if (isset($input['licenseNumber'])) {
+        $updates[] = 'license_number = ?';
+        $params[] = $input['licenseNumber'];
+        $types .= 's';
+    }
 
     if (empty($updates)) {
         throw new Exception('No updatable fields provided');
@@ -69,10 +90,7 @@ try {
     closeDBConnection($conn);
 
     echo json_encode(['success' => true]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-
-?>

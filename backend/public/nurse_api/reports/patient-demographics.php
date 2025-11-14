@@ -1,15 +1,26 @@
 <?php
-require_once '/home/site/wwwroot/cors.php';
-require_once '/home/site/wwwroot/database.php';
 header('Content-Type: application/json');
 
-session_start();
-if (empty($_SESSION['uid'])) { http_response_code(401); echo json_encode(['error' => 'UNAUTHENTICATED']); exit; }
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/session.php';
+
+// session_start();
+if (empty($_SESSION['uid'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'UNAUTHENTICATED']);
+    exit;
+}
 
 $conn = getDBConnection();
 $email = $_SESSION['email'] ?? '';
 $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
-if (empty($rows)) { closeDBConnection($conn); http_response_code(404); echo json_encode(['error' => 'NURSE_NOT_FOUND']); exit; }
+if (empty($rows)) {
+    closeDBConnection($conn);
+    http_response_code(404);
+    echo json_encode(['error' => 'NURSE_NOT_FOUND']);
+    exit;
+}
 $nurse_id = (int)$rows[0]['nurse_id'];
 
 try {
@@ -18,16 +29,28 @@ try {
     $conds = ['pv.nurse_id = ?'];
     $types = 'i';
     $params = [$nurse_id];
-    if ($from) { $conds[] = 'DATE(a.Appointment_date) >= ?'; $types .= 's'; $params[] = $from; }
-    if ($to) { $conds[] = 'DATE(a.Appointment_date) <= ?'; $types .= 's'; $params[] = $to; }
+    if ($from) {
+        $conds[] = 'DATE(a.Appointment_date) >= ?';
+        $types .= 's';
+        $params[] = $from;
+    }
+    if ($to) {
+        $conds[] = 'DATE(a.Appointment_date) <= ?';
+        $types .= 's';
+        $params[] = $to;
+    }
     $where = '';
-    if (!empty($conds)) { $where = ' AND ' . implode(' AND ', $conds); }
+    if (!empty($conds)) {
+        $where = ' AND ' . implode(' AND ', $conds);
+    }
 
     // simple gender distribution (limited to this nurse's patients via patient_visit)
     $sqlGender = "SELECT p.gender AS gender, COUNT(*) AS cnt FROM appointment a JOIN patient p ON a.Patient_id = p.patient_id JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id WHERE 1=1 {$where} GROUP BY p.gender";
     $rowsG = executeQuery($conn, $sqlGender, $types, $params);
     $gender = [];
-    foreach ($rowsG as $r) { $gender[$r['gender'] ?? 'unknown'] = intval($r['cnt']); }
+    foreach ($rowsG as $r) {
+        $gender[$r['gender'] ?? 'unknown'] = intval($r['cnt']);
+    }
 
     // age buckets
     $sqlAge = "SELECT
@@ -38,7 +61,7 @@ try {
                 FROM appointment a JOIN patient p ON a.Patient_id = p.patient_id JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
                 WHERE 1=1 {$where}";
     $rowsA = executeQuery($conn, $sqlAge, $types, $params);
-    $age = !empty($rowsA) ? $rowsA[0] : ['under18'=>0,'age18_35'=>0,'age36_55'=>0,'over55'=>0];
+    $age = !empty($rowsA) ? $rowsA[0] : ['under18' => 0, 'age18_35' => 0, 'age36_55' => 0, 'over55' => 0];
 
     closeDBConnection($conn);
     echo json_encode(['gender' => $gender, 'ageBuckets' => $age]);

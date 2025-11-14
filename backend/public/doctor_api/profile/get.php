@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Get doctor profile
  * Updated for new table structure
@@ -6,9 +7,9 @@
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
-    session_start();
+    //session_start();
 
     // Verify authentication and role first
     if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
@@ -102,7 +103,6 @@ try {
             'bio' => ''
         ]
     ]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -110,4 +110,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>

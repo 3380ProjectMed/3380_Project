@@ -1,10 +1,15 @@
 <?php
+header('Content-Type: application/json');
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-header('Content-Type: application/json');
+require_once '/home/site/wwwroot/session.php';
 
-session_start();
-if (empty($_SESSION['uid'])) { http_response_code(401); echo json_encode(['error' => 'UNAUTHENTICATED']); exit; }
+//session_start();
+if (empty($_SESSION['uid'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'UNAUTHENTICATED']);
+    exit;
+}
 
 $conn = getDBConnection();
 $email = $_SESSION['email'] ?? '';

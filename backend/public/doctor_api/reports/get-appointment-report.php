@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Doctor-Focused Appointment Report API
  * Location: /doctor_api/reports/get-appointment-report.php
@@ -17,29 +18,29 @@ error_log("=== Doctor Appointment Report API Called ===");
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
     header('Content-Type: application/json; charset=utf-8');
 
-    session_start();
-    
+    //session_start();
+
     if (!function_exists('getDBConnection')) {
         throw new Exception('Database helper functions not loaded');
     }
-    
+
     if (!isset($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     $conn = getDBConnection();
     if (!$conn) {
         throw new Exception('Database connection failed');
     }
-    
+
     $user_id = intval($_SESSION['uid']);
-    
+
     // Get user role and associated doctor info
     $userQuery = "SELECT ua.role, d.doctor_id 
               FROM user_account ua 
@@ -48,17 +49,17 @@ try {
               WHERE ua.user_id = ? 
               LIMIT 1";
     $userInfo = executeQuery($conn, $userQuery, 'i', [$user_id]);
-    
+
     if (!is_array($userInfo) || count($userInfo) === 0) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'User not found']);
         closeDBConnection($conn);
         exit;
     }
-    
+
     $userRole = $userInfo[0]['role'];
     $loggedInDoctorId = $userInfo[0]['doctor_id'];
-    
+
     // Verify user has permission to access reports
     if (!in_array($userRole, ['DOCTOR', 'ADMIN'])) {
         http_response_code(403);
@@ -66,21 +67,21 @@ try {
         closeDBConnection($conn);
         exit;
     }
-    
+
     // Build dynamic WHERE clause based on parameters
     $whereConditions = [];
     $params = [];
     $types = '';
-    
+
     // 1. Date Range (Required - defaults to current month if not provided)
     $startDate = isset($_GET['StartDate']) ? $_GET['StartDate'] : date('Y-m-01');
     $endDate = isset($_GET['EndDate']) ? $_GET['EndDate'] : date('Y-m-t');
-    
+
     $whereConditions[] = "DATE(a.Appointment_date) BETWEEN ? AND ?";
     $params[] = $startDate;
     $params[] = $endDate;
     $types .= 'ss';
-    
+
     // 2. Doctor Filter (doctors only see their own data)
     if ($userRole === 'DOCTOR') {
         if ($loggedInDoctorId === null) {
@@ -97,28 +98,28 @@ try {
         $params[] = intval($_GET['DoctorID']);
         $types .= 'i';
     }
-    
+
     // 3. Office Location
     if (isset($_GET['OfficeID']) && $_GET['OfficeID'] !== '' && $_GET['OfficeID'] !== 'all') {
         $whereConditions[] = "a.Office_id = ?";
         $params[] = intval($_GET['OfficeID']);
         $types .= 'i';
     }
-    
+
     // 4. Appointment Status
     if (isset($_GET['Status']) && $_GET['Status'] !== '' && $_GET['Status'] !== 'all') {
         $whereConditions[] = "pv.status = ?";
         $params[] = $_GET['Status'];
         $types .= 's';
     }
-    
+
     // 5. Patient Filter
     if (isset($_GET['PatientID']) && $_GET['PatientID'] !== '' && $_GET['PatientID'] !== 'all') {
         $whereConditions[] = "a.Patient_id = ?";
         $params[] = intval($_GET['PatientID']);
         $types .= 'i';
     }
-    
+
     // 6. Visit Reason
     if (isset($_GET['VisitReason']) && $_GET['VisitReason'] !== '') {
         $whereConditions[] = "a.Reason_for_visit LIKE ?";
@@ -132,10 +133,10 @@ try {
         $params[] = intval($_GET['NurseID']);
         $types .= 'i';
     }
-    
+
     // Build WHERE clause
     $whereClause = count($whereConditions) > 0 ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
-    
+
     // Main query - DOCTOR-FOCUSED FIELDS
     $sql = "SELECT 
         a.Appointment_id as appointment_id,
@@ -192,12 +193,12 @@ try {
     LEFT JOIN insurance_payer ipayer ON iplan.payer_id = ipayer.payer_id
     $whereClause
     ORDER BY a.Appointment_date DESC";
-    
+
     error_log("Executing main query");
-    
+
     // Execute query
     $appointments = executeQuery($conn, $sql, $types, $params);
-    
+
     // Get comprehensive statistics for doctors
     $statsQuery = "SELECT 
         COUNT(DISTINCT a.Appointment_id) as total_appointments,
@@ -221,9 +222,9 @@ try {
     ) pvmax_stats ON a.Appointment_id = pvmax_stats.appointment_id
     LEFT JOIN patient_visit pv ON pv.visit_id = pvmax_stats.max_visit_id
     $whereClause";
-    
+
     $stats = executeQuery($conn, $statsQuery, $types, $params);
-    
+
     // Get top diagnoses
     $diagnosisQuery = "SELECT 
         pv.diagnosis,
@@ -241,9 +242,9 @@ try {
     GROUP BY pv.diagnosis
     ORDER BY diagnosis_count DESC
     LIMIT 10";
-    
+
     $topDiagnoses = executeQuery($conn, $diagnosisQuery, $types, $params);
-    
+
     // Get top visit reasons
     $reasonQuery = "SELECT 
         a.Reason_for_visit as reason,
@@ -261,9 +262,9 @@ try {
     GROUP BY a.Reason_for_visit
     ORDER BY reason_count DESC
     LIMIT 10";
-    
+
     $topReasons = executeQuery($conn, $reasonQuery, $types, $params);
-    
+
     // Get appointments by day of week
     $dayOfWeekQuery = "SELECT 
         DATE_FORMAT(a.Appointment_date, '%W') as day_name,
@@ -278,9 +279,9 @@ try {
     $whereClause
     GROUP BY day_name
     ORDER BY FIELD(day_name, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
-    
+
     $appointmentsByDay = executeQuery($conn, $dayOfWeekQuery, $types, $params);
-    
+
     // Cast numeric types for frontend consistency
     foreach ($appointments as &$apt) {
         if (isset($apt['appointment_id'])) $apt['appointment_id'] = (int)$apt['appointment_id'];
@@ -294,7 +295,7 @@ try {
     unset($apt);
 
     $statsRow = (isset($stats[0]) && is_array($stats[0])) ? $stats[0] : [];
-    $numericStats = ['total_appointments','unique_patients','completed_count','scheduled_count','canceled_count','noshow_count','past_appointments','upcoming_appointments'];
+    $numericStats = ['total_appointments', 'unique_patients', 'completed_count', 'scheduled_count', 'canceled_count', 'noshow_count', 'past_appointments', 'upcoming_appointments'];
     foreach ($numericStats as $k) {
         if (isset($statsRow[$k])) {
             $statsRow[$k] = (int)$statsRow[$k];
@@ -302,7 +303,7 @@ try {
             $statsRow[$k] = 0;
         }
     }
-    
+
     // Round average visit duration
     if (isset($statsRow['avg_visit_duration'])) {
         $statsRow['avg_visit_duration'] = round((float)$statsRow['avg_visit_duration'], 1);
@@ -326,14 +327,12 @@ try {
             ]
         ]
     ]);
-    
 } catch (Exception $e) {
     error_log("Error in get-appointment-report.php: " . $e->getMessage());
     error_log("Stack trace: " . $e->getTraceAsString());
     http_response_code(500);
     echo json_encode([
-        'success' => false, 
+        'success' => false,
         'error' => $e->getMessage()
     ]);
 }
-?>

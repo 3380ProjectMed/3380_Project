@@ -1,32 +1,33 @@
 <?php
+
 /**
  * Admin API: Get all users
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
-    session_start();
-    
+    //session_start();
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     $conn = getDBConnection();
-    
+
     // Verify user is admin
     $checkSql = "SELECT role FROM user_account WHERE user_id = ?";
     $checkRows = executeQuery($conn, $checkSql, 'i', [(int)$_SESSION['uid']]);
-    
+
     if (empty($checkRows) || $checkRows[0]['role'] !== 'ADMIN') {
         closeDBConnection($conn);
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Admin access required']);
         exit;
     }
-    
+
     // Get all users with their associated profiles
     $sql = "SELECT 
                 u.user_id,
@@ -49,20 +50,17 @@ try {
             LEFT JOIN staff sf ON d.staff_id = sf.staff_id
             LEFT JOIN Patient p ON u.email = p.Email AND u.role = 'PATIENT'
             ORDER BY u.created_at DESC";
-    
+
     $users = executeQuery($conn, $sql);
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'users' => $users,
         'count' => count($users)
     ]);
-    
-    
 } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-    }
-?>
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+}
