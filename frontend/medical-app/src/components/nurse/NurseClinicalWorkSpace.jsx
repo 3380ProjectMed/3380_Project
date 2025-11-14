@@ -152,7 +152,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       };
 
       const response = await fetch(
-        `${API_BASE}/nurse_api/vitals/save-vitals.php`,
+        `${API_BASE}/nurse_api/clinical/save-vitals.php`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
