@@ -15,10 +15,8 @@ if (empty($_SESSION['uid'])) {
 
 try {
     $conn = getDBConnection();
-    $email = $_SESSION['email'] ?? '';
-
-    // Resolve nurse_id from staff email
-    $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
+    // $email = $_SESSION['email'] ?? '';
+    $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n WHERE n.staff_id =  ? LIMIT 1", 'i', [$_SESSION['uid']]);
     if (empty($rows)) {
         closeDBConnection($conn);
         http_response_code(404);
@@ -29,7 +27,7 @@ try {
 
     // Get work schedule for the nurse
     $sql = "SELECT 
-                ws.work_schedule_id,
+                ws.schedule_id,
                 ws.day_of_week,
                 ws.start_time,
                 ws.end_time,
@@ -40,7 +38,8 @@ try {
                 o.state
             FROM work_schedule ws
             LEFT JOIN office o ON ws.office_id = o.office_id
-            WHERE ws.nurse_id = ?
+            LEFT JOIN nurse n ON ws.staff_id = n.staff_id
+            WHERE n.nurse_id = ?
             ORDER BY FIELD(ws.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
 
     $schedule = executeQuery($conn, $sql, 'i', [$nurse_id]);

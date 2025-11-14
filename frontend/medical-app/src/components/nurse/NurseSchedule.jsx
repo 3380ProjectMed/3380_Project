@@ -1,10 +1,9 @@
-// src/components/nurse/NurseSchedule.jsx - UPDATED with clinical workspace integration
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import NurseClinicalWorkspace from './NurseClinicalWorkspace';
 import './NurseSchedule.css';
 
-function NurseSchedule() {
+function NurseSchedule({ onPatientClick }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,23 +14,35 @@ function NurseSchedule() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showClinicalWorkspace, setShowClinicalWorkspace] = useState(false);
 
+  // NEW: optional time filter (HH:MM, empty means “use shift times”)
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+
+  const currentDateStr = useMemo(
+    () => currentDate.toISOString().split('T')[0],
+    [currentDate]
+  );
+
   useEffect(() => {
     fetchDailySchedule();
-  }, [currentDate]);
+  }, [currentDate, startTime, endTime]);
 
   const fetchDailySchedule = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const dateStr = currentDate.toISOString().split('T')[0];
-      
-      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
-        ? import.meta.env.VITE_API_BASE 
-        : '';
-      
+
+      const params = new URLSearchParams({ date: currentDateStr });
+      if (startTime) params.append('start_time', startTime); // backend adds :00 if needed
+      if (endTime)   params.append('end_time',   endTime);
+
+      const API_BASE =
+        (import.meta.env && import.meta.env.VITE_API_BASE)
+          ? import.meta.env.VITE_API_BASE
+          : '';
+
       const response = await fetch(
-        `${API_BASE}/nurse_api/schedule/get-nurse-daily-schedule.php?date=${dateStr}`,
+        `${API_BASE}/nurse_api/schedule/get-nurse-daily-schedule.php?${params.toString()}`,
         { credentials: 'include' }
       );
 
@@ -40,9 +51,17 @@ function NurseSchedule() {
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setScheduleData(data);
+
+        // If no explicit filter set, default the time pickers to current filter
+        if (!startTime && data.time_filter?.start) {
+          setStartTime(data.time_filter.start);
+        }
+        if (!endTime && data.time_filter?.end) {
+          setEndTime(data.time_filter.end);
+        }
       } else {
         setError(data.error || 'Failed to load schedule');
       }
@@ -55,46 +74,41 @@ function NurseSchedule() {
   };
 
   const goToPreviousDay = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() - 1);
-    setCurrentDate(newDate);
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() - 1);
+    setCurrentDate(d);
   };
 
   const goToNextDay = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + 1);
-    setCurrentDate(newDate);
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + 1);
+    setCurrentDate(d);
   };
 
   const goToToday = () => {
     setCurrentDate(new Date());
   };
 
+  const handleDateChange = (e) => {
+    const value = e.target.value; // "YYYY-MM-DD"
+    if (!value) return;
+    // Force midnight in local time
+    setCurrentDate(new Date(value + 'T00:00:00'));
+  };
+
   const handlePatientClick = (appointment) => {
-    // Open clinical workspace with selected patient
-    setSelectedPatient({
-      visit_id: appointment.visit_id,
-      appointment_id: appointment.appointment_id,
-      patient_id: appointment.patient_id,
-      patient_name: appointment.patient_name
-    });
-    setShowClinicalWorkspace(true);
-  };
-
-  const handleCloseClinicalWorkspace = () => {
-    setShowClinicalWorkspace(false);
-    setSelectedPatient(null);
-  };
-
-  const handleVitalsSaved = (visitId) => {
-    // Refresh schedule after vitals are saved
-    fetchDailySchedule();
-    console.log('Vitals saved for visit:', visitId);
+    if (onPatientClick) {
+      onPatientClick({
+        visit_id: appointment.visit_id,
+        appointment_id: appointment.appointment_id,
+        patient_id: appointment.patient_id,
+        patient_name: appointment.patient_name,
+      });
+    }
   };
 
   const getAppointmentsToDisplay = () => {
     if (!scheduleData?.appointments) return [];
-    
     switch (selectedView) {
       case 'needs_vitals':
         return scheduleData.appointments.waiting_for_vitals || [];
@@ -105,33 +119,20 @@ function NurseSchedule() {
     }
   };
 
-  const formatDate = (date) => {
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+  const formatDate = (date) =>
+    date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
-  };
 
   const isToday = () => {
     const today = new Date();
     return currentDate.toDateString() === today.toDateString();
   };
 
-  // Show clinical workspace as overlay
-  if (showClinicalWorkspace) {
-    return (
-      <div className="clinical-workspace-overlay">
-        <NurseClinicalWorkspace
-          selectedPatient={selectedPatient}
-          onClose={handleCloseClinicalWorkspace}
-          onSave={handleVitalsSaved}
-        />
-      </div>
-    );
-  }
-
+  // --- loading / error states unchanged ---
   if (loading) {
     return (
       <div className="nurse-schedule loading">
@@ -170,28 +171,35 @@ function NurseSchedule() {
 
   return (
     <div className="nurse-schedule">
-      {/* Header with Date Navigation */}
+      {/* Header with Date Navigation + Date Picker */}
       <div className="schedule-header">
         <div className="date-navigation">
-          <button 
-            onClick={goToPreviousDay} 
+          <button
+            onClick={goToPreviousDay}
             className="nav-button"
             aria-label="Previous day"
           >
             <ChevronLeft size={24} />
           </button>
-          
+
           <div className="date-display">
             <h1>{formatDate(currentDate)}</h1>
-            {!isToday() && (
-              <button onClick={goToToday} className="today-button">
-                Today
-              </button>
-            )}
+            <div className="date-controls">
+              <input
+                type="date"
+                value={currentDateStr}
+                onChange={handleDateChange}
+              />
+              {!isToday() && (
+                <button onClick={goToToday} className="today-button">
+                  Today
+                </button>
+              )}
+            </div>
           </div>
-          
-          <button 
-            onClick={goToNextDay} 
+
+          <button
+            onClick={goToNextDay}
             className="nav-button"
             aria-label="Next day"
           >
@@ -199,16 +207,40 @@ function NurseSchedule() {
           </button>
         </div>
 
-        {/* Work Schedule Info */}
+        {/* Work Schedule Info + Time Filters */}
         {working && work_schedule && (
           <div className="work-info">
             <div className="work-time">
               <Clock size={20} />
-              <span>{work_schedule.start_time} - {work_schedule.end_time}</span>
+              <span>
+                {work_schedule.start_time} - {work_schedule.end_time}
+              </span>
             </div>
             <div className="work-location">
               <span className="office-badge">{work_schedule.office_name}</span>
-              <span className="office-address">{work_schedule.city}, {work_schedule.state}</span>
+              <span className="office-address">
+                {work_schedule.city}, {work_schedule.state}
+              </span>
+            </div>
+
+            {/* NEW: Time range filter */}
+            <div className="time-filter">
+              <label>
+                From:
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+              </label>
+              <label>
+                To:
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </label>
             </div>
           </div>
         )}
