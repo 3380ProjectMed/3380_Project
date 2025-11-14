@@ -1,18 +1,19 @@
+// src/components/nurse/NurseSchedule.jsx - UPDATED with clinical workspace integration
 import React, { useState, useEffect } from 'react';
 import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import NurseClinicalWorkspace from './NurseClinicalWorkspace';
 import './NurseSchedule.css';
 
-/**
- * NurseSchedule Component - Daily Work Queue
- * 
- * Matches the pattern from doctor Schedule.jsx but adapted for nurse workflow
- */
-function NurseSchedule({ onPatientClick }) {
+function NurseSchedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedView, setSelectedView] = useState('all');
+  
+  // Clinical workspace state
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showClinicalWorkspace, setShowClinicalWorkspace] = useState(false);
 
   useEffect(() => {
     fetchDailySchedule();
@@ -25,7 +26,6 @@ function NurseSchedule({ onPatientClick }) {
       
       const dateStr = currentDate.toISOString().split('T')[0];
       
-      // Match the API pattern from doctor files
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
         ? import.meta.env.VITE_API_BASE 
         : '';
@@ -71,14 +71,25 @@ function NurseSchedule({ onPatientClick }) {
   };
 
   const handlePatientClick = (appointment) => {
-    if (onPatientClick) {
-      onPatientClick({
-        visit_id: appointment.visit_id,
-        appointment_id: appointment.appointment_id,
-        patient_id: appointment.patient_id,
-        patient_name: appointment.patient_name
-      });
-    }
+    // Open clinical workspace with selected patient
+    setSelectedPatient({
+      visit_id: appointment.visit_id,
+      appointment_id: appointment.appointment_id,
+      patient_id: appointment.patient_id,
+      patient_name: appointment.patient_name
+    });
+    setShowClinicalWorkspace(true);
+  };
+
+  const handleCloseClinicalWorkspace = () => {
+    setShowClinicalWorkspace(false);
+    setSelectedPatient(null);
+  };
+
+  const handleVitalsSaved = (visitId) => {
+    // Refresh schedule after vitals are saved
+    fetchDailySchedule();
+    console.log('Vitals saved for visit:', visitId);
   };
 
   const getAppointmentsToDisplay = () => {
@@ -107,6 +118,19 @@ function NurseSchedule({ onPatientClick }) {
     const today = new Date();
     return currentDate.toDateString() === today.toDateString();
   };
+
+  // Show clinical workspace as overlay
+  if (showClinicalWorkspace) {
+    return (
+      <div className="clinical-workspace-overlay">
+        <NurseClinicalWorkspace
+          selectedPatient={selectedPatient}
+          onClose={handleCloseClinicalWorkspace}
+          onSave={handleVitalsSaved}
+        />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
