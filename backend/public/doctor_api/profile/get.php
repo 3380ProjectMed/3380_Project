@@ -73,6 +73,7 @@ try {
                 d.phone as phone_number
             FROM doctor d
             INNER JOIN staff s ON d.staff_id = s.staff_id
+            LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
             LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
             LEFT JOIN codes_gender cg ON s.gender = cg.gender_code
             LEFT JOIN office o ON ws.office_id = o.office_id
