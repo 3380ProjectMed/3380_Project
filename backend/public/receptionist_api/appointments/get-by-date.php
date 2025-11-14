@@ -3,6 +3,7 @@
 /**
  * Get appointments for a specific date at receptionist's office
  * Uses session-based authentication like doctor API
+ * FIXED: Properly filters appointments by office and returns complete data
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -57,11 +58,12 @@ try {
                 a.Appointment_date,
                 a.Reason_for_visit,
                 a.Status as apt_status,
+                a.Patient_id,
+                a.Doctor_id,
+                a.Office_id,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
-                p.patient_id as patient_id,
                 p.emergency_contact_id,
                 CONCAT(doc_staff.first_name, ' ', doc_staff.last_name) as doctor_name,
-                d.doctor_id as doctor_id,
                 pv.status as visit_status,
                 pv.start_at as Check_in_time,
                 pv.payment as copay
@@ -87,7 +89,7 @@ try {
         if ($visitStatus === 'Completed') {
             $displayStatus = 'Completed';
         } elseif ($visitStatus === 'Checked In' || $apt['Check_in_time']) {
-            $displayStatus = 'Checked In';
+            $displayStatus = 'Checked-in';
         } elseif ($dbStatus === 'Cancelled') {
             $displayStatus = 'Cancelled';
         } else {
@@ -97,10 +99,10 @@ try {
         $formatted_appointments[] = [
             'Appointment_id' => $apt['Appointment_id'],
             'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
-            'Patient_id' => $apt['patient_id'],
-            'patientIdFormatted' => 'P' . str_pad($apt['patient_id'], 3, '0', STR_PAD_LEFT),
+            'Patient_id' => $apt['Patient_id'],
+            'patientIdFormatted' => 'P' . str_pad($apt['Patient_id'], 3, '0', STR_PAD_LEFT),
             'patientName' => $apt['patient_name'],
-            'Doctor_id' => $apt['doctor_id'],
+            'Doctor_id' => $apt['Doctor_id'],
             'doctorName' => $apt['doctor_name'],
             'time' => date('g:i A', strtotime($apt['Appointment_date'])),
             'Appointment_date' => $apt['Appointment_date'],
