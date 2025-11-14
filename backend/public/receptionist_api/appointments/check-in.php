@@ -72,7 +72,7 @@ try {
             // Create new patient_visit record
             // The trigger will validate insurance automatically
             $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, office_id, start_at, status)
-                              SELECT a.Appointment_id, a.Patient_id, a.Doctor_id, a.Office_id, NOW(), 'Checked In'
+                              SELECT a.Appointment_id, a.Patient_id, a.Doctor_id, a.Office_id, NOW(), 'Scheduled'
                               FROM appointment a WHERE a.Appointment_id = ?";
 
             try {
@@ -126,7 +126,7 @@ try {
             // Note: The trigger only fires on INSERT, not UPDATE
             // So we need to manually check insurance for updates
             $updateVisitSql = "UPDATE patient_visit 
-                              SET start_at = NOW(), status = 'Checked In'
+                              SET start_at = NOW(), status = 'Scheduled'
                               WHERE appointment_id = ?";
             executeQuery($conn, $updateVisitSql, 'i', [$appointment_id]);
         }
