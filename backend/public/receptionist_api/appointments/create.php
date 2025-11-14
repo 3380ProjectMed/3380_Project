@@ -38,10 +38,11 @@ try {
     $conn = getDBConnection();
     
     // Verify receptionist works at the specified office
-    $verifySql = "SELECT s.work_location
+    $verifySql = "SELECT ws.office_id
                   FROM staff s
                   JOIN user_account ua ON ua.email = s.staff_email
-                  WHERE ua.user_id = ? AND s.work_location = ?";
+                  JOIN work_schedule ws ON ws.staff_id = s.staff_id
+                  WHERE ua.user_id = ? AND ws.office_id = ?";
     
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$user_id, $input['Office_id']]);
     

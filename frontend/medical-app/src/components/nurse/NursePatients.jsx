@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Search, X, AlertCircle } from 'lucide-react';
+import { Search, X, AlertCircle, Calendar, Mail, FileText, Activity } from 'lucide-react';
 import "./NursePatients.css";
-import { getNursePatients, saveNurseVitals, getAppointmentsForPatient, createOrGetNurseVisit } from '../../api/nurse';
+import { getNursePatients, getAppointmentsForPatient, createOrGetNurseVisit, getPatientDetail } from '../../api/nurse';
 import NurseVitalsModal from './NurseVitalsModal';
 
 export default function NursePatients() {
@@ -19,6 +19,7 @@ export default function NursePatients() {
   const [appointmentId, setAppointmentId] = useState(null);
   const [appointmentOptions, setAppointmentOptions] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [visitId, setVisitId] = useState(null);
   const [vitals, setVitals] = useState({ bp: '', temp: '' });
   const [savingVitals, setSavingVitals] = useState(false);
   const [vitalsError, setVitalsError] = useState(null);
@@ -82,7 +83,8 @@ export default function NursePatients() {
   async function fetchAppointmentsForPatient(patient) {
     try {
       setLoading(true);
-      const appts = await getAppointmentsForPatient(patient.patient_id, 'today');
+      const pid = patient.patient_id || patient.id;
+      const appts = await getAppointmentsForPatient(pid, 'today');
       setAppointmentOptions(appts || []);
       if (!appts || appts.length === 0) {
         setVitalsError('This patient has no appointments today. Please schedule an appointment before recording vitals.');
@@ -97,6 +99,7 @@ export default function NursePatients() {
         const v = await createOrGetNurseVisit(a.Appointment_id || a.appointment_id);
         const existing = v?.existingVitals || {};
         setVitals({ bp: existing.blood_pressure || '', temp: existing.temperature || '' });
+        setVisitId(v?.visitId ?? null);
       } else {
         // multiple appointments, show selector UI (we keep modal open)
         setVitalsError(null);
@@ -118,6 +121,7 @@ export default function NursePatients() {
       const v = await createOrGetNurseVisit(apptId);
       const existing = v?.existingVitals || {};
       setVitals({ bp: existing.blood_pressure || '', temp: existing.temperature || '' });
+      setVisitId(v?.visitId ?? null);
       setVitalsError(null);
     } catch (e) {
       setVitalsError(e?.message || 'Failed to create or get visit');
@@ -249,13 +253,25 @@ export default function NursePatients() {
               </div>
             )}
 
+            {(!selectedAppointment && Array.isArray(appointmentOptions) && appointmentOptions.length === 0) && (
+              <div className="nurse-modal-backdrop">
+                <div className="nurse-modal" role="dialog" aria-modal="true">
+                  <h2>No Appointments</h2>
+                  <div style={{ marginTop: 8 }}>This patient has no appointments today. Please schedule an appointment before recording vitals.</div>
+                  <div style={{ marginTop: 12 }}>
+                    <button onClick={closeVitalsModal}>Close</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             { /* If one appointment auto-selected or nurse picked one, render full vitals modal component */ }
             {(selectedAppointment || (appointmentOptions && appointmentOptions.length === 1)) && (
               <NurseVitalsModal
                 patient={selectedPatient}
                 appointment={selectedAppointment || (appointmentOptions && appointmentOptions[0])}
                 appointmentId={appointmentId}
-                visitId={null}
+                visitId={visitId}
                 initialVitals={vitals}
                 onClose={closeVitalsModal}
                 onSaved={handleSaveVitalsFromModal}

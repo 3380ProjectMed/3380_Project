@@ -35,13 +35,14 @@ try {
     $conn = getDBConnection();
     
     // Verify receptionist has access to this appointment's office
-    $verifySql = "SELECT a.Appointment_id, a.Office_id, s.work_location
+    $verifySql = "SELECT a.Appointment_id, a.Office_id
                   FROM appointment a
-                  JOIN staff s ON s.work_location = a.Office_id
-                  JOIN user_account ua ON ua.email = s.staff_email
-                  WHERE a.Appointment_id = ? AND ua.user_id = ?";
+                  JOIN user_account ua ON ua.user_id = ?
+                  JOIN staff s ON ua.email = s.staff_email
+                  JOIN work_schedule ws ON ws.staff_id = s.staff_id AND ws.office_id = a.Office_id
+                  WHERE a.Appointment_id = ?";
     
-    $verifyResult = executeQuery($conn, $verifySql, 'ii', [$appointment_id, $user_id]);
+    $verifyResult = executeQuery($conn, $verifySql, 'ii', [$user_id, $appointment_id]);
     
     if (empty($verifyResult)) {
         closeDBConnection($conn);
@@ -74,7 +75,7 @@ try {
     }
     
     if (isset($input['Status'])) {
-        $validStatuses = ['Scheduled', 'Pending', 'Waiting', 'In Progress', 'Completed', 'Cancelled', 'No-Show'];
+        $validStatuses = ['Scheduled', 'Pending', 'Waiting', 'Checked-in', 'In Progress', 'Completed', 'Cancelled', 'No-Show'];
         if (in_array($input['Status'], $validStatuses)) {
             $updateFields[] = 'Status = ?';
             $types .= 's';
