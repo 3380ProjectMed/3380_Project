@@ -1,5 +1,5 @@
 <?php
-
+//login.php
 declare(strict_types=1);
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
@@ -105,21 +105,21 @@ if (!$result || $result->num_rows === 0) {
 $user = $result->fetch_assoc();
 $stmt->close();
 
-// Check if account is locked
+// Check if account is locked - UPDATED: Less alarming message
 if ($user['password_hash'] === null) {
     http_response_code(403);
     echo json_encode([
-        'error' => 'Account locked due to too many failed login attempts. Please reset your password.'
+        'error' => 'Please reset your password to continue.'
     ]);
     $mysqli->close();
     exit;
 }
 
-// Check if account is active
+// Check if account is active - UPDATED: Less alarming message
 if ($user['is_active'] == 0) {
     http_response_code(403);
     echo json_encode([
-        'error' => 'Account is inactive. Please contact an administrator.'
+        'error' => 'Unable to sign in. Please contact support.'
     ]);
     $mysqli->close();
     exit;
@@ -140,9 +140,10 @@ if (!password_verify($password, $user['password_hash'])) {
         $updateStmt->execute();
         $updateStmt->close();
 
+        // UPDATED: Less alarming message
         http_response_code(403);
         echo json_encode([
-            'error' => 'Account locked due to too many failed login attempts. Please reset your password.',
+            'error' => 'Please reset your password to continue.',
             'requiresReset' => true
         ]);
     } else {
