@@ -1,430 +1,368 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getNurseWorkSchedule, getNurseMonthAppointments } from '../../api/nurse.js';
-import '../doctor/Schedule.css'; // Use shared schedule CSS
+import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import './NurseSchedule.css';
 
 /**
- * NurseSchedule Component
+ * NurseSchedule Component - Real Clinical Workflow
  * 
- * Displays a monthly calendar view with nurse's work schedule and appointments
- * Features:
- * - Monthly navigation (previous/next)
- * - Location-based filtering (dynamic from work schedule)
- * - Real-time data from API
- * - Work shifts and appointment display
- * - Weekend highlighting based on work schedule
+ * How it works in real clinics:
+ * 1. Nurse sees their work schedule (8AM-5PM at specific office)
+ * 2. Receptionist checks patients in and assigns them to nurse
+ * 3. Nurse sees queue of checked-in patients
+ * 4. Nurse takes vitals for waiting patients
+ * 5. Patients move to "Ready for Doctor" after vitals recorded
+ * 
+ * Key difference from doctor schedule:
+ * - Nurses don't have individual appointment slots
+ * - They work through a queue of assigned patients
+ * - Assignment happens at check-in by receptionist
  */
-function NurseSchedule({ onAppointmentClick }) {
-  const [currentDate, setCurrentDate] = useState(new Date()); 
-  const [selectedLocation, setSelectedLocation] = useState('all');
-  const [workSchedule, setWorkSchedule] = useState([]);
-  const [appointments, setAppointments] = useState([]);
+
+function NurseSchedule({ onPatientClick }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedView, setSelectedView] = useState('all'); // 'all', 'needs_vitals', 'ready'
 
-  // Fetch work schedule on component mount
   useEffect(() => {
-    fetchWorkSchedule();
-    fetchAppointments();
-  }, []);
-
-  // Refetch appointments when month changes
-  useEffect(() => {
-    fetchAppointments();
+    fetchDailySchedule();
   }, [currentDate]);
 
-  /**
-   * Fetch nurse's work schedule from API
-   */
-  const fetchWorkSchedule = async () => {
-    try {
-      const data = await getNurseWorkSchedule();
-      if (data.success) {
-        setWorkSchedule(data.data);
-      } else {
-        setError(data.error || 'Failed to load work schedule');
-      }
-    } catch (err) {
-      setError('Network error: ' + err.message);
-    }
-  };
-
-  /**
-   * Fetch appointments for current month
-   */
-  const fetchAppointments = async () => {
+  const fetchDailySchedule = async () => {
     try {
       setLoading(true);
-      const month = currentDate.getMonth() + 1; // JS months are 0-indexed
-      const year = currentDate.getFullYear();
+      setError(null);
       
-      const data = await getNurseMonthAppointments(year, month);
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const response = await fetch(
+        `/backend/public/nurse_api/schedule/get-nurse-daily-schedule.php?date=${dateStr}`,
+        {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch schedule');
+      }
+
+      const data = await response.json();
       
       if (data.success) {
-        // The backend groups appointments by date. Flatten into a single array for easier filtering.
-        const grouped = data.data || {};
-        const flat = [];
-        Object.keys(grouped).forEach(date => {
-          grouped[date].forEach(a => {
-            flat.push({
-              appointment_id: a.id,
-              appointment_date: a.appointment_date,
-              appointment_time: a.appointment_time,
-              patient_name: a.patientName || a.patient_name || 'Patient',
-              office_id: a.office_id || a.officeId || null,
-              office_name: a.location || a.location_name || a.office_name || '',
-              reason: a.reason || ''
-            });
-          });
-        });
-
-        setAppointments(flat);
+        setScheduleData(data);
       } else {
-        setError(data.error || 'Failed to load appointments');
+        setError(data.error || 'Failed to load schedule');
       }
     } catch (err) {
+      console.error('Error fetching nurse schedule:', err);
       setError('Network error: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * Get the day of week name from a date
-   */
-  const getDayOfWeekName = (date) => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[date.getDay()];
+  const goToPreviousDay = () => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() - 1);
+    setCurrentDate(newDate);
   };
 
-  /**
-   * Get assigned location for a specific day based on work schedule
-   */
-  const getDailyLocation = (year, month, day) => {
-    const date = new Date(year, month, day);
-    const dayOfWeekName = getDayOfWeekName(date);
-    
-    // Find work schedule entry for this day of week
-    const scheduleEntry = workSchedule.find(
-      s => (s.day_of_week || s.Day_of_week) === dayOfWeekName
-    );
-    
-    if (!scheduleEntry) {
-      return null; // Not working this day
-    }
-    
-    return {
-      office_id: scheduleEntry.office_id || scheduleEntry.Office_ID,
-      office_name: scheduleEntry.office_name,
-      address: scheduleEntry.address,
-      city: scheduleEntry.city || scheduleEntry.City,
-      state: scheduleEntry.state || scheduleEntry.State,
-      start_time: scheduleEntry.start_time || scheduleEntry.Start_time,
-      end_time: scheduleEntry.end_time || scheduleEntry.End_time
-    };
+  const goToNextDay = () => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + 1);
+    setCurrentDate(newDate);
   };
 
-  /**
-   * Get unique locations from work schedule
-   */
-  const getUniqueLocations = () => {
-    const locations = new Map();
-    workSchedule.forEach(schedule => {
-      const officeId = schedule.office_id || schedule.Office_ID;
-      const officeName = schedule.office_name;
-      const city = schedule.city || schedule.City;
-      
-      if (!locations.has(officeId)) {
-        locations.set(officeId, {
-          id: officeId,
-          name: officeName,
-          city: city
-        });
-      }
-    });
-    return Array.from(locations.values());
+  const goToToday = () => {
+    setCurrentDate(new Date());
   };
 
-  /**
-   * Get appointments for a specific day
-   */
-  const getAppointmentsForDay = (day) => {
-    const month = currentDate.getMonth();
-    const year = currentDate.getFullYear();
-    const assignedLocation = getDailyLocation(year, month, day);
-    
-    // No appointments if not working
-    if (!assignedLocation) return [];
-    
-    // Filter appointments by date
-    let dayAppointments = appointments.filter(app => {
-      const appDate = new Date(app.appointment_date);
-      return appDate.getDate() === day &&
-             appDate.getMonth() === month &&
-             appDate.getFullYear() === year;
-    });
-
-    // Apply location filter if not "all"
-    if (selectedLocation !== 'all') {
-      dayAppointments = dayAppointments.filter(app => {
-        return app.office_id === parseInt(selectedLocation);
+  const handlePatientClick = (appointment) => {
+    if (onPatientClick) {
+      onPatientClick({
+        visit_id: appointment.visit_id,
+        appointment_id: appointment.appointment_id,
+        patient_id: appointment.patient_id,
+        patient_name: appointment.patient_name
       });
     }
-
-    return dayAppointments;
   };
 
-  /**
-   * Check if day should be visible based on location filter
-   */
-  const isDayVisible = (day) => {
-    const assignedLocation = getDailyLocation(
-      currentDate.getFullYear(), 
-      currentDate.getMonth(), 
-      day
+  const getAppointmentsToDisplay = () => {
+    if (!scheduleData?.appointments) return [];
+    
+    switch (selectedView) {
+      case 'needs_vitals':
+        return scheduleData.appointments.waiting_for_vitals || [];
+      case 'ready':
+        return scheduleData.appointments.ready_for_doctor || [];
+      default:
+        return scheduleData.appointments.all || [];
+    }
+  };
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  const isToday = () => {
+    const today = new Date();
+    return currentDate.toDateString() === today.toDateString();
+  };
+
+  if (loading) {
+    return (
+      <div className="nurse-schedule loading">
+        <div className="loading-spinner">Loading schedule...</div>
+      </div>
     );
-    
-    // Always show non-working days (they're already grayed out)
-    if (!assignedLocation) return true;
-    
-    // Show all locations
-    if (selectedLocation === 'all') return true;
-    
-    // Filter by selected location
-    return assignedLocation.office_id === parseInt(selectedLocation);
-  };
-
-  /**
-   * Get display name for location badge
-   */
-  const getLocationBadge = (location) => {
-    // Extract name or use short name
-    if (location.name) {
-      return location.name;
-    }
-    // Fallback to abbreviation of office name
-    return location.office_name.split(' ').map(w => w[0]).join('').toUpperCase();
-  };
-
-  /**
-   * Navigation handlers
-   */
-  const goToPreviousMonth = () => {
-    setCurrentDate(new Date(
-      currentDate.getFullYear(), 
-      currentDate.getMonth() - 1, 
-      1
-    ));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(
-      currentDate.getFullYear(), 
-      currentDate.getMonth() + 1, 
-      1
-    ));
-  };
-
-  /**
-   * Handle appointment click
-   */
-  const handleAppointmentClick = (appointment) => {
-    if (onAppointmentClick) {
-      onAppointmentClick(appointment);
-    }
-  };
-
-  // Calendar helper functions
-  const getDaysInMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  };
-
-  const getStartingDay = (date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  };
-
-  // Get month name and year for display
-  const currentMonthName = currentDate.toLocaleString('default', { month: 'long' });
-  const currentYear = currentDate.getFullYear();
-  
-  // Generate array of days in month
-  const days = Array.from(
-    { length: getDaysInMonth(currentDate) },
-    (_, i) => i + 1
-  );
-
-  const uniqueLocations = getUniqueLocations();
+  }
 
   if (error) {
     return (
-      <div className="schedule">
-        <div className="error-message" style={{
-          padding: '2rem',
-          backgroundColor: '#fee',
-          borderRadius: '0.5rem',
-          color: '#c00'
-        }}>
+      <div className="nurse-schedule error">
+        <div className="error-message">
+          <AlertCircle size={48} />
           <h2>Error Loading Schedule</h2>
           <p>{error}</p>
+          <button onClick={fetchDailySchedule}>Retry</button>
         </div>
       </div>
     );
   }
 
+  if (!scheduleData) {
+    return (
+      <div className="nurse-schedule error">
+        <div className="error-message">
+          <AlertCircle size={48} />
+          <h2>No Schedule Data</h2>
+          <p>Unable to load schedule information</p>
+        </div>
+      </div>
+    );
+  }
+
+  const appointments = getAppointmentsToDisplay();
+  const { working, work_schedule, summary } = scheduleData;
+
   return (
-    <div className="schedule">
-      {/* ===== HEADER WITH MONTH NAVIGATION ===== */}
+    <div className="nurse-schedule">
+      {/* Header with Date Navigation */}
       <div className="schedule-header">
-        <div className="month-navigation">
+        <div className="date-navigation">
           <button 
-            onClick={goToPreviousMonth} 
-            className="nav-arrow"
-            aria-label="Previous month"
+            onClick={goToPreviousDay} 
+            className="nav-button"
+            aria-label="Previous day"
           >
             <ChevronLeft size={24} />
           </button>
           
-          <h1 className="month-title">
-            {currentMonthName} {currentYear}
-          </h1>
+          <div className="date-display">
+            <h1>{formatDate(currentDate)}</h1>
+            {!isToday() && (
+              <button onClick={goToToday} className="today-button">
+                Today
+              </button>
+            )}
+          </div>
           
           <button 
-            onClick={goToNextMonth} 
-            className="nav-arrow"
-            aria-label="Next month"
+            onClick={goToNextDay} 
+            className="nav-button"
+            aria-label="Next day"
           >
             <ChevronRight size={24} />
           </button>
         </div>
+
+        {/* Work Schedule Info */}
+        {working && work_schedule && (
+          <div className="work-info">
+            <div className="work-time">
+              <Clock size={20} />
+              <span>{work_schedule.start_time} - {work_schedule.end_time}</span>
+            </div>
+            <div className="work-location">
+              <span className="office-badge">{work_schedule.office_name}</span>
+              <span className="office-address">{work_schedule.city}, {work_schedule.state}</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ===== LOCATION FILTER ===== */}
-      {uniqueLocations.length > 1 && (
-        <div className="filter-section">
-          <label htmlFor="location-filter">Filter Location:</label>
-          <select 
-            id="location-filter"
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-            className="location-select"
-          >
-            <option value="all">All Locations</option>
-            {uniqueLocations.map(loc => (
-              <option key={loc.id} value={loc.id}>
-                {loc.name} {loc.city && `- ${loc.city}`}
-              </option>
-            ))}
-          </select>
+      {/* Not Working Today */}
+      {!working && (
+        <div className="not-working-message">
+          <Clock size={48} />
+          <h2>Not Scheduled</h2>
+          <p>You are not scheduled to work on {scheduleData.day_of_week}</p>
         </div>
       )}
 
-      {/* ===== CALENDAR GRID ===== */}
-      <div className="calendar-container">
-        {loading && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-            Loading schedule...
-          </div>
-        )}
-        
-        <div className="calendar-grid">
-          {/* Weekday Headers */}
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="weekday-header">
-              {day}
+      {/* Working - Show Patient Queue */}
+      {working && (
+        <>
+          {/* Summary Stats */}
+          <div className="schedule-summary">
+            <div className="stat-card">
+              <Users size={24} />
+              <div className="stat-content">
+                <span className="stat-value">{summary.total}</span>
+                <span className="stat-label">Total Patients</span>
+              </div>
             </div>
-          ))}
-          
-          {/* Empty cells before first day of month */}
-          {Array.from({ length: getStartingDay(currentDate) }).map((_, i) => (
-            <div key={`empty-${i}`} className="calendar-day empty-day"></div>
-          ))}
-          
-          {/* Calendar Days */}
-          {days.map(day => {
-            const assignedLocation = getDailyLocation(
-              currentDate.getFullYear(), 
-              currentDate.getMonth(), 
-              day
-            );
-            const isNotWorking = !assignedLocation;
-            const appointments = getAppointmentsForDay(day);
-            const isVisible = isDayVisible(day);
-            
-            return (
-              <div 
-                key={day} 
-                className={`calendar-day ${isNotWorking ? 'weekend' : ''} ${!isVisible && !isNotWorking ? 'filtered' : ''}`}
-              >
-                {/* Day Header */}
-                <div className="day-header">
-                  <span className="day-number">{day}</span>
-                  
-                  {/* Location Badge */}
-                  {assignedLocation && (
-                    <span 
-                      className="location-badge"
-                      style={{
-                        backgroundColor: `hsl(${(assignedLocation.office_id * 137) % 360}, 70%, 85%)`,
-                        color: `hsl(${(assignedLocation.office_id * 137) % 360}, 70%, 25%)`
-                      }}
-                      title={`${assignedLocation.office_name} - ${assignedLocation.city}, ${assignedLocation.state}`}
-                    >
-                      {getLocationBadge(assignedLocation)}
-                    </span>
-                  )}
-                </div>
-                
-                {/* Day Content */}
-                <div className="day-content">
-                  {isNotWorking ? (
-                    <p className="no-appointments">Off</p>
-                  ) : (
-                    <>
-                      {/* Show work shift times */}
-                      <div className="work-shift">
-                        {assignedLocation.start_time && assignedLocation.end_time && (
-                          <p className="shift-time">
-                            {assignedLocation.start_time.substring(0, 5)} - {assignedLocation.end_time.substring(0, 5)}
-                          </p>
+            <div className="stat-card warning">
+              <AlertCircle size={24} />
+              <div className="stat-content">
+                <span className="stat-value">{summary.needs_vitals}</span>
+                <span className="stat-label">Need Vitals</span>
+              </div>
+            </div>
+            <div className="stat-card success">
+              <CheckCircle size={24} />
+              <div className="stat-content">
+                <span className="stat-value">{summary.completed_vitals}</span>
+                <span className="stat-label">Ready for Doctor</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="view-filters">
+            <button
+              className={`filter-tab ${selectedView === 'all' ? 'active' : ''}`}
+              onClick={() => setSelectedView('all')}
+            >
+              All Patients ({summary.total})
+            </button>
+            <button
+              className={`filter-tab ${selectedView === 'needs_vitals' ? 'active' : ''}`}
+              onClick={() => setSelectedView('needs_vitals')}
+            >
+              <AlertCircle size={16} />
+              Need Vitals ({summary.needs_vitals})
+            </button>
+            <button
+              className={`filter-tab ${selectedView === 'ready' ? 'active' : ''}`}
+              onClick={() => setSelectedView('ready')}
+            >
+              <CheckCircle size={16} />
+              Ready ({summary.completed_vitals})
+            </button>
+          </div>
+
+          {/* Patient Queue */}
+          <div className="patient-queue">
+            {appointments.length === 0 ? (
+              <div className="empty-queue">
+                <Users size={48} />
+                <h3>No Patients Yet</h3>
+                <p>
+                  {selectedView === 'needs_vitals' && 'No patients waiting for vitals'}
+                  {selectedView === 'ready' && 'No patients ready for doctor'}
+                  {selectedView === 'all' && 'No patients assigned to you today'}
+                </p>
+              </div>
+            ) : (
+              <div className="patient-cards">
+                {appointments.map((appointment) => (
+                  <div
+                    key={appointment.visit_id}
+                    className={`patient-card ${appointment.needs_vitals ? 'needs-vitals' : 'vitals-complete'}`}
+                    onClick={() => handlePatientClick(appointment)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') handlePatientClick(appointment);
+                    }}
+                  >
+                    {/* Status Indicator */}
+                    <div className="card-status">
+                      {appointment.needs_vitals ? (
+                        <span className="status-badge warning">
+                          <AlertCircle size={16} />
+                          Needs Vitals
+                        </span>
+                      ) : (
+                        <span className="status-badge success">
+                          <CheckCircle size={16} />
+                          Ready
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Time */}
+                    <div className="appointment-time">
+                      <Clock size={18} />
+                      <span>{appointment.appointment_time}</span>
+                    </div>
+
+                    {/* Patient Info */}
+                    <div className="patient-info">
+                      <h3>{appointment.patient_name}</h3>
+                      <div className="patient-meta">
+                        <span>{appointment.age}y</span>
+                        <span>•</span>
+                        <span>{appointment.gender}</span>
+                      </div>
+                    </div>
+
+                    {/* Doctor Assignment */}
+                    <div className="doctor-info">
+                      <div className="doctor-name">
+                        <strong>Dr. {appointment.doctor_name?.split(' ').pop()}</strong>
+                      </div>
+                      <div className="doctor-specialty">{appointment.specialty}</div>
+                    </div>
+
+                    {/* Reason */}
+                    <div className="visit-reason">
+                      <strong>Chief Complaint:</strong>
+                      <p>{appointment.reason || 'Not specified'}</p>
+                    </div>
+
+                    {/* Vitals Preview (if recorded) */}
+                    {appointment.vitals_recorded && (
+                      <div className="vitals-preview">
+                        {appointment.blood_pressure && (
+                          <span className="vital">
+                            <strong>BP:</strong> {appointment.blood_pressure}
+                          </span>
+                        )}
+                        {appointment.temperature && (
+                          <span className="vital">
+                            <strong>Temp:</strong> {appointment.temperature}°F
+                          </span>
                         )}
                       </div>
-                      
-                      {/* Show appointments */}
-                      {appointments.length > 0 ? (
-                        <div className="appointments">
-                          {appointments.map(app => (
-                            <div 
-                              key={app.appointment_id} 
-                              className="appointment-item"
-                              onClick={() => handleAppointmentClick(app)}
-                              role="button"
-                              tabIndex={0}
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter') handleAppointmentClick(app);
-                              }}
-                            >
-                              <p className="appointment-time">
-                                {app.appointment_time ? app.appointment_time.substring(0, 5) : 'TBD'}
-                              </p>
-                              <p className="appointment-patient">
-                                {app.patient_name || 'Patient'}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+                    )}
+
+                    {/* Action Hint */}
+                    <div className="card-action">
+                      {appointment.needs_vitals ? (
+                        <span>Click to record vitals →</span>
                       ) : (
-                        <p className="no-appointments">
-                          {isVisible ? 'No appointments' : ''}
-                        </p>
+                        <span>Click to view details →</span>
                       )}
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
-      </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
