@@ -17,12 +17,6 @@ export default function NurseSidebar({ currentPage, setCurrentPage, onLogout }) 
       description: "Daily patient queue"
     },
     { 
-      id: "clinical", 
-      label: "Record Vitals", 
-      icon: <Activity size={18} />,
-      description: "Patient vitals entry"
-    },
-    { 
       id: "profile", 
       label: "Profile", 
       icon: <User size={18} />,
