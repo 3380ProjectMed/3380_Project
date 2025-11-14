@@ -972,11 +972,6 @@ function Report() {
 }
 // Add this enhanced version to replace the existing OfficeUtilizationPie in Report.jsx
 
-// Fixed Office Utilization Pie Chart Component
-// Replace the existing OfficeUtilizationPie component with this version
-
-// Simplified Working Pie Chart Component
-// Replace the OfficeUtilizationPie component with this version
 
 const OfficeUtilizationPie = ({ offices }) => {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
@@ -1095,36 +1090,37 @@ const OfficeUtilizationPie = ({ offices }) => {
             fill="white"
             filter="drop-shadow(0 2px 8px rgba(0,0,0,0.1))"
           />
+          
+          {/* Optional: Show percentage in center when hovering */}
+          {hoveredIndex !== null && (
+            <text
+              x="200"
+              y="200"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              style={{
+                fontSize: '48px',
+                fontWeight: 'bold',
+                fill: '#0077b6',
+                pointerEvents: 'none'
+              }}
+            >
+              {offices[hoveredIndex].utilization_rate}%
+            </text>
+          )}
         </svg>
-
-        {/* Hover Tooltip */}
-        {hoveredIndex !== null && (
-          <div className="pie-tooltip">
-            <div className="pie-tooltip-header">
-              {offices[hoveredIndex].office_name}
-            </div>
-            <div className="pie-tooltip-stat">
-              <div className="pie-tooltip-number">
-                {offices[hoveredIndex].total_appointments}
-              </div>
-              <div className="pie-tooltip-unit">appointments</div>
-            </div>
-            <div className="pie-tooltip-percent">
-              {offices[hoveredIndex].utilization_rate}% of total
-            </div>
-            <div className="pie-tooltip-hint">Click for details</div>
-          </div>
-        )}
       </div>
 
       <div className="pie-legend">
         {offices.map((office, idx) => {
+          const isHovered = hoveredIndex === idx;
+          
           return (
             <div 
               key={office.office_id || idx} 
               className={`pie-legend-row ${
                 selectedOffice?.office_id === office.office_id ? 'legend-selected' : ''
-              }`}
+              } ${isHovered ? 'legend-hovered' : ''}`}
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
               onClick={(e) => handleSliceClick(office, e)}
@@ -1142,6 +1138,14 @@ const OfficeUtilizationPie = ({ offices }) => {
                 <div className="pie-legend-sub">
                   {office.total_appointments} appts · {office.utilization_rate}%
                 </div>
+                {/* Show extra details when hovering */}
+                {isHovered && (
+                  <div className="pie-legend-details">
+                    <span>✓ {office.completed} completed</span>
+                    <span>⚠ {office.no_shows} no-shows</span>
+                    <span>📅 {office.scheduled} scheduled</span>
+                  </div>
+                )}
               </div>
             </div>
           );
