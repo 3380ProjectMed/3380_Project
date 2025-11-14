@@ -975,6 +975,9 @@ function Report() {
 // Fixed Office Utilization Pie Chart Component
 // Replace the existing OfficeUtilizationPie component with this version
 
+// Simplified Working Pie Chart Component
+// Replace the OfficeUtilizationPie component with this version
+
 const OfficeUtilizationPie = ({ offices }) => {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const [selectedOffice, setSelectedOffice] = React.useState(null);
@@ -988,11 +991,15 @@ const OfficeUtilizationPie = ({ offices }) => {
     return <p className="chart-empty">No appointment data for this period.</p>;
   }
 
-  // SVG circle parameters
-  const size = 400;
-  const center = size / 2;
-  const radius = 160; // Inner radius for donut chart
-  const strokeWidth = 60; // Thickness of the donut
+  // Color palette
+  const colors = [
+    '#6366f1', // indigo
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#0ea5e9', // sky blue
+    '#f43f5e', // rose
+    '#a855f7'  // purple
+  ];
 
   const handleSliceClick = (office, e) => {
     e.stopPropagation();
@@ -1007,91 +1014,73 @@ const OfficeUtilizationPie = ({ offices }) => {
     }
   }, [selectedOffice]);
 
-  // Calculate cumulative percentages for each slice
+  // Create pie slices
   let cumulativePercent = 0;
-
-  const createArc = (startPercent, endPercent) => {
-    const start = startPercent * 2 * Math.PI;
-    const end = endPercent * 2 * Math.PI;
+  const slices = offices.map((office, idx) => {
+    const value = office.total_appointments || 0;
+    const slicePercent = value / total;
     
-    const x1 = center + radius * Math.cos(start);
-    const y1 = center + radius * Math.sin(start);
-    const x2 = center + radius * Math.cos(end);
-    const y2 = center + radius * Math.sin(end);
+    // Convert to degrees
+    const startAngle = cumulativePercent * 360;
+    const endAngle = (cumulativePercent + slicePercent) * 360;
     
-    const largeArc = endPercent - startPercent > 0.5 ? 1 : 0;
+    cumulativePercent += slicePercent;
     
-    return `M ${center},${center} L ${x1},${y1} A ${radius},${radius} 0 ${largeArc} 1 ${x2},${y2} Z`;
-  };
+    // SVG path calculation for pie slice
+    const startAngleRad = ((startAngle - 90) * Math.PI) / 180;
+    const endAngleRad = ((endAngle - 90) * Math.PI) / 180;
+    
+    const x1 = 200 + 160 * Math.cos(startAngleRad);
+    const y1 = 200 + 160 * Math.sin(startAngleRad);
+    const x2 = 200 + 160 * Math.cos(endAngleRad);
+    const y2 = 200 + 160 * Math.sin(endAngleRad);
+    
+    const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
+    
+    const pathData = [
+      `M 200 200`,
+      `L ${x1} ${y1}`,
+      `A 160 160 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+      `Z`
+    ].join(' ');
+    
+    return {
+      office,
+      path: pathData,
+      color: colors[idx % colors.length],
+      index: idx
+    };
+  });
 
   return (
     <div className="office-pie-card">
       <div className="pie-chart-container">
         <svg 
-          viewBox={`0 0 ${size} ${size}`} 
-          className="pie-chart-svg"
-          style={{ transform: 'rotate(-90deg)' }}
+          viewBox="0 0 400 400" 
+          style={{ 
+            width: '100%', 
+            height: '100%',
+            display: 'block'
+          }}
         >
-          {/* Background circle */}
-          <circle
-            cx={center}
-            cy={center}
-            r={radius}
-            fill="none"
-            stroke="#e2eef8"
-            strokeWidth={strokeWidth}
-          />
-          
-          {/* Pie slices */}
-          {offices.map((office, idx) => {
-            const value = office.total_appointments || 0;
-            const slicePercent = value / total;
-            const startPercent = cumulativePercent;
-            const endPercent = cumulativePercent + slicePercent;
+          {/* Draw pie slices */}
+          {slices.map(({ office, path, color, index }) => {
+            const isActive = hoveredIndex === index || selectedOffice?.office_id === office.office_id;
             
-            cumulativePercent = endPercent;
-            
-            // For path-based approach
-            const startAngle = startPercent * 360;
-            const endAngle = endPercent * 360;
-            const startRad = (startAngle - 90) * Math.PI / 180;
-            const endRad = (endAngle - 90) * Math.PI / 180;
-            
-            const x1 = center + radius * Math.cos(startRad);
-            const y1 = center + radius * Math.sin(startRad);
-            const x2 = center + radius * Math.cos(endRad);
-            const y2 = center + radius * Math.sin(endRad);
-            
-            const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
-            
-            const pathData = [
-              `M ${center} ${center}`,
-              `L ${x1} ${y1}`,
-              `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
-              'Z'
-            ].join(' ');
-
-            const colors = [
-              '#6366f1', '#10b981', '#f59e0b', 
-              '#0ea5e9', '#f43f5e', '#a855f7'
-            ];
-            
-            const isActive = hoveredIndex === idx || selectedOffice?.office_id === office.office_id;
-
             return (
               <path
-                key={office.office_id || idx}
-                d={pathData}
-                fill={colors[idx % colors.length]}
-                className={`pie-slice pie-slice-${idx % 6} ${isActive ? 'pie-slice-active' : ''}`}
+                key={office.office_id || index}
+                d={path}
+                fill={color}
+                stroke="white"
+                strokeWidth={isActive ? 4 : 2}
                 style={{
                   cursor: 'pointer',
-                  opacity: isActive ? 1 : 0.9,
+                  opacity: isActive ? 1 : 0.95,
                   transition: 'all 0.3s ease',
-                  stroke: 'white',
-                  strokeWidth: isActive ? 3 : 1
+                  filter: isActive ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.15))'
                 }}
-                onMouseEnter={() => setHoveredIndex(idx)}
+                onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}
                 onClick={(e) => handleSliceClick(office, e)}
               />
@@ -1100,11 +1089,11 @@ const OfficeUtilizationPie = ({ offices }) => {
           
           {/* Center white circle for donut effect */}
           <circle
-            cx={center}
-            cy={center}
-            r={radius - strokeWidth}
+            cx="200"
+            cy="200"
+            r="100"
             fill="white"
-            pointerEvents="none"
+            filter="drop-shadow(0 2px 8px rgba(0,0,0,0.1))"
           />
         </svg>
 
@@ -1130,11 +1119,6 @@ const OfficeUtilizationPie = ({ offices }) => {
 
       <div className="pie-legend">
         {offices.map((office, idx) => {
-          const colors = [
-            '#6366f1', '#10b981', '#f59e0b', 
-            '#0ea5e9', '#f43f5e', '#a855f7'
-          ];
-          
           return (
             <div 
               key={office.office_id || idx} 
@@ -1148,7 +1132,10 @@ const OfficeUtilizationPie = ({ offices }) => {
             >
               <span 
                 className="pie-legend-color"
-                style={{ backgroundColor: colors[idx % colors.length] }}
+                style={{ 
+                  backgroundColor: colors[idx % colors.length],
+                  display: 'block'
+                }}
               />
               <div className="pie-legend-text">
                 <div className="pie-legend-title">{office.office_name}</div>
