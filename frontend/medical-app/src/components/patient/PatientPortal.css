@@ -159,6 +159,25 @@
   max-width: 1140px;
 }
 
+/* Ensure all content inside portal is left-aligned and has proper layout */
+.portal-content * {
+  text-align: left;
+}
+
+.portal-content .appointments-list,
+.portal-content .billing-statements {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.portal-content .appointment-card,
+.portal-content .billing-statement-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* Page Title */
 .page-title {
   font-size: 2.5rem;
