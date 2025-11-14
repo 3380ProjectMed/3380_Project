@@ -1,7 +1,7 @@
 // src/components/nurse/NurseClinicalWorkspace.jsx - SIMPLIFIED VERSION
 import React, { useState, useEffect } from 'react';
 import { Activity, AlertCircle, Save, X, CheckCircle, User, Calendar } from 'lucide-react';
-import './NurseClinicalWorkspace.css';
+import './NurseClinicalWorkSpace.css';
 
 /**
  * NurseClinicalWorkspace - SIMPLIFIED Vitals Recording
