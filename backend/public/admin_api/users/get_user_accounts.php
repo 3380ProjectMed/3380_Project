@@ -43,7 +43,7 @@ try {
                     CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
                 FROM doctor d
                 INNER JOIN staff s ON d.staff_id = s.staff_id
-                LEFT JOIN user_account ua ON s.staff_email = ua.email AND ua.role = 'DOCTOR'
+                LEFT JOIN user_account ua ON s.staff_id = ua.user_id AND ua.role = 'DOCTOR'
                 LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
                 LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
                 LEFT JOIN office o ON ws.office_id = o.office_id
@@ -58,7 +58,7 @@ try {
             }
 
             if ($work_location !== 'all') {
-                $doctor_query .= " AND s.work_location = " . intval($work_location);
+                $doctor_query .= " AND o.office_id = " . intval($work_location);
             }
 
             $queries[] = $doctor_query;
@@ -75,14 +75,15 @@ try {
                     s.ssn,
                     n.department as specialization_dept,
                     o.name as work_location,
-                    s.work_location as work_location_id,
+                    o.office_id as work_location_id,
                     COALESCE(ua.created_at, NULL) as created_at,
                     COALESCE(ua.is_active, 0) as is_active,
                     CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
                 FROM nurse n
                 INNER JOIN staff s ON n.staff_id = s.staff_id
-                LEFT JOIN user_account ua ON s.staff_email = ua.email AND ua.role = 'NURSE'
-                LEFT JOIN office o ON s.work_location = o.office_id
+                LEFT JOIN user_account ua ON s.staff_id = ua.user_id AND ua.role = 'NURSE'
+                LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
+                LEFT JOIN office o ON ws.office_id = o.office_id
                 WHERE s.staff_role = 'Nurse'";
 
             if ($active_status !== 'all') {
@@ -94,7 +95,7 @@ try {
             }
 
             if ($work_location !== 'all') {
-                $nurse_query .= " AND s.work_location = " . intval($work_location);
+                $nurse_query .= " AND o.office_id = " . intval($work_location);
             }
 
             if ($department !== 'all') {
@@ -115,13 +116,14 @@ try {
                     s.ssn,
                     NULL as specialization_dept,
                     o.name as work_location,
-                    s.work_location as work_location_id,
+                    o.office_id as work_location_id,
                     COALESCE(ua.created_at, NULL) as created_at,
                     COALESCE(ua.is_active, 0) as is_active,
                     CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
                 FROM staff s
-                LEFT JOIN user_account ua ON s.staff_email = ua.email AND ua.role = 'RECEPTIONIST'
-                LEFT JOIN office o ON s.work_location = o.office_id
+                LEFT JOIN user_account ua ON s.staff_id = ua.user_id AND ua.role = 'RECEPTIONIST'
+                LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
+                LEFT JOIN office o ON ws.office_id = o.office_id
                 WHERE s.staff_role = 'Receptionist'";
 
             if ($active_status !== 'all') {
@@ -133,7 +135,7 @@ try {
             }
 
             if ($work_location !== 'all') {
-                $receptionist_query .= " AND s.work_location = " . intval($work_location);
+                $receptionist_query .= " AND so.office_id = " . intval($work_location);
             }
 
             $queries[] = $receptionist_query;
