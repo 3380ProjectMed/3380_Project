@@ -1,33 +1,46 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
-  Activity, AlertTriangle, CheckCircle, Clock, Filter, 
-  TrendingUp, Users, ChevronDown, ChevronRight, X, 
-  Phone, Calendar, Pill, FileText, Heart, Download
+  Calendar, Filter, Download, TrendingUp, Users, ChevronDown, 
+  Search, X, Activity, Clock, AlertCircle, CheckCircle 
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
-import './ChronicDiseaseReport.css';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import './Report.css';
 
-export default function ChronicDiseaseReport() {
-  // Data state
-  const [patients, setPatients] = useState([]);
-  const [statistics, setStatistics] = useState(null);
-  const [conditionBreakdown, setConditionBreakdown] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+export default function AppointmentReport() {
+  const navigate = useNavigate();
 
   // Filter state
   const [filters, setFilters] = useState({
-    condition: 'all',
-    risk: 'all'
+    StartDate: new Date().toISOString().split('T')[0].slice(0, 8) + '01',
+    EndDate: new Date().toISOString().split('T')[0],
+    OfficeID: 'all',
+    Status: 'all',
+    PatientID: 'all',
+    VisitReason: '',
+    NurseID: 'all'
   });
 
+  // Data state
+  const [appointments, setAppointments] = useState([]);
+  const [statistics, setStatistics] = useState(null);
+  const [topDiagnoses, setTopDiagnoses] = useState([]);
+  const [topReasons, setTopReasons] = useState([]);
+  const [appointmentsByDay, setAppointmentsByDay] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Dropdown options state
+  const [offices, setOffices] = useState([]);
+  const [nurses, setNurses] = useState([]);
+
   // UI state
-  const [expandedPatient, setExpandedPatient] = useState(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedRiskView, setSelectedRiskView] = useState('critical'); // critical, due_soon, on_track
+  const [showFilters, setShowFilters] = useState(true);
+  const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
   useEffect(() => {
     fetchReport();
+    countActiveFilters();
   }, [filters]);
 
   const fetchReport = async () => {
@@ -37,26 +50,62 @@ export default function ChronicDiseaseReport() {
     try {
       const queryParams = new URLSearchParams();
       Object.keys(filters).forEach(key => {
-        if (filters[key] && filters[key] !== 'all') {
+        if (filters[key] && filters[key] !== 'all' && filters[key] !== '') {
           queryParams.append(key, filters[key]);
         }
       });
 
-      const response = await fetch(`/doctor_api/reports/get-chronic-disease-report.php?${queryParams}`, { 
+      const response = await fetch(`/doctor_api/reports/get-appointment-report.php?${queryParams}`, { 
         credentials: 'include' 
       });
 
       if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
+        const text = await response.text();
+        const short = text.length > 1000 ? text.slice(0, 1000) + '...' : text;
+        setError(`Server returned ${response.status}: ${short}`);
+        return;
       }
 
-      const data = await response.json();
-      if (data.success) {
-        setPatients(data.data.patients || []);
-        setStatistics(data.data.statistics || null);
-        setConditionBreakdown(data.data.condition_breakdown || []);
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        if (data.success) {
+          const appts = data.data.appointments || [];
+          setAppointments(appts);
+          setStatistics(data.data.statistics || null);
+          setTopDiagnoses(data.data.top_diagnoses || []);
+          setTopReasons(data.data.top_reasons || []);
+          setAppointmentsByDay(data.data.appointments_by_day || []);
+
+          // Derive offices and nurses from appointments
+          const officeMap = new Map();
+          const nurseMap = new Map();
+          
+          appts.forEach(a => {
+            if (a.office_id) {
+              officeMap.set(a.office_id, { 
+                office_id: a.office_id, 
+                name: a.office_name || 'Unknown Office' 
+              });
+            }
+            
+            if (a.nurse_id) {
+              nurseMap.set(a.nurse_id, { 
+                nurse_id: a.nurse_id, 
+                name: a.nurse_name || 'Unknown Nurse' 
+              });
+            }
+          });
+          
+          setOffices(Array.from(officeMap.values()));
+          setNurses(Array.from(nurseMap.values()));
+        } else {
+          setError(data.error || 'Failed to fetch report');
+        }
       } else {
-        setError(data.error || 'Failed to fetch report');
+        const text = await response.text();
+        const short = text.length > 1000 ? text.slice(0, 1000) + '...' : text;
+        setError('Invalid JSON response from server: ' + short);
       }
     } catch (err) {
       setError('Network error: ' + err.message);
@@ -65,62 +114,46 @@ export default function ChronicDiseaseReport() {
     }
   };
 
+  const countActiveFilters = () => {
+    let count = 0;
+    Object.keys(filters).forEach(key => {
+      if (filters[key] && filters[key] !== 'all' && filters[key] !== '') {
+        if (key !== 'StartDate' && key !== 'EndDate') count++;
+      }
+    });
+    setActiveFiltersCount(count);
+  };
+
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const togglePatientExpand = (patientId) => {
-    setExpandedPatient(expandedPatient === patientId ? null : patientId);
-  };
-
-  const getRiskColor = (risk) => {
-    switch (risk) {
-      case 'CRITICAL': return 'bg-red-100 text-red-800 border-red-300';
-      case 'DUE_SOON': return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'ON_TRACK': return 'bg-green-100 text-green-800 border-green-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
-
-  const getBPStatusColor = (status) => {
-    switch (status) {
-      case 'CONTROLLED': return 'text-green-600';
-      case 'UNCONTROLLED': return 'text-red-600';
-      case 'NO_DATA': return 'text-gray-400';
-      default: return 'text-gray-600';
-    }
-  };
-
-  const getMedStatusColor = (status) => {
-    switch (status) {
-      case 'EXPIRED': return 'bg-red-100 text-red-800 border-red-300';
-      case 'CRITICAL': return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'EXPIRING_SOON': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'ACTIVE': return 'bg-green-100 text-green-800 border-green-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'Never';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const clearFilters = () => {
+    setFilters({
+      StartDate: new Date().toISOString().split('T')[0].slice(0, 8) + '01',
+      EndDate: new Date().toISOString().split('T')[0],
+      OfficeID: 'all',
+      Status: 'all',
+      PatientID: 'all',
+      VisitReason: '',
+      NurseID: 'all'
+    });
   };
 
   const exportToCSV = () => {
-    if (patients.length === 0) return;
+    if (appointments.length === 0) return;
 
-    const headers = ['Patient', 'Age', 'Condition', 'Days Since Visit', 'Risk Status', 'BP Status', 'Active Meds', 'No-Shows', 'Next Appointment'];
-    const rows = patients.map(p => [
-      p.patient_name,
-      p.age,
-      p.condition_name,
-      p.days_since_last_visit || 'N/A',
-      p.followup_risk,
-      p.bp_control_status,
-      p.active_medications,
-      p.no_show_count,
-      p.next_appointment_date ? formatDate(p.next_appointment_date) : 'Not Scheduled'
+    const headers = ['Date', 'Time', 'Patient', 'Age', 'Reason', 'Status', 'Diagnosis', 'Duration (min)', 'Office'];
+    const rows = appointments.map(apt => [
+      apt.appointment_date || 'N/A',
+      apt.appointment_time || 'N/A',
+      apt.patient_name || 'N/A',
+      apt.patient_age || 'N/A',
+      apt.reason || 'N/A',
+      apt.status || 'N/A',
+      apt.diagnosis || 'N/A',
+      apt.visit_duration_minutes || 'N/A',
+      apt.office_name || 'N/A'
     ]);
 
     const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
@@ -128,447 +161,358 @@ export default function ChronicDiseaseReport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `chronic-disease-management-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `doctor-appointment-report-${filters.StartDate}-to-${filters.EndDate}.csv`;
     a.click();
   };
 
-  // Prepare chart data
-  const riskDistributionData = statistics ? [
-    { name: 'Critical', value: statistics.critical_count, color: '#ef4444' },
-    { name: 'Due Soon', value: statistics.due_soon_count, color: '#f59e0b' },
-    { name: 'On Track', value: statistics.on_track_count, color: '#10b981' }
+  const handleRowClick = (appointment) => {
+    // Navigate to clinical workspace with appointment_id
+    if (appointment.appointment_id) {
+      navigate(`/doctor/workspace/${appointment.appointment_id}`);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Completed': return 'bg-green-100 text-green-800 border-green-300';
+      case 'Scheduled': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'Canceled': 
+      case 'Cancelled': return 'bg-red-100 text-red-800 border-red-300';
+      case 'No-Show': return 'bg-orange-100 text-orange-800 border-orange-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  // Prepare data for status pie chart
+  const statusChartData = statistics ? [
+    { name: 'Completed', value: statistics.completed_count, color: '#10b981' },
+    { name: 'Scheduled', value: statistics.scheduled_count, color: '#3b82f6' },
+    { name: 'Canceled', value: statistics.canceled_count, color: '#ef4444' },
+    { name: 'No-Show', value: statistics.noshow_count, color: '#f59e0b' }
   ].filter(item => item.value > 0) : [];
 
-  const conditionChartData = conditionBreakdown.slice(0, 5).map(c => ({
-    condition: c.condition_name.substring(0, 15) + (c.condition_name.length > 15 ? '...' : ''),
-    total: c.total_patients,
-    critical: c.critical
+  // Prepare data for day of week bar chart
+  const dayChartData = appointmentsByDay.map(day => ({
+    day: day.day_name,
+    count: parseInt(day.appointment_count)
   }));
 
-  // Filter patients by selected risk view
-  const filteredPatients = patients.filter(p => {
-    if (selectedRiskView === 'all') return true;
-    return p.followup_risk.toLowerCase() === selectedRiskView.toLowerCase();
-  });
+  // Calculate completion rate
+  const completionRate = statistics && statistics.total_appointments > 0
+    ? ((statistics.completed_count / statistics.total_appointments) * 100).toFixed(1)
+    : 0;
+
+  const noshowRate = statistics && statistics.total_appointments > 0
+    ? ((statistics.noshow_count / statistics.total_appointments) * 100).toFixed(1)
+    : 0;
 
   return (
-    <div className="chronic-disease-dashboard">
-      <div className="dashboard-header">
-        <div>
-          <h1><Activity style={{display: 'inline', marginRight: '0.5rem'}} />Chronic Disease Management</h1>
-          <p className="dashboard-subtitle">Track and manage patients with chronic conditions</p>
+    <div className="reports-page">
+      <div className="report-view">
+        <div className="report-header">
+          <div>
+            <h2><Calendar className="selector-icon" /> Clinical Appointment Report</h2>
+            <p className="report-subtitle">Patient care insights from {filters.StartDate} to {filters.EndDate}</p>
+          </div>
+          <div className="report-header-actions">
+            <button className="btn-export" onClick={exportToCSV} disabled={appointments.length === 0}>
+              <Download /> Export CSV
+            </button>
+          </div>
         </div>
-        <button className="btn-export" onClick={exportToCSV} disabled={patients.length === 0}>
-          <Download size={18} /> Export Report
-        </button>
-      </div>
 
-      {loading ? (
-        <div className="loading-state">Loading patient data...</div>
-      ) : error ? (
-        <div className="error-state">{error}</div>
-      ) : (
-        <>
-          {/* SUMMARY STATISTICS - The Big Picture */}
-          {statistics && (
-            <div className="summary-section">
-              <h2><TrendingUp size={20} /> Overview</h2>
-              <div className="summary-cards">
-                <div className="summary-card total">
-                  <div className="card-icon" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>
-                    <Users size={24} />
-                  </div>
-                  <div className="card-content">
-                    <div className="card-value">{statistics.total_patients}</div>
-                    <div className="card-label">Total Patients</div>
-                    <div className="card-sublabel">with chronic conditions</div>
-                  </div>
+        {/* Statistics Dashboard */}
+        {statistics && (
+          <div className="report-section">
+            <h3><TrendingUp className="selector-icon" /> Performance Overview</h3>
+            <div className="report-stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon-wrapper" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>
+                  <Calendar style={{width: 24, height: 24, color: 'white'}} />
                 </div>
-
-                <div className="summary-card critical" onClick={() => setSelectedRiskView('critical')}>
-                  <div className="card-icon" style={{background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'}}>
-                    <AlertTriangle size={24} />
-                  </div>
-                  <div className="card-content">
-                    <div className="card-value">{statistics.critical_count}</div>
-                    <div className="card-label">CRITICAL</div>
-                    <div className="card-sublabel">Overdue for follow-up (&gt;90 days)</div>
-                  </div>
-                  <div className="card-action">Click to view →</div>
-                </div>
-
-                <div className="summary-card warning" onClick={() => setSelectedRiskView('due_soon')}>
-                  <div className="card-icon" style={{background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'}}>
-                    <Clock size={24} />
-                  </div>
-                  <div className="card-content">
-                    <div className="card-value">{statistics.due_soon_count}</div>
-                    <div className="card-label">DUE SOON</div>
-                    <div className="card-sublabel">Need follow-up (60-90 days)</div>
-                  </div>
-                  <div className="card-action">Click to view →</div>
-                </div>
-
-                <div className="summary-card success" onClick={() => setSelectedRiskView('on_track')}>
-                  <div className="card-icon" style={{background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'}}>
-                    <CheckCircle size={24} />
-                  </div>
-                  <div className="card-content">
-                    <div className="card-value">{statistics.on_track_count}</div>
-                    <div className="card-label">ON TRACK</div>
-                    <div className="card-sublabel">Recent visits (&lt;60 days)</div>
-                  </div>
-                  <div className="card-action">Click to view →</div>
+                <div className="stat-content">
+                  <div className="stat-value">{statistics.total_appointments}</div>
+                  <div className="stat-label">Total Appointments</div>
                 </div>
               </div>
 
-              {/* Secondary Metrics - Why These Numbers Matter */}
-              <div className="secondary-metrics">
-                <div className="metric-item">
-                  <Heart className="metric-icon" />
-                  <div>
-                    <div className="metric-value">{statistics.uncontrolled_bp_count}</div>
-                    <div className="metric-label">Uncontrolled BP</div>
+              <div className="stat-card">
+                <div className="stat-icon-wrapper" style={{background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'}}>
+                  <Users style={{width: 24, height: 24, color: 'white'}} />
+                </div>
+                <div className="stat-content">
+                  <div className="stat-value">{statistics.unique_patients}</div>
+                  <div className="stat-label">Unique Patients</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon-wrapper" style={{background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'}}>
+                  <CheckCircle style={{width: 24, height: 24, color: 'white'}} />
+                </div>
+                <div className="stat-content">
+                  <div className="stat-value">{statistics.completed_count}</div>
+                  <div className="stat-label">Completed Visits</div>
+                  <div className="stat-percentage">{completionRate}% completion rate</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon-wrapper" style={{background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'}}>
+                  <AlertCircle style={{width: 24, height: 24, color: 'white'}} />
+                </div>
+                <div className="stat-content">
+                  <div className="stat-value">{statistics.noshow_count}</div>
+                  <div className="stat-label">No-Shows</div>
+                  <div className="stat-percentage" style={{color: parseFloat(noshowRate) > 10 ? '#ef4444' : '#6b7280'}}>
+                    {noshowRate}% no-show rate
                   </div>
                 </div>
-                <div className="metric-item">
-                  <Pill className="metric-icon" />
-                  <div>
-                    <div className="metric-value">{statistics.meds_expiring_count}</div>
-                    <div className="metric-label">Meds Expiring Soon</div>
+              </div>
+
+              {statistics.avg_visit_duration && (
+                <div className="stat-card">
+                  <div className="stat-icon-wrapper" style={{background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'}}>
+                    <Clock style={{width: 24, height: 24, color: 'white'}} />
+                  </div>
+                  <div className="stat-content">
+                    <div className="stat-value">{statistics.avg_visit_duration} min</div>
+                    <div className="stat-label">Avg Visit Duration</div>
                   </div>
                 </div>
-                <div className="metric-item">
-                  <AlertTriangle className="metric-icon" />
-                  <div>
-                    <div className="metric-value">{statistics.high_risk_no_shows}</div>
-                    <div className="metric-label">High-Risk No-Shows</div>
-                  </div>
+              )}
+
+              <div className="stat-card">
+                <div className="stat-icon-wrapper" style={{background: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'}}>
+                  <Activity style={{width: 24, height: 24, color: 'white'}} />
                 </div>
-                <div className="metric-item">
-                  <Calendar className="metric-icon" />
-                  <div>
-                    <div className="metric-value">{statistics.no_scheduled_followup}</div>
-                    <div className="metric-label">No Follow-up Scheduled</div>
-                  </div>
+                <div className="stat-content">
+                  <div className="stat-value">{statistics.upcoming_appointments}</div>
+                  <div className="stat-label">Upcoming Appointments</div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* VISUAL ANALYTICS */}
-          {statistics && (
-            <div className="analytics-section">
-              <h2>Clinical Insights</h2>
-              <div className="charts-container">
-                {/* Risk Distribution Pie Chart */}
-                {riskDistributionData.length > 0 && (
-                  <div className="chart-card">
-                    <h3>Patient Risk Distribution</h3>
-                    <p className="chart-description">How many patients need attention now vs. later</p>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={riskDistributionData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {riskDistributionData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
+        {/* Charts Section */}
+        {statistics && (
+          <div className="report-section">
+            <h3>Visual Analytics</h3>
+            <div className="charts-grid">
+              {/* Status Distribution Pie Chart */}
+              {statusChartData.length > 0 && (
+                <div className="chart-card">
+                  <h4>Appointment Status Distribution</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={statusChartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {statusChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
 
-                {/* Condition Breakdown Bar Chart */}
-                {conditionChartData.length > 0 && (
-                  <div className="chart-card">
-                    <h3>Top Chronic Conditions</h3>
-                    <p className="chart-description">What conditions I'm managing (with critical counts)</p>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={conditionChartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="condition" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="total" fill="#667eea" name="Total Patients" />
-                        <Bar dataKey="critical" fill="#ef4444" name="Critical" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </div>
-
-              {/* Condition Details Table */}
-              {conditionBreakdown.length > 0 && (
-                <div className="condition-breakdown">
-                  <h3>Condition Breakdown Details</h3>
-                  <table className="breakdown-table">
-                    <thead>
-                      <tr>
-                        <th>Condition</th>
-                        <th>Total Patients</th>
-                        <th>Critical</th>
-                        <th>Due Soon</th>
-                        <th>On Track</th>
-                        <th>Uncontrolled BP</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {conditionBreakdown.map((condition, idx) => (
-                        <tr key={idx}>
-                          <td><strong>{condition.condition_name}</strong></td>
-                          <td>{condition.total_patients}</td>
-                          <td><span className="badge badge-critical">{condition.critical}</span></td>
-                          <td><span className="badge badge-warning">{condition.due_soon}</span></td>
-                          <td><span className="badge badge-success">{condition.on_track}</span></td>
-                          <td><span className="badge badge-danger">{condition.uncontrolled_bp}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {/* Appointments by Day of Week */}
+              {dayChartData.length > 0 && (
+                <div className="chart-card">
+                  <h4>Appointments by Day of Week</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={dayChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="day" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#667eea" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* PATIENT LIST - The Drill-Down Detail */}
-          <div className="patients-section">
-            <div className="section-header">
-              <h2>
-                Patient Details 
-                <span className="patient-count">({filteredPatients.length} patients)</span>
-              </h2>
-              <div className="view-toggles">
-                <button 
-                  className={`toggle-btn ${selectedRiskView === 'critical' ? 'active critical' : ''}`}
-                  onClick={() => setSelectedRiskView('critical')}
-                >
-                  Critical ({statistics?.critical_count || 0})
-                </button>
-                <button 
-                  className={`toggle-btn ${selectedRiskView === 'due_soon' ? 'active warning' : ''}`}
-                  onClick={() => setSelectedRiskView('due_soon')}
-                >
-                  Due Soon ({statistics?.due_soon_count || 0})
-                </button>
-                <button 
-                  className={`toggle-btn ${selectedRiskView === 'on_track' ? 'active success' : ''}`}
-                  onClick={() => setSelectedRiskView('on_track')}
-                >
-                  On Track ({statistics?.on_track_count || 0})
-                </button>
-                <button 
-                  className={`toggle-btn ${selectedRiskView === 'all' ? 'active' : ''}`}
-                  onClick={() => setSelectedRiskView('all')}
-                >
-                  All ({statistics?.total_patients || 0})
-                </button>
+        {/* Top Diagnoses and Reasons */}
+        {(topDiagnoses.length > 0 || topReasons.length > 0) && (
+          <div className="report-section">
+            <h3>Clinical Insights</h3>
+            <div className="insights-grid">
+              {topDiagnoses.length > 0 && (
+                <div className="insight-card">
+                  <h4>Top Diagnoses</h4>
+                  <div className="insight-list">
+                    {topDiagnoses.slice(0, 5).map((diag, idx) => (
+                      <div key={idx} className="insight-item">
+                        <span className="insight-rank">{idx + 1}</span>
+                        <span className="insight-text">{diag.diagnosis}</span>
+                        <span className="insight-count">{diag.diagnosis_count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {topReasons.length > 0 && (
+                <div className="insight-card">
+                  <h4>Top Visit Reasons</h4>
+                  <div className="insight-list">
+                    {topReasons.slice(0, 5).map((reason, idx) => (
+                      <div key={idx} className="insight-item">
+                        <span className="insight-rank">{idx + 1}</span>
+                        <span className="insight-text">{reason.reason}</span>
+                        <span className="insight-count">{reason.reason_count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Filters Section */}
+        <div className="report-section">
+          <div className="report-header" style={{justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer'}} onClick={() => setShowFilters(!showFilters)}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+              <Filter />
+              <h3>Filters {activeFiltersCount > 0 && <span className="risk-badge">{activeFiltersCount} active</span>}</h3>
+            </div>
+            <div>
+              {activeFiltersCount > 0 && (
+                <button onClick={(e) => { e.stopPropagation(); clearFilters(); }} className="btn-back-reports">Clear All</button>
+              )}
+              <ChevronDown className={`${showFilters ? 'rotated' : ''}`} />
+            </div>
+          </div>
+
+          {showFilters && (
+            <div className="report-selector-grid">
+              <div>
+                <label>Start Date</label>
+                <input type="date" value={filters.StartDate} onChange={(e) => handleFilterChange('StartDate', e.target.value)} className="date-range-select" />
+              </div>
+              <div>
+                <label>End Date</label>
+                <input type="date" value={filters.EndDate} onChange={(e) => handleFilterChange('EndDate', e.target.value)} className="date-range-select" />
+              </div>
+
+              <div>
+                <label>Status</label>
+                <select value={filters.Status} onChange={(e) => handleFilterChange('Status', e.target.value)} className="date-range-select">
+                  <option value="all">All Statuses</option>
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Canceled">Canceled</option>
+                  <option value="No-Show">No-Show</option>
+                </select>
+              </div>
+
+              <div>
+                <label>Office</label>
+                <select value={filters.OfficeID} onChange={(e) => handleFilterChange('OfficeID', e.target.value)} className="date-range-select">
+                  <option value="all">All Offices</option>
+                  {offices.map(office => (
+                    <option key={office.office_id} value={office.office_id}>
+                      {office.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label>Nurse</label>
+                <select value={filters.NurseID} onChange={(e) => handleFilterChange('NurseID', e.target.value)} className="date-range-select">
+                  <option value="all">All Nurses</option>
+                  {nurses.map(nurse => (
+                    <option key={nurse.nurse_id} value={nurse.nurse_id}>
+                      {nurse.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label>Visit Reason</label>
+                <input 
+                  type="text" 
+                  value={filters.VisitReason} 
+                  onChange={(e) => handleFilterChange('VisitReason', e.target.value)} 
+                  placeholder="e.g. Annual Checkup" 
+                  className="date-range-select" 
+                />
               </div>
             </div>
+          )}
+        </div>
 
-            {filteredPatients.length === 0 ? (
-              <div className="empty-state">
-                <CheckCircle size={48} style={{color: '#10b981'}} />
-                <p>No patients in this category</p>
+        {/* Appointment Table */}
+        <div className="report-section">
+          <h3>Appointment Details ({appointments.length})</h3>
+          <p style={{fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem'}}>
+            Click on any row to view full clinical details
+          </p>
+
+          {loading ? (
+            <div style={{padding: '3rem', textAlign: 'center'}}>Loading report...</div>
+          ) : error ? (
+            <div style={{padding: '3rem', textAlign: 'center', color: 'red'}}>{error}</div>
+          ) : appointments.length === 0 ? (
+            <div style={{padding: '3rem', textAlign: 'center', color: '#6b7280'}}>
+              <Search style={{width: 64, height: 64, margin: '0 auto'}} />
+              <p>No appointments found matching your filters</p>
+            </div>
+          ) : (
+            <div className="risk-table">
+              <div className="table-header">
+                <div>Date</div>
+                <div>Time</div>
+                <div>Patient</div>
+                <div>Age</div>
+                <div>Reason</div>
+                <div>Status</div>
+                <div>Diagnosis</div>
+                <div>Office</div>
               </div>
-            ) : (
-              <div className="patient-list">
-                {filteredPatients.map((patient) => (
-                  <div key={patient.patient_id} className={`patient-card ${expandedPatient === patient.patient_id ? 'expanded' : ''}`}>
-                    {/* Patient Header - Always Visible */}
-                    <div className="patient-header" onClick={() => togglePatientExpand(patient.patient_id)}>
-                      <div className="patient-main-info">
-                        <div className="patient-name-row">
-                          <h3>{patient.patient_name}</h3>
-                          <span className={`risk-badge ${getRiskColor(patient.followup_risk)}`}>
-                            {patient.followup_risk.replace('_', ' ')}
-                          </span>
-                        </div>
-                        <div className="patient-meta">
-                          <span>{patient.age} years old</span>
-                          <span>•</span>
-                          <span>{patient.gender}</span>
-                          <span>•</span>
-                          <span><strong>{patient.condition_name}</strong></span>
-                        </div>
-                      </div>
-
-                      <div className="patient-quick-stats">
-                        <div className="quick-stat">
-                          <Clock size={16} />
-                          <span>{patient.days_since_last_visit} days since visit</span>
-                        </div>
-                        <div className="quick-stat">
-                          <Pill size={16} />
-                          <span>{patient.active_medications} active meds</span>
-                        </div>
-                        {patient.no_show_count > 0 && (
-                          <div className="quick-stat warning">
-                            <AlertTriangle size={16} />
-                            <span>{patient.no_show_count} no-shows</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="expand-icon">
-                        {expandedPatient === patient.patient_id ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-                      </div>
-                    </div>
-
-                    {/* Expanded Details - Show on Click */}
-                    {expandedPatient === patient.patient_id && (
-                      <div className="patient-details">
-                        <div className="details-grid">
-                          {/* Left Column: Clinical Status */}
-                          <div className="details-section">
-                            <h4><Heart size={18} /> Clinical Status</h4>
-                            <div className="detail-item">
-                              <span className="detail-label">Last Visit:</span>
-                              <span className="detail-value">{formatDate(patient.last_visit_date)}</span>
-                            </div>
-                            <div className="detail-item">
-                              <span className="detail-label">Last Seen By:</span>
-                              <span className="detail-value">{patient.last_seen_by || 'N/A'}</span>
-                            </div>
-                            <div className="detail-item">
-                              <span className="detail-label">Blood Pressure:</span>
-                              <span className={`detail-value ${getBPStatusColor(patient.bp_control_status)}`}>
-                                {patient.last_bp || 'No data'} 
-                                {patient.bp_control_status !== 'NO_DATA' && ` (${patient.bp_control_status})`}
-                              </span>
-                            </div>
-                            <div className="detail-item">
-                              <span className="detail-label">Temperature:</span>
-                              <span className="detail-value">{patient.last_temp || 'N/A'}</span>
-                            </div>
-                            <div className="detail-item">
-                              <span className="detail-label">Last Diagnosis:</span>
-                              <span className="detail-value">{patient.last_diagnosis || 'N/A'}</span>
-                            </div>
-                          </div>
-
-                          {/* Right Column: Follow-up Info */}
-                          <div className="details-section">
-                            <h4><Calendar size={18} /> Follow-up Status</h4>
-                            <div className="detail-item">
-                              <span className="detail-label">Diagnosed:</span>
-                              <span className="detail-value">{formatDate(patient.diagnosis_date)}</span>
-                            </div>
-                            <div className="detail-item">
-                              <span className="detail-label">Next Appointment:</span>
-                              <span className="detail-value">
-                                {patient.next_appointment_date ? (
-                                  <>
-                                    {formatDate(patient.next_appointment_date)}
-                                    <br />
-                                    <small>{patient.next_appointment_reason}</small>
-                                  </>
-                                ) : (
-                                  <span style={{color: '#ef4444', fontWeight: 'bold'}}>⚠️ Not Scheduled</span>
-                                )}
-                              </span>
-                            </div>
-                            <div className="detail-item">
-                              <span className="detail-label">Completed Visits:</span>
-                              <span className="detail-value">{patient.total_completed_visits}</span>
-                            </div>
-                            <div className="detail-item">
-                              <span className="detail-label">Contact:</span>
-                              <span className="detail-value">
-                                {patient.phone || 'No phone on file'}
-                                {patient.phone && (
-                                  <button className="btn-call" onClick={() => window.location.href = `tel:${patient.phone}`}>
-                                    <Phone size={14} /> Call
-                                  </button>
-                                )}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Medications Section */}
-                        {patient.medications && patient.medications.length > 0 && (
-                          <div className="medications-section">
-                            <h4><Pill size={18} /> Active Medications ({patient.medications.length})</h4>
-                            <div className="medications-list">
-                              {patient.medications.map((med, idx) => (
-                                <div key={idx} className="medication-item">
-                                  <div className="med-main">
-                                    <strong>{med.medication_name}</strong>
-                                    <span className={`med-status-badge ${getMedStatusColor(med.prescription_status)}`}>
-                                      {med.prescription_status.replace('_', ' ')}
-                                    </span>
-                                  </div>
-                                  <div className="med-details">
-                                    <span>{med.dosage} - {med.frequency}</span>
-                                    {med.days_until_expiration !== null && (
-                                      <span className="med-expiry">
-                                        {med.days_until_expiration > 0 
-                                          ? `Expires in ${med.days_until_expiration} days`
-                                          : `Expired ${Math.abs(med.days_until_expiration)} days ago`
-                                        }
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Recent Visit History */}
-                        {patient.recent_visits && patient.recent_visits.length > 0 && (
-                          <div className="visit-history-section">
-                            <h4><FileText size={18} /> Recent Visit History</h4>
-                            <div className="visit-timeline">
-                              {patient.recent_visits.map((visit, idx) => (
-                                <div key={idx} className="visit-item">
-                                  <div className="visit-date">{formatDate(visit.visit_date)}</div>
-                                  <div className="visit-content">
-                                    <div><strong>BP:</strong> {visit.blood_pressure || 'N/A'}</div>
-                                    <div><strong>Diagnosis:</strong> {visit.diagnosis || 'N/A'}</div>
-                                    <div><strong>Provider:</strong> {visit.doctor_name}</div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Action Buttons */}
-                        <div className="patient-actions">
-                          <button className="btn-action primary">
-                            <Calendar size={16} /> Schedule Follow-up
-                          </button>
-                          <button className="btn-action secondary">
-                            <FileText size={16} /> View Full Chart
-                          </button>
-                          {patient.phone && (
-                            <button className="btn-action secondary" onClick={() => window.location.href = `tel:${patient.phone}`}>
-                              <Phone size={16} /> Call Patient
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
+              {appointments.map((apt) => (
+                <div 
+                  key={apt.appointment_id} 
+                  className="table-row clickable-row"
+                  onClick={() => handleRowClick(apt)}
+                  style={{cursor: 'pointer'}}
+                  title="Click to view clinical details"
+                >
+                  <div>{apt.appointment_date || 'N/A'}</div>
+                  <div>{apt.appointment_time || 'N/A'}</div>
+                  <div style={{fontWeight: 700}}>{apt.patient_name || 'N/A'}</div>
+                  <div>{apt.patient_age || 'N/A'}</div>
+                  <div>{apt.reason || 'N/A'}</div>
+                  <div>
+                    <span className={`risk-badge ${getStatusColor(apt.status)}`}>
+                      {apt.status || 'N/A'}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </>
-      )}
+                  <div>{apt.diagnosis || 'N/A'}</div>
+                  <div>{apt.office_name || 'N/A'}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
