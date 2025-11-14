@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users, Clock, FileText, Search, Filter, ClipboardList } from 'lucide-react';
+import { Calendar, Users, Clock, FileText, Search, Filter } from 'lucide-react';
 import './NurseDashboard.css';
 import { getNurseDashboardStats, getNurseScheduleToday, getNurseProfile } from '../../api/nurse';
 
-export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
+export default function NurseDashboard({ setCurrentPage }) {
   const [appointments, setAppointments] = useState([]);
   const [stats, setStats] = useState({ total: 0, waiting: 0, upcoming: 0, completed: 0 });
   const [loading, setLoading] = useState(true);
@@ -11,7 +11,6 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [nurseName, setNurseName] = useState('');
-  const [tasks, setTasks] = useState({ pendingNotes: 0, referrals: 0 });
 
   useEffect(() => {
     let mounted = true;
@@ -20,25 +19,23 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
       setError(null);
       try {
         const today = new Date().toISOString().slice(0, 10);
-        // Unified, robust API calls
         const [s, appts, profile] = await Promise.all([
           getNurseDashboardStats(today),
-          // use the specialized today endpoint for a quick preview
           getNurseScheduleToday(),
           getNurseProfile()
         ]);
-        if (mounted && s) setStats({
-          total: s.total,
-          waiting: s.waiting,
-          upcoming: s.upcoming,
-          completed: s.completed
-        });
-  if (mounted) setAppointments(Array.isArray(appts) ? appts : []);
+        
+        if (mounted && s) {
+          setStats({
+            total: s.total,
+            waiting: s.waiting,
+            upcoming: s.upcoming,
+            completed: s.completed
+          });
+        }
+        
+        if (mounted) setAppointments(Array.isArray(appts) ? appts : []);
         if (mounted && profile && profile.lastName) setNurseName(profile.lastName);
-        if (mounted) setTasks({
-          pendingNotes: (appts || []).filter(a => a.status && a.status.toLowerCase() === 'in progress').length,
-          referrals: 1 // Placeholder, replace with real API if available
-        });
       } catch (err) {
         if (mounted) setError(err?.message || 'Failed to load');
       } finally {
@@ -75,8 +72,9 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
   };
 
   const handleAppointmentRowClick = (appointment) => {
-    if (onAppointmentClick) onAppointmentClick(appointment);
-    if (setCurrentPage) setCurrentPage('clinical');
+    // Click appointment → Go to schedule page
+    // The schedule page will handle opening the vitals form
+    if (setCurrentPage) setCurrentPage('schedule');
   };
 
   const getCurrentDate = () => {
@@ -92,7 +90,7 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
       {/* ===== WELCOME HEADER ===== */}
       <div className="dashboard-header">
         <div className="welcome-section">
-          <h1>Welcome, Nurse{nurseName ? `. ${nurseName}` : ''}</h1>
+          <h1>Welcome, Nurse{nurseName ? ` ${nurseName}` : ''}</h1>
           <p className="office-info">
             <Calendar size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
             {getCurrentDate()} • <span>Main Clinic, Suite 305</span>
@@ -143,32 +141,25 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
       {/* ===== QUICK ACTIONS ===== */}
       <div className="quick-actions">
         <button
-          className="action-btn"
-          onClick={() => setCurrentPage && setCurrentPage('patients')}
-        >
-          <Users size={18} />
-          View All Patients
-        </button>
-        <button
-          className="action-btn"
+          className="action-btn action-primary"
           onClick={() => setCurrentPage && setCurrentPage('schedule')}
         >
           <Calendar size={18} />
-          My Schedule
+          View My Schedule
         </button>
         <button
-          className="action-btn"
-          onClick={() => setCurrentPage && setCurrentPage('clinical')}
+          className="action-btn action-secondary"
+          onClick={() => setCurrentPage && setCurrentPage('profile')}
         >
-          <ClipboardList size={18} />
-          Clinical Workspace
+          <Users size={18} />
+          My Profile
         </button>
       </div>
 
       {/* ===== TODAY'S SCHEDULE ===== */}
       <div className="schedule-section">
         <div className="section-header">
-          <h2>Today's Schedule</h2>
+          <h2>Today's Schedule Preview</h2>
           <div className="section-controls">
             {/* Search Box */}
             <div className="search-box">
@@ -209,7 +200,6 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
             <div className="col-patient">PATIENT'S NAME</div>
             <div className="col-reason">REASON FOR VISIT</div>
             <div className="col-status">STATUS</div>
-            <div className="col-actions">ACTIONS</div>
           </div>
 
           <div className="table-body">
@@ -247,10 +237,9 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
                     </div>
                     <div className="col-reason">{appointment.reason}</div>
                     <div className="col-status">
-                      <span className={`status-badge ${getStatusClass(appointment.status)}`}>{appointment.status}</span>
-                    </div>
-                    <div className="col-actions">
-                      {/* Actions can be added here if needed for nurse */}
+                      <span className={`status-badge ${getStatusClass(appointment.status)}`}>
+                        {appointment.status}
+                      </span>
                     </div>
                   </div>
                 ))
@@ -262,6 +251,16 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
               )
             )}
           </div>
+        </div>
+
+        {/* View Full Schedule Link */}
+        <div className="section-footer">
+          <button 
+            className="link-button"
+            onClick={() => setCurrentPage && setCurrentPage('schedule')}
+          >
+            View Full Schedule →
+          </button>
         </div>
       </div>
     </div>
