@@ -138,3 +138,5 @@ const isDoctorWorking = (doctor) => {
   return doctor.workDays && doctor.workDays.includes(dayOfWeek);
 };
 
+export default OfficeSchedule;
+
