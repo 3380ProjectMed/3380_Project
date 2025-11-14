@@ -1,14 +1,15 @@
 <?php
+header('Content-Type: application/json');
 /**
  * Create or return an existing patient_visit for a given appointment
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/session.php';
 
-header('Content-Type: application/json');
 
 try {
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -103,11 +104,8 @@ try {
         'status' => 'Scheduled',
         'existingVitals' => $existingVitals
     ]);
-
 } catch (Throwable $e) {
     if (isset($conn)) closeDBConnection($conn);
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-
-?>

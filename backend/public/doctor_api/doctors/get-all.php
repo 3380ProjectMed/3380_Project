@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Get all doctors (for admin or dropdowns)
  * FIXED: Excludes the logged-in doctor from the list
@@ -6,19 +7,19 @@
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
-    session_start();
-    
+    //session_start();
+
     // Optional: Require authentication
     if (!isset($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     $conn = getDBConnection();
-    
+
     // Get the current logged-in doctor's ID to exclude them from the list
     $current_doctor_id = null;
     $user_id = isset($_SESSION['uid']) ? intval($_SESSION['uid']) : null;
@@ -33,7 +34,7 @@ try {
             $current_doctor_id = (int)$currentDoctorRows[0]['doctor_id'];
         }
     }
-    
+
     // Get all doctors with their specialty
     // FIXED: Use correct column names from correct tables
     $sql = "SELECT 
@@ -50,19 +51,19 @@ try {
             LEFT JOIN specialty s ON d.specialty = s.specialty_id
             LEFT JOIN codes_gender cg ON st.gender = cg.gender_code
             ORDER BY st.last_name, st.first_name";
-    
+
     $doctors = executeQuery($conn, $sql, '', []);
-    
+
     // Format response - exclude the current logged-in doctor
     $formatted_doctors = [];
     foreach ($doctors as $doc) {
         $doc_id = (int)$doc['doctor_id'];
-        
+
         // Skip the current logged-in doctor
         if ($current_doctor_id && $doc_id === $current_doctor_id) {
             continue;
         }
-        
+
         $formatted_doctors[] = [
             'doctor_id' => $doc_id,
             'id' => $doc_id, // Add 'id' field for frontend compatibility
@@ -78,15 +79,14 @@ try {
             'gender' => $doc['gender']
         ];
     }
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'doctors' => $formatted_doctors,
         'count' => count($formatted_doctors)
     ]);
-    
 } catch (Exception $e) {
     error_log("Error in doctors/get-all.php: " . $e->getMessage());
     http_response_code(500);
@@ -95,4 +95,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Get specialist doctors (excludes primary care specialties)
  * Excludes: specialty_id IN (1,2,3,4,7) which are primary care specialties
@@ -6,19 +7,19 @@
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
-    session_start();
-    
+    //session_start();
+
     // Require authentication
     if (!isset($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     $conn = getDBConnection();
-    
+
     // Get current doctor's ID to optionally exclude them
     $current_doctor_id = null;
     $user_id = intval($_SESSION['uid']);
@@ -31,7 +32,7 @@ try {
     if (is_array($currentDoctorRows) && count($currentDoctorRows) > 0) {
         $current_doctor_id = (int)$currentDoctorRows[0]['doctor_id'];
     }
-    
+
     // Get specialist doctors (exclude primary care specialties 1,2,3,4,7)
     $sql = "SELECT 
                 d.doctor_id,
@@ -44,19 +45,19 @@ try {
             LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
             WHERE d.specialty NOT IN (1, 2, 3, 4, 7)
             ORDER BY sp.specialty_name, s.last_name, s.first_name";
-    
+
     $specialists = executeQuery($conn, $sql, '', []);
-    
+
     // Format response
     $formatted_specialists = [];
     foreach ($specialists as $doc) {
         $doc_id = (int)$doc['doctor_id'];
-        
+
         // Note: Not excluding current doctor - they may need to refer to themselves or colleagues
         // if ($current_doctor_id && $doc_id === $current_doctor_id) {
         //     continue;
         // }
-        
+
         $formatted_specialists[] = [
             'id' => $doc_id,
             'doctor_id' => $doc_id,
@@ -68,15 +69,14 @@ try {
             'specialty_id' => $doc['specialty_id']
         ];
     }
-    
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
         'success' => true,
         'specialists' => $formatted_specialists,
         'count' => count($formatted_specialists)
     ]);
-    
 } catch (Exception $e) {
     error_log("Error in get-specialists.php: " . $e->getMessage());
     http_response_code(500);
@@ -85,4 +85,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>

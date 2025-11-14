@@ -1,14 +1,15 @@
 <?php
+
 /**
  * Get doctor availability for a specific date
  * Uses session-based authentication like doctor API
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
     // Start session and require that the user is logged in
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -130,9 +131,9 @@ try {
         'slots' => $slots,
         'total_slots' => count($slots),
         'available_slots' => count(array_filter($slots, function ($s) {
-            return $s['available']; }))
+            return $s['available'];
+        }))
     ]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -140,4 +141,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>

@@ -1,4 +1,5 @@
 <?php
+header('Content-Type: application/json');
 /**
  * Search for visits with payment filter option
  * filter=unpaid (default) - only show visits needing payment
@@ -6,11 +7,11 @@
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/session.php';
 
-header('Content-Type: application/json');
 
 try {
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -35,14 +36,14 @@ try {
         JOIN work_schedule ws ON ws.staff_id = s.staff_id
         WHERE ua.user_id = ?
         LIMIT 1', 'i', [(int)$_SESSION['uid']]);
-    
+
     if (empty($staffRows)) {
         closeDBConnection($conn);
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'No receptionist account found']);
         exit;
     }
-    
+
     $office_id = (int)$staffRows[0]['office_id'];
 
     // Build query based on filter
@@ -63,13 +64,13 @@ try {
             INNER JOIN patient p ON pv.patient_id = p.patient_id
             WHERE pv.office_id = ?
             AND pv.status IN ('Checked In', 'Scheduled', 'Completed')";
-    
+
     // Add payment filter
     if ($filter === 'unpaid') {
         $sql .= " AND (pv.payment IS NULL OR pv.payment = 0)";
     }
     // If filter is 'all', don't add payment condition
-    
+
     $sql .= " AND (
                 CONCAT(p.first_name, ' ', p.last_name) LIKE ?
                 OR pv.appointment_id = ?
@@ -87,7 +88,7 @@ try {
         foreach ($visits as $v) {
             $payment = (float)($v['payment'] ?? 0);
             $isPaid = $payment > 0;
-            
+
             $results[] = [
                 'visit_id' => (int)$v['visit_id'],
                 'patient_id' => (int)$v['patient_id'],
@@ -115,12 +116,10 @@ try {
         'count' => count($results),
         'filter' => $filter
     ]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
-        'success' => false, 
+        'success' => false,
         'error' => $e->getMessage()
     ]);
 }
-?>

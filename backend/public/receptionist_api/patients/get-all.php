@@ -2,26 +2,26 @@
 // receptionist_api/patients/get-all.php
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
     // Start session and require that the user is logged in
-    session_start();
+    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
+
     $user_id = (int)$_SESSION['uid'];
     $conn = getDBConnection();
-    
+
     // Verify receptionist
     $verifyStaffSql = "SELECT s.staff_id 
                        FROM staff s 
                        JOIN user_account ua ON ua.email = s.staff_email 
                        WHERE ua.user_id = ? AND s.staff_role = 'Receptionist'";
     $staffResult = executeQuery($conn, $verifyStaffSql, 'i', [$user_id]);
-    
+
     if (empty($staffResult)) {
         closeDBConnection($conn);
         http_response_code(403);
@@ -66,12 +66,12 @@ try {
     }
 
     // Map to friendly shape used by frontend
-    $patients = array_map(function($r) {
+    $patients = array_map(function ($r) {
         $pcpName = null;
         if (!empty($r['pcp_first_name']) && !empty($r['pcp_last_name'])) {
             $pcpName = 'Dr. ' . $r['pcp_first_name'] . ' ' . $r['pcp_last_name'];
         }
-        
+
         return [
             'Patient_ID' => (int)($r['patient_id'] ?? 0),
             'First_Name' => $r['first_name'] ?? '',
@@ -92,7 +92,6 @@ try {
 
     echo json_encode(['success' => true, 'patients' => $patients, 'count' => count($patients)]);
     exit;
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);

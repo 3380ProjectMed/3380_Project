@@ -1,15 +1,25 @@
 <?php
+header('Content-Type: application/json');
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-header('Content-Type: application/json');
+require_once '/home/site/wwwroot/session.php';
 
-session_start();
-if (empty($_SESSION['uid'])) { http_response_code(401); echo json_encode(['error' => 'UNAUTHENTICATED']); exit; }
+//session_start();
+if (empty($_SESSION['uid'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'UNAUTHENTICATED']);
+    exit;
+}
 
 $conn = getDBConnection();
 $email = $_SESSION['email'] ?? '';
 $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
-if (empty($rows)) { closeDBConnection($conn); http_response_code(404); echo json_encode(['error' => 'NURSE_NOT_FOUND']); exit; }
+if (empty($rows)) {
+    closeDBConnection($conn);
+    http_response_code(404);
+    echo json_encode(['error' => 'NURSE_NOT_FOUND']);
+    exit;
+}
 $nurse_id = (int)$rows[0]['nurse_id'];
 
 try {
@@ -18,11 +28,21 @@ try {
     $conds = ['pv.nurse_id = ?'];
     $types = 'i';
     $params = [$nurse_id];
-    if ($from) { $conds[] = 'DATE(a.Appointment_date) >= ?'; $types .= 's'; $params[] = $from; }
-    if ($to) { $conds[] = 'DATE(a.Appointment_date) <= ?'; $types .= 's'; $params[] = $to; }
+    if ($from) {
+        $conds[] = 'DATE(a.Appointment_date) >= ?';
+        $types .= 's';
+        $params[] = $from;
+    }
+    if ($to) {
+        $conds[] = 'DATE(a.Appointment_date) <= ?';
+        $types .= 's';
+        $params[] = $to;
+    }
 
     $where = '';
-    if (!empty($conds)) { $where = ' AND ' . implode(' AND ', $conds); }
+    if (!empty($conds)) {
+        $where = ' AND ' . implode(' AND ', $conds);
+    }
 
     $sqlHandled = "SELECT COUNT(*) AS cnt FROM appointment a JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id WHERE 1=1 {$where}";
     $rowsH = executeQuery($conn, $sqlHandled, $types, $params);

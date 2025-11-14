@@ -1,20 +1,35 @@
 <?php
+header('Content-Type: application/json');
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-header('Content-Type: application/json');
+require_once '/home/site/wwwroot/session.php';
 
-session_start();
-if (empty($_SESSION['uid'])) { http_response_code(401); echo json_encode(['error' => 'UNAUTHENTICATED']); exit; }
+//session_start();
+if (empty($_SESSION['uid'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'UNAUTHENTICATED']);
+    exit;
+}
 
 $conn = getDBConnection();
 $email = $_SESSION['email'] ?? '';
 $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n JOIN staff s ON n.staff_id = s.staff_id WHERE s.staff_email = ? LIMIT 1", 's', [$email]);
-if (empty($rows)) { closeDBConnection($conn); http_response_code(404); echo json_encode(['error' => 'NURSE_NOT_FOUND']); exit; }
+if (empty($rows)) {
+    closeDBConnection($conn);
+    http_response_code(404);
+    echo json_encode(['error' => 'NURSE_NOT_FOUND']);
+    exit;
+}
 $nurse_id = (int)$rows[0]['nurse_id'];
 
 try {
     $apptId = isset($_GET['apptId']) ? intval($_GET['apptId']) : 0;
-    if (!$apptId) { closeDBConnection($conn); http_response_code(400); echo json_encode(['error' => 'Missing apptId']); exit; }
+    if (!$apptId) {
+        closeDBConnection($conn);
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing apptId']);
+        exit;
+    }
 
     // Ensure appointment belongs to this nurse via patient_visit
     $sql = "SELECT a.Appointment_id AS id, a.Appointment_date AS time, a.Status AS status, a.Reason_for_visit AS reason,
@@ -26,7 +41,12 @@ try {
            WHERE a.Appointment_id = ? AND pv.nurse_id = ? LIMIT 1";
 
     $rows = executeQuery($conn, $sql, 'ii', [$apptId, $nurse_id]);
-    if (empty($rows)) { closeDBConnection($conn); http_response_code(404); echo json_encode(['error' => 'Appointment not found']); exit; }
+    if (empty($rows)) {
+        closeDBConnection($conn);
+        http_response_code(404);
+        echo json_encode(['error' => 'Appointment not found']);
+        exit;
+    }
     $apt = $rows[0];
 
     // vitals
