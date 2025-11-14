@@ -135,7 +135,7 @@ try {
             }
 
             if ($work_location !== 'all') {
-                $receptionist_query .= " AND so.office_id = " . intval($work_location);
+                $receptionist_query .= " AND o.office_id = " . intval($work_location);
             }
 
             $queries[] = $receptionist_query;
