@@ -3,27 +3,16 @@ import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } fro
 import './NurseSchedule.css';
 
 /**
- * NurseSchedule Component - Real Clinical Workflow
+ * NurseSchedule Component - Daily Work Queue
  * 
- * How it works in real clinics:
- * 1. Nurse sees their work schedule (8AM-5PM at specific office)
- * 2. Receptionist checks patients in and assigns them to nurse
- * 3. Nurse sees queue of checked-in patients
- * 4. Nurse takes vitals for waiting patients
- * 5. Patients move to "Ready for Doctor" after vitals recorded
- * 
- * Key difference from doctor schedule:
- * - Nurses don't have individual appointment slots
- * - They work through a queue of assigned patients
- * - Assignment happens at check-in by receptionist
+ * Matches the pattern from doctor Schedule.jsx but adapted for nurse workflow
  */
-
 function NurseSchedule({ onPatientClick }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedView, setSelectedView] = useState('all'); // 'all', 'needs_vitals', 'ready'
+  const [selectedView, setSelectedView] = useState('all');
 
   useEffect(() => {
     fetchDailySchedule();
@@ -35,19 +24,19 @@ function NurseSchedule({ onPatientClick }) {
       setError(null);
       
       const dateStr = currentDate.toISOString().split('T')[0];
+      
+      // Match the API pattern from doctor files
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+      
       const response = await fetch(
-        `/backend/public/nurse_api/schedule/get-nurse-daily-schedule.php?date=${dateStr}`,
-        {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
+        `${API_BASE}/nurse_api/schedule/get-nurse-daily-schedule.php?date=${dateStr}`,
+        { credentials: 'include' }
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch schedule');
+        throw new Error(`HTTP ${response.status}: Failed to fetch schedule`);
       }
 
       const data = await response.json();

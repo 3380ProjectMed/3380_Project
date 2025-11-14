@@ -1,26 +1,22 @@
 <?php
 
 /**
- * get-nurse-daily-schedule.php
- * Get nurse's assigned appointments for a specific date
- * 
- * Real clinic workflow:
- * - Receptionist checks patient in and assigns nurse to patient_visit
- * - Nurse sees all appointments where they're assigned
- * - Appointments show in chronological order with patient info
+ * Get nurse's daily schedule with assigned patients
+ * Path: /backend/public/nurse_api/schedule/get-nurse-daily-schedule.php
  */
-header('Content-Type: application/json');
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
-if (empty($_SESSION['uid'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'UNAUTHENTICATED']);
-    exit;
-}
-
 try {
+    // Verify authentication
+    if (empty($_SESSION['uid'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit;
+    }
+
     $conn = getDBConnection();
     //$email = $_SESSION['email'] ?? '';
 
@@ -74,7 +70,7 @@ try {
             'date' => $date,
             'day_of_week' => $dayOfWeek,
             'working' => false,
-            'nurse_name' => $nurse_name,
+            'nurse_name' => $nurse_name ?? 'Nurse',
             'appointments' => []
         ]);
         exit;
@@ -83,7 +79,6 @@ try {
     $workSchedule = $scheduleRows[0];
 
     // Get all appointments assigned to this nurse for this date
-    // Only show appointments that have been checked in (patient_visit exists)
     $sql = "SELECT 
                 a.Appointment_id as appointment_id,
                 a.Appointment_date as appointment_datetime,
@@ -132,7 +127,7 @@ try {
             'age' => $apt['age'],
             'gender' => $apt['gender'],
             'dob' => $apt['dob'],
-            'appointment_time' => substr($apt['appointment_time'], 0, 5), // HH:MM
+            'appointment_time' => substr($apt['appointment_time'], 0, 5),
             'appointment_datetime' => $apt['appointment_datetime'],
             'reason' => $apt['reason'],
             'doctor_id' => $apt['doctor_id'],
@@ -142,13 +137,11 @@ try {
             'office_id' => $apt['office_id'],
             'status' => $apt['status'],
             'visit_status' => $apt['visit_status'],
-            // Vitals info
             'blood_pressure' => $apt['blood_pressure'],
             'temperature' => $apt['temperature'],
             'present_illnesses' => $apt['present_illnesses'],
             'vitals_recorded' => $hasVitals,
             'start_time' => $apt['start_at'],
-            // UI helper
             'needs_vitals' => !$hasVitals,
             'ready_for_doctor' => $hasVitals
         ];
@@ -165,7 +158,7 @@ try {
         'date' => $date,
         'day_of_week' => $dayOfWeek,
         'working' => true,
-        'nurse_name' => $nurse_name,
+        'nurse_name' => $nurse_name ?? 'Nurse',
         'work_schedule' => [
             'start_time' => substr($workSchedule['start_time'], 0, 5),
             'end_time' => substr($workSchedule['end_time'], 0, 5),
