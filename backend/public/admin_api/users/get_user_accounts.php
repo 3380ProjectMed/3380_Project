@@ -37,7 +37,7 @@ try {
                     s.ssn,
                     sp.specialty_name as specialization_dept,
                     o.name as work_location,
-                    s.work_location as work_location_id,
+                    o.office_id as work_location_id,
                     COALESCE(ua.created_at, NULL) as created_at,
                     COALESCE(ua.is_active, 0) as is_active,
                     CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
@@ -45,7 +45,8 @@ try {
                 INNER JOIN staff s ON d.staff_id = s.staff_id
                 LEFT JOIN user_account ua ON s.staff_email = ua.email AND ua.role = 'DOCTOR'
                 LEFT JOIN specialty sp ON d.specialty = sp.specialty_id
-                LEFT JOIN office o ON s.work_location = o.office_id
+                LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
+                LEFT JOIN office o ON ws.office_id = o.office_id
                 WHERE s.staff_role = 'Doctor'";
 
             if ($active_status !== 'all') {
