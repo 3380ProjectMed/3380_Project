@@ -1,7 +1,7 @@
 // src/components/nurse/NurseSchedule.jsx - WITH PROFESSIONAL OVERLAY
 import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import NurseClinicalWorkspace from './NurseClinicalWorkspace';
+import NurseClinicalWorkspace from './NurseClinicalWorkSpace';
 import './NurseSchedule.css';
 
 function NurseSchedule() {
