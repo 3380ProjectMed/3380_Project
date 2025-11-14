@@ -972,6 +972,9 @@ function Report() {
 }
 // Add this enhanced version to replace the existing OfficeUtilizationPie in Report.jsx
 
+// Fixed Office Utilization Pie Chart Component
+// Replace the existing OfficeUtilizationPie component with this version
+
 const OfficeUtilizationPie = ({ offices }) => {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const [selectedOffice, setSelectedOffice] = React.useState(null);
@@ -985,9 +988,11 @@ const OfficeUtilizationPie = ({ offices }) => {
     return <p className="chart-empty">No appointment data for this period.</p>;
   }
 
-  const radius = 16;
-  const circumference = 2 * Math.PI * radius;
-  let offset = 0;
+  // SVG circle parameters
+  const size = 400;
+  const center = size / 2;
+  const radius = 160; // Inner radius for donut chart
+  const strokeWidth = 60; // Thickness of the donut
 
   const handleSliceClick = (office, e) => {
     e.stopPropagation();
@@ -1002,45 +1007,105 @@ const OfficeUtilizationPie = ({ offices }) => {
     }
   }, [selectedOffice]);
 
+  // Calculate cumulative percentages for each slice
+  let cumulativePercent = 0;
+
+  const createArc = (startPercent, endPercent) => {
+    const start = startPercent * 2 * Math.PI;
+    const end = endPercent * 2 * Math.PI;
+    
+    const x1 = center + radius * Math.cos(start);
+    const y1 = center + radius * Math.sin(start);
+    const x2 = center + radius * Math.cos(end);
+    const y2 = center + radius * Math.sin(end);
+    
+    const largeArc = endPercent - startPercent > 0.5 ? 1 : 0;
+    
+    return `M ${center},${center} L ${x1},${y1} A ${radius},${radius} 0 ${largeArc} 1 ${x2},${y2} Z`;
+  };
+
   return (
     <div className="office-pie-card">
       <div className="pie-chart-container">
-        <svg viewBox="0 0 40 40" className="pie-chart-svg">
-          {/* background circle */}
+        <svg 
+          viewBox={`0 0 ${size} ${size}`} 
+          className="pie-chart-svg"
+          style={{ transform: 'rotate(-90deg)' }}
+        >
+          {/* Background circle */}
           <circle
-            cx="20"
-            cy="20"
+            cx={center}
+            cy={center}
             r={radius}
-            className="pie-background"
+            fill="none"
+            stroke="#e2eef8"
+            strokeWidth={strokeWidth}
           />
+          
+          {/* Pie slices */}
           {offices.map((office, idx) => {
             const value = office.total_appointments || 0;
-            const fraction = value / total;
-            const dash = fraction * circumference;
-            const gap = circumference - dash;
-            const currentOffset = offset;
-            offset += dash;
+            const slicePercent = value / total;
+            const startPercent = cumulativePercent;
+            const endPercent = cumulativePercent + slicePercent;
+            
+            cumulativePercent = endPercent;
+            
+            // For path-based approach
+            const startAngle = startPercent * 360;
+            const endAngle = endPercent * 360;
+            const startRad = (startAngle - 90) * Math.PI / 180;
+            const endRad = (endAngle - 90) * Math.PI / 180;
+            
+            const x1 = center + radius * Math.cos(startRad);
+            const y1 = center + radius * Math.sin(startRad);
+            const x2 = center + radius * Math.cos(endRad);
+            const y2 = center + radius * Math.sin(endRad);
+            
+            const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+            
+            const pathData = [
+              `M ${center} ${center}`,
+              `L ${x1} ${y1}`,
+              `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`,
+              'Z'
+            ].join(' ');
+
+            const colors = [
+              '#6366f1', '#10b981', '#f59e0b', 
+              '#0ea5e9', '#f43f5e', '#a855f7'
+            ];
+            
+            const isActive = hoveredIndex === idx || selectedOffice?.office_id === office.office_id;
 
             return (
-              <circle
+              <path
                 key={office.office_id || idx}
-                cx="20"
-                cy="20"
-                r={radius}
-                className={`pie-slice pie-slice-${idx % 6} ${
-                  hoveredIndex === idx || selectedOffice?.office_id === office.office_id
-                    ? 'pie-slice-active'
-                    : ''
-                }`}
-                strokeDasharray={`${dash} ${gap}`}
-                strokeDashoffset={-currentOffset}
+                d={pathData}
+                fill={colors[idx % colors.length]}
+                className={`pie-slice pie-slice-${idx % 6} ${isActive ? 'pie-slice-active' : ''}`}
+                style={{
+                  cursor: 'pointer',
+                  opacity: isActive ? 1 : 0.9,
+                  transition: 'all 0.3s ease',
+                  stroke: 'white',
+                  strokeWidth: isActive ? 3 : 1
+                }}
                 onMouseEnter={() => setHoveredIndex(idx)}
                 onMouseLeave={() => setHoveredIndex(null)}
                 onClick={(e) => handleSliceClick(office, e)}
-                style={{ cursor: 'pointer' }}
               />
             );
           })}
+          
+          {/* Center white circle for donut effect */}
+          <circle
+            cx={center}
+            cy={center}
+            r={radius - strokeWidth}
+            fill="white"
+            pointerEvents="none"
+          />
         </svg>
 
         {/* Hover Tooltip */}
@@ -1050,9 +1115,12 @@ const OfficeUtilizationPie = ({ offices }) => {
               {offices[hoveredIndex].office_name}
             </div>
             <div className="pie-tooltip-stat">
-              {offices[hoveredIndex].total_appointments} appointments
+              <div className="pie-tooltip-number">
+                {offices[hoveredIndex].total_appointments}
+              </div>
+              <div className="pie-tooltip-unit">appointments</div>
             </div>
-            <div className="pie-tooltip-stat">
+            <div className="pie-tooltip-percent">
               {offices[hoveredIndex].utilization_rate}% of total
             </div>
             <div className="pie-tooltip-hint">Click for details</div>
@@ -1061,26 +1129,36 @@ const OfficeUtilizationPie = ({ offices }) => {
       </div>
 
       <div className="pie-legend">
-        {offices.map((office, idx) => (
-          <div 
-            key={office.office_id || idx} 
-            className={`pie-legend-row ${
-              selectedOffice?.office_id === office.office_id ? 'legend-selected' : ''
-            }`}
-            onMouseEnter={() => setHoveredIndex(idx)}
-            onMouseLeave={() => setHoveredIndex(null)}
-            onClick={(e) => handleSliceClick(office, e)}
-            style={{ cursor: 'pointer' }}
-          >
-            <span className={`pie-legend-color pie-slice-${idx % 6}`} />
-            <div className="pie-legend-text">
-              <div className="pie-legend-title">{office.office_name}</div>
-              <div className="pie-legend-sub">
-                {office.total_appointments} appts · {office.utilization_rate}%
+        {offices.map((office, idx) => {
+          const colors = [
+            '#6366f1', '#10b981', '#f59e0b', 
+            '#0ea5e9', '#f43f5e', '#a855f7'
+          ];
+          
+          return (
+            <div 
+              key={office.office_id || idx} 
+              className={`pie-legend-row ${
+                selectedOffice?.office_id === office.office_id ? 'legend-selected' : ''
+              }`}
+              onMouseEnter={() => setHoveredIndex(idx)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              onClick={(e) => handleSliceClick(office, e)}
+              style={{ cursor: 'pointer' }}
+            >
+              <span 
+                className="pie-legend-color"
+                style={{ backgroundColor: colors[idx % colors.length] }}
+              />
+              <div className="pie-legend-text">
+                <div className="pie-legend-title">{office.office_name}</div>
+                <div className="pie-legend-sub">
+                  {office.total_appointments} appts · {office.utilization_rate}%
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Detailed Office Stats Modal */}
@@ -1102,7 +1180,7 @@ const OfficeUtilizationPie = ({ offices }) => {
           <div className="office-detail-grid">
             <div className="detail-stat">
               <span className="detail-label">Address</span>
-              <span className="detail-value">{selectedOffice.address}</span>
+              <span className="detail-value detail-value-small">{selectedOffice.address}</span>
             </div>
 
             <div className="detail-stat">

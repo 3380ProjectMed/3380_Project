@@ -1333,6 +1333,7 @@
   height: 100%;
   transform: rotate(-90deg);
   display: block;
+  overflow: visible;
 }
 
 .pie-background {
