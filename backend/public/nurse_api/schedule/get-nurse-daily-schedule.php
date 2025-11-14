@@ -1,52 +1,58 @@
 <?php
 /**
- * get-nurse-daily-schedule.php
- * Get nurse's assigned appointments for a specific date
- * 
- * Real clinic workflow:
- * - Receptionist checks patient in and assigns nurse to patient_visit
- * - Nurse sees all appointments where they're assigned
- * - Appointments show in chronological order with patient info
+ * Get nurse's daily schedule with assigned patients
+ * Path: /backend/public/nurse_api/schedule/get-nurse-daily-schedule.php
  */
-header('Content-Type: application/json');
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
-if (empty($_SESSION['uid'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'UNAUTHENTICATED']);
-    exit;
-}
-
 try {
-    $conn = getDBConnection();
-    $email = $_SESSION['email'] ?? '';
-    
-    // Get nurse_id from session
-    $rows = executeQuery($conn, 
-        "SELECT n.nurse_id, CONCAT(s.first_name, ' ', s.last_name) as nurse_name
-         FROM nurse n 
-         JOIN staff s ON n.staff_id = s.staff_id 
-         WHERE s.staff_email = ? LIMIT 1", 
-        's', [$email]);
-    
-    if (empty($rows)) {
-        closeDBConnection($conn);
-        http_response_code(404);
-        echo json_encode(['success' => false, 'error' => 'NURSE_NOT_FOUND']);
+    // Verify authentication
+    if (empty($_SESSION['uid'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
+
+    $conn = getDBConnection();
     
-    $nurse_id = (int)$rows[0]['nurse_id'];
-    $nurse_name = $rows[0]['nurse_name'];
+    // Get nurse_id from session (matching doctor pattern)
+    $nurse_id = null;
+    if (isset($_GET['nurse_id'])) {
+        $nurse_id = intval($_GET['nurse_id']);
+    } else {
+        // Get from session - nurse_id is stored in staff table
+        $user_id = intval($_SESSION['uid']);
+        
+        $rows = executeQuery($conn, 
+            'SELECT n.nurse_id, CONCAT(s.first_name, " ", s.last_name) as nurse_name
+             FROM user_account ua
+             JOIN staff s ON ua.user_id = s.staff_id
+             JOIN nurse n ON s.staff_id = n.staff_id
+             WHERE ua.user_id = ? 
+             LIMIT 1', 
+            'i', [$user_id]);
+        
+        if (empty($rows)) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'No nurse associated with user']);
+            closeDBConnection($conn);
+            exit;
+        }
+        
+        $nurse_id = (int)$rows[0]['nurse_id'];
+        $nurse_name = $rows[0]['nurse_name'];
+    }
     
     // Get date parameter (default to today)
     $date = $_GET['date'] ?? date('Y-m-d');
     
-    // Get the nurse's work schedule for this day of week
+    // Get the day of week for this date
     $dayOfWeek = date('l', strtotime($date)); // Monday, Tuesday, etc.
     
+    // Get nurse's work schedule for this day
     $scheduleQuery = "SELECT 
             ws.start_time,
             ws.end_time,
@@ -70,7 +76,7 @@ try {
             'date' => $date,
             'day_of_week' => $dayOfWeek,
             'working' => false,
-            'nurse_name' => $nurse_name,
+            'nurse_name' => $nurse_name ?? 'Nurse',
             'appointments' => []
         ]);
         exit;
@@ -79,7 +85,6 @@ try {
     $workSchedule = $scheduleRows[0];
     
     // Get all appointments assigned to this nurse for this date
-    // Only show appointments that have been checked in (patient_visit exists)
     $sql = "SELECT 
                 a.Appointment_id as appointment_id,
                 a.Appointment_date as appointment_datetime,
@@ -116,9 +121,8 @@ try {
     
     $appointments = executeQuery($conn, $sql, 'is', [$nurse_id, $date]);
     
-    // Format appointments for frontend
+    // Format appointments
     $formattedAppointments = array_map(function($apt) {
-        // Determine visit stage based on vitals
         $hasVitals = !empty($apt['blood_pressure']) || !empty($apt['temperature']);
         
         return [
@@ -129,7 +133,7 @@ try {
             'age' => $apt['age'],
             'gender' => $apt['gender'],
             'dob' => $apt['dob'],
-            'appointment_time' => substr($apt['appointment_time'], 0, 5), // HH:MM
+            'appointment_time' => substr($apt['appointment_time'], 0, 5),
             'appointment_datetime' => $apt['appointment_datetime'],
             'reason' => $apt['reason'],
             'doctor_id' => $apt['doctor_id'],
@@ -139,19 +143,17 @@ try {
             'office_id' => $apt['office_id'],
             'status' => $apt['status'],
             'visit_status' => $apt['visit_status'],
-            // Vitals info
             'blood_pressure' => $apt['blood_pressure'],
             'temperature' => $apt['temperature'],
             'present_illnesses' => $apt['present_illnesses'],
             'vitals_recorded' => $hasVitals,
             'start_time' => $apt['start_at'],
-            // UI helper
             'needs_vitals' => !$hasVitals,
             'ready_for_doctor' => $hasVitals
         ];
     }, $appointments ?: []);
     
-    // Group appointments by status for easier nursing workflow
+    // Group by status
     $waitingForVitals = array_filter($formattedAppointments, fn($a) => !$a['vitals_recorded']);
     $readyForDoctor = array_filter($formattedAppointments, fn($a) => $a['vitals_recorded']);
     
@@ -162,7 +164,7 @@ try {
         'date' => $date,
         'day_of_week' => $dayOfWeek,
         'working' => true,
-        'nurse_name' => $nurse_name,
+        'nurse_name' => $nurse_name ?? 'Nurse',
         'work_schedule' => [
             'start_time' => substr($workSchedule['start_time'], 0, 5),
             'end_time' => substr($workSchedule['end_time'], 0, 5),
@@ -192,7 +194,6 @@ try {
     error_log("Error in get-nurse-daily-schedule.php: " . $e->getMessage());
     echo json_encode([
         'success' => false, 
-        'error' => 'Internal server error',
-        'message' => $e->getMessage()
+        'error' => $e->getMessage()
     ]);
 }
