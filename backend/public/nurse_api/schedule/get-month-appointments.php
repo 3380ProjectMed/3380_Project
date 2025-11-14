@@ -98,5 +98,5 @@ try {
     }
     http_response_code(500);
     error_log("Error in get-month-appointments.php: " . $e->getMessage());
-    echo json_encode(['success' => false, 'error' => 'Internal server error']);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
