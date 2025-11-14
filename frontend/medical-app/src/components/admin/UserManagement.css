@@ -2,8 +2,11 @@
 
 .user-management {
   padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  margin: 0;              
+  width: 100%;            
+  max-width: 100%;        
+  box-sizing: border-box; 
+  flex: 1 1 auto;         
 }
 
 .page-header {
