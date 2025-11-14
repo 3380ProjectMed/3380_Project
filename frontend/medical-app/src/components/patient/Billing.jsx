@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, X } from 'lucide-react';
+import { CreditCard, X, CheckCircle, AlertCircle } from 'lucide-react';
 import './Billing.css';
 
 export default function Billing(props) {
@@ -8,6 +8,7 @@ export default function Billing(props) {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [selectedStatement, setSelectedStatement] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [notification, setNotification] = useState(null);
   
   // billingBalance may come back as a string from the API (e.g. "0.00"). Coerce to number for safe math/formatting.
   const balanceNumber = typeof billingBalance === 'string' ? parseFloat(billingBalance || 0) : Number(billingBalance || 0);
@@ -22,10 +23,15 @@ export default function Billing(props) {
     setShowPaymentModal(true);
   };
 
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000); // Auto-hide after 5 seconds
+  };
+
   const handlePaymentSubmit = async () => {
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) {
-      alert('Please enter a valid amount');
+      showNotification('Please enter a valid amount', 'error');
       return;
     }
 
@@ -37,12 +43,12 @@ export default function Billing(props) {
       setShowPaymentModal(false);
       setPaymentAmount('');
       setSelectedStatement(null);
-      alert('Payment processed successfully!');
+      showNotification('Payment processed successfully!', 'success');
       // Optionally reload data by full page or parent callback
-      window.location.reload();
+      setTimeout(() => window.location.reload(), 2000); // Give time to see notification
     } catch (e) {
       console.error(e);
-      alert('Payment failed. Please try again.');
+      showNotification('Payment failed. Please try again.', 'error');
     } finally {
       setProcessingPayment(false);
     }
@@ -58,6 +64,26 @@ export default function Billing(props) {
 
   return (
     <div className="portal-content">
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`notification notification-${notification.type}`}>
+          <div className="notification-content">
+            {notification.type === 'success' ? (
+              <CheckCircle className="notification-icon" />
+            ) : (
+              <AlertCircle className="notification-icon" />
+            )}
+            <span className="notification-message">{notification.message}</span>
+            <button 
+              className="notification-close" 
+              onClick={() => setNotification(null)}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <h1 className="page-title">Billing & Payments</h1>
       {loading ? (
         <div className="loading-spinner">Loading...</div>

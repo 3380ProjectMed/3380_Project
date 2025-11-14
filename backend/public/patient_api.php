@@ -1583,10 +1583,17 @@ elseif ($endpoint === 'schedule') {
                 $day_of_week = $datetime->format('l'); // Monday, Tuesday, etc.
                 
                 // First check if doctor works on this day
+                error_log("=== TIMESLOTS DEBUG ===");
+                error_log("Doctor ID: $doctor_id");
+                error_log("Date: $date");
+                error_log("Day of week: $day_of_week");
+                
                 $stmt = $mysqli->prepare("
                     SELECT COUNT(*) as schedule_count, 
                            MIN(ws.start_time) as earliest_start,
-                           MAX(ws.end_time) as latest_end
+                           MAX(ws.end_time) as latest_end,
+                           GROUP_CONCAT(CONCAT(ws.day_of_week, ' at office ', ws.office_id)) as schedule_details,
+                           d.staff_id
                     FROM work_schedule ws
                     JOIN doctor d ON ws.staff_id = d.staff_id
                     WHERE d.doctor_id = ?
@@ -1594,6 +1601,7 @@ elseif ($endpoint === 'schedule') {
                         (ws.days = ? AND ws.days IS NOT NULL)
                         OR (ws.day_of_week = ? AND ws.days IS NULL)
                     )
+                    GROUP BY d.staff_id
                 ");
                 
                 $stmt->bind_param('iss', $doctor_id, $date, $day_of_week);
@@ -1601,12 +1609,30 @@ elseif ($endpoint === 'schedule') {
                 $result = $stmt->get_result();
                 $schedule_check = $result->fetch_assoc();
                 
-                if ($schedule_check['schedule_count'] == 0) {
+                error_log("Schedule check result: " . json_encode($schedule_check));
+                
+                if (!$schedule_check || $schedule_check['schedule_count'] == 0) {
+                    // Let's also check what schedules exist for this doctor on any day
+                    $debug_stmt = $mysqli->prepare("
+                        SELECT ws.day_of_week, ws.office_id, ws.start_time, ws.end_time, d.staff_id
+                        FROM work_schedule ws
+                        JOIN doctor d ON ws.staff_id = d.staff_id
+                        WHERE d.doctor_id = ?
+                    ");
+                    $debug_stmt->bind_param('i', $doctor_id);
+                    $debug_stmt->execute();
+                    $debug_result = $debug_stmt->get_result();
+                    $all_schedules = $debug_result->fetch_all(MYSQLI_ASSOC);
+                    
+                    error_log("All schedules for doctor $doctor_id: " . json_encode($all_schedules));
+                    
                     sendResponse(true, [
                         'available_slots' => [],
                         'booked_slots' => [],
                         'date' => $date,
                         'doctor_id' => $doctor_id,
+                        'day_of_week' => $day_of_week,
+                        'debug_all_schedules' => $all_schedules,
                         'message' => 'Doctor is not scheduled to work on this date'
                     ], 'No available time slots for this date');
                     return;
