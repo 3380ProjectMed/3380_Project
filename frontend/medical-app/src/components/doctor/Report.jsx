@@ -5,7 +5,7 @@ import {
   Phone, Calendar, Pill, FileText, Heart, Download
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
-import './ChronicDiseaseReport.css';
+import './Report.css';
 
 export default function ChronicDiseaseReport() {
   // Data state
