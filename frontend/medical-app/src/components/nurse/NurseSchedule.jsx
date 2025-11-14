@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import NurseClinicalWorkspace from './NurseClinicalWorkspace';
 import './NurseSchedule.css';
 
 function NurseSchedule({ onPatientClick }) {
@@ -8,6 +9,10 @@ function NurseSchedule({ onPatientClick }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedView, setSelectedView] = useState('all');
+  
+  // Clinical workspace state
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showClinicalWorkspace, setShowClinicalWorkspace] = useState(false);
 
   // NEW: optional time filter (HH:MM, empty means “use shift times”)
   const [startTime, setStartTime] = useState('');
