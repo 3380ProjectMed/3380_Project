@@ -13,9 +13,7 @@ export default function NursePortal() {
   const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
   const [selectedVisitId, setSelectedVisitId] = useState(null);
   const handleLogout = () => {
-    if (confirm("Log out of Nurse Portal?")) {
-      window.location.href = "/login";
-    }
+    window.location.href = "/login";
   };
 
   return (
