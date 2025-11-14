@@ -10,7 +10,6 @@ header('Content-Type: application/json');
 
 session_start();
 
-// Require ADMIN
 if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
     http_response_code(403);
     echo json_encode(['success' => false, 'error' => 'Admin access required']);
@@ -25,8 +24,7 @@ try {
         throw new Exception('Invalid JSON payload');
     }
 
-    $required = ['first_name', 'last_name', 'email', 'password', 'ssn', 'gender', 'work_location', 'work_schedule', 'license_number', 'specialization'];
-
+    $required = ['first_name', 'last_name', 'email', 'password', 'ssn', 'gender', 'work_location', 'work_schedule'];
     foreach ($required as $field) {
         if (!isset($data[$field]) || $data[$field] === '') {
             throw new Exception("Missing required field: $field");
@@ -45,60 +43,23 @@ try {
         'password'       => $data['password'],
         'work_location'  => (int)$data['work_location'],
         'work_schedule'  => (int)$data['work_schedule'],
-        'license_number' => $data['license_number'],
+        'license_number' => $data['license_number'] ?? null,
     ];
 
     $staffResult = createStaffAndUser(
         $conn,
         $payload,
-        'Doctor',
-        'DOCTOR'
+        'Receptionist',
+        'RECEPTIONIST'
     );
     $staffId  = $staffResult['staff_id'];
     $username = $staffResult['username'];
-
-    $specialtyName = $data['specialization'];
-
-    $sqlSpec = "SELECT specialty_id FROM specialty WHERE specialty_name = ?";
-    $stmt = $conn->prepare($sqlSpec);
-    if (!$stmt) {
-        throw new Exception('Prepare specialty lookup failed: ' . $conn->error);
-    }
-    $stmt->bind_param('s', $specialtyName);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    $row = $res ? $res->fetch_assoc() : null;
-    $stmt->close();
-
-    if (!$row) {
-        throw new Exception('Specialty not found: ' . $specialtyName);
-    }
-
-    $specialtyId = (int)$row['specialty_id'];
-
-    $sqlDoctor = "
-        INSERT INTO doctor (staff_id, specialty, phone)
-        VALUES (?, ?, ?)
-    ";
-
-    $stmt = $conn->prepare($sqlDoctor);
-    if (!$stmt) {
-        throw new Exception('Prepare doctor insert failed: ' . $conn->error);
-    }
-
-    $phone = $data['phone_number'] ?? null;
-    $stmt->bind_param('iis', $staffId, $specialtyId, $phone);
-
-    if (!$stmt->execute()) {
-        throw new Exception('Execute doctor insert failed: ' . $stmt->error);
-    }
-    $stmt->close();
 
     $conn->commit();
 
     echo json_encode([
         'success'  => true,
-        'message'  => 'Doctor created successfully',
+        'message'  => 'Receptionist created successfully',
         'staff_id' => $staffId,
         'username' => $username,
     ]);
