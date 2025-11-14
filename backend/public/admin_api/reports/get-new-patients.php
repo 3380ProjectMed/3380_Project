@@ -1,18 +1,18 @@
 <?php
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 header('Content-Type: application/json');
 
 try {
-    session_start();
-    
+    //session_start();
+
     if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Admin access required']);
         exit;
     }
-    
+
     $conn = getDBConnection(); // <-- mysqli
 
     // ---- Get & sanitize params ----
@@ -21,7 +21,7 @@ try {
     $group_by   = isset($_GET['group_by'])   ? $_GET['group_by']   : 'day';
 
     // normalize group_by to what SQL expects
-    $allowed_group = ['day','week','month','year'];
+    $allowed_group = ['day', 'week', 'month', 'year'];
     if (!in_array($group_by, $allowed_group)) {
         $group_by = 'day';
     }
@@ -174,10 +174,7 @@ try {
         'summary' => $summary,
         'rows'    => $rows
     ]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
-
-?>

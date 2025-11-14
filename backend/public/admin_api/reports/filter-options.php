@@ -2,9 +2,9 @@
 //filter-options.php
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-
+require_once '/home/site/wwwroot/session.php';
 try {
-    session_start();
+    //session_start();
 
     if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
         http_response_code(403);
