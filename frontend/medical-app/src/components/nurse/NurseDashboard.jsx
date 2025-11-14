@@ -100,16 +100,6 @@ export default function NurseDashboard({ setCurrentPage, onAppointmentClick }) {
         </div>
       </div>
 
-      {/* ===== TASK LIST ===== */}
-      <div className="task-list">
-        <div className="task-item">
-          <ClipboardList size={18} style={{marginRight:4}} /> Appointments pending your notes: <strong>{tasks.pendingNotes}</strong>
-        </div>
-        <div className="task-item">
-          <Users size={18} style={{marginRight:4}} /> Referral requests to review: <strong>{tasks.referrals}</strong>
-        </div>
-      </div>
-
       {/* ===== STATS CARDS ===== */}
       <div className="stats-grid">
         <div className="stat-card stat-primary">
