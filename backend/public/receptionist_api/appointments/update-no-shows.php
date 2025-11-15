@@ -58,6 +58,7 @@ try {
                             a.Doctor_id,
                             a.Appointment_date,
                             a.Status,
+                            NOW() as current_time,
                             TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past
                         FROM appointment a
                         WHERE a.Status IN ('Scheduled', 'Waiting')
@@ -102,6 +103,7 @@ try {
                 'appointment_id' => $appointmentId,
                 'patient_id' => $appointment['Patient_id'],
                 'appointment_date' => $appointment['Appointment_date'],
+                'current_time' => $appointment['current_time'],
                 'minutes_past' => $appointment['minutes_past']
             ];
         }
