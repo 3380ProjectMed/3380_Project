@@ -39,6 +39,22 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   }, [officeId]);
 
   /**
+   * Automatic No-Show checker - runs every 2 minutes
+   */
+  useEffect(() => {
+    // Check for no-shows immediately on mount
+    checkForNoShows();
+    
+    // Set up interval to check every 2 minutes (120000 ms)
+    const noShowInterval = setInterval(() => {
+      checkForNoShows();
+    }, 120000);
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(noShowInterval);
+  }, []);
+
+  /**
    * Load calendar when month changes
    */
   useEffect(() => {
@@ -47,6 +63,30 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     // if the doctors API was delayed — causing the calendar to show incomplete data.
     loadCalendarData();
   }, [currentDate, officeId, doctors]);
+
+  /**
+   * Check for appointments that should be marked as No-Show
+   * Called automatically every 2 minutes
+   */
+  const checkForNoShows = async () => {
+    try {
+      const response = await fetch('/receptionist_api/appointments/update-no-shows.php', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      
+      if (data.success && data.updated_count > 0) {
+        console.log(`${data.updated_count} appointment(s) marked as No-Show`);
+        // Reload dashboard data to reflect changes
+        loadDashboardData();
+        loadCalendarData();
+      }
+    } catch (err) {
+      console.error('Failed to check for no-shows:', err);
+      // Silently fail - this is a background task
+    }
+  };
 
   /**
    * Fetch doctors from the database
