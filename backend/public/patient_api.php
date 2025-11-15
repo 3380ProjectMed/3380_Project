@@ -185,7 +185,7 @@ if ($endpoint === 'dashboard') {
                 LEFT JOIN doctor d ON p.primary_doctor = d.doctor_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN work_schedule ws ON doc_s.staff_id = ws.staff_id
+                LEFT JOIN work_schedule ws ON doc_staff.staff_id = ws.staff_id
                 LEFT JOIN office o ON ws.office_id = o.office_id
                 WHERE p.patient_id = ?
                 GROUP BY d.doctor_id, doc_staff.staff_id, s.specialty_id
@@ -194,6 +194,11 @@ if ($endpoint === 'dashboard') {
             $stmt->execute();
             $result = $stmt->get_result();
             $pcp = $result->fetch_assoc();
+            
+            // Convert empty PCP result to null for proper frontend handling
+            if (empty($pcp) || empty($pcp['name'])) {
+                $pcp = null;
+            }
 
             // Get recent visits
             $stmt = $mysqli->prepare("
@@ -273,6 +278,7 @@ if ($endpoint === 'dashboard') {
             ]);
         } catch (Exception $e) {
             error_log("Dashboard error: " . $e->getMessage());
+            error_log("Dashboard error trace: " . $e->getTraceAsString());
             sendResponse(false, [], 'Failed to load dashboard', 500);
         }
     }
