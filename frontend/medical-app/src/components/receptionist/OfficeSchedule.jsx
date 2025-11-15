@@ -596,7 +596,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     const normalizedStatus = (status || 'scheduled').toLowerCase();
     const statusMap = {
       'scheduled': 'status-scheduled',
-      'ready': 'status-ready',
       'waiting': 'status-waiting',
       'checked-in': 'status-checked-in',
       'checked in': 'status-checked-in',
