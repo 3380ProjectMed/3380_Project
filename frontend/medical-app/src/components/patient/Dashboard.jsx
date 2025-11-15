@@ -95,7 +95,7 @@ export default function Dashboard(props) {
               <h2><User className="icon" /> Primary Care Physician</h2>
             </div>
             <div className="card-content">
-              {pcp ? (
+              {pcp && pcp.name ? (
                 <div className="pcp-info">
                   <div className="pcp-avatar"><Stethoscope /></div>
                   <div>
