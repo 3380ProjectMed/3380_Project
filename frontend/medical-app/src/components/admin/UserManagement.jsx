@@ -13,6 +13,7 @@ import {
   Filter
 } from 'lucide-react';
 import './UserManagement.css';
+import UserDetails from './UserDetails';
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -21,6 +22,10 @@ function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState('doctor');
+  
+  // Details modal state - MOVED INSIDE THE COMPONENT
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -88,6 +93,12 @@ function UserManagement() {
     setShowAddModal(true);
   };
 
+  // MOVED INSIDE THE COMPONENT
+  const handleViewDetails = (user) => {
+    setSelectedUser(user);
+    setShowDetailsModal(true);
+  };
+
   // Simplified filtering - only filter by name and email since backend handles other filters
   const filteredUsers = users.filter(user => {
     const searchLower = searchTerm.toLowerCase();
@@ -110,8 +121,6 @@ function UserManagement() {
       'nurse': 'Nurse',
       'RECEPTIONIST': 'Receptionist',
       'receptionist': 'Receptionist',
-      'PATIENT': 'Patient',
-      'patient': 'Patient'
     };
     return labels[userType] || userType;
   };
@@ -137,7 +146,7 @@ function UserManagement() {
 
   const hasActiveFilters = filters.role !== 'all' || filters.activeStatus !== 'all' || filters.workLocation !== 'all' || filters.department !== 'all';
   
-    const getColumnCount = () => {
+  const getColumnCount = () => {
     let count = 5;
     if (filters.role === 'all' || filters.role === 'doctor' || filters.role === 'nurse') {
       count += 1;
@@ -194,7 +203,6 @@ function UserManagement() {
               <option value="doctor">Doctors</option>
               <option value="nurse">Nurses</option>
               <option value="receptionist">Receptionists</option>
-              <option value="patient">Patients</option>
             </select>
           </div>
 
@@ -323,7 +331,7 @@ function UserManagement() {
                           <Mail size={16} />
                           {user.email || 'N/A'}
                         </div>
-                      </td>                      
+                      </td>
                       
                       {/* Specialization/Department column */}
                       {(filters.role === 'all' || filters.role === 'doctor' || filters.role === 'nurse') && (
@@ -341,7 +349,11 @@ function UserManagement() {
                         </span>
                       </td>
                       <td>
-                        <button className="btn-icon" title="View Details">
+                        <button 
+                          className="btn-icon" 
+                          title="View Details"
+                          onClick={() => handleViewDetails(user)}
+                        >
                           👁️
                         </button>
                         <button className="btn-icon" title="Edit">
@@ -381,7 +393,7 @@ function UserManagement() {
         </>
       )}
 
-      {/* Add User Modal */}
+      {/* Add User Modal - OUTSIDE the table */}
       {showAddModal && (
         <AddUserModal
           type={modalType}
@@ -392,12 +404,28 @@ function UserManagement() {
           }}
         />
       )}
+
+      {/* User Details Modal - MOVED HERE, OUTSIDE the table */}
+      {showDetailsModal && selectedUser && (
+        <UserDetails
+          userId={selectedUser.user_id}
+          userType={selectedUser.user_type}
+          onClose={() => {
+            setShowDetailsModal(false);
+            setSelectedUser(null);
+          }}
+          onUpdate={() => {
+            loadUsers();
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // Add User Modal Component
 function AddUserModal({ type, onClose, onSuccess }) {
+  // ... rest of your AddUserModal code stays the same
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -406,8 +434,8 @@ function AddUserModal({ type, onClose, onSuccess }) {
     ssn: '',
     gender: '1',
     phoneNumber: '',
-    workLocation: '1',
-    workSchedule: '1',
+    workLocation: '',
+    workSchedule: '',
     licenseNumber: '',
     specialty: '',
     department: '',
@@ -415,6 +443,77 @@ function AddUserModal({ type, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  
+  // Dynamic options from database
+  const [workLocations, setWorkLocations] = useState([]);
+  const [workSchedules, setWorkSchedules] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+
+  // Load dynamic options on mount
+  useEffect(() => {
+    loadFormOptions();
+  }, []);
+
+  const loadFormOptions = async () => {
+    setLoadingOptions(true);
+    try {
+      const response = await fetch('/admin_api/users/get_form_options.php', {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setWorkLocations(data.work_locations || []);
+        setWorkSchedules(data.work_schedules || []);
+        
+        // Set default values to first option
+        if (data.work_locations && data.work_locations.length > 0) {
+          setFormData(prev => ({ ...prev, workLocation: data.work_locations[0].office_id.toString() }));
+        }
+        if (data.work_schedules && data.work_schedules.length > 0) {
+          setFormData(prev => ({ ...prev, workSchedule: data.work_schedules[0].schedule_id.toString() }));
+        }
+      } else {
+        setError(data.error || 'Failed to load form options');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('Error loading form options:', err);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
+  // Format SSN as 000-00-0000
+  const formatSSN = (value) => {
+    const digits = value.replace(/\D/g, '');
+    
+    if (digits.length <= 3) {
+      return digits;
+    } else if (digits.length <= 5) {
+      return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    } else {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5, 9)}`;
+    }
+  };
+
+  // Format phone number as 000-000-0000
+  const formatPhoneNumber = (value) => {
+    const digits = value.replace(/\D/g, '');
+    
+    if (digits.length <= 3) {
+      return digits;
+    } else if (digits.length <= 6) {
+      return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    } else {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -433,9 +532,9 @@ function AddUserModal({ type, onClose, onSuccess }) {
         last_name: formData.lastName,
         email: formData.email,
         password: formData.password,
-        ssn: formData.ssn,
+        ssn: formData.ssn.replace(/\D/g, ''),
         gender: parseInt(formData.gender),
-        phone_number: formData.phoneNumber,
+        phone_number: formData.phoneNumber.replace(/\D/g, ''),
         work_location: parseInt(formData.workLocation),
         work_schedule: parseInt(formData.workSchedule),
         license_number: formData.licenseNumber,
@@ -446,7 +545,6 @@ function AddUserModal({ type, onClose, onSuccess }) {
       } else if (type === 'nurse') {
         payload.department = formData.department;
       }
-
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -476,36 +574,20 @@ function AddUserModal({ type, onClose, onSuccess }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    let formattedValue = value;
+    
+    if (name === 'ssn') {
+      formattedValue = formatSSN(value);
+    } else if (name === 'phoneNumber') {
+      formattedValue = formatPhoneNumber(value);
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: formattedValue
     }));
   };
-
-  // Show info message for patients - admin cannot add patients
-  if (type === 'patient') {
-    return (
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2>Add Patient</h2>
-            <button className="close-btn" onClick={onClose}>
-              <X size={24} />
-            </button>
-          </div>
-          <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <AlertCircle size={48} style={{ margin: '0 auto 1rem', color: '#f59e0b' }} />
-            <h3 style={{ marginBottom: '1rem' }}>Patient Registration Restricted</h3>
-            <p>Patient accounts cannot be created through the admin portal.</p>
-            <p>Patients must register through the patient registration page.</p>
-            <button className="btn btn-secondary" onClick={onClose} style={{ marginTop: '1.5rem' }}>
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const getModalTitle = () => {
     if (type === 'doctor') return 'Doctor';
@@ -528,6 +610,11 @@ function AddUserModal({ type, onClose, onSuccess }) {
           <div className="success-message">
             <CheckCircle size={48} />
             <h3>{getModalTitle()} added successfully!</h3>
+          </div>
+        ) : loadingOptions ? (
+          <div className="loading-container" style={{ padding: '3rem' }}>
+            <Loader className="spinner" size={40} />
+            <p>Loading form...</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -599,7 +686,8 @@ function AddUserModal({ type, onClose, onSuccess }) {
                   name="ssn"
                   value={formData.ssn}
                   onChange={handleChange}
-                  placeholder="123-45-6789"
+                  placeholder="000-00-0000"
+                  maxLength={11}
                   required
                 />
               </div>
@@ -627,7 +715,8 @@ function AddUserModal({ type, onClose, onSuccess }) {
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleChange}
-                placeholder="987-65-4321"
+                placeholder="000-000-0000"
+                maxLength={12}
               />
             </div>
 
@@ -641,10 +730,15 @@ function AddUserModal({ type, onClose, onSuccess }) {
                   onChange={handleChange}
                   required
                 >
-                  <option value="1">Location 1</option>
-                  <option value="2">Location 2</option>
-                  <option value="3">Location 3</option>
-                  <option value="4">Location 4</option>
+                  {workLocations.length === 0 ? (
+                    <option value="">No locations available</option>
+                  ) : (
+                    workLocations.map(location => (
+                      <option key={location.office_id} value={location.office_id}>
+                        {location.name} - {location.address}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -657,10 +751,15 @@ function AddUserModal({ type, onClose, onSuccess }) {
                   onChange={handleChange}
                   required
                 >
-                  <option value="1">Day Shift</option>
-                  <option value="2">Night Shift</option>
-                  <option value="3">Rotating</option>
-                  <option value="4">Part-time</option>
+                  {workSchedules.length === 0 ? (
+                    <option value="">No schedules available</option>
+                  ) : (
+                    workSchedules.map(schedule => (
+                      <option key={schedule.schedule_id} value={schedule.schedule_id}>
+                        {schedule.shift_type}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>

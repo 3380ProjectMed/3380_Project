@@ -50,6 +50,9 @@ export const appointmentsAPI = {
   getAvailableTimeSlots: (doctorId, date) =>
     j(`${PATIENT_API_BASE}/patient_api.php?endpoint=schedule&action=timeslots&doctor_id=${doctorId}&date=${date}`),
 
+  getDoctorOfficesForDate: (doctorId, date) =>
+    j(`${PATIENT_API_BASE}/patient_api.php?endpoint=schedule&action=availability&doctor_id=${doctorId}&date=${date}`),
+
   getOffices: () => 
     j(`${PATIENT_API_BASE}/patient_api.php?endpoint=offices`)
 }

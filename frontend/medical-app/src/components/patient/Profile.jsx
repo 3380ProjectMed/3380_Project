@@ -278,7 +278,9 @@ export default function Profile(props) {
                   onChange={(e) => setFormData({ ...formData, primary_doctor: e.target.value })}
                 >
                   <option value="">Select a Primary Care Physician</option>
-                  {doctors.filter((doctor) => doctor.specialty_name === 'Internal Medicine').map((doctor) => (
+                  {doctors.filter((doctor) => 
+                    ['Internal Medicine', 'General Practice', 'Pediatrics'].includes(doctor.specialty_name)
+                  ).map((doctor) => (
                     <option key={doctor.doctor_id} value={doctor.doctor_id}>
                       {doctor.name} - {doctor.specialty_name} ({doctor.office_name})
                     </option>

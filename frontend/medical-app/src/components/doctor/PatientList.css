@@ -400,11 +400,19 @@
 /* Action Buttons */
 .patient-summary__actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 0.75rem;
   margin-top: 1rem;
   padding-top: 1.5rem;
   border-top: 2px solid var(--fifth-color);
+  /* Make actions sticky so the primary button remains visible while scrolling */
+  position: sticky;
+  bottom: 0;
+  background: white;
+  z-index: 20;
+  padding-bottom: 1rem;
+  /* create breathing room so content isn't hidden behind the sticky actions */
 }
 
 .btn-action {
@@ -495,4 +503,9 @@
     padding-right: 1.5rem;
     padding-bottom: 1.5rem;
   }
+
+/* Ensure the sidebar has extra bottom padding to avoid content being obscured by the sticky actions */
+.patient-summary {
+  padding-bottom: 5rem;
+}
 }

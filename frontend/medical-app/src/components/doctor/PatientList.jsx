@@ -161,7 +161,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
           age: p.age || patient.age,
           bloodType: p.blood_type || patient.bloodType || patient.bloodType,
           email: patient.email || '',
-          phone: patient.phone || '',
           gender: p.gender || patient.gender || 'Not Specified',
           allergies: p.allergies || patient.allergies || 'No Known Allergies',
           medicalHistory: p.medicalHistory || [],
@@ -395,12 +394,12 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
                   {selectedPatient.email}
                 </a>
               </div>
-              <div className="patient-summary__field">
+              {/* <div className="patient-summary__field">
                 <span className="patient-summary__field-label">Phone:</span>
                 <a href={`tel:${selectedPatient.phone}`} className="patient-summary__link">
                   {selectedPatient.phone}
                 </a>
-              </div>
+              </div> */}
             </div>
 
             {/* Allergies */}
@@ -499,7 +498,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
             </div>
 
             {/* Action Buttons */}
-            <div className="patient-summary__actions">
+            {/* <div className="patient-summary__actions"> */}
               <button 
                 className="btn-action btn-primary"
                 onClick={handleViewFullChart}
@@ -507,11 +506,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
                 <FileText size={18} />
                 View Full Chart
               </button>
-              <button className="btn-action btn-secondary">
-                <Calendar size={18} />
-                Schedule Appointment
-              </button>
-            </div>
+            {/* </div> */}
           </div>
         </div>
       )}

@@ -3,7 +3,7 @@ header('Content-Type: application/json');
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
-//session_start();
+
 if (empty($_SESSION['uid'])) {
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'UNAUTHENTICATED']);
@@ -38,43 +38,54 @@ try {
     $nurseId = (int)$rows[0]['nurse_id'];
     error_log('[save-vitals] Found nurse_id: ' . $nurseId);
 
-    // 2) Validate appointment_id
-    $appointmentId = (int)($_GET['appointment_id'] ?? $_GET['apptId'] ?? 0);
-    error_log('[save-vitals] Appointment ID: ' . $appointmentId);
+    // 2) Get appointment_id from URL params or JSON body
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true) ?? [];
+    
+    error_log('[save-vitals] Raw input: ' . $rawInput);
+    error_log('[save-vitals] Parsed input: ' . json_encode($input));
+    error_log('[save-vitals] GET params: ' . json_encode($_GET));
+    
+    $appointmentId = (int)($_GET['appointment_id'] ?? $_GET['apptId'] ?? $input['appointment_id'] ?? $input['appointmentId'] ?? 0);
+    error_log('[save-vitals] Final appointment ID: ' . $appointmentId);
+    
     if ($appointmentId <= 0) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'APPOINTMENT_ID_REQUIRED']);
+        echo json_encode([
+            'success' => false, 
+            'error' => 'APPOINTMENT_ID_REQUIRED',
+            'debug' => [
+                'get_appointment_id' => $_GET['appointment_id'] ?? 'missing',
+                'get_apptId' => $_GET['apptId'] ?? 'missing',
+                'input_appointment_id' => $input['appointment_id'] ?? 'missing',
+                'input_appointmentId' => $input['appointmentId'] ?? 'missing',
+                'raw_input' => $rawInput,
+                'get_params' => $_GET
+            ]
+        ]);
         closeDBConnection($conn);
         exit;
     }
 
-    // 3) Parse JSON body for vitals
-    $raw = file_get_contents('php://input');
-    $payload = json_decode($raw, true) ?? [];
-    if (!is_array($payload)) {
+    // Parse payload for vitals data
+    if (!is_array($input)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid JSON body']);
         closeDBConnection($conn);
         exit;
     }
 
-    // Extract vitals from payload (normalize input keys)
-    $bp     = trim($payload['bp']     ?? '');
-    $hr     = trim($payload['hr']     ?? '');
-    $temp   = trim($payload['temp']   ?? '');
-    $spo2   = trim($payload['spo2']   ?? '');
-    $weight = trim($payload['weight'] ?? '');
-    $height = trim($payload['height'] ?? '');
+    $bp     = trim($input['bp']     ?? $input['blood_pressure'] ?? '');
+    $hr     = trim($input['hr']     ?? $input['heart_rate'] ?? '');
+    $temp   = trim($input['temp']   ?? $input['temperature'] ?? '');
+    $spo2   = trim($input['spo2']   ?? '');
+    $weight = trim($input['weight'] ?? '');
+    $height = trim($input['height'] ?? '');
+    $notes  = trim($input['present_illnesses'] ?? '');
 
-    error_log('[save-vitals] Vitals - BP: ' . $bp . ', Temp: ' . $temp . ', HR: ' . $hr . ', SpO2: ' . $spo2);
+    error_log('[save-vitals] Vitals - BP: ' . $bp . ', Temp: ' . $temp . ', HR: ' . $hr . ', SpO2: ' . $spo2 . ', Notes: ' . $notes);
 
-    // Validate that we have at least some vitals to save
-    if (empty($bp) && empty($temp)) {
-        error_log('[save-vitals] No vitals provided (BP and Temp both empty)');
-        // Still proceed - we'll update audit columns at minimum
-    }
-
-    // 4) Get or create patient_visit
+    // 3) Get or create patient_visit
     $visitId = null;
     $patientId = null;
 
@@ -120,7 +131,7 @@ try {
         $doctorId = isset($apptRows[0]['Doctor_id']) ? (int)$apptRows[0]['Doctor_id'] : null;
         $officeId = isset($apptRows[0]['Office_id']) ? (int)$apptRows[0]['Office_id'] : null;
 
-        // Insert new patient_visit row (using exact schema column names)
+        // Insert new patient_visit row
         executeQuery(
             $conn,
             "INSERT INTO patient_visit (appointment_id, patient_id, date, doctor_id, nurse_id, office_id, status, created_by) 
@@ -137,8 +148,8 @@ try {
         }
     }
 
-    // 5) Update vitals on patient_visit
-    // Build update query for available columns (only blood_pressure and temperature exist in schema)
+    // 4) Update vitals on patient_visit
+    // Build update query for available columns
     $updates = [];
     $params = [];
     $types = '';
@@ -150,8 +161,13 @@ try {
     }
     if (!empty($temp)) {
         $updates[] = 'temperature = ?';
-        $types .= 'd'; // decimal type for temperature
-        $params[] = (float)$temp; // convert to numeric
+        $types .= 'd';
+        $params[] = (float)$temp;
+    }
+    if (!empty($notes)) {
+        $updates[] = 'present_illnesses = ?';
+        $types .= 's';
+        $params[] = $notes;
     }
 
     // Always add audit columns 
@@ -159,7 +175,7 @@ try {
     $types .= 's';
     $params[] = $email;
 
-    // Ensure we always have at least one update (the audit column)
+    // Ensure we always have at least one update
     if (empty($updates)) {
         throw new Exception('No updates to perform');
     }
@@ -190,7 +206,8 @@ try {
             'temp' => $temp,
             'spo2' => $spo2,
             'weight' => $weight,
-            'height' => $height
+            'height' => $height,
+            'present_illnesses' => $notes
         ]
     ]);
 } catch (Throwable $e) {
@@ -201,7 +218,6 @@ try {
     error_log('[nurse_api] save-vitals.php error: ' . $e->getMessage());
     error_log('[nurse_api] save-vitals.php stack trace: ' . $e->getTraceAsString());
 
-    // Include error details for debugging (remove in production)
     echo json_encode([
         'success' => false,
         'error' => 'FAILED_TO_SAVE_VITALS',
