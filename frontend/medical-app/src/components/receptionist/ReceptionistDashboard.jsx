@@ -203,42 +203,71 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   };
 
   /**
-   * Handle check-in appointment - Step 1: Show nurse selection
+   * Handle check-in appointment - Step 1: Validate insurance first
    */
   const handleCheckInAppointment = async () => {
     if (!selectedAppointment) return;
     
-    // Load nurses for the appointment's office
-    setLoadingNurses(true);
-    setShowNurseModal(true);
+    // First, validate insurance by attempting check-in with a dummy nurse_id
+    // We'll use nurse_id = 0 as a validation flag
+    setCheckingIn(true);
     
     try {
-      const response = await fetch(`/receptionist_api/nurses/get-by-office.php?office_id=${selectedAppointment.Office_id}`, {
-        credentials: 'include'
+      const response = await fetch('/receptionist_api/appointments/check-in.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          Appointment_id: selectedAppointment.Appointment_id,
+          nurse_id: 0, // Dummy value for validation
+          validate_only: true // Flag to indicate this is just validation
+        })
       });
       
       const data = await response.json();
       
-      if (data.success && data.nurses) {
-        setNurses(data.nurses);
-        if (data.nurses.length > 0) {
-          setSelectedNurse(data.nurses[0].nurse_id); // Pre-select first nurse
+      // If insurance validation fails, stop here
+      if (!data.success) {
+        if (data.error_type === 'INSURANCE_WARNING' || data.error_type === 'INSURANCE_EXPIRED') {
+          alert(`❌ Cannot Check In - Insurance Issue\n\n${data.message || data.error}\n\nPlease update the patient's insurance information before checking in.`);
+        } else {
+          alert('❌ Failed to check in: ' + (data.error || 'Unknown error'));
+        }
+        setCheckingIn(false);
+        return;
+      }
+      
+      // Insurance validation passed, now load nurses and show selection modal
+      setCheckingIn(false);
+      setLoadingNurses(true);
+      setShowNurseModal(true);
+      
+      const nursesResponse = await fetch(`/receptionist_api/nurses/get-by-office.php?office_id=${selectedAppointment.Office_id}`, {
+        credentials: 'include'
+      });
+      
+      const nursesData = await nursesResponse.json();
+      
+      if (nursesData.success && nursesData.nurses) {
+        setNurses(nursesData.nurses);
+        if (nursesData.nurses.length > 0) {
+          setSelectedNurse(nursesData.nurses[0].nurse_id); // Pre-select first nurse
         }
       } else {
-        alert('❌ Failed to load nurses: ' + (data.error || 'Unknown error'));
+        alert('❌ Failed to load nurses: ' + (nursesData.error || 'Unknown error'));
         setShowNurseModal(false);
       }
-    } catch (error) {
-      console.error('Failed to load nurses:', error);
-      alert('❌ Failed to load nurses - Network error');
-      setShowNurseModal(false);
-    } finally {
       setLoadingNurses(false);
+      
+    } catch (error) {
+      console.error('Check-in validation error:', error);
+      alert('❌ Failed to validate insurance - Network error');
+      setCheckingIn(false);
     }
   };
   
   /**
-   * Handle check-in confirmation - Step 2: Perform check-in with selected nurse
+   * Handle check-in confirmation - Step 2: Perform actual check-in with selected nurse
    */
   const handleConfirmCheckIn = async () => {
     if (!selectedAppointment || !selectedNurse) return;
@@ -258,7 +287,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       const data = await response.json();
       
       if (data.success) {
-        // Check for insurance warnings
+        // Check for insurance warnings (expiring soon)
         if (data.insurance_warning) {
           alert(`✓ Patient checked in successfully!\n\n⚠️ Insurance Warning:\n${data.insurance_warning}`);
         } else {
@@ -270,12 +299,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         loadDashboardData(); // Reload today's appointments and stats
         loadCalendarData(); // Reload calendar data
       } else {
-        // Check if it's an insurance-related error
-        if (data.error_type === 'INSURANCE_WARNING' || data.error_type === 'INSURANCE_EXPIRED') {
-          alert(`❌ Cannot Check In - Insurance Issue\n\n${data.message || data.error}\n\nPlease update the patient's insurance information before checking in.`);
-        } else {
-          alert('❌ Failed to check in: ' + (data.error || 'Unknown error'));
-        }
+        alert('❌ Failed to check in: ' + (data.error || 'Unknown error'));
       }
     } catch (error) {
       console.error('Check-in error:', error);

@@ -41,7 +41,7 @@ try {
             JOIN staff s ON s.staff_id = ws.staff_id
             JOIN nurse n ON n.staff_id = s.staff_id
             WHERE ws.office_id = ?
-            AND s.role = 'Nurse'
+            AND s.staff_role = 'Nurse'
             ORDER BY s.last_name, s.first_name";
 
     $nurses = executeQuery($conn, $sql, 'i', [$office_id]);
