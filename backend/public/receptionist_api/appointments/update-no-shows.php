@@ -29,21 +29,29 @@ try {
     $conn->begin_transaction();
 
     try {
-        // STEP 1: Update Scheduled appointments to Waiting if appointment time has passed
-        $updateToWaitingSql = "UPDATE appointment 
-                               SET Status = 'Waiting'
-                               WHERE Status = 'Scheduled'
-                               AND DATE(Appointment_date) = CURDATE()
-                               AND Appointment_date < NOW()";
+        // STEP 1: Update Scheduled appointments to Waiting if appointment time has passed (but less than 15 min)
+        // Only for appointments that haven't been checked in
+        $updateToWaitingSql = "UPDATE appointment a
+                               SET a.Status = 'Waiting'
+                               WHERE a.Status = 'Scheduled'
+                               AND DATE(a.Appointment_date) = CURDATE()
+                               AND a.Appointment_date < NOW()
+                               AND TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) < 15
+                               AND NOT EXISTS (
+                                   SELECT 1 FROM patient_visit pv 
+                                   WHERE pv.appointment_id = a.Appointment_id 
+                                   AND pv.start_at IS NOT NULL
+                               )";
         
         $conn->query($updateToWaitingSql);
         $waitingCount = $conn->affected_rows;
 
-        // STEP 2: Find Waiting appointments that should be marked as No-Show
+        // STEP 2: Find Scheduled or Waiting appointments that should be marked as No-Show
         // Conditions:
-        // 1. Status is 'Waiting'
+        // 1. Status is 'Scheduled' or 'Waiting'
         // 2. Appointment time was more than 15 minutes ago
-        // 3. Today's date (don't update future appointments or very old ones)
+        // 3. Today's date
+        // 4. Not checked in yet
         $findNoShowsSql = "SELECT 
                             a.Appointment_id,
                             a.Patient_id,
@@ -52,9 +60,14 @@ try {
                             a.Status,
                             TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past
                         FROM appointment a
-                        WHERE a.Status = 'Waiting'
+                        WHERE a.Status IN ('Scheduled', 'Waiting')
                         AND DATE(a.Appointment_date) = CURDATE()
                         AND TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) >= 15
+                        AND NOT EXISTS (
+                            SELECT 1 FROM patient_visit pv 
+                            WHERE pv.appointment_id = a.Appointment_id 
+                            AND pv.start_at IS NOT NULL
+                        )
                         ORDER BY a.Appointment_date";
 
         $noShowAppointments = executeQuery($conn, $findNoShowsSql, '', []);

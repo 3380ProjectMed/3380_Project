@@ -13,11 +13,11 @@
   margin-bottom: 2.2rem;
 }
 .nurse-dashboard-welcome {
-  background: linear-gradient(135deg, #03045e, #0077b6);
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #0ea5e9 100%);
   color: #fff;
   padding: 2.2rem 2.7rem;
   border-radius: 1rem;
-  box-shadow: 0 6px 18px rgba(3, 4, 94, 0.15);
+  box-shadow: 0 8px 25px rgba(30, 58, 138, 0.2);
 }
 .nurse-dashboard-welcome h1 {
   margin: 0 0 0.6rem 0;
@@ -387,4 +387,43 @@
     gap: 1rem;
     padding: 1rem;
   }
+}
+
+/* Modern Link Button Styles */
+.section-footer {
+  text-align: center;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(226, 238, 248, 0.6);
+  margin-top: 1.5rem;
+}
+
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 2px solid rgba(59, 130, 246, 0.2);
+  border-radius: 0.75rem;
+  color: #1e40af;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  box-shadow: 0 2px 4px rgba(30, 64, 175, 0.1);
+}
+
+.link-button:hover {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border-color: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.25);
+}
+
+.link-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
 }

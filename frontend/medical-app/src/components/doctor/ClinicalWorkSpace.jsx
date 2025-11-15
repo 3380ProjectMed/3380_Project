@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, Calendar, Clock, AlertCircle, FileText, Activity,
   Heart, Thermometer, Droplet, Pill, History, Save, X, ChevronDown, ChevronUp,
-  Plus, Trash2, Edit2
+  Plus, Trash2, Edit2, Clipboard
 } from 'lucide-react';
 import './ClinicalWorkSpace.css';
 
@@ -664,19 +664,17 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       )}
       {/* Header */}
       <div className="workspace-header">
-        {/* <div className="header-info"> */}
-          <h2>
-            <User size={24} />
-            {patientInfo?.name || 'Patient'}
-          </h2>
-          <div className="patient-meta">
-            <span>{patientInfo?.age} years old</span>
-            <span>•</span>
-            <span>{patientInfo?.gender || 'Unknown'}</span>
-            <span>•</span>
-            <span>Blood Type: {patientInfo?.blood_type || 'Unknown'}</span>
-          </div>
-        {/* </div> */}
+        <h2>
+          <User size={24} />
+          {patientInfo?.name || 'Patient'}
+        </h2>
+        <div className="patient-meta">
+          <span>{patientInfo?.age} years old</span>
+          <span>•</span>
+          <span>{patientInfo?.gender || 'Unknown'}</span>
+          <span>•</span>
+          <span>Blood Type: {patientInfo?.blood_type || 'Unknown'}</span>
+        </div>
         <button onClick={onClose} className="btn-close">
           <X size={20} />
         </button>
@@ -902,8 +900,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                     <option value="">Select a treatment...</option>
                     {treatmentCatalog.map(t => (
                       <option key={t.treatment_id} value={t.treatment_id}>
-                        {t.treatment_name} 
-                        {/* - ${t.cost} should doctor know the price as well? */}
+                        {t.treatment_name}
                       </option>
                     ))}
                   </select>
@@ -920,26 +917,6 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                           <Trash2 size={16} />
                         </button>
                       </div>
-                      <div className="treatment-controls">
-                        {/* <div className="input-group">
-                          <label>Quantity:</label>
-                          <input 
-                            type="number" 
-                            min="1"
-                            value={treatment.quantity}
-                            onChange={(e) => handleUpdateTreatment(idx, 'quantity', parseInt(e.target.value))}
-                          />
-                        </div> */}
-                        {/* <div className="input-group">
-                          <label>Cost Each:</label>
-                          <input 
-                            type="number" 
-                            step="0.01"
-                            value={treatment.cost_each}
-                            onChange={(e) => handleUpdateTreatment(idx, 'cost_each', parseFloat(e.target.value))}
-                          />
-                        </div> */}
-                      </div>
                       <div className="input-group">
                         <label>Notes:</label>
                         <input 
@@ -949,9 +926,6 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                           placeholder="Optional notes..."
                         />
                       </div>
-                      {/* <div className="treatment-total">
-                        Total: ${(treatment.quantity * treatment.cost_each).toFixed(2)}
-                      </div> */}
                     </div>
                   ))
                 ) : (
@@ -1102,12 +1076,36 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                         </span>
                         <span className="note-doctor">{note.doctor_name}</span>
                       </div>
+                      
                       {note.diagnosis && (
                         <div className="note-diagnosis">
                           <strong>Diagnosis:</strong> {note.diagnosis}
                         </div>
                       )}
-                      {note.note_text && (
+                      
+                      {note.treatments && note.treatments.length > 0 && (
+                        <div className="note-treatments">
+                          <div className="treatments-header">
+                            <Clipboard size={16} />
+                            <strong>Treatments:</strong>
+                          </div>
+                          <ul className="treatment-list">
+                            {note.treatments.map((treatment, tIdx) => (
+                              <li key={tIdx} className="treatment-list-item">
+                                <span className="treatment-name">{treatment.treatment_name}</span>
+                                {treatment.quantity > 1 && (
+                                  <span className="treatment-quantity">×{treatment.quantity}</span>
+                                )}
+                                {treatment.notes && (
+                                  <span className="treatment-notes"> - {treatment.notes}</span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {note.note_text && !note.treatments?.length && (
                         <div className="note-text">
                           <strong>Treatments:</strong> {note.note_text}
                         </div>
