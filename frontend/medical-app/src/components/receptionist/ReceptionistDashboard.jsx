@@ -93,6 +93,17 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       if (data.success) {
         if (data.updated_count > 0) {
           console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
+          
+          // Log detailed no-show information
+          if (data.no_show_appointments && data.no_show_appointments.length > 0) {
+            console.log('No-Show Details:', data.no_show_appointments.map(apt => ({
+              id: apt.appointment_id,
+              appointmentTime: apt.appointment_date,
+              serverTime: apt.current_time,
+              minutesPast: apt.minutes_past
+            })));
+          }
+          
           // Reload dashboard data to reflect changes
           loadDashboardData();
           loadCalendarData();
