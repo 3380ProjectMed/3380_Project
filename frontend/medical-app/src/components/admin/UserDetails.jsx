@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import './UserDetails.css';
 
-function UserDetailsModal({ userId, userType, onClose, onUpdate }) {
+function UserDetails({ userId, userType, onClose, onUpdate }) {
   const [user, setUser] = useState(null);
   const [schedules, setSchedules] = useState([]);
   const [availableSchedules, setAvailableSchedules] = useState([]);
