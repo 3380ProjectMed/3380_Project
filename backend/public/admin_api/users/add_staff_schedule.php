@@ -29,7 +29,6 @@ try {
         FROM work_schedule
         WHERE office_id = ?
         AND day_of_week = ?
-        AND staff_id IS NULL
         LIMIT 1";
     
     $templateResults = executeQuery($conn, $templateQuery, 'is', [$officeId, $dayOfWeek]);

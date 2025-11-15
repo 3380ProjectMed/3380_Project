@@ -24,22 +24,20 @@ try {
     $userType = strtoupper($userType);
     
     // Get user details based on type
-    $query = "
-        SELECT 
-            ua.user_id,
-            ua.email,
-            ua.is_active,
-            s.staff_id,
-            s.fname,
-            s.lname,
-            CONCAT(s.fname, ' ', s.lname) as name,
-            s.gender,
-            s.phone_number,
-            s.license_number,
-            o.office_id,
-            o.name as work_location,
-            o.address as office_address,
-            ws.shift_type";
+    $query = "SELECT 
+                ua.user_id,
+                ua.email,
+                ua.is_active,
+                s.staff_id,
+                s.first_name,
+                s.last_name,
+                CONCAT(s.first_name, ' ', s.last_name) as name,
+                s.gender,
+                s.license_number,
+                o.office_id,
+                o.name as work_location,
+                o.address as office_address,
+                ws.schedule_id";
     
     if ($userType === 'DOCTOR') {
         $query .= ", d.specialty";
@@ -49,9 +47,9 @@ try {
     
     $query .= "
         FROM user_account ua
-        JOIN staff s ON ua.user_id = s.user_id
-        LEFT JOIN office o ON s.office_id = o.office_id
-        LEFT JOIN work_schedule ws ON s.schedule_id = ws.schedule_id";
+        JOIN staff s ON ua.user_id = s.staff_id
+        LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
+        LEFT JOIN office o ON ws.office_id = o.office_id";
     
     if ($userType === 'DOCTOR') {
         $query .= " LEFT JOIN doctor d ON s.staff_id = d.staff_id";
