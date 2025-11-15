@@ -1,79 +1,14 @@
 /* Appointments styles (split from PatientPortal.css) */
-.appointments-section { 
-  margin-bottom: 3rem; 
-  width: 100%;
-}
-.appointments-section h2 { 
-  font-size: 1.75rem; 
-  font-weight: 700; 
-  color: #03045e; 
-  margin: 2rem 0 1.5rem 0; 
-  text-align: left;
-}
-.appointments-list { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 1rem; 
-  width: 100%;
-}
-.appointment-card { 
-  background: white; 
-  border-radius: 1rem; 
-  padding: 1.5rem; 
-  box-shadow: 0 4px 12px rgba(0,119,182,0.08); 
-  border: 2px solid transparent; 
-  transition: all 0.2s ease;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
-.appointment-card:hover { 
-  border-color: #00b4d8; 
-  transform: translateX(4px); 
-}
-.appointment-header { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: flex-start; 
-  margin-bottom: 1rem; 
-  width: 100%;
-}
-.appointment-header h3 { 
-  margin: 0 0 0.25rem 0; 
-  font-size: 1.25rem; 
-  font-weight: 700; 
-  color: #03045e; 
-  flex: 1;
-  text-align: left;
-  line-height: 1.4;
-  word-wrap: break-word;
-}
-.appointment-body { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 0.5rem; 
-  margin-bottom: 1rem; 
-  width: 100%;
-}
-.appointment-body p { 
-  display: flex; 
-  align-items: center; 
-  gap: 0.5rem; 
-  margin: 0 0 0.25rem 0; 
-  color: #374151; 
-  text-align: left;
-  line-height: 1.5;
-  width: 100%;
-}
-.appointment-footer { 
-  display: flex; 
-  justify-content: flex-end; 
-  gap: 1rem; 
-  padding-top: 1rem; 
-  border-top: 1px solid #e5e7eb; 
-  width: 100%;
-}
+.appointments-section { margin-bottom: 3rem; }
+.appointments-section h2 { font-size:1.75rem; font-weight:700; color:#03045e; margin:2rem 0 1.5rem 0; }
+.appointments-list { display:grid; gap:1rem; }
+.appointment-card { background:white; border-radius:1rem; padding:1.5rem; box-shadow:0 4px 12px rgba(0,119,182,0.08); border:2px solid transparent; transition:all 0.2s ease; }
+.appointment-card:hover { border-color:#00b4d8; transform:translateX(4px); }
+.appointment-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem; }
+.appointment-header h3 { margin:0 0 0.25rem 0; font-size:1.25rem; font-weight:700; color:#03045e; flex: 1; }
+.appointment-body { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem; }
+.appointment-body p { display:flex; align-items:center; gap:0.5rem; margin:0; color:#374151; }
+.appointment-footer { display:flex; justify-content:flex-end; gap:1rem; padding-top:1rem; border-top:1px solid #e5e7eb; }
 .history-list { display:flex; flex-direction:column; gap:0.5rem; }
 .history-item { display:flex; justify-content:space-between; align-items:center; padding:1.25rem 1.5rem; background:#f8f9fa; border-radius:0.75rem; transition:all 0.2s ease; border:2px solid transparent; }
 .history-item:hover { background:#caf0f8; border-color:#00b4d8; transform:translateX(4px); }
