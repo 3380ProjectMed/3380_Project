@@ -406,13 +406,15 @@
   margin-top: 1rem;
   padding-top: 1.5rem;
   border-top: 2px solid var(--fifth-color);
-  /* Make actions sticky so the primary button remains visible while scrolling */
-  position: sticky;
-  bottom: 0;
+  /* Pin actions to the bottom of the sidebar so the primary button is always visible */
+  position: absolute;
+  left: 2rem;
+  right: 2rem;
+  bottom: 1.5rem;
   background: white;
-  z-index: 20;
-  padding-bottom: 1rem;
-  /* create breathing room so content isn't hidden behind the sticky actions */
+  z-index: 1200;
+  padding-bottom: 0.5rem;
+  box-shadow: 0 -6px 18px rgba(2,6,23,0.06);
 }
 
 .btn-action {
@@ -494,14 +496,16 @@
   }
   
   .patient-summary__actions {
-    position: sticky;
-    bottom: 0;
+    position: absolute;
+    left: 1.5rem;
+    right: 1.5rem;
+    bottom: 1rem;
     background: white;
     padding-top: 1rem;
-    margin: 0 -1.5rem;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    padding-bottom: 1.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-bottom: 1rem;
+    box-shadow: 0 -6px 12px rgba(2,6,23,0.06);
   }
 
 /* Ensure the sidebar has extra bottom padding to avoid content being obscured by the sticky actions */
