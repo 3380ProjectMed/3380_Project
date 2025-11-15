@@ -1923,3 +1923,229 @@
     font-size: 1.75rem;
   }
 }
+
+
+/* ============================================================================
+   ADD THESE STYLES TO THE BOTTOM OF YOUR Report.css FILE
+   NEW PATIENTS REPORT ENHANCEMENTS
+   ============================================================================ */
+
+/* Retention Cell Styling */
+.retention-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.retention-bar {
+  width: 100%;
+  height: 6px;
+  background-color: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.retention-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Office Breakdown Cards */
+.office-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.office-breakdown-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.office-breakdown-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+}
+
+.office-breakdown-header h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+}
+
+.office-breakdown-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.breakdown-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.breakdown-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0077b6;
+  line-height: 1;
+}
+
+.breakdown-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+/* Trend Chart Styling */
+.trend-chart-container {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-top: 1rem;
+}
+
+.trend-chart {
+  display: flex;
+  gap: 1rem;
+  min-height: 300px;
+  position: relative;
+}
+
+.trend-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-right: 12px;
+  min-width: 40px;
+}
+
+.y-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.trend-chart-area {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.trend-gridlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.trend-gridlines .gridline {
+  height: 1px;
+  background-color: #e5e7eb;
+  width: 100%;
+}
+
+.trend-svg {
+  width: 100%;
+  height: 300px;
+  margin-bottom: 10px;
+}
+
+.trend-point {
+  cursor: pointer;
+  transition: r 0.2s ease;
+}
+
+.trend-point:hover {
+  r: 7;
+}
+
+.trend-x-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 5px;
+  margin-top: 8px;
+}
+
+.x-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+  text-align: center;
+  flex: 1;
+}
+
+/* Trend Legend */
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.trend-legend .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.trend-legend .legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: block;
+}
+
+/* Table right alignment utility */
+.report-table th.text-right,
+.report-table td.text-right {
+  text-align: right;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .office-breakdown-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .office-breakdown-stats {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .trend-chart {
+    min-height: 250px;
+  }
+
+  .trend-svg {
+    height: 250px;
+  }
+
+  .trend-legend {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
