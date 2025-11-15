@@ -21,6 +21,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [checkingIn, setCheckingIn] = useState(false);
 
   // Doctor colors palette for calendar visualization
   const doctorColors = [
