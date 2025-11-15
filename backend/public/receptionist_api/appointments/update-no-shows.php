@@ -26,6 +26,10 @@ try {
     }
 
     $conn = getDBConnection();
+    
+    // Set timezone to match appointment times (US Central Time)
+    $conn->query("SET time_zone = '-06:00'");
+    
     $conn->begin_transaction();
 
     try {
