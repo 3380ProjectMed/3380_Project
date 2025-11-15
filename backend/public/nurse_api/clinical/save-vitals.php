@@ -38,8 +38,9 @@ try {
     $nurseId = (int)$rows[0]['nurse_id'];
     error_log('[save-vitals] Found nurse_id: ' . $nurseId);
 
-    // 2) Validate appointment_id
-    $appointmentId = (int)($_GET['appointment_id'] ?? $_GET['apptId'] ?? 0);
+    // 2) Get appointment_id from URL params or JSON body
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    $appointmentId = (int)($_GET['appointment_id'] ?? $_GET['apptId'] ?? $input['appointmentId'] ?? 0);
     error_log('[save-vitals] Appointment ID: ' . $appointmentId);
     if ($appointmentId <= 0) {
         http_response_code(400);

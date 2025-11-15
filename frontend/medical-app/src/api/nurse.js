@@ -74,6 +74,7 @@ export async function saveNurseNote(appointmentId, noteBody) {
 
 export async function saveNurseVitals(appointmentId, vitals) {
   const payload = {
+    appointmentId: appointmentId, // Include appointment ID in payload as well
     bp: vitals.bp ?? vitals.bloodPressure ?? '',
     hr: vitals.hr ?? vitals.heartRate ?? '',
     temp: vitals.temp ?? vitals.temperature ?? '',
