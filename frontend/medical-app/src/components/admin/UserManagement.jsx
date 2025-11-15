@@ -13,7 +13,7 @@ import {
   Filter
 } from 'lucide-react';
 import './UserManagement.css';
-import UserDetails from './UserDetails'; // Make sure this matches your component name
+import UserDetails from './UserDetails';
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
