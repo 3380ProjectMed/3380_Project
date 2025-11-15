@@ -93,12 +93,12 @@ function UserManagement() {
     const searchLower = searchTerm.toLowerCase();
     const name = (user.name || '').toLowerCase();
     const email = (user.email || '').toLowerCase();
-    const specializationDept = (user.specialization_dept || '').toLowerCase();
+    const specialtyDept = (user.specialty_dept || '').toLowerCase();
     const workLocation = (user.work_location || '').toLowerCase();
     
     return name.includes(searchLower) || 
            email.includes(searchLower) || 
-           specializationDept.includes(searchLower) ||
+           specialtyDept.includes(searchLower) ||
            workLocation.includes(searchLower);
   });
 
@@ -135,10 +135,21 @@ function UserManagement() {
     });
   };
 
-  const hasActiveFilters = filters.role !== 'all' || 
-                           filters.activeStatus !== 'all' || 
-                           filters.workLocation !== 'all' || 
-                           filters.department !== 'all';
+  const hasActiveFilters = filters.role !== 'all' || filters.activeStatus !== 'all' || filters.workLocation !== 'all' || filters.department !== 'all';
+  
+    const getColumnCount = () => {
+    let count = 5;
+    if (filters.role === 'all' || filters.role === 'doctor' || filters.role === 'nurse') {
+      count += 1;
+    }
+
+    // Work Location column (not shown for patients)
+    if (filters.role !== 'patient') {
+      count += 1;
+    }
+
+    return count;
+  };
 
   return (
     <div className="user-management">
@@ -149,7 +160,7 @@ function UserManagement() {
         </div>
         <button 
           className="btn btn-primary"
-          onClick={() => handleAddUser(filters.role !== 'all' && filters.role !== 'patient' ? filters.role : 'doctor')}
+          onClick={() => handleAddUser(filters.role !== 'all' ? filters.role : 'doctor')}
         >
           <UserPlus size={20} />
           Add User
@@ -276,7 +287,6 @@ function UserManagement() {
                   <th>Role</th>
                   <th>Name</th>
                   <th>Email</th>
-                  <th>SSN</th>
                   {filters.role === 'all' && <th>Specialization/Dept</th>}
                   {filters.role === 'doctor' && <th>Specialization</th>}
                   {filters.role === 'nurse' && <th>Department</th>}
@@ -288,7 +298,7 @@ function UserManagement() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="no-data">
+                    <td colSpan={getColumnCount()} className="no-data">
                       {searchTerm ? `No users found matching "${searchTerm}"` : 'No users found'}
                     </td>
                   </tr>
@@ -313,12 +323,11 @@ function UserManagement() {
                           <Mail size={16} />
                           {user.email || 'N/A'}
                         </div>
-                      </td>
-                      <td>{user.ssn || 'N/A'}</td>
+                      </td>                      
                       
                       {/* Specialization/Department column */}
                       {(filters.role === 'all' || filters.role === 'doctor' || filters.role === 'nurse') && (
-                        <td>{user.specialization_dept || 'N/A'}</td>
+                        <td>{user.specialty_dept || 'N/A'}</td>
                       )}
                       
                       {/* Work Location - not shown for patients */}
@@ -433,10 +442,11 @@ function AddUserModal({ type, onClose, onSuccess }) {
       };
 
       if (type === 'doctor') {
-        payload.specialization = formData.specialization;
+        payload.specialty = formData.specialty;
       } else if (type === 'nurse') {
         payload.department = formData.department;
       }
+
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -669,12 +679,12 @@ function AddUserModal({ type, onClose, onSuccess }) {
 
             {type === 'doctor' && (
               <div className="form-group">
-                <label htmlFor="specialization">Specialization *</label>
+                <label htmlFor="specialty">Specialization *</label>
                 <input
                   type="text"
-                  id="specialization"
-                  name="specialization"
-                  value={formData.specialization}
+                  id="specialty"
+                  name="specialty"
+                  value={formData.specialty}
                   onChange={handleChange}
                   placeholder="e.g., Cardiology, Pediatrics"
                   required

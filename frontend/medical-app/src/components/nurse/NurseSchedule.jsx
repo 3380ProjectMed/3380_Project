@@ -1,29 +1,24 @@
-import React, { useState, useEffect } from 'react';
+// src/components/nurse/NurseSchedule.jsx - WITH PROFESSIONAL OVERLAY
+import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import NurseClinicalWorkspace from './NurseClinicalWorkSpace';
 import './NurseSchedule.css';
 
-/**
- * NurseSchedule Component - Real Clinical Workflow
- * 
- * How it works in real clinics:
- * 1. Nurse sees their work schedule (8AM-5PM at specific office)
- * 2. Receptionist checks patients in and assigns them to nurse
- * 3. Nurse sees queue of checked-in patients
- * 4. Nurse takes vitals for waiting patients
- * 5. Patients move to "Ready for Doctor" after vitals recorded
- * 
- * Key difference from doctor schedule:
- * - Nurses don't have individual appointment slots
- * - They work through a queue of assigned patients
- * - Assignment happens at check-in by receptionist
- */
-
-function NurseSchedule({ onPatientClick }) {
+function NurseSchedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedView, setSelectedView] = useState('all'); // 'all', 'needs_vitals', 'ready'
+  const [selectedView, setSelectedView] = useState('all');
+  
+  // Clinical workspace state
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showClinicalWorkspace, setShowClinicalWorkspace] = useState(false);
+
+  const currentDateStr = useMemo(
+    () => currentDate.toISOString().split('T')[0],
+    [currentDate]
+  );
 
   useEffect(() => {
     fetchDailySchedule();
@@ -33,25 +28,22 @@ function NurseSchedule({ onPatientClick }) {
     try {
       setLoading(true);
       setError(null);
-      
-      const dateStr = currentDate.toISOString().split('T')[0];
+
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+
       const response = await fetch(
-        `/backend/public/nurse_api/schedule/get-nurse-daily-schedule.php?date=${dateStr}`,
-        {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
+        `${API_BASE}/nurse_api/schedule/get-nurse-daily-schedule.php?date=${currentDateStr}`,
+        { credentials: 'include' }
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch schedule');
+        throw new Error(`HTTP ${response.status}: Failed to fetch schedule`);
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setScheduleData(data);
       } else {
@@ -65,36 +57,45 @@ function NurseSchedule({ onPatientClick }) {
     }
   };
 
+  const handlePatientClick = (appointment) => {
+    setSelectedPatient({
+      visit_id: appointment.visit_id,
+      appointment_id: appointment.appointment_id,
+      patient_id: appointment.patient_id,
+      patient_name: appointment.patient_name
+    });
+    setShowClinicalWorkspace(true);
+  };
+
+  const handleCloseClinicalWorkspace = () => {
+    setShowClinicalWorkspace(false);
+    setSelectedPatient(null);
+  };
+
+  const handleVitalsSaved = (visitId) => {
+    // Refresh schedule after saving
+    fetchDailySchedule();
+    console.log('Vitals saved for visit:', visitId);
+  };
+
   const goToPreviousDay = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() - 1);
-    setCurrentDate(newDate);
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() - 1);
+    setCurrentDate(d);
   };
 
   const goToNextDay = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + 1);
-    setCurrentDate(newDate);
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + 1);
+    setCurrentDate(d);
   };
 
   const goToToday = () => {
     setCurrentDate(new Date());
   };
 
-  const handlePatientClick = (appointment) => {
-    if (onPatientClick) {
-      onPatientClick({
-        visit_id: appointment.visit_id,
-        appointment_id: appointment.appointment_id,
-        patient_id: appointment.patient_id,
-        patient_name: appointment.patient_name
-      });
-    }
-  };
-
   const getAppointmentsToDisplay = () => {
     if (!scheduleData?.appointments) return [];
-    
     switch (selectedView) {
       case 'needs_vitals':
         return scheduleData.appointments.waiting_for_vitals || [];
@@ -105,19 +106,29 @@ function NurseSchedule({ onPatientClick }) {
     }
   };
 
-  const formatDate = (date) => {
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+  const formatDate = (date) =>
+    date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
-  };
 
   const isToday = () => {
     const today = new Date();
     return currentDate.toDateString() === today.toDateString();
   };
+
+  // Show clinical workspace as full-screen overlay
+  if (showClinicalWorkspace) {
+    return (
+      <NurseClinicalWorkspace
+        selectedPatient={selectedPatient}
+        onClose={handleCloseClinicalWorkspace}
+        onSave={handleVitalsSaved}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -160,11 +171,7 @@ function NurseSchedule({ onPatientClick }) {
       {/* Header with Date Navigation */}
       <div className="schedule-header">
         <div className="date-navigation">
-          <button 
-            onClick={goToPreviousDay} 
-            className="nav-button"
-            aria-label="Previous day"
-          >
+          <button onClick={goToPreviousDay} className="nav-button" aria-label="Previous day">
             <ChevronLeft size={24} />
           </button>
           
@@ -177,11 +184,7 @@ function NurseSchedule({ onPatientClick }) {
             )}
           </div>
           
-          <button 
-            onClick={goToNextDay} 
-            className="nav-button"
-            aria-label="Next day"
-          >
+          <button onClick={goToNextDay} className="nav-button" aria-label="Next day">
             <ChevronRight size={24} />
           </button>
         </div>

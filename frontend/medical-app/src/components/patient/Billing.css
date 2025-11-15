@@ -86,13 +86,17 @@
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
 }
 
 .billing-statement-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 1rem;
+  width: 100%;
 }
 
 .billing-statement-header h3 {
@@ -101,58 +105,32 @@
   font-weight: 600;
   color: #2d3748;
   flex: 1;
+  text-align: left;
+  line-height: 1.4;
 }
 
 .billing-statement-amount {
   font-size: 1.2rem;
   font-weight: 700;
   color: #2b6cb0;
+  text-align: right;
+  margin-left: 1rem;
 }
 
 .billing-statement-body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .billing-statement-body p {
-  margin: 0;
+  margin: 0 0 0.25rem 0;
   color: #718096;
   font-size: 0.9rem;
-}
-
-/* Fix alignment for appointments and general card layouts */
-.appointments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  text-align: left;
+  line-height: 1.5;
   width: 100%;
-  text-align: left;
-}
-
-.appointment-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.appointment-card h3,
-.appointment-card h4 {
-  margin: 0 0 0.5rem 0;
-  text-align: left;
-}
-
-.appointment-card p,
-.appointment-card div {
-  margin: 0;
-  text-align: left;
 }
 
 /* Payment Modal Styles */

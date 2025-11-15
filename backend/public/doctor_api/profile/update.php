@@ -28,14 +28,17 @@ try {
 
     // Resolve requested doctor_id and enforce role-based restrictions
     $requested_doctor_id = null;
-    if (isset($input['doctor_id'])) $requested_doctor_id = intval($input['doctor_id']);
-    if (isset($_GET['doctor_id'])) $requested_doctor_id = intval($_GET['doctor_id']);
+    if (isset($input['doctor_id']))
+        $requested_doctor_id = intval($input['doctor_id']);
+    if (isset($_GET['doctor_id']))
+        $requested_doctor_id = intval($_GET['doctor_id']);
 
     $logged_in_doctor_id = null;
     if ($_SESSION['role'] === 'DOCTOR') {
         $staff_id = (int) $_SESSION['uid'];
         $rows = executeQuery($conn, 'SELECT doctor_id FROM doctor WHERE staff_id = ? LIMIT 1', 'i', [$staff_id]);
-        if (!empty($rows)) $logged_in_doctor_id = (int)$rows[0]['doctor_id'];
+        if (!empty($rows))
+            $logged_in_doctor_id = (int) $rows[0]['doctor_id'];
     }
 
     if ($requested_doctor_id !== null) {
@@ -74,7 +77,7 @@ try {
         echo json_encode(['success' => false, 'error' => 'Doctor not found']);
         exit;
     }
-    $staff_id = (int)$rows[0]['staff_id'];
+    $staff_id = (int) $rows[0]['staff_id'];
 
     // Prepare updates: staff fields and doctor fields separately
     $staffUpdates = [];
@@ -117,9 +120,11 @@ try {
         $staffParams[] = $staff_id;
         $staffTypes .= 'i';
         $stmt = $conn->prepare($sql);
-        if (!$stmt) throw new Exception('Prepare failed (staff): ' . $conn->error);
+        if (!$stmt)
+            throw new Exception('Prepare failed (staff): ' . $conn->error);
         $stmt->bind_param($staffTypes, ...$staffParams);
-        if (!$stmt->execute()) throw new Exception('Execute failed (staff): ' . $stmt->error);
+        if (!$stmt->execute())
+            throw new Exception('Execute failed (staff): ' . $stmt->error);
         $stmt->close();
     }
 
@@ -129,9 +134,11 @@ try {
         $doctorParams[] = $doctor_id;
         $doctorTypes .= 'i';
         $stmt = $conn->prepare($sql);
-        if (!$stmt) throw new Exception('Prepare failed (doctor): ' . $conn->error);
+        if (!$stmt)
+            throw new Exception('Prepare failed (doctor): ' . $conn->error);
         $stmt->bind_param($doctorTypes, ...$doctorParams);
-        if (!$stmt->execute()) throw new Exception('Execute failed (doctor): ' . $stmt->error);
+        if (!$stmt->execute())
+            throw new Exception('Execute failed (doctor): ' . $stmt->error);
         $stmt->close();
     }
 

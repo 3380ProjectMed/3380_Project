@@ -101,7 +101,8 @@ try {
             'workLocation' => $doctor['work_location_name'] ?: 'Not assigned',
             'specialties' => [$doctor['specialty_name']],
             'gender' => $doctor['gender'],
-            'bio' => ''
+            'bio' => '',
+            'phone' => $doctor['phone_number'] ?? ''
         ]
     ]);
 } catch (Exception $e) {

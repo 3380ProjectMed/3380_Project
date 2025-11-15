@@ -1,26 +1,46 @@
 // src/components/nurse/NurseSidebar.jsx
 import React from "react";
-import { Home, Calendar, Users, ClipboardList, User, BarChart2, LogOut } from "lucide-react";
+import { Home, Calendar, Activity, User, LogOut } from "lucide-react";
 import "./NurseSidebar.css";
-
 export default function NurseSidebar({ currentPage, setCurrentPage, onLogout }) {
   const items = [
-    { id: "dashboard", label: "Dashboard", icon: <Home size={18} /> },
-    { id: "schedule", label: "My Schedule", icon: <Calendar size={18} /> },
-    { id: "patients", label: "My Patients", icon: <Users size={18} /> },
-    { id: "clinical", label: "Clinical Workspace", icon: <ClipboardList size={18} /> },
-    { id: "profile", label: "Profile", icon: <User size={18} /> },
-    { id: "reports", label: "Reports", icon: <BarChart2 size={18} /> },
+    { 
+      id: "dashboard", 
+      label: "Dashboard", 
+      icon: <Home size={18} />,
+      description: "Overview & quick stats"
+    },
+    { 
+      id: "schedule", 
+      label: "My Schedule", 
+      icon: <Calendar size={18} />,
+      description: "Daily patient queue"
+    },
+    { 
+      id: "profile", 
+      label: "Profile", 
+      icon: <User size={18} />,
+      description: "Personal settings"
+    },
   ];
+
   return (
     <aside className="nurse-sidebar">
-      <div className="nurse-sidebar__brand">Nurse Portal</div>
+      <div className="nurse-sidebar__brand">
+        <div className="brand-icon">🩺</div>
+        <div className="brand-text">Nurse Portal</div>
+      </div>
 
       <nav className="nurse-sidebar__nav">
-        {items.map((i) => (
-          <button key={i.id} className={`nurse-sidebar__link ${currentPage === i.id ? "active" : ""}`} onClick={() => setCurrentPage(i.id)}>
-            {i.icon}
-            <span>{i.label}</span>
+        {items.map((item) => (
+          <button
+            key={item.id}
+            className={`nurse-sidebar__link ${currentPage === item.id ? "active" : ""}`}
+            onClick={() => setCurrentPage(item.id)}
+            title={item.description}
+          >
+            <span className="link-icon">{item.icon}</span>
+            <span className="link-label">{item.label}</span>
           </button>
         ))}
       </nav>
