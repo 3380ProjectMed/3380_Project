@@ -81,8 +81,9 @@ try {
     $spo2   = trim($input['spo2']   ?? '');
     $weight = trim($input['weight'] ?? '');
     $height = trim($input['height'] ?? '');
+    $notes  = trim($input['present_illnesses'] ?? '');
 
-    error_log('[save-vitals] Vitals - BP: ' . $bp . ', Temp: ' . $temp . ', HR: ' . $hr . ', SpO2: ' . $spo2);
+    error_log('[save-vitals] Vitals - BP: ' . $bp . ', Temp: ' . $temp . ', HR: ' . $hr . ', SpO2: ' . $spo2 . ', Notes: ' . $notes);
 
     // 3) Get or create patient_visit
     $visitId = null;
@@ -163,6 +164,11 @@ try {
         $types .= 'd';
         $params[] = (float)$temp;
     }
+    if (!empty($notes)) {
+        $updates[] = 'present_illnesses = ?';
+        $types .= 's';
+        $params[] = $notes;
+    }
 
     // Always add audit columns 
     $updates[] = 'updated_by = ?';
@@ -200,7 +206,8 @@ try {
             'temp' => $temp,
             'spo2' => $spo2,
             'weight' => $weight,
-            'height' => $height
+            'height' => $height,
+            'present_illnesses' => $notes
         ]
     ]);
 } catch (Throwable $e) {
