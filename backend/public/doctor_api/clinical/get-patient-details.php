@@ -124,15 +124,16 @@ try {
         $patient_id = $appt['Patient_id'];
         $appointment_date = $appt['Appointment_date'];
 
-        // Step 2: Look for patient_visit that matches BOTH appointment_id AND date
+        // Step 2: Look for patient_visit that matches appointment_id
+        // Note: We search by appointment_id only, not date, because the nurse may have
+        // created the visit record and we want to find it regardless of exact date/time match
         $visitSql = $baseSelect . ", a.Appointment_date, a.Reason_for_visit as appointment_reason"
             . $baseFrom
             . " LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
-                    WHERE pv.appointment_id = ? 
-                    AND DATE(pv.date) = DATE(?)
+                    WHERE pv.appointment_id = ?
                     ORDER BY pv.date DESC
                     LIMIT 1";
-        $rows = executeQuery($conn, $visitSql, 'is', [$appointment_id, $appointment_date]);
+        $rows = executeQuery($conn, $visitSql, 'i', [$appointment_id]);
 
         // Step 3: If no patient_visit found for this appointment date
         if (empty($rows)) {
