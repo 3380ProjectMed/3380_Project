@@ -1,10 +1,9 @@
 <?php
 
 /**
- * Update appointments to No-Show status if they are:
- * - Status is 'Scheduled' or 'Waiting'
- * - Appointment time was more than 15 minutes ago
- * - Not already completed, cancelled, or checked-in
+ * Update appointments in two steps:
+ * Step 1: Update 'Scheduled' appointments to 'Waiting' status if appointment time has passed
+ * Step 2: Update 'Waiting' appointments to 'No-Show' status if they've been waiting 15+ minutes
  * 
  * This can be called periodically or triggered manually
  */
@@ -27,43 +26,42 @@ try {
     }
 
     $conn = getDBConnection();
-
-    // Find appointments that should be marked as No-Show
-    // Conditions:
-    // 1. Status is 'Scheduled' or 'Waiting'
-    // 2. Appointment time is more than 15 minutes ago
-    // 3. Today's date (don't update future appointments or very old ones)
-    $findNoShowsSql = "SELECT 
-                        a.Appointment_id,
-                        a.Patient_id,
-                        a.Doctor_id,
-                        a.Appointment_date,
-                        a.Status,
-                        TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past
-                    FROM appointment a
-                    WHERE a.Status IN ('Scheduled', 'Waiting')
-                    AND DATE(a.Appointment_date) = CURDATE()
-                    AND TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) >= 15
-                    ORDER BY a.Appointment_date";
-
-    $noShowAppointments = executeQuery($conn, $findNoShowsSql, '', []);
-
-    if (empty($noShowAppointments)) {
-        closeDBConnection($conn);
-        echo json_encode([
-            'success' => true,
-            'message' => 'No appointments to update',
-            'updated_count' => 0,
-            'appointments' => []
-        ]);
-        exit;
-    }
-
     $conn->begin_transaction();
 
     try {
-        $updatedAppointments = [];
+        // STEP 1: Update Scheduled appointments to Waiting if appointment time has passed
+        $updateToWaitingSql = "UPDATE appointment 
+                               SET Status = 'Waiting'
+                               WHERE Status = 'Scheduled'
+                               AND DATE(Appointment_date) = CURDATE()
+                               AND Appointment_date < NOW()";
         
+        $conn->query($updateToWaitingSql);
+        $waitingCount = $conn->affected_rows;
+
+        // STEP 2: Find Waiting appointments that should be marked as No-Show
+        // Conditions:
+        // 1. Status is 'Waiting'
+        // 2. Appointment time was more than 15 minutes ago
+        // 3. Today's date (don't update future appointments or very old ones)
+        $findNoShowsSql = "SELECT 
+                            a.Appointment_id,
+                            a.Patient_id,
+                            a.Doctor_id,
+                            a.Appointment_date,
+                            a.Status,
+                            TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past
+                        FROM appointment a
+                        WHERE a.Status = 'Waiting'
+                        AND DATE(a.Appointment_date) = CURDATE()
+                        AND TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) >= 15
+                        ORDER BY a.Appointment_date";
+
+        $noShowAppointments = executeQuery($conn, $findNoShowsSql, '', []);
+
+        $updatedToNoShow = [];
+        
+        // STEP 3: Update Waiting appointments to No-Show
         foreach ($noShowAppointments as $appointment) {
             $appointmentId = $appointment['Appointment_id'];
             
@@ -87,7 +85,7 @@ try {
             // Note: We don't create new patient_visit records for no-shows
             // to avoid triggering the insurance validation
             
-            $updatedAppointments[] = [
+            $updatedToNoShow[] = [
                 'appointment_id' => $appointmentId,
                 'patient_id' => $appointment['Patient_id'],
                 'appointment_date' => $appointment['Appointment_date'],
@@ -100,9 +98,12 @@ try {
 
         echo json_encode([
             'success' => true,
-            'message' => count($updatedAppointments) . ' appointment(s) updated to No-Show status',
-            'updated_count' => count($updatedAppointments),
-            'appointments' => $updatedAppointments
+            'message' => $waitingCount . ' appointment(s) updated to Waiting, ' . count($updatedToNoShow) . ' appointment(s) updated to No-Show',
+            'waiting_count' => $waitingCount,
+            'no_show_count' => count($updatedToNoShow),
+            'updated_count' => $waitingCount + count($updatedToNoShow),
+            'waiting_appointments' => $waitingCount,
+            'no_show_appointments' => $updatedToNoShow
         ]);
         
     } catch (Exception $ex) {
