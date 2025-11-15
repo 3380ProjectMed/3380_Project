@@ -1252,6 +1252,151 @@ elseif ($endpoint === 'insurance') {
             error_log("Insurance update error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to update insurance', 500);
         }
+    } elseif ($method === 'POST') {
+        // Add new insurance policy
+        error_log("Insurance POST: Starting add insurance process for patient_id: " . $patient_id);
+        
+        $raw_input = file_get_contents('php://input');
+        error_log("Insurance POST: Raw input received: " . $raw_input);
+        
+        if (empty($raw_input)) {
+            error_log("Insurance POST: No data provided");
+            sendResponse(false, [], 'No data provided', 400);
+            return;
+        }
+
+        $data = json_decode($raw_input, true);
+        error_log("Insurance POST: Decoded data: " . json_encode($data));
+        
+        if (!$data) {
+            error_log("Insurance POST: Invalid JSON data");
+            sendResponse(false, [], 'Invalid JSON data', 400);
+            return;
+        }
+
+        try {
+            $mysqli->begin_transaction();
+
+            // Check if patient already has insurance (enforce single policy restriction)
+            $check_stmt = $mysqli->prepare("SELECT COUNT(*) as count FROM patient_insurance WHERE patient_id = ?");
+            $check_stmt->bind_param('i', $patient_id);
+            $check_stmt->execute();
+            $check_result = $check_stmt->get_result();
+            $existing_count = $check_result->fetch_assoc()['count'];
+            $check_stmt->close();
+
+            if ($existing_count > 0) {
+                $mysqli->rollback();
+                sendResponse(false, [], 'Patient already has an insurance policy. Only one policy is allowed.', 400);
+                return;
+            }
+
+            $plan_id = null;
+
+            // If payer_id and plan details are provided, find or create insurance plan
+            if (isset($data['payer_id']) && isset($data['plan_name'])) {
+                // Check if plan already exists
+                $plan_stmt = $mysqli->prepare("
+                    SELECT plan_id FROM insurance_plan 
+                    WHERE payer_id = ? AND plan_name = ? AND plan_type = ?
+                ");
+                $plan_stmt->bind_param('iss', $data['payer_id'], $data['plan_name'], $data['plan_type']);
+                $plan_stmt->execute();
+                $plan_result = $plan_stmt->get_result();
+                $existing_plan = $plan_result->fetch_assoc();
+                $plan_stmt->close();
+
+                if ($existing_plan) {
+                    $plan_id = $existing_plan['plan_id'];
+                } else {
+                    // Create new plan
+                    $new_plan_stmt = $mysqli->prepare("
+                        INSERT INTO insurance_plan (payer_id, plan_name, plan_type) 
+                        VALUES (?, ?, ?)
+                    ");
+                    $new_plan_stmt->bind_param('iss', $data['payer_id'], $data['plan_name'], $data['plan_type']);
+                    
+                    if (!$new_plan_stmt->execute()) {
+                        $mysqli->rollback();
+                        sendResponse(false, [], 'Failed to create insurance plan: ' . $new_plan_stmt->error, 500);
+                        return;
+                    }
+                    
+                    $plan_id = $mysqli->insert_id;
+                    $new_plan_stmt->close();
+                }
+            } elseif (isset($data['plan_id'])) {
+                $plan_id = $data['plan_id'];
+            }
+
+            // Insert patient insurance record
+            $insert_fields = ['patient_id'];
+            $insert_values = [$patient_id];
+            $insert_types = 'i';
+
+            if ($plan_id) {
+                $insert_fields[] = 'plan_id';
+                $insert_values[] = $plan_id;
+                $insert_types .= 'i';
+            }
+
+            if (isset($data['member_id']) && !empty($data['member_id'])) {
+                $insert_fields[] = 'member_id';
+                $insert_values[] = $data['member_id'];
+                $insert_types .= 's';
+            }
+
+            if (isset($data['group_id']) && !empty($data['group_id'])) {
+                $insert_fields[] = 'group_id';
+                $insert_values[] = $data['group_id'];
+                $insert_types .= 's';
+            }
+
+            if (isset($data['effective_date']) && !empty($data['effective_date'])) {
+                $insert_fields[] = 'effective_date';
+                $insert_values[] = $data['effective_date'];
+                $insert_types .= 's';
+            }
+
+            if (isset($data['expiration_date']) && !empty($data['expiration_date'])) {
+                $insert_fields[] = 'expiration_date';
+                $insert_values[] = $data['expiration_date'];
+                $insert_types .= 's';
+            }
+
+            // Set as primary insurance (since we only allow one)
+            $insert_fields[] = 'is_primary';
+            $insert_values[] = 1;
+            $insert_types .= 'i';
+
+            $sql = "INSERT INTO patient_insurance (" . implode(', ', $insert_fields) . ") VALUES (" . str_repeat('?,', count($insert_fields) - 1) . "?)";
+            
+            $stmt = $mysqli->prepare($sql);
+            if (!$stmt) {
+                $mysqli->rollback();
+                sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
+                return;
+            }
+
+            $stmt->bind_param($insert_types, ...$insert_values);
+
+            if ($stmt->execute()) {
+                $new_insurance_id = $mysqli->insert_id;
+                $mysqli->commit();
+                error_log("Insurance POST: Successfully added insurance with ID: " . $new_insurance_id);
+                sendResponse(true, ['id' => $new_insurance_id], 'Insurance added successfully');
+            } else {
+                $mysqli->rollback();
+                error_log("Insurance POST: Failed to execute insert: " . $stmt->error);
+                sendResponse(false, [], 'Failed to add insurance: ' . $stmt->error, 500);
+            }
+
+            $stmt->close();
+        } catch (Exception $e) {
+            error_log("Insurance add error: " . $e->getMessage());
+            $mysqli->rollback();
+            sendResponse(false, [], 'Failed to add insurance', 500);
+        }
     }
 }
 
