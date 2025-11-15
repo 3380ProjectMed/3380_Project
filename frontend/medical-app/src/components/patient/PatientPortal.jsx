@@ -58,6 +58,10 @@ export default function PatientPortal({ onLogout }) {
   const [insurancePolicies, setInsurancePolicies] = useState([]);
   const [billingBalance, setBillingBalance] = useState(0);
   const [billingStatements, setBillingStatements] = useState([]);
+  
+  // PCP Selection Modal States
+  const [showPcpModal, setShowPcpModal] = useState(false);
+  const [pcpFormData, setPcpFormData] = useState({ primary_doctor: '' });
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null); // { message, type }
   const [profileErrors, setProfileErrors] = useState({});
@@ -357,6 +361,47 @@ export default function PatientPortal({ onLogout }) {
     }));
     setProfileErrors({});
     setEditingProfile(false);
+  }
+
+  // PCP Selection functions
+  function showPcpSelection() {
+    setPcpFormData({ primary_doctor: '' });
+    setShowPcpModal(true);
+  }
+
+  function hidePcpSelection() {
+    setShowPcpModal(false);
+    setPcpFormData({ primary_doctor: '' });
+  }
+
+  async function handleSavePcp() {
+    if (!pcpFormData.primary_doctor) {
+      alert('Please select a Primary Care Physician');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        primary_doctor: pcpFormData.primary_doctor,
+      };
+
+      const res = await api.profile.updateProfile(payload);
+      if (res.success) {
+        // Refresh profile data
+        await loadProfile();
+        hidePcpSelection();
+        alert('Primary Care Physician updated successfully!');
+      } else {
+        console.error('Failed to update PCP:', res);
+        alert('Failed to update Primary Care Physician. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error updating PCP:', err);
+      alert('An error occurred while updating Primary Care Physician. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   // --- Booking helpers ---
@@ -729,6 +774,43 @@ export default function PatientPortal({ onLogout }) {
     </div>
   );
 
+  // --- PCP Selection Modal Renderer ---
+  const renderPcpModal = () => (
+    <div className="modal-overlay" onClick={hidePcpSelection}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+        <div className="modal-header">
+          <h3>Choose Your Primary Care Physician</h3>
+          <button className="btn" onClick={hidePcpSelection}><X /></button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label>Select Primary Care Physician</label>
+            <select 
+              className="form-input" 
+              value={pcpFormData.primary_doctor} 
+              onChange={(e) => setPcpFormData({ ...pcpFormData, primary_doctor: e.target.value })}
+            >
+              <option value="">Select a Primary Care Physician</option>
+              {doctors.filter((doctor) => 
+                ['Internal Medicine', 'General Practice', 'Pediatrics'].includes(doctor.specialty_name)
+              ).map((doctor) => (
+                <option key={doctor.doctor_id} value={doctor.doctor_id}>
+                  {doctor.name} - {doctor.specialty_name} ({doctor.office_name})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={hidePcpSelection} disabled={loading}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSavePcp} disabled={loading || !pcpFormData.primary_doctor}>
+            {loading ? 'Saving...' : 'Save PCP'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   // --- Cancel confirmation modal renderer ---
   const renderCancelModal = () => (
     <div className="modal-overlay" onClick={() => setShowCancelModal(false)}>
@@ -796,7 +878,12 @@ export default function PatientPortal({ onLogout }) {
     raceOptions,
     saveProfile: handleSaveProfile,
     processPayment: api.billing.makePayment,
-  };  return (
+    showPcpSelection,
+    hidePcpSelection,
+    handleSavePcp,
+  };
+
+  return (
     <div className="patient-portal-root">
       {/* Sidebar (fixed on the left) */}
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
@@ -812,6 +899,7 @@ export default function PatientPortal({ onLogout }) {
       </main>
 
       {showBookingModal && renderBookingModal()}
+      {showPcpModal && renderPcpModal()}
       {showCancelModal && renderCancelModal()}
 
       {/* Global toast (patient portal) */}
