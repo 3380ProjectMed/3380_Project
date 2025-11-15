@@ -476,6 +476,16 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         return;
       }
       
+      // Check if there's an insurance warning (expiring soon) during validation
+      if (result.insurance_warning) {
+        setAlertModal({
+          show: true,
+          type: 'warning',
+          title: 'Insurance Warning',
+          message: result.insurance_warning
+        });
+      }
+      
       // Insurance validation passed, now load nurses and show selection modal
       setCheckingIn(false);
       setLoadingNurses(true);

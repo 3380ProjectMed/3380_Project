@@ -255,6 +255,16 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         return;
       }
       
+      // Check if there's an insurance warning (expiring soon) during validation
+      if (data.insurance_warning) {
+        setAlertModal({
+          show: true,
+          type: 'warning',
+          title: 'Insurance Warning',
+          message: data.insurance_warning
+        });
+      }
+      
       // Insurance validation passed, now load nurses and show selection modal
       setCheckingIn(false);
       setLoadingNurses(true);
