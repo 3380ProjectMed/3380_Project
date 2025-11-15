@@ -394,12 +394,12 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
                   {selectedPatient.email}
                 </a>
               </div>
-              <div className="patient-summary__field">
+              {/* <div className="patient-summary__field">
                 <span className="patient-summary__field-label">Phone:</span>
                 <a href={`tel:${selectedPatient.phone}`} className="patient-summary__link">
                   {selectedPatient.phone}
                 </a>
-              </div>
+              </div> */}
             </div>
 
             {/* Allergies */}
@@ -505,10 +505,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
               >
                 <FileText size={18} />
                 View Full Chart
-              </button>
-              <button className="btn-action btn-secondary">
-                <Calendar size={18} />
-                Schedule Appointment
               </button>
             </div>
           </div>
