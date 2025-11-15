@@ -31,7 +31,14 @@ try {
         exit;
     }
 
+    if (!isset($input['nurse_id'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'nurse_id is required']);
+        exit;
+    }
+
     $appointment_id = (int)$input['Appointment_id'];
+    $nurse_id = (int)$input['nurse_id'];
     $user_id = (int)$_SESSION['uid'];
 
     // Optional: allow forcing check-in despite warnings (not errors)
@@ -40,7 +47,7 @@ try {
     $conn = getDBConnection();
 
     // Verify receptionist has access to this appointment (same office)
-    $verifySql = "SELECT a.Appointment_id, a.Office_id, a.Patient_id
+    $verifySql = "SELECT a.Appointment_id, a.Office_id, a.Patient_id, a.Doctor_id
                   FROM appointment a
                   JOIN user_account ua ON ua.user_id = ?
                   JOIN staff s ON ua.email = s.staff_email
@@ -57,6 +64,8 @@ try {
     }
 
     $patient_id = $verifyResult[0]['Patient_id'];
+    $office_id = $verifyResult[0]['Office_id'];
+    $doctor_id = $verifyResult[0]['Doctor_id'];
 
     $conn->begin_transaction();
 
@@ -71,12 +80,11 @@ try {
         if (empty($existingVisit)) {
             // Create new patient_visit record
             // The trigger will validate insurance automatically
-            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, office_id, start_at)
-                              SELECT a.Appointment_id, a.Patient_id, a.Doctor_id, a.Office_id, NOW()
-                              FROM appointment a WHERE a.Appointment_id = ?";
+            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, nurse_id, office_id, start_at)
+                              VALUES (?, ?, ?, ?, ?, NOW())";
 
             try {
-                executeQuery($conn, $insertVisitSql, 'i', [$appointment_id]);
+                executeQuery($conn, $insertVisitSql, 'iiiii', [$appointment_id, $patient_id, $doctor_id, $nurse_id, $office_id]);
             } catch (Exception $insertEx) {
                 // Check if this is an insurance-related error from the trigger
                 $errorMsg = $insertEx->getMessage();
