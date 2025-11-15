@@ -1,1498 +1,574 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  DollarSign, 
-  FileText, 
-  Building2, 
-  TrendingUp, 
-  AlertCircle,
-  Calendar,
-  Download,
-  RefreshCw,
-  Filter,
-  ArrowLeft,
-  ChevronDown,
-  ChevronUp,
-  BarChart3,
-  Users,
-  Clock,
-  UserPlus
+  Activity, AlertTriangle, CheckCircle, Clock, Filter, 
+  TrendingUp, Users, ChevronDown, ChevronRight, X, 
+  Phone, Calendar, Pill, FileText, Heart, Download
 } from 'lucide-react';
-import '../doctor/Dashboard.css';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
 import './Report.css';
 
-function Report() {
-  const [activeReport, setActiveReport] = useState(null);
+export default function ChronicDiseaseReport() {
+  // Data state
+  const [patients, setPatients] = useState([]);
+  const [statistics, setStatistics] = useState(null);
+  const [conditionBreakdown, setConditionBreakdown] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Filter states
-  const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 30);
-    return date.toISOString().split('T')[0];
+  // Filter state
+  const [filters, setFilters] = useState({
+    condition: 'all',
+    risk: 'all'
   });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [groupBy, setGroupBy] = useState('day'); // day, week, month
-  const [selectedOffice, setSelectedOffice] = useState('all');
-  const [selectedDoctor, setSelectedDoctor] = useState('all');
-  const [selectedInsurance, setSelectedInsurance] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedPeriod, setSelectedPeriod] = useState(null);
-  // Data states
-  const [financialData, setFinancialData] = useState(null);
-  const [officeData, setOfficeData] = useState(null);
-  const [newPatientsData, setNewPatientsData] = useState(null);
-  const [offices, setOffices] = useState([]);
-  const [doctors, setDoctors] = useState([]);
-  const [insurances, setInsurances] = useState([]);
 
-  // UI states
+  // UI state
+  const [expandedPatient, setExpandedPatient] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
-  const [showChart, setShowChart] = useState(true);
+  const [selectedRiskView, setSelectedRiskView] = useState('critical'); // critical, due_soon, on_track
 
-  // Fetch filter options on mount
   useEffect(() => {
-    fetchFilterOptions();
-  }, []);
+    fetchReport();
+  }, [filters]);
 
-  // Fetch report data when activeReport changes
-  useEffect(() => {
-    if (activeReport === 'financial') {
-      fetchFinancialReport();
-    } else if (activeReport === 'office') {
-      fetchOfficeUtilization();
-    } else if (activeReport === 'newPatients') {
-      fetchNewPatientsReport();
-    }
-  }, [activeReport]);
+  const fetchReport = async () => {
+    setLoading(true);
+    setError(null);
 
-  const fetchFilterOptions = async () => {
     try {
-      const [officesRes, doctorsRes, insurancesRes] = await Promise.all([
-        fetch('/admin_api/reports/filter-options.php?type=offices', { credentials: 'include' }),
-        fetch('/admin_api/reports/filter-options.php?type=doctors', { credentials: 'include' }),
-        fetch('/admin_api/reports/filter-options.php?type=insurances', { credentials: 'include' })
-      ]);
+      const queryParams = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key] && filters[key] !== 'all') {
+          queryParams.append(key, filters[key]);
+        }
+      });
 
-      const [officesData, doctorsData, insurancesData] = await Promise.all([
-        officesRes.json(),
-        doctorsRes.json(),
-        insurancesRes.json()
-      ]);
+      const response = await fetch(`/doctor_api/reports/get-chronic-disease-report.php?${queryParams}`, { 
+        credentials: 'include' 
+      });
 
-      if (officesData.success) setOffices(officesData.data || []);
-      if (doctorsData.success) setDoctors(doctorsData.data || []);
-      if (insurancesData.success) setInsurances(insurancesData.data || []);
-    } catch (err) {
-      console.error('Failed to fetch filter options:', err);
-    }
-  };
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
 
-  const money = (v) => {
-    const n = Number(v || 0);
-    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  const StatCard = ({type='primary', icon, label, value, subtitle, trend}) => (
-    <div className={`stat-card stat-${type}`}>
-      <div className="stat-icon">{icon}</div>
-      <div className="stat-content">
-        <div className="stat-value">{value}</div>
-        <div className="stat-label">{label}</div>
-        {subtitle && <div className="stat-subtitle">{subtitle}</div>}
-        {trend && <div className={`stat-trend ${trend.direction}`}>{trend.text}</div>}
-      </div>
-    </div>
-  );
-
-  const buildQueryParams = () => {
-    const params = new URLSearchParams({
-      start_date: startDate,
-      end_date: endDate,
-      group_by: groupBy
-    });
-    
-    if (selectedOffice !== 'all') params.append('office_id', selectedOffice);
-    if (selectedDoctor !== 'all') params.append('doctor_id', selectedDoctor);
-    if (selectedInsurance !== 'all') params.append('insurance_id', selectedInsurance);
-    if (statusFilter !== 'all') params.append('status', statusFilter);
-    
-    return params.toString();
-  };
-
-  const fetchFinancialReport = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(
-        `/admin_api/reports/financial-summary.php?${buildQueryParams()}`,
-        { credentials: 'include' }
-      );
-      const data = await res.json();
+      const data = await response.json();
       if (data.success) {
-        setFinancialData(data);
+        setPatients(data.data.patients || []);
+        setStatistics(data.data.statistics || null);
+        setConditionBreakdown(data.data.condition_breakdown || []);
       } else {
-        setError(data.error || 'Failed to load financial report');
+        setError(data.error || 'Failed to fetch report');
       }
     } catch (err) {
-      setError(err.message);
+      setError('Network error: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchOfficeUtilization = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(
-        `/admin_api/reports/office-utilization.php?${buildQueryParams()}`,
-        { credentials: 'include' }
-      );
-      const data = await res.json();
-      if (data.success) {
-        setOfficeData(data);
-      } else {
-        setError(data.error || 'Failed to load office utilization report');
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const togglePatientExpand = (patientId) => {
+    setExpandedPatient(expandedPatient === patientId ? null : patientId);
+  };
+
+  const getRiskColor = (risk) => {
+    switch (risk) {
+      case 'CRITICAL': return 'bg-red-100 text-red-800 border-red-300';
+      case 'DUE_SOON': return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'ON_TRACK': return 'bg-green-100 text-green-800 border-green-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
-  const fetchNewPatientsReport = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(
-        `/admin_api/reports/get-new-patients.php?${buildQueryParams()}`,
-        { credentials: 'include' }
-      );
-      const data = await res.json();
-      if (data.success) {
-        setNewPatientsData(data);
-      } else {
-        setError(data.error || 'Failed to load new patients report');
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  const getBPStatusColor = (status) => {
+    switch (status) {
+      case 'CONTROLLED': return 'text-green-600';
+      case 'UNCONTROLLED': return 'text-red-600';
+      case 'NO_DATA': return 'text-gray-400';
+      default: return 'text-gray-600';
     }
   };
 
-  const handleSelectReport = (reportType) => {
-    setActiveReport(reportType);
-    setShowFilters(false);
-    setSortConfig({ key: null, direction: 'desc' });
-    setSelectedPeriod(null);
-  };
-
-  const handleRefresh = () => {
-    setSelectedPeriod(null);
-    if (activeReport === 'financial') {
-      fetchFinancialReport();
-    } else if (activeReport === 'office') {
-      fetchOfficeUtilization();
-    } else if (activeReport === 'newPatients') {
-      fetchNewPatientsReport();
+  const getMedStatusColor = (status) => {
+    switch (status) {
+      case 'EXPIRED': return 'bg-red-100 text-red-800 border-red-300';
+      case 'CRITICAL': return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'EXPIRING_SOON': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'ACTIVE': return 'bg-green-100 text-green-800 border-green-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
-  const handleSort = (key) => {
-    let direction = 'desc';
-    if (sortConfig.key === key && sortConfig.direction === 'desc') {
-      direction = 'asc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const getSortedData = (data, key) => {
-    if (!sortConfig.key || !data) return data;
-    
-    return [...data].sort((a, b) => {
-      const aVal = a[key];
-      const bVal = b[key];
-      
-      if (aVal === bVal) return 0;
-      
-      const comparison = aVal < bVal ? -1 : 1;
-      return sortConfig.direction === 'asc' ? comparison : -comparison;
-    });
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Never';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   const exportToCSV = () => {
-    let csvContent = '';
-    let filename = '';
-    
-    if (activeReport === 'financial' && financialData) {
-      filename = `financial_report_${startDate}_to_${endDate}.csv`;
-      csvContent = 'Period,Total Visits,Gross Revenue,Collected Payments,Outstanding Balance,Unique Patients,Collection Rate\n';
-      (financialData.daily_revenue || []).forEach(row => {
-        const gross = Number(row.gross_revenue || 0);
-        const collected = Number(row.collected_payments || 0);
-        const rate = gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
-        csvContent += `${row.period_label},${row.total_visits},${row.gross_revenue},${row.collected_payments},${row.outstanding_balance},${row.unique_patients},${rate}\n`;
-      });
-    } else if (activeReport === 'office' && officeData) {
-      filename = `office_utilization_${startDate}_to_${endDate}.csv`;
-      csvContent = 'Office Name,Address,Total Appointments,Completed,Cancelled,No-Shows,Scheduled,No-Show Rate,Avg Wait Time (min),Utilization Rate\n';
-      (officeData.office_stats || []).forEach(row => {
-        csvContent += `"${row.office_name}","${row.address}",${row.total_appointments},${row.completed},${row.cancelled},${row.no_shows},${row.scheduled},${row.no_show_rate},${row.avg_wait_minutes || 'N/A'},${row.utilization_rate}\n`;
-      });
-    } else if (activeReport === 'newPatients' && newPatientsData) {
-      filename = `new_patients_${startDate}_to_${endDate}.csv`;
-      csvContent = 'Period,Doctor,Office,New Appointments,Unique New Patients\n';
-      (newPatientsData.rows || []).forEach(row => {
-        csvContent += `${row.period_label},${row.doctor_name},${row.office_name},${row.new_patient_appointments},${row.unique_new_patients}\n`;
-      });
-    }
-    
-    if (!filename) return;
+    if (patients.length === 0) return;
 
+    const headers = ['Patient', 'Age', 'Condition', 'Days Since Visit', 'Risk Status', 'BP Status', 'Active Meds', 'No-Shows', 'Next Appointment'];
+    const rows = patients.map(p => [
+      p.patient_name,
+      p.age,
+      p.condition_name,
+      p.days_since_last_visit || 'N/A',
+      p.followup_risk,
+      p.bp_control_status,
+      p.active_medications,
+      p.no_show_count,
+      p.next_appointment_date ? formatDate(p.next_appointment_date) : 'Not Scheduled'
+    ]);
+
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = `chronic-disease-management-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
-    window.URL.revokeObjectURL(url);
   };
 
-  const resetFilters = () => {
-    const date = new Date();
-    date.setDate(date.getDate() - 30);
-    setStartDate(date.toISOString().split('T')[0]);
-    setEndDate(new Date().toISOString().split('T')[0]);
-    setGroupBy('day');
-    setSelectedOffice('all');
-    setSelectedDoctor('all');
-    setSelectedInsurance('all');
-    setStatusFilter('all');
-  };
+  // Prepare chart data
+  const riskDistributionData = statistics ? [
+    { name: 'Critical', value: statistics.critical_count, color: '#ef4444' },
+    { name: 'Due Soon', value: statistics.due_soon_count, color: '#f59e0b' },
+    { name: 'On Track', value: statistics.on_track_count, color: '#10b981' }
+  ].filter(item => item.value > 0) : [];
 
-  // Quick date range presets
-  const setDateRange = (days) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - days);
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
-  };
+  const conditionChartData = conditionBreakdown.slice(0, 5).map(c => ({
+    condition: c.condition_name.substring(0, 15) + (c.condition_name.length > 15 ? '...' : ''),
+    total: c.total_patients,
+    critical: c.critical
+  }));
 
-  // Report selector view
-  if (!activeReport) {
-    return (
-      <div className="report-container">
-        <div className="dashboard-header">
-          <div className="welcome-section">
-            <h1>Reports & Analytics</h1>
-            <p className="office-info">Select a report type to view detailed insights</p>
-          </div>
-        </div>
-
-        <div className="report-selector-grid">
-          <div className="report-selector-card" onClick={() => handleSelectReport('financial')}>
-            <div className="selector-icon">
-              <DollarSign size={48} />
-            </div>
-            <h3>Financial Summary</h3>
-            <p>Revenue tracking, payments collected, outstanding balances, and insurance breakdown</p>
-            <div className="card-features">
-              <span><BarChart3 size={14} /> Charts & Trends</span>
-              <span><Filter size={14} /> Advanced Filters</span>
-              <span><Download size={14} /> Export Data</span>
-            </div>
-          </div>
-
-          <div className="report-selector-card" onClick={() => handleSelectReport('office')}>
-            <div className="selector-icon">
-              <Building2 size={48} />
-            </div>
-            <h3>Office Utilization</h3>
-            <p>Appointment metrics, no-show rates, wait times, and office performance analysis</p>
-            <div className="card-features">
-              <span><Clock size={14} /> Wait Time Analysis</span>
-              <span><Users size={14} /> Staff Performance</span>
-              <span><TrendingUp size={14} /> Utilization Trends</span>
-            </div>
-          </div>
-
-          <div className="report-selector-card" onClick={() => handleSelectReport('newPatients')}>
-            <div className="selector-icon">
-              <UserPlus size={48} />
-            </div>
-            <h3>New Patients</h3>
-            <p>Track first-time visits by doctor and office over time</p>
-            <div className="card-features">
-              <span><Users size={14} /> Patient Growth</span>
-              <span><BarChart3 size={14} /> Trends Over Time</span>
-              <span><Download size={14} /> Export Data</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const headerTitle =
-    activeReport === 'financial'
-      ? 'Financial Summary'
-      : activeReport === 'office'
-      ? 'Office Utilization'
-      : 'New Patients';
+  // Filter patients by selected risk view
+  const filteredPatients = patients.filter(p => {
+    if (selectedRiskView === 'all') return true;
+    return p.followup_risk.toLowerCase() === selectedRiskView.toLowerCase();
+  });
 
   return (
-    <div className="report-container">
-      <div className="dashboard-header report-header">
-        <div className="report-header-left">
-          <h1>{headerTitle}</h1>
-          <p className="office-info">
-            <Calendar size={16} />
-            <span className="date-range">{startDate} — {endDate}</span>
-            {(selectedOffice !== 'all' || selectedDoctor !== 'all' || selectedInsurance !== 'all') && (
-              <span className="active-filters-badge">{
-                [selectedOffice !== 'all' && 'Office', 
-                 selectedDoctor !== 'all' && 'Doctor',
-                 selectedInsurance !== 'all' && 'Insurance'].filter(Boolean).join(', ')
-              } filtered</span>
-            )}
-          </p>
+    <div className="chronic-disease-dashboard">
+      <div className="dashboard-header">
+        <div>
+          <h1><Activity style={{display: 'inline', marginRight: '0.5rem'}} />Chronic Disease Management</h1>
+          <p className="dashboard-subtitle">Track and manage patients with chronic conditions</p>
         </div>
-
-        <div className="report-header-actions">
-          <button onClick={() => setActiveReport(null)} className="btn btn-ghost">
-            <ArrowLeft size={14} /> Back
-          </button>
-          <div className="toolbar-actions">
-            <button 
-              onClick={() => setShowFilters(!showFilters)} 
-              className={`btn btn-sm ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
-            >
-              <Filter size={14} /> Filters {showFilters ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            </button>
-            <button onClick={handleRefresh} disabled={loading} className="btn btn-sm btn-secondary">
-              <RefreshCw size={14} className={loading ? 'spinning' : ''} />
-            </button>
-            <button 
-              onClick={exportToCSV} 
-              disabled={loading || (!financialData && !officeData && !newPatientsData)}
-              className="btn btn-sm btn-primary"
-            >
-              <Download size={14} /> Export
-            </button>
-          </div>
-        </div>
+        <button className="btn-export" onClick={exportToCSV} disabled={patients.length === 0}>
+          <Download size={18} /> Export Report
+        </button>
       </div>
 
-      {showFilters && (
-        <div className="advanced-filters-panel">
-          <div className="filters-grid">
-            <div className="filter-group">
-              <label>Date Range</label>
-              <div className="date-range-group">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  max={endDate}
-                />
-                <span>to</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate}
-                  max={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-              <div className="date-presets">
-                <button onClick={() => setDateRange(7)} className="btn-preset">Last 7 days</button>
-                <button onClick={() => setDateRange(30)} className="btn-preset">Last 30 days</button>
-                <button onClick={() => setDateRange(90)} className="btn-preset">Last 90 days</button>
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <label>Group By</label>
-              <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)}>
-                <option value="day">Daily</option>
-                <option value="week">Weekly</option>
-                <option value="month">Monthly</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <label>Office</label>
-              <select value={selectedOffice} onChange={(e) => setSelectedOffice(e.target.value)}>
-                <option value="all">All Offices</option>
-                {offices.map(office => (
-                  <option key={office.office_id} value={office.office_id}>
-                    {office.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {(activeReport === 'financial' || activeReport === 'newPatients') && (
-              <div className="filter-group">
-                <label>Doctor</label>
-                <select value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)}>
-                  <option value="all">All Doctors</option>
-                  {doctors.map(doctor => (
-                    <option key={doctor.doctor_id} value={doctor.doctor_id}>
-                      Dr. {doctor.first_name} {doctor.last_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {activeReport === 'financial' && (
-              <div className="filter-group">
-                <label>Insurance</label>
-                <select value={selectedInsurance} onChange={(e) => setSelectedInsurance(e.target.value)}>
-                  <option value="all">All Insurance</option>
-                  <option value="self-pay">Self-Pay Only</option>
-                  {insurances.map(ins => (
-                    <option key={ins.payer_id} value={ins.payer_id}>
-                      {ins.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {activeReport === 'office' && (
-              <div className="filter-group">
-                <label>Appointment Status</label>
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                  <option value="all">All Statuses</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Scheduled">Scheduled</option>
-                  <option value="Cancelled">Cancelled</option>
-                  <option value="No-Show">No-Show</option>
-                </select>
-              </div>
-            )}
-          </div>
-
-          <div className="filter-actions">
-            <button onClick={resetFilters} className="btn btn-ghost">Reset All</button>
-            <button onClick={handleRefresh} disabled={loading} className="btn btn-primary">
-              Apply Filters
-            </button>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="error-banner">
-          <AlertCircle size={20} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {loading && (
-        <div className="loading-container">
-          <div className="loading-spinner" />
-          <p>Loading report data...</p>
-        </div>
-      )}
-
-      {/* FINANCIAL REPORT VIEW */}
-      {!loading && activeReport === 'financial' && financialData && (
+      {loading ? (
+        <div className="loading-state">Loading patient data...</div>
+      ) : error ? (
+        <div className="error-state">{error}</div>
+      ) : (
         <>
-          <div className="stats-grid">
-            <StatCard 
-              type="primary"
-              icon={<DollarSign size={20} />}
-              label="Total Revenue"
-              value={`$${money(financialData.summary?.total_revenue || 0)}`}
-              subtitle={`${financialData.summary?.total_visits || 0} visits`}
-            />
-            <StatCard 
-              type="success"
-              icon={<TrendingUp size={20} />}
-              label="Collected"
-              value={`$${money(financialData.summary?.total_collected || 0)}`}
-              subtitle={`${financialData.summary?.collection_rate || 0}% collection rate`}
-            />
-            <StatCard 
-              type="warning"
-              icon={<AlertCircle size={20} />}
-              label="Outstanding"
-              value={`$${money(financialData.summary?.total_outstanding || 0)}`}
-              subtitle={`${financialData.summary?.outstanding_visits || 0} visits pending`}
-            />
-            <StatCard 
-              type="info"
-              icon={<Users size={20} />}
-              label="Unique Patients"
-              value={financialData.summary?.unique_patients || 0}
-              subtitle={`$${money(financialData.summary?.avg_revenue_per_patient || 0)} avg per patient`}
-            />
-          </div>
-            {financialData.daily_revenue && financialData.daily_revenue.length > 0 && (
-              <section className="report-section">
-                <div className="section-header">
-                  <h3>Revenue Trend</h3>
-                  <button onClick={() => setShowChart(!showChart)} className="btn btn-sm btn-ghost">
-                    {showChart ? 'Hide Chart' : 'Show Chart'}
-                  </button>
-                </div>
-
-                {showChart && (
-                  <SimpleChart
-                    data={financialData.daily_revenue}
-                    onBarSelect={setSelectedPeriod}
-                    selectedPeriod={selectedPeriod}
-                  />
-                )}
-              </section>
-            )}
-
-              <section className="report-section">
-                <div className="section-header">
-                  <div>
-                    <h3>Daily Revenue Breakdown</h3>
-                    {/* use filtered count here */}
-                    <p className="section-subtitle">
-                      {(
-                        selectedPeriod
-                          ? (financialData.daily_revenue || []).filter(
-                              (r) => r.period_label === selectedPeriod
-                            )
-                          : (financialData.daily_revenue || [])
-                      ).length}{' '}
-                      {selectedPeriod ? 'rows for selected period' : 'periods'}
-                    </p>
+          {/* SUMMARY STATISTICS - The Big Picture */}
+          {statistics && (
+            <div className="summary-section">
+              <h2><TrendingUp size={20} /> Overview</h2>
+              <div className="summary-cards">
+                <div className="summary-card total">
+                  <div className="card-icon" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>
+                    <Users size={24} />
                   </div>
-
-                  {selectedPeriod && (
-                    <button
-                      className="btn btn-sm btn-ghost"
-                      onClick={() => setSelectedPeriod(null)}
-                    >
-                      Clear selection
-                    </button>
-                  )}
+                  <div className="card-content">
+                    <div className="card-value">{statistics.total_patients}</div>
+                    <div className="card-label">Total Patients</div>
+                    <div className="card-sublabel">with chronic conditions</div>
+                  </div>
                 </div>
-                <div className="table-container">
-                  <table className="report-table sortable-table">
+
+                <div className="summary-card critical" onClick={() => setSelectedRiskView('critical')}>
+                  <div className="card-icon" style={{background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'}}>
+                    <AlertTriangle size={24} />
+                  </div>
+                  <div className="card-content">
+                    <div className="card-value">{statistics.critical_count}</div>
+                    <div className="card-label">CRITICAL</div>
+                    <div className="card-sublabel">Overdue for follow-up (&gt;90 days)</div>
+                  </div>
+                  <div className="card-action">Click to view →</div>
+                </div>
+
+                <div className="summary-card warning" onClick={() => setSelectedRiskView('due_soon')}>
+                  <div className="card-icon" style={{background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'}}>
+                    <Clock size={24} />
+                  </div>
+                  <div className="card-content">
+                    <div className="card-value">{statistics.due_soon_count}</div>
+                    <div className="card-label">DUE SOON</div>
+                    <div className="card-sublabel">Need follow-up (60-90 days)</div>
+                  </div>
+                  <div className="card-action">Click to view →</div>
+                </div>
+
+                <div className="summary-card success" onClick={() => setSelectedRiskView('on_track')}>
+                  <div className="card-icon" style={{background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'}}>
+                    <CheckCircle size={24} />
+                  </div>
+                  <div className="card-content">
+                    <div className="card-value">{statistics.on_track_count}</div>
+                    <div className="card-label">ON TRACK</div>
+                    <div className="card-sublabel">Recent visits (&lt;60 days)</div>
+                  </div>
+                  <div className="card-action">Click to view →</div>
+                </div>
+              </div>
+
+              {/* Secondary Metrics - Why These Numbers Matter */}
+              <div className="secondary-metrics">
+                <div className="metric-item">
+                  <Heart className="metric-icon" />
+                  <div>
+                    <div className="metric-value">{statistics.uncontrolled_bp_count}</div>
+                    <div className="metric-label">Uncontrolled BP</div>
+                  </div>
+                </div>
+                <div className="metric-item">
+                  <Pill className="metric-icon" />
+                  <div>
+                    <div className="metric-value">{statistics.meds_expiring_count}</div>
+                    <div className="metric-label">Meds Expiring Soon</div>
+                  </div>
+                </div>
+                <div className="metric-item">
+                  <AlertTriangle className="metric-icon" />
+                  <div>
+                    <div className="metric-value">{statistics.high_risk_no_shows}</div>
+                    <div className="metric-label">High-Risk No-Shows</div>
+                  </div>
+                </div>
+                <div className="metric-item">
+                  <Calendar className="metric-icon" />
+                  <div>
+                    <div className="metric-value">{statistics.no_scheduled_followup}</div>
+                    <div className="metric-label">No Follow-up Scheduled</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VISUAL ANALYTICS */}
+          {statistics && (
+            <div className="analytics-section">
+              <h2>Clinical Insights</h2>
+              <div className="charts-container">
+                {/* Risk Distribution Pie Chart */}
+                {riskDistributionData.length > 0 && (
+                  <div className="chart-card">
+                    <h3>Patient Risk Distribution</h3>
+                    <p className="chart-description">How many patients need attention now vs. later</p>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={riskDistributionData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {riskDistributionData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {/* Condition Breakdown Bar Chart */}
+                {conditionChartData.length > 0 && (
+                  <div className="chart-card">
+                    <h3>Top Chronic Conditions</h3>
+                    <p className="chart-description">What conditions I'm managing (with critical counts)</p>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={conditionChartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="condition" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="total" fill="#667eea" name="Total Patients" />
+                        <Bar dataKey="critical" fill="#ef4444" name="Critical" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+
+              {/* Condition Details Table */}
+              {conditionBreakdown.length > 0 && (
+                <div className="condition-breakdown">
+                  <h3>Condition Breakdown Details</h3>
+                  <table className="breakdown-table">
                     <thead>
                       <tr>
-                        <th onClick={() => handleSort('period_label')}>
-                          Date {sortConfig.key === 'period_label' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => handleSort('total_visits')}>
-                          Visits {sortConfig.key === 'total_visits' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => handleSort('gross_revenue')}>
-                          Gross Revenue {sortConfig.key === 'gross_revenue' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => handleSort('collected_payments')}>
-                          Collected {sortConfig.key === 'collected_payments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => handleSort('outstanding_balance')}>
-                          Outstanding {sortConfig.key === 'outstanding_balance' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => handleSort('unique_patients')}>
-                          Unique Patients {sortConfig.key === 'unique_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th>Collection Rate</th>
+                        <th>Condition</th>
+                        <th>Total Patients</th>
+                        <th>Critical</th>
+                        <th>Due Soon</th>
+                        <th>On Track</th>
+                        <th>Uncontrolled BP</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {getSortedData(
-                        selectedPeriod
-                          ? (financialData.daily_revenue || []).filter(
-                              (row) => row.period_label === selectedPeriod
-                            )
-                          : (financialData.daily_revenue || []),
-                        sortConfig.key
-                      ).map((row, idx) => {
-                        const gross = Number(row.gross_revenue || 0);
-                        const collected = Number(row.collected_payments || 0);
-                        const collectionRate =
-                          gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
-
-                        return (
-                          <tr key={idx}>
-                            <td className="text-bold">{row.period_label}</td>
-                            <td>{row.total_visits}</td>
-                            <td className="text-success">${money(row.gross_revenue)}</td>
-                            <td className="text-primary">${money(row.collected_payments)}</td>
-                            <td className="text-warning">${money(row.outstanding_balance)}</td>
-                            <td>{row.unique_patients}</td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  Number(collectionRate) >= 80
-                                    ? 'badge-success'
-                                    : Number(collectionRate) >= 50
-                                    ? 'badge-warning'
-                                    : 'badge-danger'
-                                }`}
-                              >
-                                {collectionRate}%
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {conditionBreakdown.map((condition, idx) => (
+                        <tr key={idx}>
+                          <td><strong>{condition.condition_name}</strong></td>
+                          <td>{condition.total_patients}</td>
+                          <td><span className="badge badge-critical">{condition.critical}</span></td>
+                          <td><span className="badge badge-warning">{condition.due_soon}</span></td>
+                          <td><span className="badge badge-success">{condition.on_track}</span></td>
+                          <td><span className="badge badge-danger">{condition.uncontrolled_bp}</span></td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
-              </section>
-
-
-          {financialData.insurance_breakdown && financialData.insurance_breakdown.length > 0 && (
-            <section className="report-section">
-              <div className="section-header">
-                <h3>Insurance Breakdown</h3>
-                <p className="section-subtitle">{financialData.insurance_breakdown.length} insurance plans</p>
-              </div>
-              <div className="table-container">
-                <table className="report-table">
-                  <thead>
-                    <tr>
-                      <th>Insurance Company</th>
-                      <th>Plan Name</th>
-                      <th>Visit Count</th>
-                      <th>Total Cost</th>
-                      <th>Total Payments</th>
-                      <th>Outstanding</th>
-                      <th>Collection Rate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {financialData.insurance_breakdown.map((ins, idx) => {
-                      const collectionRate = Number(ins.total_cost) > 0 
-                        ? ((Number(ins.total_payments) / Number(ins.total_cost)) * 100).toFixed(1) 
-                        : '0.0';
-                      
-                      return (
-                        <tr key={idx}>
-                          <td className="text-bold">{ins.insurance_company}</td>
-                          <td>{ins.plan_name}</td>
-                          <td>{ins.visit_count}</td>
-                          <td className="text-success">${money(ins.total_cost)}</td>
-                          <td className="text-primary">${money(ins.total_payments)}</td>
-                          <td className="text-warning">${money(ins.outstanding)}</td>
-                          <td>
-                            <span className={`badge ${Number(collectionRate) >= 80 ? 'badge-success' : Number(collectionRate) >= 50 ? 'badge-warning' : 'badge-danger'}`}>
-                              {collectionRate}%
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+              )}
+            </div>
           )}
 
-          {financialData.doctor_performance && financialData.doctor_performance.length > 0 && (
-            <section className="report-section">
-              <div className="section-header">
-                <h3>Doctor Performance</h3>
-                <p className="section-subtitle">{financialData.doctor_performance.length} doctors</p>
-              </div>
-              <div className="table-container">
-                <table className="report-table">
-                  <thead>
-                    <tr>
-                      <th>Doctor Name</th>
-                      <th>Total Visits</th>
-                      <th>Total Revenue</th>
-                      <th>Collected</th>
-                      <th>Avg Per Visit</th>
-                      <th>Unique Patients</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {financialData.doctor_performance.map((doc, idx) => (
-                      <tr key={idx}>
-                        <td className="text-bold">Dr. {doc.doctor_name}</td>
-                        <td>{doc.total_visits}</td>
-                        <td className="text-success">${money(doc.total_revenue)}</td>
-                        <td className="text-primary">${money(doc.collected)}</td>
-                        <td>${money(doc.avg_per_visit)}</td>
-                        <td>{doc.unique_patients}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-        </>
-      )}
-
-      {/* OFFICE UTILIZATION REPORT VIEW */}
-      {!loading && activeReport === 'office' && officeData && (
-        <>
-          <div className="stats-grid">
-            <StatCard 
-              type="primary"
-              icon={<Building2 size={20} />}
-              label="Total Appointments"
-              value={officeData.summary?.total_appointments || 0}
-              subtitle={`${officeData.summary?.total_offices || 0} offices`}
-            />
-            <StatCard 
-              type="success"
-              icon={<TrendingUp size={20} />}
-              label="Completed"
-              value={officeData.summary?.completed || 0}
-              subtitle={`${officeData.summary?.completion_rate || 0}% completion rate`}
-            />
-            <StatCard 
-              type="danger"
-              icon={<AlertCircle size={20} />}
-              label="No-Shows"
-              value={officeData.summary?.no_shows || 0}
-              subtitle={`${officeData.summary?.no_show_rate || 0}% no-show rate`}
-            />
-            <StatCard 
-              type="info"
-              icon={<Clock size={20} />}
-              label="Avg Wait Time"
-              value={officeData.summary?.avg_wait_minutes ? `${officeData.summary.avg_wait_minutes} min` : 'N/A'}
-              subtitle="Across all offices"
-            />
-          </div>
-          {officeData.office_stats && officeData.office_stats.length > 0 && (
-            <section className="report-section">
-              <div className="section-header">
-                <h3>Utilization by Office</h3>
-                <p className="section-subtitle">
-                  Share of total appointments in this period
-                </p>
-              </div>
-              <OfficeUtilizationPie offices={officeData.office_stats} />
-            </section>
-          )}
-
-          <section className="report-section">
+          {/* PATIENT LIST - The Drill-Down Detail */}
+          <div className="patients-section">
             <div className="section-header">
-              <h3>Office Performance Metrics</h3>
-              <p className="section-subtitle">{(officeData.office_stats || []).length} offices</p>
-            </div>
-            <div className="table-container">
-              <table className="report-table sortable-table">
-                <thead>
-                  <tr>
-                    <th onClick={() => handleSort('office_name')}>
-                      Office Name {sortConfig.key === 'office_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th>Address</th>
-                    <th onClick={() => handleSort('total_appointments')}>
-                      Total Appts {sortConfig.key === 'total_appointments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('completed')}>
-                      Completed {sortConfig.key === 'completed' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('cancelled')}>
-                      Cancelled {sortConfig.key === 'cancelled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('no_shows')}>
-                      No-Shows {sortConfig.key === 'no_shows' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('scheduled')}>
-                      Scheduled {sortConfig.key === 'scheduled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th>No-Show Rate</th>
-                    <th>Avg Wait</th>
-                    <th>Utilization</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getSortedData(officeData.office_stats || [], sortConfig.key).map((office, idx) => (
-                    <tr key={idx}>
-                      <td className="text-bold">{office.office_name}</td>
-                      <td className="text-muted">{office.address}</td>
-                      <td>{office.total_appointments}</td>
-                      <td className="text-success">{office.completed}</td>
-                      <td className="text-warning">{office.cancelled}</td>
-                      <td className="text-danger">{office.no_shows}</td>
-                      <td>{office.scheduled}</td>
-                      <td>
-                        <span className={`badge ${Number(office.no_show_rate) < 5 ? 'badge-success' : Number(office.no_show_rate) < 10 ? 'badge-warning' : 'badge-danger'}`}>
-                          {office.no_show_rate}%
-                        </span>
-                      </td>
-                      <td>{office.avg_wait_minutes ? `${office.avg_wait_minutes} min` : 'N/A'}</td>
-                      <td>
-                        <span className={`badge ${Number(office.utilization_rate) >= 80 ? 'badge-success' : Number(office.utilization_rate) >= 60 ? 'badge-warning' : 'badge-danger'}`}>
-                          {office.utilization_rate}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {officeData.doctor_stats && officeData.doctor_stats.length > 0 && (
-            <section className="report-section">
-              <div className="section-header">
-                <h3>Doctor Performance by Office</h3>
-                <p className="section-subtitle">{officeData.doctor_stats.length} doctor-office combinations</p>
+              <h2>
+                Patient Details 
+                <span className="patient-count">({filteredPatients.length} patients)</span>
+              </h2>
+              <div className="view-toggles">
+                <button 
+                  className={`toggle-btn ${selectedRiskView === 'critical' ? 'active critical' : ''}`}
+                  onClick={() => setSelectedRiskView('critical')}
+                >
+                  Critical ({statistics?.critical_count || 0})
+                </button>
+                <button 
+                  className={`toggle-btn ${selectedRiskView === 'due_soon' ? 'active warning' : ''}`}
+                  onClick={() => setSelectedRiskView('due_soon')}
+                >
+                  Due Soon ({statistics?.due_soon_count || 0})
+                </button>
+                <button 
+                  className={`toggle-btn ${selectedRiskView === 'on_track' ? 'active success' : ''}`}
+                  onClick={() => setSelectedRiskView('on_track')}
+                >
+                  On Track ({statistics?.on_track_count || 0})
+                </button>
+                <button 
+                  className={`toggle-btn ${selectedRiskView === 'all' ? 'active' : ''}`}
+                  onClick={() => setSelectedRiskView('all')}
+                >
+                  All ({statistics?.total_patients || 0})
+                </button>
               </div>
-              <div className="table-container">
-                <table className="report-table">
-                  <thead>
-                    <tr>
-                      <th>Doctor</th>
-                      <th>Office</th>
-                      <th>Total Appts</th>
-                      <th>Completed</th>
-                      <th>No-Shows</th>
-                      <th>Completion Rate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {officeData.doctor_stats.map((stat, idx) => (
-                      <tr key={idx}>
-                        <td className="text-bold">Dr. {stat.doctor_name}</td>
-                        <td>{stat.office_name}</td>
-                        <td>{stat.total_appointments}</td>
-                        <td className="text-success">{stat.completed}</td>
-                        <td className="text-danger">{stat.no_shows}</td>
-                        <td>
-                          <span className={`badge ${Number(stat.completion_rate) >= 90 ? 'badge-success' : Number(stat.completion_rate) >= 75 ? 'badge-warning' : 'badge-danger'}`}>
-                            {stat.completion_rate}%
+            </div>
+
+            {filteredPatients.length === 0 ? (
+              <div className="empty-state">
+                <CheckCircle size={48} style={{color: '#10b981'}} />
+                <p>No patients in this category</p>
+              </div>
+            ) : (
+              <div className="patient-list">
+                {filteredPatients.map((patient) => (
+                  <div key={patient.patient_id} className={`patient-card ${expandedPatient === patient.patient_id ? 'expanded' : ''}`}>
+                    {/* Patient Header - Always Visible */}
+                    <div className="patient-header" onClick={() => togglePatientExpand(patient.patient_id)}>
+                      <div className="patient-main-info">
+                        <div className="patient-name-row">
+                          <h3>{patient.patient_name}</h3>
+                          <span className={`risk-badge ${getRiskColor(patient.followup_risk)}`}>
+                            {patient.followup_risk.replace('_', ' ')}
                           </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-        </>
-      )}
+                        </div>
+                        <div className="patient-meta">
+                          <span>{patient.age} years old</span>
+                          <span>•</span>
+                          <span>{patient.gender}</span>
+                          <span>•</span>
+                          <span><strong>{patient.condition_name}</strong></span>
+                        </div>
+                      </div>
 
-      {/* NEW PATIENTS REPORT VIEW */}
-      {!loading && activeReport === 'newPatients' && newPatientsData && (
-        <>
-          <div className="stats-grid">
-            <StatCard 
-              type="primary"
-              icon={<UserPlus size={20} />}
-              label="Total New Patient Appointments"
-              value={newPatientsData.summary?.total_new_appointments || 0}
-              subtitle={`${(newPatientsData.rows || []).length} time buckets`}
-            />
-            <StatCard 
-              type="success"
-              icon={<Users size={20} />}
-              label="Unique New Patients"
-              value={newPatientsData.summary?.unique_new_patients || 0}
-              subtitle="First-time visits in period"
-            />
-          </div>
-
-          <section className="report-section">
-            <div className="section-header">
-              <h3>New Patients by Period / Doctor / Office</h3>
-            </div>
-            <div className="table-container">
-              <table className="report-table sortable-table">
-                <thead>
-                  <tr>
-                    <th onClick={() => handleSort('period_label')}>
-                      Period {sortConfig.key === 'period_label' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('doctor_name')}>
-                      Doctor {sortConfig.key === 'doctor_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('office_name')}>
-                      Office {sortConfig.key === 'office_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('new_patient_appointments')}>
-                      New Appts {sortConfig.key === 'new_patient_appointments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('unique_new_patients')}>
-                      Unique New Patients {sortConfig.key === 'unique_new_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getSortedData(newPatientsData.rows || [], sortConfig.key).map((row, idx) => (
-                    <tr key={idx}>
-                      <td className="text-bold">{row.period_label}</td>
-                      <td>Dr. {row.doctor_name}</td>
-                      <td>{row.office_name}</td>
-                      <td>{row.new_patient_appointments}</td>
-                      <td>{row.unique_new_patients}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
-      )}
-
-      {/* Empty States */}
-      {!loading && !error && activeReport === 'financial' && !financialData && (
-        <div className="empty-state">
-          <FileText size={56} />
-          <p>No financial data available for the selected filters</p>
-          <button onClick={resetFilters} className="btn btn-secondary">Reset Filters</button>
-        </div>
-      )}
-
-      {!loading && !error && activeReport === 'office' && !officeData && (
-        <div className="empty-state">
-          <Building2 size={56} />
-          <p>No office utilization data available for the selected filters</p>
-          <button onClick={resetFilters} className="btn btn-secondary">Reset Filters</button>
-        </div>
-      )}
-
-      {!loading && !error && activeReport === 'newPatients' && !newPatientsData && (
-        <div className="empty-state">
-          <UserPlus size={56} />
-          <p>No new patient data available for the selected filters</p>
-          <button onClick={resetFilters} className="btn btn-secondary">Reset Filters</button>
-        </div>
-      )}
-    </div>
-  );
-}
-// Add this enhanced version to replace the existing OfficeUtilizationPie in Report.jsx
-
-
-const OfficeUtilizationPie = ({ offices }) => {
-  const [hoveredIndex, setHoveredIndex] = React.useState(null);
-  const [selectedOffice, setSelectedOffice] = React.useState(null);
-
-  const total = offices.reduce(
-    (sum, o) => sum + (o.total_appointments || 0),
-    0
-  );
-
-  if (!total) {
-    return <p className="chart-empty">No appointment data for this period.</p>;
-  }
-
-  // Color palette
-  const colors = [
-    '#6366f1', // indigo
-    '#10b981', // green
-    '#f59e0b', // amber
-    '#0ea5e9', // sky blue
-    '#f43f5e', // rose
-    '#a855f7'  // purple
-  ];
-
-  const handleSliceClick = (office, e) => {
-    e.stopPropagation();
-    setSelectedOffice(selectedOffice?.office_id === office.office_id ? null : office);
-  };
-
-  React.useEffect(() => {
-    const handleClickOutside = () => setSelectedOffice(null);
-    if (selectedOffice) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [selectedOffice]);
-
-  // Create pie slices
-  let cumulativePercent = 0;
-  const slices = offices.map((office, idx) => {
-    const value = office.total_appointments || 0;
-    const slicePercent = value / total;
-    
-    // Convert to degrees
-    const startAngle = cumulativePercent * 360;
-    const endAngle = (cumulativePercent + slicePercent) * 360;
-    
-    cumulativePercent += slicePercent;
-    
-    // SVG path calculation for pie slice
-    const startAngleRad = ((startAngle - 90) * Math.PI) / 180;
-    const endAngleRad = ((endAngle - 90) * Math.PI) / 180;
-    
-    const x1 = 200 + 160 * Math.cos(startAngleRad);
-    const y1 = 200 + 160 * Math.sin(startAngleRad);
-    const x2 = 200 + 160 * Math.cos(endAngleRad);
-    const y2 = 200 + 160 * Math.sin(endAngleRad);
-    
-    const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
-    
-    const pathData = [
-      `M 200 200`,
-      `L ${x1} ${y1}`,
-      `A 160 160 0 ${largeArcFlag} 1 ${x2} ${y2}`,
-      `Z`
-    ].join(' ');
-    
-    return {
-      office,
-      path: pathData,
-      color: colors[idx % colors.length],
-      index: idx
-    };
-  });
-
-  return (
-    <div className="office-pie-card">
-      <div className="pie-chart-container">
-        <svg 
-          viewBox="0 0 400 400" 
-          style={{ 
-            width: '100%', 
-            height: '100%',
-            display: 'block'
-          }}
-        >
-          {/* Draw pie slices */}
-          {slices.map(({ office, path, color, index }) => {
-            const isActive = hoveredIndex === index || selectedOffice?.office_id === office.office_id;
-            
-            return (
-              <path
-                key={office.office_id || index}
-                d={path}
-                fill={color}
-                stroke="white"
-                strokeWidth={isActive ? 4 : 2}
-                style={{
-                  cursor: 'pointer',
-                  opacity: isActive ? 1 : 0.95,
-                  transition: 'all 0.3s ease',
-                  filter: isActive ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.15))'
-                }}
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
-                onClick={(e) => handleSliceClick(office, e)}
-              />
-            );
-          })}
-          
-          {/* Center white circle for donut effect */}
-          <circle
-            cx="200"
-            cy="200"
-            r="100"
-            fill="white"
-            filter="drop-shadow(0 2px 8px rgba(0,0,0,0.1))"
-          />
-          
-          {/* Optional: Show percentage in center when hovering */}
-          {hoveredIndex !== null && (
-            <text
-              x="200"
-              y="200"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              style={{
-                fontSize: '48px',
-                fontWeight: 'bold',
-                fill: '#0077b6',
-                pointerEvents: 'none'
-              }}
-            >
-              {offices[hoveredIndex].utilization_rate}%
-            </text>
-          )}
-        </svg>
-      </div>
-
-      <div className="pie-legend">
-        {offices.map((office, idx) => {
-          const isHovered = hoveredIndex === idx;
-          
-          return (
-            <div 
-              key={office.office_id || idx} 
-              className={`pie-legend-row ${
-                selectedOffice?.office_id === office.office_id ? 'legend-selected' : ''
-              } ${isHovered ? 'legend-hovered' : ''}`}
-              onMouseEnter={() => setHoveredIndex(idx)}
-              onMouseLeave={() => setHoveredIndex(null)}
-              onClick={(e) => handleSliceClick(office, e)}
-              style={{ cursor: 'pointer' }}
-            >
-              <span 
-                className="pie-legend-color"
-                style={{ 
-                  backgroundColor: colors[idx % colors.length],
-                  display: 'block'
-                }}
-              />
-              <div className="pie-legend-text">
-                <div className="pie-legend-title">{office.office_name}</div>
-                <div className="pie-legend-sub">
-                  {office.total_appointments} appts · {office.utilization_rate}%
-                </div>
-                {/* Show extra details when hovering */}
-                {isHovered && (
-                  <div className="pie-legend-details">
-                    <span>✓ {office.completed} completed</span>
-                    <span>⚠ {office.no_shows} no-shows</span>
-                    <span>📅 {office.scheduled} scheduled</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Detailed Office Stats Modal */}
-      {selectedOffice && (
-        <div className="office-detail-card" onClick={(e) => e.stopPropagation()}>
-          <div className="office-detail-header">
-            <h4>{selectedOffice.office_name}</h4>
-            <button 
-              className="btn-close-detail" 
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedOffice(null);
-              }}
-            >
-              ×
-            </button>
-          </div>
-          
-          <div className="office-detail-grid">
-            <div className="detail-stat">
-              <span className="detail-label">Address</span>
-              <span className="detail-value detail-value-small">{selectedOffice.address}</span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">Total Appointments</span>
-              <span className="detail-value detail-primary">
-                {selectedOffice.total_appointments}
-              </span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">Completed</span>
-              <span className="detail-value detail-success">
-                {selectedOffice.completed}
-              </span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">Scheduled</span>
-              <span className="detail-value detail-info">
-                {selectedOffice.scheduled}
-              </span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">Cancelled</span>
-              <span className="detail-value detail-warning">
-                {selectedOffice.cancelled}
-              </span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">No-Shows</span>
-              <span className="detail-value detail-danger">
-                {selectedOffice.no_shows}
-              </span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">No-Show Rate</span>
-              <span className={`detail-value ${
-                Number(selectedOffice.no_show_rate) < 5 
-                  ? 'detail-success' 
-                  : Number(selectedOffice.no_show_rate) < 10 
-                  ? 'detail-warning' 
-                  : 'detail-danger'
-              }`}>
-                {selectedOffice.no_show_rate}%
-              </span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">Completion Rate</span>
-              <span className={`detail-value ${
-                Number(selectedOffice.completion_rate) >= 90 
-                  ? 'detail-success' 
-                  : Number(selectedOffice.completion_rate) >= 75 
-                  ? 'detail-warning' 
-                  : 'detail-danger'
-              }`}>
-                {selectedOffice.completion_rate}%
-              </span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">Avg Wait Time</span>
-              <span className="detail-value">
-                {selectedOffice.avg_wait_minutes 
-                  ? `${selectedOffice.avg_wait_minutes} min` 
-                  : 'N/A'}
-              </span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">Utilization Rate</span>
-              <span className={`detail-value ${
-                Number(selectedOffice.utilization_rate) >= 80 
-                  ? 'detail-success' 
-                  : Number(selectedOffice.utilization_rate) >= 60 
-                  ? 'detail-warning' 
-                  : 'detail-danger'
-              }`}>
-                {selectedOffice.utilization_rate}%
-              </span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">Unique Doctors</span>
-              <span className="detail-value">
-                {selectedOffice.unique_doctors}
-              </span>
-            </div>
-
-            <div className="detail-stat">
-              <span className="detail-label">Unique Patients</span>
-              <span className="detail-value">
-                {selectedOffice.unique_patients}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Enhanced chart component with gridlines, axis, and tooltips
-const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
-  const [hoveredBar, setHoveredBar] = React.useState(null);
-  const [clickedBar, setClickedBar] = React.useState(null);
-  
-  if (!data || data.length === 0) return null;
-
-  // Parse all revenue values and log for debugging
-  const revenues = data.map((d, idx) => {
-    const raw = d.gross_revenue;
-    const parsed = parseFloat(raw);
-    const final = isNaN(parsed) ? 0 : parsed;
-    
-    // Debug logging (remove after confirming it works)
-    if (idx === 0) {
-      console.log('Chart Debug - First Item:');
-      console.log('  Raw value:', raw, typeof raw);
-      console.log('  Parsed:', parsed);
-      console.log('  Final:', final);
-    }
-    
-    return final;
-  });
-  
-  const maxRevenue = Math.max(...revenues);
-  const yAxisMax = Math.max(Math.ceil(maxRevenue * 1.1), 100);
-  
-  // More debug logging
-  console.log('Chart Scaling:');
-  console.log('  Max Revenue:', maxRevenue);
-  console.log('  Y-Axis Max:', yAxisMax);
-  console.log('  All revenues:', revenues);
-  
-  const yAxisSteps = 5;
-  const yAxisLabels = [];
-  for (let i = yAxisSteps; i >= 0; i--) {
-    yAxisLabels.push(Math.round((yAxisMax * i / yAxisSteps) * 100) / 100);
-  }
-
-  const formatCurrency = (value) => {
-    if (value >= 1000) {
-      return `$${(value / 1000).toFixed(1)}k`;
-    }
-    return `$${Math.round(value)}`;
-  };
-
-  const handleBarClick = (item, idx) => {
-    const nextIndex = clickedBar === idx ? null : idx;
-    setClickedBar(nextIndex);
-
-    if (onBarSelect) {
-      onBarSelect(nextIndex === null ? null : item.period_label);
-    }
-  };
-  const handleOutsideClick = () => {
-    setClickedBar(null);
-    if (onBarSelect) {
-      onBarSelect(null);  
-    }
-  };
-
-  React.useEffect(() => {
-    if (clickedBar !== null) {
-      document.addEventListener('click', handleOutsideClick);
-      return () => document.removeEventListener('click', handleOutsideClick);
-    }
-  }, [clickedBar]);
-  React.useEffect(() => {
-    if (selectedPeriod === null) {
-      setClickedBar(null);
-    }
-  }, [selectedPeriod]);
-  
-  return (
-    <div className="simple-chart">
-      <div className="chart-wrapper">
-        {/* Y-Axis */}
-        <div className="chart-y-axis">
-          {yAxisLabels.map((value, idx) => (
-            <div key={idx} className="y-axis-label">
-              {formatCurrency(value)}
-            </div>
-          ))}
-        </div>
-        
-        {/* Chart Area */}
-        <div className="chart-area">
-          {/* Gridlines */}
-          <div className="chart-gridlines">
-            {yAxisLabels.map((_, idx) => (
-              <div key={idx} className="gridline" />
-            ))}
-          </div>
-          
-          {/* Bars */}
-          <div className="chart-bars">
-            {data.map((item, idx) => {
-              // Explicitly parse each value
-              const grossRevenue = parseFloat(item.gross_revenue) || 0;
-              const collected = parseFloat(item.collected_payments) || 0;
-              const outstanding = parseFloat(item.outstanding_balance) || 0;
-              
-              // Calculate heights as percentages with explicit checks
-              const height = yAxisMax > 0 ? (grossRevenue / yAxisMax) * 100 : 0;
-              const collectedHeight = yAxisMax > 0 ? (collected / yAxisMax) * 100 : 0;
-              
-              // Debug first bar
-              if (idx === 0) {
-                console.log(`Bar ${idx} (${item.period_label}):`);
-                console.log('  Gross Revenue:', grossRevenue);
-                console.log('  Calculated Height:', height + '%');
-                console.log('  Y-Axis Max:', yAxisMax);
-              }
-              
-              // Ensure height is a valid number
-              const safeHeight = isNaN(height) || height < 0 ? 0 : Math.min(height, 100);
-              const safeCollectedPct = (grossRevenue > 0 && collectedHeight > 0) 
-                ? Math.min((collectedHeight / height) * 100, 100) 
-                : 0;  
-              const isActive =
-                hoveredBar === idx ||
-                clickedBar === idx ||
-                selectedPeriod === item.period_label;
-              return (
-                  <div
-                    key={idx}
-                    className="chart-bar-group"
-                    onMouseEnter={() => setHoveredBar(idx)}
-                    onMouseLeave={() => setHoveredBar(null)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBarClick(item, idx);
-                    }}
-                  >
-                    <div className="chart-bar-container">
-                      <div
-                        className={`chart-bar chart-bar-gross ${
-                          isActive ? 'hovered' : ''
-                        }`}
-                        style={{ height: `${safeHeight}%` }}
-                      >
-                        {safeHeight > 0 && (
-                          <div
-                            className="chart-bar-collected"
-                            style={{ height: `${safeCollectedPct}%` }}
-                          />
+                      <div className="patient-quick-stats">
+                        <div className="quick-stat">
+                          <Clock size={16} />
+                          <span>{patient.days_since_last_visit} days since visit</span>
+                        </div>
+                        <div className="quick-stat">
+                          <Pill size={16} />
+                          <span>{patient.active_medications} active meds</span>
+                        </div>
+                        {patient.no_show_count > 0 && (
+                          <div className="quick-stat warning">
+                            <AlertTriangle size={16} />
+                            <span>{patient.no_show_count} no-shows</span>
+                          </div>
                         )}
                       </div>
-                    
-                    {/* Tooltip */}
-                    {(hoveredBar === idx || clickedBar === idx) && (
-                      <div className={`chart-tooltip ${clickedBar === idx ? 'clicked' : ''}`}>
-                        <div className="tooltip-header">{item.period_label}</div>
-                        <div className="tooltip-row">
-                          <span className="tooltip-label">
-                            <span className="tooltip-dot gross" />
-                            Gross Revenue:
-                          </span>
-                          <span className="tooltip-value">${grossRevenue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+
+                      <div className="expand-icon">
+                        {expandedPatient === patient.patient_id ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                      </div>
+                    </div>
+
+                    {/* Expanded Details - Show on Click */}
+                    {expandedPatient === patient.patient_id && (
+                      <div className="patient-details">
+                        <div className="details-grid">
+                          {/* Left Column: Clinical Status */}
+                          <div className="details-section">
+                            <h4><Heart size={18} /> Clinical Status</h4>
+                            <div className="detail-item">
+                              <span className="detail-label">Last Visit:</span>
+                              <span className="detail-value">{formatDate(patient.last_visit_date)}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="detail-label">Last Seen By:</span>
+                              <span className="detail-value">{patient.last_seen_by || 'N/A'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="detail-label">Blood Pressure:</span>
+                              <span className={`detail-value ${getBPStatusColor(patient.bp_control_status)}`}>
+                                {patient.last_bp || 'No data'} 
+                                {patient.bp_control_status !== 'NO_DATA' && ` (${patient.bp_control_status})`}
+                              </span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="detail-label">Temperature:</span>
+                              <span className="detail-value">{patient.last_temp || 'N/A'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="detail-label">Last Diagnosis:</span>
+                              <span className="detail-value">{patient.last_diagnosis || 'N/A'}</span>
+                            </div>
+                          </div>
+
+                          {/* Right Column: Follow-up Info */}
+                          <div className="details-section">
+                            <h4><Calendar size={18} /> Follow-up Status</h4>
+                            <div className="detail-item">
+                              <span className="detail-label">Diagnosed:</span>
+                              <span className="detail-value">{formatDate(patient.diagnosis_date)}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="detail-label">Next Appointment:</span>
+                              <span className="detail-value">
+                                {patient.next_appointment_date ? (
+                                  <>
+                                    {formatDate(patient.next_appointment_date)}
+                                    <br />
+                                    <small>{patient.next_appointment_reason}</small>
+                                  </>
+                                ) : (
+                                  <span style={{color: '#ef4444', fontWeight: 'bold'}}>⚠️ Not Scheduled</span>
+                                )}
+                              </span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="detail-label">Completed Visits:</span>
+                              <span className="detail-value">{patient.total_completed_visits}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="detail-label">Contact:</span>
+                              <span className="detail-value">
+                                {patient.phone || 'No phone on file'}
+                                {patient.phone && (
+                                  <button className="btn-call" onClick={() => window.location.href = `tel:${patient.phone}`}>
+                                    <Phone size={14} /> Call
+                                  </button>
+                                )}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="tooltip-row">
-                          <span className="tooltip-label">
-                            <span className="tooltip-dot collected" />
-                            Collected:
-                          </span>
-                          <span className="tooltip-value">${collected.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                        </div>
-                        <div className="tooltip-row">
-                          <span className="tooltip-label">
-                            <span className="tooltip-dot outstanding" />
-                            Outstanding:
-                          </span>
-                          <span className="tooltip-value">${outstanding.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                        </div>
-                        <div className="tooltip-divider" />
-                        <div className="tooltip-row small">
-                          <span className="tooltip-label">Visits:</span>
-                          <span className="tooltip-value">{item.total_visits}</span>
-                        </div>
-                        <div className="tooltip-row small">
-                          <span className="tooltip-label">Patients:</span>
-                          <span className="tooltip-value">{item.unique_patients}</span>
-                        </div>
-                        <div className="tooltip-row small">
-                          <span className="tooltip-label">Collection Rate:</span>
-                          <span className="tooltip-value">
-                            {grossRevenue > 0 ? ((collected / grossRevenue) * 100).toFixed(1) : '0.0'}%
-                          </span>
+
+                        {/* Medications Section */}
+                        {patient.medications && patient.medications.length > 0 && (
+                          <div className="medications-section">
+                            <h4><Pill size={18} /> Active Medications ({patient.medications.length})</h4>
+                            <div className="medications-list">
+                              {patient.medications.map((med, idx) => (
+                                <div key={idx} className="medication-item">
+                                  <div className="med-main">
+                                    <strong>{med.medication_name}</strong>
+                                    <span className={`med-status-badge ${getMedStatusColor(med.prescription_status)}`}>
+                                      {med.prescription_status.replace('_', ' ')}
+                                    </span>
+                                  </div>
+                                  <div className="med-details">
+                                    <span>{med.dosage} - {med.frequency}</span>
+                                    {med.days_until_expiration !== null && (
+                                      <span className="med-expiry">
+                                        {med.days_until_expiration > 0 
+                                          ? `Expires in ${med.days_until_expiration} days`
+                                          : `Expired ${Math.abs(med.days_until_expiration)} days ago`
+                                        }
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Recent Visit History */}
+                        {patient.recent_visits && patient.recent_visits.length > 0 && (
+                          <div className="visit-history-section">
+                            <h4><FileText size={18} /> Recent Visit History</h4>
+                            <div className="visit-timeline">
+                              {patient.recent_visits.map((visit, idx) => (
+                                <div key={idx} className="visit-item">
+                                  <div className="visit-date">{formatDate(visit.visit_date)}</div>
+                                  <div className="visit-content">
+                                    <div><strong>BP:</strong> {visit.blood_pressure || 'N/A'}</div>
+                                    <div><strong>Diagnosis:</strong> {visit.diagnosis || 'N/A'}</div>
+                                    <div><strong>Provider:</strong> {visit.doctor_name}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="patient-actions">
+                          <button className="btn-action primary">
+                            <Calendar size={16} /> Schedule Follow-up
+                          </button>
+                          <button className="btn-action secondary">
+                            <FileText size={16} /> View Full Chart
+                          </button>
+                          {patient.phone && (
+                            <button className="btn-action secondary" onClick={() => window.location.href = `tel:${patient.phone}`}>
+                              <Phone size={16} /> Call Patient
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
-                    <div className="chart-label">{item.period_label}</div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-      
-      <div className="chart-legend">
-        <div className="legend-item">
-          <span className="legend-color legend-gross" />
-          <span>Gross Revenue</span>
-        </div>
-        <div className="legend-item">
-          <span className="legend-color legend-collected" />
-          <span>Collected</span>
-        </div>
-        <div className="legend-hint">
-          <AlertCircle size={14} />
-          <span>Click bars for details</span>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
-};
-
-export default Report;
+}
