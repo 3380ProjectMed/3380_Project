@@ -766,10 +766,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                 <Edit size={18} />
                 Edit Appointment
               </button>
-              <button className="btn btn-danger">
-                <X size={18} />
-                Cancel Appointment
-              </button>
               <button className="btn btn-ghost" onClick={() => setSelectedAppointment(null)}>
                 Close
               </button>
