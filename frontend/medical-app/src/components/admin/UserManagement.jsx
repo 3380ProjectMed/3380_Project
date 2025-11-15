@@ -13,7 +13,7 @@ import {
   Filter
 } from 'lucide-react';
 import './UserManagement.css';
-import UserDetailsModal from './UserDetailsModal'; // Make sure this matches your component name
+import UserDetails from './UserDetails'; // Make sure this matches your component name
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -407,7 +407,7 @@ function UserManagement() {
 
       {/* User Details Modal - MOVED HERE, OUTSIDE the table */}
       {showDetailsModal && selectedUser && (
-        <UserDetailsModal
+        <UserDetails
           userId={selectedUser.user_id}
           userType={selectedUser.user_type}
           onClose={() => {
