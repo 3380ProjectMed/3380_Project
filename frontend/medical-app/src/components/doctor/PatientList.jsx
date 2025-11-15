@@ -498,7 +498,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
             </div>
 
             {/* Action Buttons */}
-            <div className="patient-summary__actions">
+            {/* <div className="patient-summary__actions"> */}
               <button 
                 className="btn-action btn-primary"
                 onClick={handleViewFullChart}
@@ -506,7 +506,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
                 <FileText size={18} />
                 View Full Chart
               </button>
-            </div>
+            {/* </div> */}
           </div>
         </div>
       )}
