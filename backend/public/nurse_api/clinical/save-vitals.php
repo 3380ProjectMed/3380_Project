@@ -39,12 +39,29 @@ try {
     error_log('[save-vitals] Found nurse_id: ' . $nurseId);
 
     // 2) Get appointment_id from URL params or JSON body
-    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true) ?? [];
+    
+    error_log('[save-vitals] Raw input: ' . $rawInput);
+    error_log('[save-vitals] Parsed input: ' . json_encode($input));
+    error_log('[save-vitals] GET params: ' . json_encode($_GET));
+    
     $appointmentId = (int)($_GET['appointment_id'] ?? $_GET['apptId'] ?? $input['appointmentId'] ?? 0);
-    error_log('[save-vitals] Appointment ID: ' . $appointmentId);
+    error_log('[save-vitals] Final appointment ID: ' . $appointmentId);
+    
     if ($appointmentId <= 0) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'APPOINTMENT_ID_REQUIRED']);
+        echo json_encode([
+            'success' => false, 
+            'error' => 'APPOINTMENT_ID_REQUIRED',
+            'debug' => [
+                'get_appointment_id' => $_GET['appointment_id'] ?? 'missing',
+                'get_apptId' => $_GET['apptId'] ?? 'missing',
+                'input_appointmentId' => $input['appointmentId'] ?? 'missing',
+                'raw_input' => $rawInput,
+                'get_params' => $_GET
+            ]
+        ]);
         closeDBConnection($conn);
         exit;
     }

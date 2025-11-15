@@ -51,7 +51,8 @@ export async function getNurseScheduleToday() {
 }
 
 export async function getNurseProfile() {
-  return fetchJson(`${BASE_URL}/profile/get.php`);
+  const data = await fetchJson(`${BASE_URL}/profile/get.php`);
+  return data?.profile || data; // Extract profile data if wrapped
 }
 
 export async function getNursePatients(query = '', page = 1, pageSize = 10) {
