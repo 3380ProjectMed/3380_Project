@@ -49,6 +49,8 @@ export default function PatientPortal({ onLogout }) {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  const [doctorOfficesForDate, setDoctorOfficesForDate] = useState([]);
+  const [loadingDoctorOffices, setLoadingDoctorOffices] = useState(false);
   const [vitalsHistory, setVitalsHistory] = useState([]);
   const [medications, setMedications] = useState([]);
   const [allergies, setAllergies] = useState([]);
@@ -144,6 +146,37 @@ export default function PatientPortal({ onLogout }) {
       setAvailableTimeSlots([]);
     } finally {
       setLoadingTimeSlots(false);
+    }
+  }
+
+  async function loadDoctorOfficesForDate(doctorId, date) {
+    if (!doctorId || !date) {
+      setDoctorOfficesForDate([]);
+      return;
+    }
+
+    setLoadingDoctorOffices(true);
+    try {
+      const response = await api.appointments.getDoctorOfficesForDate(doctorId, date);
+      if (response.success) {
+        setDoctorOfficesForDate(response.data.offices || []);
+        // Auto-select the office if there's only one
+        if (response.data.offices && response.data.offices.length === 1) {
+          setSelectedLocation(response.data.offices[0].office_id);
+        } else {
+          setSelectedLocation(null);
+        }
+      } else {
+        setDoctorOfficesForDate([]);
+        setSelectedLocation(null);
+        console.error('Failed to load doctor offices:', response.message);
+      }
+    } catch (error) {
+      console.error('Error loading doctor offices:', error);
+      setDoctorOfficesForDate([]);
+      setSelectedLocation(null);
+    } finally {
+      setLoadingDoctorOffices(false);
     }
   }
 
@@ -362,13 +395,16 @@ export default function PatientPortal({ onLogout }) {
     }
   }, [showBookingModal]);
 
-  // Load available time slots when doctor and date are selected
+  // Load available time slots and offices when doctor and date are selected
   useEffect(() => {
     if (selectedDoctor && selectedDate) {
       loadAvailableTimeSlots(selectedDoctor.doctor_id, selectedDate);
+      loadDoctorOfficesForDate(selectedDoctor.doctor_id, selectedDate);
     } else {
       setAvailableTimeSlots([]);
+      setDoctorOfficesForDate([]);
       setSelectedTime('');
+      setSelectedLocation(null);
     }
   }, [selectedDoctor, selectedDate]);
 
@@ -404,7 +440,10 @@ export default function PatientPortal({ onLogout }) {
   }
 
   async function handleBookingSubmit() {
-    console.log('Submitting booking...', { selectedDoctor, selectedLocation, selectedDate, selectedTime });
+    // Determine office from doctor's schedule for selected date
+    const officeForAppointment = doctorOfficesForDate.length > 0 ? doctorOfficesForDate[0].office_id : null;
+    
+    console.log('Submitting booking...', { selectedDoctor, officeForAppointment, selectedDate, selectedTime });
     setBookingLoading(true);
     setBookingError(null);
     
@@ -414,8 +453,8 @@ export default function PatientPortal({ onLogout }) {
       setBookingLoading(false);
       return;
     }
-    if (!selectedLocation) {
-      setBookingError('Please select an office location');
+    if (!officeForAppointment) {
+      setBookingError('No office available for the selected doctor on this date');
       setBookingLoading(false);
       return;
     }
@@ -437,7 +476,7 @@ export default function PatientPortal({ onLogout }) {
     
     const appointmentData = {
       doctor_id: selectedDoctor.doctor_id,
-      office_id: selectedLocation,
+      office_id: officeForAppointment,
       appointment_date: `${selectedDate} ${selectedTime}`,
       reason: appointmentReason.trim(),
     };
@@ -458,6 +497,7 @@ export default function PatientPortal({ onLogout }) {
         setSelectedTime('');
         setAppointmentReason(''); 
         setNeedsReferral(false);
+        setDoctorOfficesForDate([]);
         setBookingLoading(false);
         // Refresh both appointments and referrals data
         loadAppointments();
@@ -628,15 +668,6 @@ export default function PatientPortal({ onLogout }) {
           </select>
           {doctorsLoadError && <div className="form-error">{doctorsLoadError}</div>}
 
-          <label style={{ marginTop: 8 }}>Office</label>
-            <select className="form-input" value={selectedLocation || ''} onChange={(e) => setSelectedLocation(Number(e.target.value))}>
-            <option value="">Select office</option>
-            {offices.map(o => (
-              <option key={o.office_id} value={o.office_id}>{o.name} — {o.full_address}</option>
-            ))}
-          </select>
-          {officesLoadError && <div className="form-error">{officesLoadError}</div>}
-
           <label style={{ marginTop: 8 }}>Date</label>
           <input className="form-input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
 
@@ -656,13 +687,40 @@ export default function PatientPortal({ onLogout }) {
             </div>
           )}
 
+          {/* Office information - displayed after time selection */}
+          {selectedDoctor && selectedDate && (
+            <>
+              <label style={{ marginTop: 8 }}>Office Location</label>
+              {loadingDoctorOffices ? (
+                <div className="form-input" style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                  Loading office information...
+                </div>
+              ) : doctorOfficesForDate.length > 0 ? (
+                <div className="form-input" style={{ background: '#f9fafb', color: '#374151' }}>
+                  {doctorOfficesForDate.map((office, index) => (
+                    <div key={office.office_id}>
+                      <strong>{office.office_name}</strong><br />
+                      {office.full_address}
+                      {office.phone && <><br />Phone: {office.phone}</>}
+                      {doctorOfficesForDate.length > 1 && index < doctorOfficesForDate.length - 1 && <hr style={{ margin: '8px 0' }} />}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="form-error">
+                  Doctor is not scheduled to work on this date. Please select a different date.
+                </div>
+              )}
+            </>
+          )}
+
           <label style={{ marginTop: 8 }}>Reason</label>
           <textarea className="form-input" rows={3} value={appointmentReason} onChange={(e) => setAppointmentReason(e.target.value)} />
 
           {bookingError && <div className="form-error" style={{ marginTop: 8 }}>{bookingError}</div>}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
             <button className="btn" onClick={() => { setShowBookingModal(false); setBookingStep(1); }} disabled={bookingLoading}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleBookingSubmit} disabled={bookingLoading || !selectedDoctor || !selectedLocation || !selectedDate || !selectedTime}>
+            <button className="btn btn-primary" onClick={handleBookingSubmit} disabled={bookingLoading || !selectedDoctor || !selectedDate || !selectedTime || doctorOfficesForDate.length === 0}>
               {bookingLoading ? 'Booking…' : 'Book Appointment'}
             </button>
           </div>
