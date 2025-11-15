@@ -49,7 +49,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       }
 
       const response = await fetch(
-        `${API_BASE}/doctor_api/clinical/get-patient-details.php?${params}`,
+        `${API_BASE}/nurse_api/clinical/get-patient-details.php?${params}`,
         { credentials: 'include' }
       );
 
