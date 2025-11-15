@@ -1,21 +1,22 @@
 /* NurseClinicalWorkspace.css */
 
 .clinical-workspace {
-  background: #f8f9fa;
+  background: transparent;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 /* ===== HEADER ===== */
 .workspace-header {
-  background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+  background: linear-gradient(135deg, #03045e, #0077b6);
   color: white;
   padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(3, 4, 94, 0.15);
 }
 
 .header-left {
@@ -28,6 +29,7 @@
   margin: 0;
   font-size: 1.75rem;
   font-weight: 700;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 .header-title p {
@@ -53,11 +55,11 @@
 
 /* ===== PATIENT INFO BAR ===== */
 .patient-info-bar {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   padding: 1.25rem 2rem;
   display: flex;
   gap: 2rem;
-  border-bottom: 2px solid #e8ecf1;
+  border-bottom: 2px solid rgba(226, 238, 248, 0.6);
   flex-wrap: wrap;
 }
 
@@ -105,6 +107,74 @@
   color: #78350f;
 }
 
+/* ===== SAVED VITALS SECTION ===== */
+.saved-vitals-section {
+  background: rgba(232, 245, 232, 0.7);
+  border: 2px solid #22c55e;
+  border-left: 6px solid #16a34a;
+  margin: 1.5rem 2rem;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);
+}
+
+.saved-vitals-section h3 {
+  color: #16a34a;
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.saved-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.saved-vital {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #d1fae5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.saved-vital.full-width {
+  grid-column: 1 / -1;
+}
+
+.vital-label {
+  display: block;
+  font-weight: 600;
+  color: #16a34a;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.vital-value {
+  display: block;
+  font-size: 1.125rem;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.vital-value.notes {
+  background: #f9fafb;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 1rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
 /* ===== MAIN CONTENT ===== */
 .workspace-content {
   flex: 1;
@@ -124,11 +194,11 @@
 }
 
 .form-section {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e8ecf1;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  border: 2px solid rgba(226, 238, 248, 0.6);
 }
 
 .form-section.full-width {
@@ -170,7 +240,7 @@
 
 .input-with-unit:focus-within {
   border-color: #0077b6;
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .input-with-unit input {
@@ -234,13 +304,13 @@ textarea::placeholder {
 
 /* ===== FOOTER ===== */
 .workspace-footer {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
   padding: 1.5rem 2rem;
-  border-top: 2px solid #e8ecf1;
+  border-top: 2px solid rgba(226, 238, 248, 0.6);
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -4px 12px rgba(0, 119, 182, 0.08);
 }
 
 .footer-actions {
@@ -254,11 +324,12 @@ textarea::placeholder {
 .btn-secondary,
 .btn-close {
   padding: 0.875rem 1.75rem;
-  border-radius: 8px;
+  border-radius: 0.75rem;
   font-size: 1rem;
   font-weight: 600;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -266,14 +337,14 @@ textarea::placeholder {
 }
 
 .btn-primary {
-  background: #0077b6;
+  background: linear-gradient(135deg, #03045e, #0077b6);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #005a8d;
+  background: linear-gradient(135deg, #023e8a, #005a8d);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
+  box-shadow: 0 6px 18px rgba(0, 119, 182, 0.3);
 }
 
 .btn-primary:disabled {

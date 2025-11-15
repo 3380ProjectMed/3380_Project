@@ -1,7 +1,7 @@
 // src/components/nurse/NurseClinicalWorkspace.jsx - SIMPLIFIED VERSION
 import React, { useState, useEffect } from 'react';
 import { Activity, AlertCircle, Save, X, CheckCircle, User, Calendar } from 'lucide-react';
-import './NurseClinicalWorkspace.css';
+import './NurseClinicalWorkSpace.css';
 
 /**
  * NurseClinicalWorkspace - SIMPLIFIED Vitals Recording
@@ -49,7 +49,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       }
 
       const response = await fetch(
-        `${API_BASE}/doctor_api/appointments/get-patient-details.php?${params}`,
+        `${API_BASE}/nurse_api/clinical/get-patient-details.php?${params}`,
         { credentials: 'include' }
       );
 
@@ -62,17 +62,17 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       if (data.success) {
         setPatientData(data);
 
-        // Pre-fill existing vitals
-        if (data.vitals) {
-          const bp = data.vitals.blood_pressure || '';
-          const [systolic, diastolic] = bp.split('/');
+        // Pre-fill existing vitals from visit data
+        if (data.visit) {
+          const bp = data.visit.blood_pressure || '';
+          const [systolic, diastolic] = bp.includes('/') ? bp.split('/') : ['', ''];
 
           setVitals(prev => ({
             ...prev,
             blood_pressure_systolic: systolic || '',
             blood_pressure_diastolic: diastolic || '',
-            temperature: data.vitals.temperature || '',
-            present_illnesses: data.visit?.present_illnesses || ''
+            temperature: data.visit.temperature || '',
+            present_illnesses: data.visit.present_illnesses || ''
           }));
         }
       } else {
@@ -166,15 +166,26 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       if (data.success) {
         setSuccess(true);
         
+        // Update patient data with saved vitals to show them in the UI
+        setPatientData(prevData => ({
+          ...prevData,
+          visit: {
+            ...prevData.visit,
+            blood_pressure: blood_pressure,
+            temperature: vitals.temperature,
+            present_illnesses: vitals.present_illnesses
+          }
+        }));
+        
         // Notify parent
         if (onSave) {
           onSave(patientData.visit?.visit_id);
         }
 
-        // Auto-close after 1.5 seconds
+        // Clear success message after 3 seconds but keep modal open to show saved data
         setTimeout(() => {
-          if (onClose) onClose();
-        }, 1500);
+          setSuccess(false);
+        }, 3000);
       } else {
         setError(data.error || 'Failed to save vitals');
       }
@@ -251,7 +262,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         <div className="info-item">
           <Calendar size={18} />
           <div>
-            <strong>{visit.reason}</strong>
+            <strong>{visit.reason_for_visit || visit.reason || 'Not specified'}</strong>
             <span>{new Date(visit.date).toLocaleDateString()}</span>
           </div>
         </div>
@@ -265,6 +276,33 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
           </div>
         )}
       </div>
+
+      {/* Previously Saved Vitals/Notes - Show if any exist */}
+      {(visit.blood_pressure || visit.temperature || visit.present_illnesses) && (
+        <div className="saved-vitals-section">
+          <h3>📋 Previously Recorded</h3>
+          <div className="saved-vitals-grid">
+            {visit.blood_pressure && (
+              <div className="saved-vital">
+                <span className="vital-label">Blood Pressure:</span>
+                <span className="vital-value">{visit.blood_pressure}</span>
+              </div>
+            )}
+            {visit.temperature && (
+              <div className="saved-vital">
+                <span className="vital-label">Temperature:</span>
+                <span className="vital-value">{visit.temperature}°F</span>
+              </div>
+            )}
+            {visit.present_illnesses && (
+              <div className="saved-vital full-width">
+                <span className="vital-label">Chief Complaints / Present Illnesses:</span>
+                <div className="vital-value notes">{visit.present_illnesses}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Content - SIMPLIFIED */}
       <div className="workspace-content">

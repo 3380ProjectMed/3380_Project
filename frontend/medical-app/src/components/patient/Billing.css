@@ -86,17 +86,13 @@
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  text-align: left;
 }
 
 .billing-statement-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 1rem;
-  width: 100%;
 }
 
 .billing-statement-header h3 {
@@ -105,7 +101,6 @@
   font-weight: 600;
   color: #2d3748;
   flex: 1;
-  text-align: left;
   line-height: 1.4;
 }
 
@@ -113,24 +108,31 @@
   font-size: 1.2rem;
   font-weight: 700;
   color: #2b6cb0;
-  text-align: right;
-  margin-left: 1rem;
 }
 
 .billing-statement-body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  width: 100%;
 }
 
 .billing-statement-body p {
-  margin: 0 0 0.25rem 0;
+  margin: 0;
   color: #718096;
   font-size: 0.9rem;
-  text-align: left;
-  line-height: 1.5;
-  width: 100%;
+}
+
+/* Patient portal specific billing fixes - scoped to avoid affecting other portals */
+.patient-portal-root .billing-statement-header h3 {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.patient-portal-root .billing-statement-body p {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Payment Modal Styles */

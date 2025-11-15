@@ -62,21 +62,19 @@ try {
                          WHERE Appointment_id = ?";
         executeQuery($conn, $updateApptSql, 'i', [$appointment_id]);
 
-        // Update or create patient_visit record
+        // If a patient_visit record exists, update its status to Canceled
+        // Don't create a new patient_visit for cancellations (avoids insurance trigger)
         $checkVisitSql = "SELECT visit_id FROM patient_visit WHERE appointment_id = ?";
         $existingVisit = executeQuery($conn, $checkVisitSql, 'i', [$appointment_id]);
 
-        if (empty($existingVisit)) {
-            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, office_id, status)
-                              SELECT a.Appointment_id, a.Patient_id, a.Doctor_id, a.Office_id, 'Canceled'
-                              FROM appointment a WHERE a.Appointment_id = ?";
-            executeQuery($conn, $insertVisitSql, 'i', [$appointment_id]);
-        } else {
+        if (!empty($existingVisit)) {
             $updateVisitSql = "UPDATE patient_visit 
                               SET status = 'Canceled'
                               WHERE appointment_id = ?";
             executeQuery($conn, $updateVisitSql, 'i', [$appointment_id]);
         }
+        // Note: We don't create a new patient_visit record for cancellations
+        // This avoids triggering the insurance validation trigger
 
         $conn->commit();
         closeDBConnection($conn);

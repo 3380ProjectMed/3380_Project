@@ -38,6 +38,7 @@ function Report() {
   const [selectedInsurance, setSelectedInsurance] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedPeriod, setSelectedPeriod] = useState(null);
+  
   // Data states
   const [financialData, setFinancialData] = useState(null);
   const [officeData, setOfficeData] = useState(null);
@@ -245,9 +246,9 @@ function Report() {
       });
     } else if (activeReport === 'newPatients' && newPatientsData) {
       filename = `new_patients_${startDate}_to_${endDate}.csv`;
-      csvContent = 'Period,Doctor,Office,New Appointments,Unique New Patients\n';
-      (newPatientsData.rows || []).forEach(row => {
-        csvContent += `${row.period_label},${row.doctor_name},${row.office_name},${row.new_patient_appointments},${row.unique_new_patients}\n`;
+      csvContent = 'Doctor,New Patients,Retained,Retention Rate,Total Patients,Avg Visits,Completed\n';
+      (newPatientsData.doctor_performance || []).forEach(doc => {
+        csvContent += `"Dr. ${doc.doctor_name}",${doc.new_patients_acquired},${doc.retained_patients},${doc.retention_rate}%,${doc.total_patients_seen},${doc.avg_visits_per_patient},${doc.total_completed}\n`;
       });
     }
     
@@ -274,7 +275,6 @@ function Report() {
     setStatusFilter('all');
   };
 
-  // Quick date range presets
   const setDateRange = (days) => {
     const end = new Date();
     const start = new Date();
@@ -326,10 +326,10 @@ function Report() {
               <UserPlus size={48} />
             </div>
             <h3>New Patients</h3>
-            <p>Track first-time visits by doctor and office over time</p>
+            <p>Track patient acquisition and retention by doctor and office</p>
             <div className="card-features">
               <span><Users size={14} /> Patient Growth</span>
-              <span><BarChart3 size={14} /> Trends Over Time</span>
+              <span><BarChart3 size={14} /> Retention Analytics</span>
               <span><Download size={14} /> Export Data</span>
             </div>
           </div>
@@ -343,7 +343,7 @@ function Report() {
       ? 'Financial Summary'
       : activeReport === 'office'
       ? 'Office Utilization'
-      : 'New Patients';
+      : 'New Patients & Retention';
 
   return (
     <div className="report-container">
@@ -536,119 +536,118 @@ function Report() {
               subtitle={`$${money(financialData.summary?.avg_revenue_per_patient || 0)} avg per patient`}
             />
           </div>
-            {financialData.daily_revenue && financialData.daily_revenue.length > 0 && (
-              <section className="report-section">
-                <div className="section-header">
-                  <h3>Revenue Trend</h3>
-                  <button onClick={() => setShowChart(!showChart)} className="btn btn-sm btn-ghost">
-                    {showChart ? 'Hide Chart' : 'Show Chart'}
-                  </button>
-                </div>
 
-                {showChart && (
-                  <SimpleChart
-                    data={financialData.daily_revenue}
-                    onBarSelect={setSelectedPeriod}
-                    selectedPeriod={selectedPeriod}
-                  />
-                )}
-              </section>
-            )}
+          {financialData.daily_revenue && financialData.daily_revenue.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>Revenue Trend</h3>
+                <button onClick={() => setShowChart(!showChart)} className="btn btn-sm btn-ghost">
+                  {showChart ? 'Hide Chart' : 'Show Chart'}
+                </button>
+              </div>
 
-              <section className="report-section">
-                <div className="section-header">
-                  <div>
-                    <h3>Daily Revenue Breakdown</h3>
-                    {/* use filtered count here */}
-                    <p className="section-subtitle">
-                      {(
-                        selectedPeriod
-                          ? (financialData.daily_revenue || []).filter(
-                              (r) => r.period_label === selectedPeriod
-                            )
-                          : (financialData.daily_revenue || [])
-                      ).length}{' '}
-                      {selectedPeriod ? 'rows for selected period' : 'periods'}
-                    </p>
-                  </div>
+              {showChart && (
+                <SimpleChart
+                  data={financialData.daily_revenue}
+                  onBarSelect={setSelectedPeriod}
+                  selectedPeriod={selectedPeriod}
+                />
+              )}
+            </section>
+          )}
 
-                  {selectedPeriod && (
-                    <button
-                      className="btn btn-sm btn-ghost"
-                      onClick={() => setSelectedPeriod(null)}
-                    >
-                      Clear selection
-                    </button>
-                  )}
-                </div>
-                <div className="table-container">
-                  <table className="report-table sortable-table">
-                    <thead>
-                      <tr>
-                        <th onClick={() => handleSort('period_label')}>
-                          Date {sortConfig.key === 'period_label' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => handleSort('total_visits')}>
-                          Visits {sortConfig.key === 'total_visits' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => handleSort('gross_revenue')}>
-                          Gross Revenue {sortConfig.key === 'gross_revenue' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => handleSort('collected_payments')}>
-                          Collected {sortConfig.key === 'collected_payments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => handleSort('outstanding_balance')}>
-                          Outstanding {sortConfig.key === 'outstanding_balance' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th onClick={() => handleSort('unique_patients')}>
-                          Unique Patients {sortConfig.key === 'unique_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th>Collection Rate</th>
+          <section className="report-section">
+            <div className="section-header">
+              <div>
+                <h3>Daily Revenue Breakdown</h3>
+                <p className="section-subtitle">
+                  {(
+                    selectedPeriod
+                      ? (financialData.daily_revenue || []).filter(
+                          (r) => r.period_label === selectedPeriod
+                        )
+                      : (financialData.daily_revenue || [])
+                  ).length}{' '}
+                  {selectedPeriod ? 'rows for selected period' : 'periods'}
+                </p>
+              </div>
+
+              {selectedPeriod && (
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => setSelectedPeriod(null)}
+                >
+                  Clear selection
+                </button>
+              )}
+            </div>
+            <div className="table-container">
+              <table className="report-table sortable-table">
+                <thead>
+                  <tr>
+                    <th onClick={() => handleSort('period_label')}>
+                      Date {sortConfig.key === 'period_label' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('total_visits')}>
+                      Visits {sortConfig.key === 'total_visits' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('gross_revenue')}>
+                      Gross Revenue {sortConfig.key === 'gross_revenue' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('collected_payments')}>
+                      Collected {sortConfig.key === 'collected_payments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('outstanding_balance')}>
+                      Outstanding {sortConfig.key === 'outstanding_balance' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('unique_patients')}>
+                      Unique Patients {sortConfig.key === 'unique_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th>Collection Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getSortedData(
+                    selectedPeriod
+                      ? (financialData.daily_revenue || []).filter(
+                          (row) => row.period_label === selectedPeriod
+                        )
+                      : (financialData.daily_revenue || []),
+                    sortConfig.key
+                  ).map((row, idx) => {
+                    const gross = Number(row.gross_revenue || 0);
+                    const collected = Number(row.collected_payments || 0);
+                    const collectionRate =
+                      gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
+
+                    return (
+                      <tr key={idx}>
+                        <td className="text-bold">{row.period_label}</td>
+                        <td>{row.total_visits}</td>
+                        <td className="text-success">${money(row.gross_revenue)}</td>
+                        <td className="text-primary">${money(row.collected_payments)}</td>
+                        <td className="text-warning">${money(row.outstanding_balance)}</td>
+                        <td>{row.unique_patients}</td>
+                        <td>
+                          <span
+                            className={`badge ${
+                              Number(collectionRate) >= 80
+                                ? 'badge-success'
+                                : Number(collectionRate) >= 50
+                                ? 'badge-warning'
+                                : 'badge-danger'
+                            }`}
+                          >
+                            {collectionRate}%
+                          </span>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {getSortedData(
-                        selectedPeriod
-                          ? (financialData.daily_revenue || []).filter(
-                              (row) => row.period_label === selectedPeriod
-                            )
-                          : (financialData.daily_revenue || []),
-                        sortConfig.key
-                      ).map((row, idx) => {
-                        const gross = Number(row.gross_revenue || 0);
-                        const collected = Number(row.collected_payments || 0);
-                        const collectionRate =
-                          gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
-
-                        return (
-                          <tr key={idx}>
-                            <td className="text-bold">{row.period_label}</td>
-                            <td>{row.total_visits}</td>
-                            <td className="text-success">${money(row.gross_revenue)}</td>
-                            <td className="text-primary">${money(row.collected_payments)}</td>
-                            <td className="text-warning">${money(row.outstanding_balance)}</td>
-                            <td>{row.unique_patients}</td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  Number(collectionRate) >= 80
-                                    ? 'badge-success'
-                                    : Number(collectionRate) >= 50
-                                    ? 'badge-warning'
-                                    : 'badge-danger'
-                                }`}
-                              >
-                                {collectionRate}%
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
 
           {financialData.insurance_breakdown && financialData.insurance_breakdown.length > 0 && (
             <section className="report-section">
@@ -767,6 +766,7 @@ function Report() {
               subtitle="Across all offices"
             />
           </div>
+
           {officeData.office_stats && officeData.office_stats.length > 0 && (
             <section className="report-section">
               <div className="section-header">
@@ -888,58 +888,164 @@ function Report() {
             <StatCard 
               type="primary"
               icon={<UserPlus size={20} />}
-              label="Total New Patient Appointments"
-              value={newPatientsData.summary?.total_new_appointments || 0}
-              subtitle={`${(newPatientsData.rows || []).length} time buckets`}
+              label="New Patients Acquired"
+              value={newPatientsData.summary?.total_new_patients || 0}
+              trend={newPatientsData.summary?.growth_rate !== undefined ? {
+                direction: newPatientsData.summary.growth_rate >= 0 ? 'up' : 'down',
+                text: `${newPatientsData.summary.growth_rate >= 0 ? '+' : ''}${newPatientsData.summary.growth_rate}% vs prev period`
+              } : null}
             />
+            
             <StatCard 
               type="success"
+              icon={<TrendingUp size={20} />}
+              label="Patient Retention"
+              value={`${newPatientsData.summary?.avg_retention_rate || 0}%`}
+              subtitle={`${newPatientsData.summary?.total_retained_patients || 0} of ${newPatientsData.summary?.total_new_patients || 0} returned`}
+            />
+
+            <StatCard 
+              type="info"
               icon={<Users size={20} />}
-              label="Unique New Patients"
-              value={newPatientsData.summary?.unique_new_patients || 0}
-              subtitle="First-time visits in period"
+              label="Total Unique Patients"
+              value={newPatientsData.summary?.total_unique_patients || 0}
+              subtitle="Seen in period"
+            />
+
+            <StatCard 
+              type="warning"
+              icon={<BarChart3 size={20} />}
+              label="Top Performer"
+              value={newPatientsData.summary?.top_doctor_count || 0}
+              subtitle={`Dr. ${newPatientsData.summary?.top_doctor || 'N/A'}`}
             />
           </div>
 
-          <section className="report-section">
-            <div className="section-header">
-              <h3>New Patients by Period / Doctor / Office</h3>
-            </div>
-            <div className="table-container">
-              <table className="report-table sortable-table">
-                <thead>
-                  <tr>
-                    <th onClick={() => handleSort('period_label')}>
-                      Period {sortConfig.key === 'period_label' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('doctor_name')}>
-                      Doctor {sortConfig.key === 'doctor_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('office_name')}>
-                      Office {sortConfig.key === 'office_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('new_patient_appointments')}>
-                      New Appts {sortConfig.key === 'new_patient_appointments' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                    <th onClick={() => handleSort('unique_new_patients')}>
-                      Unique New Patients {sortConfig.key === 'unique_new_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getSortedData(newPatientsData.rows || [], sortConfig.key).map((row, idx) => (
-                    <tr key={idx}>
-                      <td className="text-bold">{row.period_label}</td>
-                      <td>Dr. {row.doctor_name}</td>
-                      <td>{row.office_name}</td>
-                      <td>{row.new_patient_appointments}</td>
-                      <td>{row.unique_new_patients}</td>
+          {newPatientsData.trend_data && newPatientsData.trend_data.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>New Patient Acquisition Trend</h3>
+                <p className="section-subtitle">New patients acquired by doctor over time</p>
+              </div>
+              <NewPatientTrendChart data={newPatientsData.trend_data} groupBy={groupBy} />
+            </section>
+          )}
+
+          {newPatientsData.doctor_performance && newPatientsData.doctor_performance.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>Doctor Performance Analysis</h3>
+                <p className="section-subtitle">
+                  {newPatientsData.doctor_performance.length} doctors · Acquisition & Retention Metrics
+                </p>
+              </div>
+              <div className="table-container">
+                <table className="report-table sortable-table">
+                  <thead>
+                    <tr>
+                      <th onClick={() => handleSort('doctor_name')}>
+                        Doctor {sortConfig.key === 'doctor_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th onClick={() => handleSort('new_patients_acquired')} className="text-right">
+                        New Patients {sortConfig.key === 'new_patients_acquired' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th onClick={() => handleSort('retained_patients')} className="text-right">
+                        Retained {sortConfig.key === 'retained_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th onClick={() => handleSort('retention_rate')}>
+                        Retention Rate {sortConfig.key === 'retention_rate' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th onClick={() => handleSort('total_patients_seen')} className="text-right">
+                        Total Patients {sortConfig.key === 'total_patients_seen' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th onClick={() => handleSort('avg_visits_per_patient')} className="text-right">
+                        Avg Visits/Patient {sortConfig.key === 'avg_visits_per_patient' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th onClick={() => handleSort('total_completed')} className="text-right">
+                        Completed {sortConfig.key === 'total_completed' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                  </thead>
+                  <tbody>
+                    {getSortedData(newPatientsData.doctor_performance, sortConfig.key).map((doc, idx) => (
+                      <tr key={idx}>
+                        <td className="text-bold">Dr. {doc.doctor_name}</td>
+                        <td className="text-right text-primary">{doc.new_patients_acquired}</td>
+                        <td className="text-right text-success">{doc.retained_patients}</td>
+                        <td>
+                          <div className="retention-cell">
+                            <span className={`badge ${
+                              Number(doc.retention_rate) >= 70 
+                                ? 'badge-success' 
+                                : Number(doc.retention_rate) >= 50 
+                                ? 'badge-warning' 
+                                : 'badge-danger'
+                            }`}>
+                              {doc.retention_rate}%
+                            </span>
+                            <div className="retention-bar">
+                              <div 
+                                className="retention-fill" 
+                                style={{ 
+                                  width: `${doc.retention_rate}%`,
+                                  backgroundColor: Number(doc.retention_rate) >= 70 
+                                    ? '#10b981' 
+                                    : Number(doc.retention_rate) >= 50 
+                                    ? '#f59e0b' 
+                                    : '#ef4444'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="text-right">{doc.total_patients_seen}</td>
+                        <td className="text-right">{doc.avg_visits_per_patient}</td>
+                        <td className="text-right">{doc.total_completed}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {newPatientsData.office_breakdown && newPatientsData.office_breakdown.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>New Patients by Office</h3>
+                <p className="section-subtitle">{newPatientsData.office_breakdown.length} offices</p>
+              </div>
+              <div className="office-breakdown-grid">
+                {newPatientsData.office_breakdown.map((office, idx) => {
+                  const newPatientRate = office.total_patients > 0 
+                    ? ((office.new_patients / office.total_patients) * 100).toFixed(1)
+                    : 0;
+                  
+                  return (
+                    <div key={idx} className="office-breakdown-card">
+                      <div className="office-breakdown-header">
+                        <h4>{office.office_name}</h4>
+                      </div>
+                      <div className="office-breakdown-stats">
+                        <div className="breakdown-stat">
+                          <span className="breakdown-value">{office.new_patients}</span>
+                          <span className="breakdown-label">New Patients</span>
+                        </div>
+                        <div className="breakdown-stat">
+                          <span className="breakdown-value">{office.total_patients}</span>
+                          <span className="breakdown-label">Total Patients</span>
+                        </div>
+                        <div className="breakdown-stat">
+                          <span className="breakdown-value">{newPatientRate}%</span>
+                          <span className="breakdown-label">New Patient Rate</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </>
       )}
 
@@ -970,8 +1076,6 @@ function Report() {
     </div>
   );
 }
-// Add this enhanced version to replace the existing OfficeUtilizationPie in Report.jsx
-
 
 const OfficeUtilizationPie = ({ offices }) => {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
@@ -986,14 +1090,13 @@ const OfficeUtilizationPie = ({ offices }) => {
     return <p className="chart-empty">No appointment data for this period.</p>;
   }
 
-  // Color palette
   const colors = [
-    '#6366f1', // indigo
-    '#10b981', // green
-    '#f59e0b', // amber
-    '#0ea5e9', // sky blue
-    '#f43f5e', // rose
-    '#a855f7'  // purple
+    '#6366f1',
+    '#10b981',
+    '#f59e0b',
+    '#0ea5e9',
+    '#f43f5e',
+    '#a855f7'
   ];
 
   const handleSliceClick = (office, e) => {
@@ -1009,19 +1112,16 @@ const OfficeUtilizationPie = ({ offices }) => {
     }
   }, [selectedOffice]);
 
-  // Create pie slices
   let cumulativePercent = 0;
   const slices = offices.map((office, idx) => {
     const value = office.total_appointments || 0;
     const slicePercent = value / total;
     
-    // Convert to degrees
     const startAngle = cumulativePercent * 360;
     const endAngle = (cumulativePercent + slicePercent) * 360;
     
     cumulativePercent += slicePercent;
     
-    // SVG path calculation for pie slice
     const startAngleRad = ((startAngle - 90) * Math.PI) / 180;
     const endAngleRad = ((endAngle - 90) * Math.PI) / 180;
     
@@ -1058,7 +1158,6 @@ const OfficeUtilizationPie = ({ offices }) => {
             display: 'block'
           }}
         >
-          {/* Draw pie slices */}
           {slices.map(({ office, path, color, index }) => {
             const isActive = hoveredIndex === index || selectedOffice?.office_id === office.office_id;
             
@@ -1082,7 +1181,6 @@ const OfficeUtilizationPie = ({ offices }) => {
             );
           })}
           
-          {/* Center white circle for donut effect */}
           <circle
             cx="200"
             cy="200"
@@ -1091,7 +1189,6 @@ const OfficeUtilizationPie = ({ offices }) => {
             filter="drop-shadow(0 2px 8px rgba(0,0,0,0.1))"
           />
           
-          {/* Optional: Show percentage in center when hovering */}
           {hoveredIndex !== null && (
             <text
               x="200"
@@ -1138,7 +1235,6 @@ const OfficeUtilizationPie = ({ offices }) => {
                 <div className="pie-legend-sub">
                   {office.total_appointments} appts · {office.utilization_rate}%
                 </div>
-                {/* Show extra details when hovering */}
                 {isHovered && (
                   <div className="pie-legend-details">
                     <span>✓ {office.completed} completed</span>
@@ -1152,7 +1248,6 @@ const OfficeUtilizationPie = ({ offices }) => {
         })}
       </div>
 
-      {/* Detailed Office Stats Modal */}
       {selectedOffice && (
         <div className="office-detail-card" onClick={(e) => e.stopPropagation()}>
           <div className="office-detail-header">
@@ -1277,38 +1372,19 @@ const OfficeUtilizationPie = ({ offices }) => {
   );
 };
 
-// Enhanced chart component with gridlines, axis, and tooltips
 const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
   const [hoveredBar, setHoveredBar] = React.useState(null);
   const [clickedBar, setClickedBar] = React.useState(null);
   
   if (!data || data.length === 0) return null;
 
-  // Parse all revenue values and log for debugging
-  const revenues = data.map((d, idx) => {
-    const raw = d.gross_revenue;
-    const parsed = parseFloat(raw);
-    const final = isNaN(parsed) ? 0 : parsed;
-    
-    // Debug logging (remove after confirming it works)
-    if (idx === 0) {
-      console.log('Chart Debug - First Item:');
-      console.log('  Raw value:', raw, typeof raw);
-      console.log('  Parsed:', parsed);
-      console.log('  Final:', final);
-    }
-    
-    return final;
+  const revenues = data.map((d) => {
+    const parsed = parseFloat(d.gross_revenue);
+    return isNaN(parsed) ? 0 : parsed;
   });
   
   const maxRevenue = Math.max(...revenues);
   const yAxisMax = Math.max(Math.ceil(maxRevenue * 1.1), 100);
-  
-  // More debug logging
-  console.log('Chart Scaling:');
-  console.log('  Max Revenue:', maxRevenue);
-  console.log('  Y-Axis Max:', yAxisMax);
-  console.log('  All revenues:', revenues);
   
   const yAxisSteps = 5;
   const yAxisLabels = [];
@@ -1331,6 +1407,7 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
       onBarSelect(nextIndex === null ? null : item.period_label);
     }
   };
+
   const handleOutsideClick = () => {
     setClickedBar(null);
     if (onBarSelect) {
@@ -1344,6 +1421,7 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
       return () => document.removeEventListener('click', handleOutsideClick);
     }
   }, [clickedBar]);
+
   React.useEffect(() => {
     if (selectedPeriod === null) {
       setClickedBar(null);
@@ -1353,7 +1431,6 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
   return (
     <div className="simple-chart">
       <div className="chart-wrapper">
-        {/* Y-Axis */}
         <div className="chart-y-axis">
           {yAxisLabels.map((value, idx) => (
             <div key={idx} className="y-axis-label">
@@ -1362,71 +1439,58 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
           ))}
         </div>
         
-        {/* Chart Area */}
         <div className="chart-area">
-          {/* Gridlines */}
           <div className="chart-gridlines">
             {yAxisLabels.map((_, idx) => (
               <div key={idx} className="gridline" />
             ))}
           </div>
           
-          {/* Bars */}
           <div className="chart-bars">
             {data.map((item, idx) => {
-              // Explicitly parse each value
               const grossRevenue = parseFloat(item.gross_revenue) || 0;
               const collected = parseFloat(item.collected_payments) || 0;
               const outstanding = parseFloat(item.outstanding_balance) || 0;
               
-              // Calculate heights as percentages with explicit checks
               const height = yAxisMax > 0 ? (grossRevenue / yAxisMax) * 100 : 0;
               const collectedHeight = yAxisMax > 0 ? (collected / yAxisMax) * 100 : 0;
               
-              // Debug first bar
-              if (idx === 0) {
-                console.log(`Bar ${idx} (${item.period_label}):`);
-                console.log('  Gross Revenue:', grossRevenue);
-                console.log('  Calculated Height:', height + '%');
-                console.log('  Y-Axis Max:', yAxisMax);
-              }
-              
-              // Ensure height is a valid number
               const safeHeight = isNaN(height) || height < 0 ? 0 : Math.min(height, 100);
               const safeCollectedPct = (grossRevenue > 0 && collectedHeight > 0) 
                 ? Math.min((collectedHeight / height) * 100, 100) 
                 : 0;  
+
               const isActive =
                 hoveredBar === idx ||
                 clickedBar === idx ||
                 selectedPeriod === item.period_label;
+
               return (
-                  <div
-                    key={idx}
-                    className="chart-bar-group"
-                    onMouseEnter={() => setHoveredBar(idx)}
-                    onMouseLeave={() => setHoveredBar(null)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBarClick(item, idx);
-                    }}
-                  >
-                    <div className="chart-bar-container">
-                      <div
-                        className={`chart-bar chart-bar-gross ${
-                          isActive ? 'hovered' : ''
-                        }`}
-                        style={{ height: `${safeHeight}%` }}
-                      >
-                        {safeHeight > 0 && (
-                          <div
-                            className="chart-bar-collected"
-                            style={{ height: `${safeCollectedPct}%` }}
-                          />
-                        )}
-                      </div>
-                    
-                    {/* Tooltip */}
+                <div
+                  key={idx}
+                  className="chart-bar-group"
+                  onMouseEnter={() => setHoveredBar(idx)}
+                  onMouseLeave={() => setHoveredBar(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBarClick(item, idx);
+                  }}
+                >
+                  <div className="chart-bar-container">
+                    <div
+                      className={`chart-bar chart-bar-gross ${
+                        isActive ? 'hovered' : ''
+                      }`}
+                      style={{ height: `${safeHeight}%` }}
+                    >
+                      {safeHeight > 0 && (
+                        <div
+                          className="chart-bar-collected"
+                          style={{ height: `${safeCollectedPct}%` }}
+                        />
+                      )}
+                    </div>
+                  
                     {(hoveredBar === idx || clickedBar === idx) && (
                       <div className={`chart-tooltip ${clickedBar === idx ? 'clicked' : ''}`}>
                         <div className="tooltip-header">{item.period_label}</div>
@@ -1469,7 +1533,7 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
                       </div>
                     )}
                   </div>
-                    <div className="chart-label">{item.period_label}</div>
+                  <div className="chart-label">{item.period_label}</div>
                 </div>
               );
             })}
@@ -1490,6 +1554,114 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
           <AlertCircle size={14} />
           <span>Click bars for details</span>
         </div>
+      </div>
+    </div>
+  );
+};
+
+const NewPatientTrendChart = ({ data, groupBy }) => {
+  const doctorMap = {};
+  const periods = [];
+  
+  data.forEach(row => {
+    if (!periods.includes(row.period_label)) {
+      periods.push(row.period_label);
+    }
+    
+    if (!doctorMap[row.doctor_name]) {
+      doctorMap[row.doctor_name] = {};
+    }
+    doctorMap[row.doctor_name][row.period_label] = parseInt(row.new_patients);
+  });
+
+  const doctors = Object.keys(doctorMap);
+  const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9'];
+
+  const maxValue = Math.max(...data.map(d => parseInt(d.new_patients)), 1);
+  const yAxisMax = Math.ceil(maxValue * 1.2);
+
+  return (
+    <div className="trend-chart-container">
+      <div className="trend-chart">
+        <div className="trend-y-axis">
+          {[4, 3, 2, 1, 0].map(i => (
+            <div key={i} className="y-label">
+              {Math.round(yAxisMax * i / 4)}
+            </div>
+          ))}
+        </div>
+
+        <div className="trend-chart-area">
+          <div className="trend-gridlines">
+            {[0, 1, 2, 3, 4].map(i => (
+              <div key={i} className="gridline" />
+            ))}
+          </div>
+
+          <svg className="trend-svg" viewBox="0 0 800 300" preserveAspectRatio="none">
+            {doctors.map((doctor, doctorIdx) => {
+              const points = periods.map((period, idx) => {
+                const value = doctorMap[doctor][period] || 0;
+                const x = (idx / (periods.length - 1)) * 800;
+                const y = 300 - ((value / yAxisMax) * 300);
+                return `${x},${y}`;
+              }).join(' ');
+
+              return (
+                <g key={doctor}>
+                  <polyline
+                    points={points}
+                    fill="none"
+                    stroke={colors[doctorIdx % colors.length]}
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {periods.map((period, idx) => {
+                    const value = doctorMap[doctor][period] || 0;
+                    if (value === 0) return null;
+                    
+                    const x = (idx / (periods.length - 1)) * 800;
+                    const y = 300 - ((value / yAxisMax) * 300);
+                    
+                    return (
+                      <circle
+                        key={idx}
+                        cx={x}
+                        cy={y}
+                        r="5"
+                        fill={colors[doctorIdx % colors.length]}
+                        className="trend-point"
+                      >
+                        <title>Dr. {doctor} - {period}: {value} patients</title>
+                      </circle>
+                    );
+                  })}
+                </g>
+              );
+            })}
+          </svg>
+
+          <div className="trend-x-labels">
+            {periods.map((period, idx) => (
+              <div key={idx} className="x-label">
+                {period}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="trend-legend">
+        {doctors.map((doctor, idx) => (
+          <div key={doctor} className="legend-item">
+            <span 
+              className="legend-dot" 
+              style={{ backgroundColor: colors[idx % colors.length] }}
+            />
+            <span>Dr. {doctor}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

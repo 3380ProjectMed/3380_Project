@@ -1,7 +1,7 @@
 // src/components/nurse/NurseSchedule.jsx - WITH PROFESSIONAL OVERLAY
 import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import NurseClinicalWorkspace from './NurseClinicalWorkspace';
+import NurseClinicalWorkspace from './NurseClinicalWorkSpace';
 import './NurseSchedule.css';
 
 function NurseSchedule() {
@@ -290,19 +290,24 @@ function NurseSchedule() {
                       if (e.key === 'Enter') handlePatientClick(appointment);
                     }}
                   >
-                    {/* Status Indicator */}
-                    <div className="card-status">
-                      {appointment.needs_vitals ? (
-                        <span className="status-badge warning">
-                          <AlertCircle size={16} />
-                          Needs Vitals
-                        </span>
-                      ) : (
-                        <span className="status-badge success">
-                          <CheckCircle size={16} />
-                          Ready
-                        </span>
-                      )}
+                    {/* Appointment Number and Status */}
+                    <div className="card-header">
+                      <div className="appointment-number">
+                        <span className="appt-id-badge">#{appointment.appointment_id}</span>
+                      </div>
+                      <div className="card-status">
+                        {appointment.needs_vitals ? (
+                          <span className="status-badge warning">
+                            <AlertCircle size={16} />
+                            Needs Vitals
+                          </span>
+                        ) : (
+                          <span className="status-badge success">
+                            <CheckCircle size={16} />
+                            Ready
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Time */}
@@ -331,7 +336,7 @@ function NurseSchedule() {
 
                     {/* Reason */}
                     <div className="visit-reason">
-                      <strong>Chief Complaint:</strong>
+                      <strong>Symptoms:</strong>
                       <p>{appointment.reason || 'Not specified'}</p>
                     </div>
 

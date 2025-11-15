@@ -21,6 +21,13 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [checkingIn, setCheckingIn] = useState(false);
+  
+  // Nurse selection state
+  const [showNurseModal, setShowNurseModal] = useState(false);
+  const [nurses, setNurses] = useState([]);
+  const [selectedNurse, setSelectedNurse] = useState(null);
+  const [loadingNurses, setLoadingNurses] = useState(false);
 
   // Doctor colors palette for calendar visualization
   const doctorColors = [
@@ -38,6 +45,22 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   }, [officeId]);
 
   /**
+   * Automatic No-Show checker - runs every 2 minutes
+   */
+  useEffect(() => {
+    // Check for no-shows immediately on mount
+    checkForNoShows();
+    
+    // Set up interval to check every 2 minutes (120000 ms)
+    const noShowInterval = setInterval(() => {
+      checkForNoShows();
+    }, 120000);
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(noShowInterval);
+  }, []);
+
+  /**
    * Load calendar when month changes
    */
   useEffect(() => {
@@ -46,6 +69,36 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     // if the doctors API was delayed — causing the calendar to show incomplete data.
     loadCalendarData();
   }, [currentDate, officeId, doctors]);
+
+  /**
+   * Check for appointments that should be marked as No-Show
+   * Called automatically every 2 minutes
+   */
+  const checkForNoShows = async () => {
+    try {
+      const response = await fetch('/receptionist_api/appointments/update-no-shows.php', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        if (data.updated_count > 0) {
+          console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
+          // Reload dashboard data to reflect changes
+          loadDashboardData();
+          loadCalendarData();
+        } else {
+          console.log('No appointment status updates needed');
+        }
+      } else {
+        console.error('Failed to update appointments:', data.error);
+      }
+    } catch (err) {
+      console.error('Failed to check for no-shows:', err);
+      // Silently fail - this is a background task
+    }
+  };
 
   /**
    * Fetch doctors from the database
@@ -150,14 +203,45 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   };
 
   /**
-   * Handle check-in appointment
+   * Handle check-in appointment - Step 1: Show nurse selection
    */
   const handleCheckInAppointment = async () => {
     if (!selectedAppointment) return;
     
-    if (!confirm(`Check in patient ${selectedAppointment.Patient_First} ${selectedAppointment.Patient_Last} for their appointment?`)) {
-      return;
+    // Load nurses for the appointment's office
+    setLoadingNurses(true);
+    setShowNurseModal(true);
+    
+    try {
+      const response = await fetch(`/receptionist_api/nurses/get-by-office.php?office_id=${selectedAppointment.Office_id}`, {
+        credentials: 'include'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.nurses) {
+        setNurses(data.nurses);
+        if (data.nurses.length > 0) {
+          setSelectedNurse(data.nurses[0].nurse_id); // Pre-select first nurse
+        }
+      } else {
+        alert('❌ Failed to load nurses: ' + (data.error || 'Unknown error'));
+        setShowNurseModal(false);
+      }
+    } catch (error) {
+      console.error('Failed to load nurses:', error);
+      alert('❌ Failed to load nurses - Network error');
+      setShowNurseModal(false);
+    } finally {
+      setLoadingNurses(false);
     }
+  };
+  
+  /**
+   * Handle check-in confirmation - Step 2: Perform check-in with selected nurse
+   */
+  const handleConfirmCheckIn = async () => {
+    if (!selectedAppointment || !selectedNurse) return;
     
     setCheckingIn(true);
     try {
@@ -165,22 +249,37 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ Appointment_id: selectedAppointment.Appointment_id })
+        body: JSON.stringify({ 
+          Appointment_id: selectedAppointment.Appointment_id,
+          nurse_id: selectedNurse
+        })
       });
       
       const data = await response.json();
       
       if (data.success) {
-        alert('Patient checked in successfully!');
+        // Check for insurance warnings
+        if (data.insurance_warning) {
+          alert(`✓ Patient checked in successfully!\n\n⚠️ Insurance Warning:\n${data.insurance_warning}`);
+        } else {
+          alert('✓ Patient checked in successfully!');
+        }
+        setShowNurseModal(false);
         setSelectedAppointment(null);
+        setSelectedNurse(null);
         loadDashboardData(); // Reload today's appointments and stats
         loadCalendarData(); // Reload calendar data
       } else {
-        alert('Failed to check in: ' + (data.error || 'Unknown error'));
+        // Check if it's an insurance-related error
+        if (data.error_type === 'INSURANCE_WARNING' || data.error_type === 'INSURANCE_EXPIRED') {
+          alert(`❌ Cannot Check In - Insurance Issue\n\n${data.message || data.error}\n\nPlease update the patient's insurance information before checking in.`);
+        } else {
+          alert('❌ Failed to check in: ' + (data.error || 'Unknown error'));
+        }
       }
     } catch (error) {
       console.error('Check-in error:', error);
-      alert('Failed to check in patient');
+      alert('❌ Failed to check in patient - Network error');
     } finally {
       setCheckingIn(false);
     }
@@ -765,12 +864,92 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                 <Edit size={18} />
                 Edit Appointment
               </button>
-              <button className="btn btn-danger">
-                <X size={18} />
-                Cancel Appointment
-              </button>
               <button className="btn btn-ghost" onClick={() => setSelectedAppointment(null)}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ===== NURSE SELECTION MODAL ===== */}
+      {showNurseModal && selectedAppointment && (
+        <div className="modal-overlay" onClick={() => setShowNurseModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Select Nurse</h2>
+                <p className="modal-subtitle">
+                  Patient: {selectedAppointment.Patient_First} {selectedAppointment.Patient_Last}
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => setShowNurseModal(false)}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {loadingNurses ? (
+                <p style={{ textAlign: 'center', padding: '20px' }}>Loading nurses...</p>
+              ) : nurses.length === 0 ? (
+                <p style={{ textAlign: 'center', padding: '20px', color: '#ef4444' }}>
+                  No nurses available at this office
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {nurses.map(nurse => (
+                    <label 
+                      key={nurse.nurse_id} 
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        border: selectedNurse === nurse.nurse_id ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        backgroundColor: selectedNurse === nurse.nurse_id ? '#eff6ff' : 'white'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="nurse"
+                        value={nurse.nurse_id}
+                        checked={selectedNurse === nurse.nurse_id}
+                        onChange={() => setSelectedNurse(nurse.nurse_id)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '500', color: '#111827' }}>
+                          {nurse.first_name} {nurse.last_name}
+                        </div>
+                        {nurse.specialization && (
+                          <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '2px' }}>
+                            {nurse.specialization}
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="btn btn-success" 
+                onClick={handleConfirmCheckIn}
+                disabled={checkingIn || !selectedNurse || loadingNurses}
+              >
+                <Check size={18} />
+                {checkingIn ? 'Checking In...' : 'Confirm Check In'}
+              </button>
+              <button 
+                className="btn btn-ghost" 
+                onClick={() => setShowNurseModal(false)}
+                disabled={checkingIn}
+              >
+                Cancel
               </button>
             </div>
           </div>

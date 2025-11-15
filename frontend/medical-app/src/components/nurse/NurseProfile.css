@@ -1,8 +1,8 @@
 /* Sleek, modern card-based UI for Nurse Profile */
 .nurse-profile-container {
-	background: #fff;
-	border-radius: 18px;
-	box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 1rem;
+	box-shadow: 0 6px 18px rgba(0, 119, 182, 0.08);
 	padding: 2rem 2.5rem;
 	margin: 2rem auto;
 	max-width: 900px;
@@ -13,19 +13,20 @@
 	padding: 2.5rem;
 	max-width: 1200px;
 	margin: 0 auto;
-	font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+	font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 .nurse-profile-header {
-	background: linear-gradient(120deg, #0f3d91 60%, #3db2ff 100%);
-	border-radius: 1.2rem;
+	background: linear-gradient(135deg, #03045e, #0077b6);
+	border-radius: 1rem;
 	padding: 2.2rem 2.7rem;
 	margin-bottom: 2.2rem;
-	box-shadow: 0 6px 18px rgba(15, 61, 145, 0.10);
+	box-shadow: 0 6px 18px rgba(3, 4, 94, 0.15);
 	color: #fff;
 }
 .nurse-profile-header h1 {
 	font-size: 2.3rem;
-	font-weight: 900;
+	font-weight: 700;
+	font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 	margin: 0 0 0.6rem 0;
 	letter-spacing: -1px;
 }
@@ -35,10 +36,10 @@
 	margin: 0;
 }
 .nurse-profile-card {
-	background: #fff;
-	border-radius: 1.1rem;
+	background: rgba(255, 255, 255, 0.95);
+	border-radius: 1rem;
 	padding: 1.5rem 2rem;
-	box-shadow: 0 4px 16px rgba(15, 61, 145, 0.07);
+	box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
 	display: flex;
 	align-items: center;
 	gap: 1.2rem;
@@ -47,7 +48,7 @@
 	width: 80px;
 	height: 80px;
 	border-radius: 50%;
-	background: linear-gradient(135deg, #3db2ff, #0f3d91);
+	background: linear-gradient(135deg, #0077b6, #03045e);
 	display: flex;
 	align-items: center;
 	justify-content: center;
