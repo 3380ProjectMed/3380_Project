@@ -122,6 +122,19 @@
   font-size: 0.9rem;
 }
 
+/* Patient portal specific billing fixes - scoped to avoid affecting other portals */
+.patient-portal-root .billing-statement-header h3 {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.patient-portal-root .billing-statement-body p {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
 /* Payment Modal Styles */
 .modal-overlay {
   position: fixed;
