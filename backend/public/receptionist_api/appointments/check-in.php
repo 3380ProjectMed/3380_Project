@@ -40,6 +40,9 @@ try {
     $appointment_id = (int)$input['Appointment_id'];
     $nurse_id = (int)$input['nurse_id'];
     $user_id = (int)$_SESSION['uid'];
+    
+    // Check if this is validation-only mode
+    $validate_only = isset($input['validate_only']) && $input['validate_only'] === true;
 
     // Optional: allow forcing check-in despite warnings (not errors)
     $force_checkin = isset($input['force']) && $input['force'] === true;
@@ -85,6 +88,19 @@ try {
 
             try {
                 executeQuery($conn, $insertVisitSql, 'iiiii', [$appointment_id, $patient_id, $doctor_id, $nurse_id, $office_id]);
+                
+                // If validate_only mode, rollback the transaction but return success
+                if ($validate_only) {
+                    $conn->rollback();
+                    closeDBConnection($conn);
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Insurance validation passed',
+                        'validation_only' => true
+                    ]);
+                    exit;
+                }
+                
             } catch (Exception $insertEx) {
                 // Check if this is an insurance-related error from the trigger
                 $errorMsg = $insertEx->getMessage();
