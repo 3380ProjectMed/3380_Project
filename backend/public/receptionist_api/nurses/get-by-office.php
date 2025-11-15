@@ -36,8 +36,7 @@ try {
     $sql = "SELECT DISTINCT
                 n.nurse_id,
                 s.first_name,
-                s.last_name,
-                n.specialization
+                s.last_name
             FROM work_schedule ws
             JOIN staff s ON s.staff_id = ws.staff_id
             JOIN nurse n ON n.staff_id = s.staff_id
