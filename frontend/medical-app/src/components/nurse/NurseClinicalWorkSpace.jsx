@@ -166,15 +166,26 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       if (data.success) {
         setSuccess(true);
         
+        // Update patient data with saved vitals to show them in the UI
+        setPatientData(prevData => ({
+          ...prevData,
+          visit: {
+            ...prevData.visit,
+            blood_pressure: blood_pressure,
+            temperature: vitals.temperature,
+            present_illnesses: vitals.present_illnesses
+          }
+        }));
+        
         // Notify parent
         if (onSave) {
           onSave(patientData.visit?.visit_id);
         }
 
-        // Auto-close after 1.5 seconds
+        // Clear success message after 3 seconds but keep modal open to show saved data
         setTimeout(() => {
-          if (onClose) onClose();
-        }, 1500);
+          setSuccess(false);
+        }, 3000);
       } else {
         setError(data.error || 'Failed to save vitals');
       }
@@ -265,6 +276,33 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
           </div>
         )}
       </div>
+
+      {/* Previously Saved Vitals/Notes - Show if any exist */}
+      {(visit.blood_pressure || visit.temperature || visit.present_illnesses) && (
+        <div className="saved-vitals-section">
+          <h3>📋 Previously Recorded</h3>
+          <div className="saved-vitals-grid">
+            {visit.blood_pressure && (
+              <div className="saved-vital">
+                <span className="vital-label">Blood Pressure:</span>
+                <span className="vital-value">{visit.blood_pressure}</span>
+              </div>
+            )}
+            {visit.temperature && (
+              <div className="saved-vital">
+                <span className="vital-label">Temperature:</span>
+                <span className="vital-value">{visit.temperature}°F</span>
+              </div>
+            )}
+            {visit.present_illnesses && (
+              <div className="saved-vital full-width">
+                <span className="vital-label">Chief Complaints / Present Illnesses:</span>
+                <div className="vital-value notes">{visit.present_illnesses}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Content - SIMPLIFIED */}
       <div className="workspace-content">
