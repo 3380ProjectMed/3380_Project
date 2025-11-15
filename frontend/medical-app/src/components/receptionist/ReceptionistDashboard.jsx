@@ -76,11 +76,17 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       });
       const data = await response.json();
       
-      if (data.success && data.updated_count > 0) {
-        console.log(`${data.updated_count} appointment(s) marked as No-Show`);
-        // Reload dashboard data to reflect changes
-        loadDashboardData();
-        loadCalendarData();
+      if (data.success) {
+        if (data.updated_count > 0) {
+          console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
+          // Reload dashboard data to reflect changes
+          loadDashboardData();
+          loadCalendarData();
+        } else {
+          console.log('No appointment status updates needed');
+        }
+      } else {
+        console.error('Failed to update appointments:', data.error);
       }
     } catch (err) {
       console.error('Failed to check for no-shows:', err);
