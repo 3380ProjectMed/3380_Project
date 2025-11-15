@@ -69,6 +69,89 @@ try {
     $patient_id = $verifyResult[0]['Patient_id'];
     $office_id = $verifyResult[0]['Office_id'];
     $doctor_id = $verifyResult[0]['Doctor_id'];
+    
+    // If validate_only mode, check insurance directly without creating patient_visit
+    if ($validate_only) {
+        try {
+            // Query to check patient insurance status (same logic as trigger)
+            $insuranceCheckSql = "
+                SELECT 
+                    pi.id,
+                    pi.expiration_date,
+                    CASE
+                        WHEN pi.expiration_date IS NULL THEN 'ACTIVE'
+                        WHEN pi.expiration_date < CURDATE() THEN 'EXPIRED'
+                        WHEN pi.expiration_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'EXPIRING_SOON'
+                        ELSE 'ACTIVE'
+                    END AS status,
+                    ip.plan_name,
+                    ipy.name AS payer_name,
+                    DATEDIFF(pi.expiration_date, CURDATE()) AS days_remaining
+                FROM patient_insurance pi
+                LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
+                LEFT JOIN insurance_payer ipy ON ip.payer_id = ipy.payer_id
+                WHERE pi.patient_id = ?
+                  AND pi.is_primary = 1
+                  AND pi.effective_date <= CURDATE()
+                ORDER BY pi.effective_date DESC
+                LIMIT 1
+            ";
+            
+            $insuranceResult = executeQuery($conn, $insuranceCheckSql, 'i', [$patient_id]);
+            
+            // Case 1: No insurance found
+            if (empty($insuranceResult)) {
+                closeDBConnection($conn);
+                http_response_code(422);
+                echo json_encode([
+                    'success' => false,
+                    'error_type' => 'INSURANCE_WARNING',
+                    'error_code' => 'NO_INSURANCE',
+                    'error' => 'Patient has no active insurance on file',
+                    'message' => 'Patient has no active insurance on file. Please verify insurance information before proceeding with check-in.',
+                    'patient_id' => $patient_id,
+                    'requires_update' => true
+                ]);
+                exit;
+            }
+            
+            $insuranceStatus = $insuranceResult[0]['status'];
+            
+            // Case 2: Insurance is expired
+            if ($insuranceStatus === 'EXPIRED') {
+                closeDBConnection($conn);
+                http_response_code(422);
+                echo json_encode([
+                    'success' => false,
+                    'error_type' => 'INSURANCE_EXPIRED',
+                    'error_code' => 'EXPIRED_INSURANCE',
+                    'error' => 'Patient insurance has expired',
+                    'message' => 'Patient insurance has expired. Please update insurance information before check-in.',
+                    'patient_id' => $patient_id,
+                    'requires_update' => true
+                ]);
+                exit;
+            }
+            
+            // Insurance validation passed
+            closeDBConnection($conn);
+            echo json_encode([
+                'success' => true,
+                'message' => 'Insurance validation passed',
+                'validation_only' => true
+            ]);
+            exit;
+            
+        } catch (Exception $validateEx) {
+            closeDBConnection($conn);
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Failed to validate insurance: ' . $validateEx->getMessage()
+            ]);
+            exit;
+        }
+    }
 
     $conn->begin_transaction();
 
@@ -88,18 +171,6 @@ try {
 
             try {
                 executeQuery($conn, $insertVisitSql, 'iiiii', [$appointment_id, $patient_id, $doctor_id, $nurse_id, $office_id]);
-                
-                // If validate_only mode, rollback the transaction but return success
-                if ($validate_only) {
-                    $conn->rollback();
-                    closeDBConnection($conn);
-                    echo json_encode([
-                        'success' => true,
-                        'message' => 'Insurance validation passed',
-                        'validation_only' => true
-                    ]);
-                    exit;
-                }
                 
             } catch (Exception $insertEx) {
                 // Check if this is an insurance-related error from the trigger

@@ -28,6 +28,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [nurses, setNurses] = useState([]);
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [loadingNurses, setLoadingNurses] = useState(false);
+  
+  // Alert/notification state
+  const [alertModal, setAlertModal] = useState({
+    show: false,
+    type: 'info', // 'success', 'error', 'warning', 'info'
+    title: '',
+    message: ''
+  });
 
   // Doctor colors palette for calendar visualization
   const doctorColors = [
@@ -229,9 +237,19 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       // If insurance validation fails, stop here
       if (!data.success) {
         if (data.error_type === 'INSURANCE_WARNING' || data.error_type === 'INSURANCE_EXPIRED') {
-          alert(`❌ Cannot Check In - Insurance Issue\n\n${data.message || data.error}\n\nPlease update the patient's insurance information before checking in.`);
+          setAlertModal({
+            show: true,
+            type: 'error',
+            title: 'Cannot Check In - Insurance Issue',
+            message: data.message || data.error
+          });
         } else {
-          alert('❌ Failed to check in: ' + (data.error || 'Unknown error'));
+          setAlertModal({
+            show: true,
+            type: 'error',
+            title: 'Check-In Failed',
+            message: data.error || 'Unknown error occurred'
+          });
         }
         setCheckingIn(false);
         return;
@@ -254,14 +272,24 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
           setSelectedNurse(nursesData.nurses[0].nurse_id); // Pre-select first nurse
         }
       } else {
-        alert('❌ Failed to load nurses: ' + (nursesData.error || 'Unknown error'));
+        setAlertModal({
+          show: true,
+          type: 'error',
+          title: 'Failed to Load Nurses',
+          message: nursesData.error || 'Unable to load available nurses'
+        });
         setShowNurseModal(false);
       }
       setLoadingNurses(false);
       
     } catch (error) {
       console.error('Check-in validation error:', error);
-      alert('❌ Failed to validate insurance - Network error');
+      setAlertModal({
+        show: true,
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to validate insurance. Please check your connection and try again.'
+      });
       setCheckingIn(false);
     }
   };
@@ -289,9 +317,19 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       if (data.success) {
         // Check for insurance warnings (expiring soon)
         if (data.insurance_warning) {
-          alert(`✓ Patient checked in successfully!\n\n⚠️ Insurance Warning:\n${data.insurance_warning}`);
+          setAlertModal({
+            show: true,
+            type: 'warning',
+            title: 'Patient Checked In - Insurance Warning',
+            message: data.insurance_warning
+          });
         } else {
-          alert('✓ Patient checked in successfully!');
+          setAlertModal({
+            show: true,
+            type: 'success',
+            title: 'Check-In Successful',
+            message: 'Patient has been checked in successfully!'
+          });
         }
         setShowNurseModal(false);
         setSelectedAppointment(null);
@@ -299,11 +337,21 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         loadDashboardData(); // Reload today's appointments and stats
         loadCalendarData(); // Reload calendar data
       } else {
-        alert('❌ Failed to check in: ' + (data.error || 'Unknown error'));
+        setAlertModal({
+          show: true,
+          type: 'error',
+          title: 'Check-In Failed',
+          message: data.error || 'Unknown error occurred'
+        });
       }
     } catch (error) {
       console.error('Check-in error:', error);
-      alert('❌ Failed to check in patient - Network error');
+      setAlertModal({
+        show: true,
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to check in patient. Please check your connection and try again.'
+      });
     } finally {
       setCheckingIn(false);
     }
@@ -974,6 +1022,59 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                 disabled={checkingIn}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ===== ALERT MODAL ===== */}
+      {alertModal.show && (
+        <div className="modal-overlay" onClick={() => setAlertModal({ ...alertModal, show: false })}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {alertModal.type === 'success' && (
+                  <Check size={24} style={{ color: '#10b981' }} />
+                )}
+                {alertModal.type === 'error' && (
+                  <X size={24} style={{ color: '#ef4444' }} />
+                )}
+                {alertModal.type === 'warning' && (
+                  <AlertCircle size={24} style={{ color: '#f59e0b' }} />
+                )}
+                {alertModal.type === 'info' && (
+                  <AlertCircle size={24} style={{ color: '#3b82f6' }} />
+                )}
+                <h2 className="modal-title">{alertModal.title}</h2>
+              </div>
+              <button className="modal-close" onClick={() => setAlertModal({ ...alertModal, show: false })}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p style={{ 
+                fontSize: '1rem', 
+                lineHeight: '1.5',
+                color: '#374151',
+                whiteSpace: 'pre-line'
+              }}>
+                {alertModal.message}
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className={`btn ${
+                  alertModal.type === 'success' ? 'btn-success' : 
+                  alertModal.type === 'error' ? 'btn-danger' :
+                  alertModal.type === 'warning' ? 'btn-warning' :
+                  'btn-primary'
+                }`}
+                onClick={() => setAlertModal({ ...alertModal, show: false })}
+              >
+                OK
               </button>
             </div>
           </div>
