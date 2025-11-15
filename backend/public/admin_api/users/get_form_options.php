@@ -1,31 +1,32 @@
 <?php
-session_start();
-header('Content-Type: application/json');
-
-// Check if user is logged in and is an admin
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'ADMIN') {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-require_once '../../config/database.php';
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/session.php';
 
 try {
-    $db = new Database();
-    $conn = $db->getConnection();
+    if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin access required']);
+        exit;
+    }
+
+    $conn = getDBConnection();
     
     // Get work locations from Office table
-    $locationsQuery = "SELECT office_id, name, address FROM Office ORDER BY name";
-    $locationsStmt = $conn->prepare($locationsQuery);
-    $locationsStmt->execute();
-    $workLocations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
+    $locationsQuery = "SELECT office_id, name, address FROM office ORDER BY name";
+    $workLocations = executeQuery($conn, $locationsQuery, '', []);
     
-    // Get work schedules from WorkSchedule table
-    $schedulesQuery = "SELECT schedule_id, shift_type FROM WorkSchedule ORDER BY schedule_id";
-    $schedulesStmt = $conn->prepare($schedulesQuery);
-    $schedulesStmt->execute();
-    $workSchedules = $schedulesStmt->fetchAll(PDO::FETCH_ASSOC);
+    // Get unique shift types from WorkSchedule table (only template schedules)
+    $schedulesQuery = "
+        SELECT DISTINCT schedule_id, shift_type 
+        FROM work_schedule 
+        WHERE staff_id IS NULL 
+        GROUP BY shift_type
+        ORDER BY schedule_id 
+        LIMIT 10";
+    $workSchedules = executeQuery($conn, $schedulesQuery, '', []);
+    
+    closeDBConnection($conn);
     
     echo json_encode([
         'success' => true,
@@ -33,8 +34,8 @@ try {
         'work_schedules' => $workSchedules
     ]);
     
-} catch (PDOException $e) {
-    error_log("Database error in get_form_options.php: " . $e->getMessage());
+} catch (Exception $e) {
+    error_log("Error in get_form_options.php: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,

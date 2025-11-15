@@ -1,36 +1,39 @@
 <?php
-session_start();
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'ADMIN') {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-require_once '../../config/database.php';
-
-$input = json_decode(file_get_contents('php://input'), true);
-
-$scheduleId = $input['schedule_id'] ?? null;
-
-if (!$scheduleId) {
-    echo json_encode(['success' => false, 'error' => 'Missing schedule ID']);
-    exit;
-}
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/session.php';
 
 try {
-    $db = new Database();
-    $conn = $db->getConnection();
+    if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin access required']);
+        exit;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    $scheduleId = $input['schedule_id'] ?? null;
+
+    if (!$scheduleId) {
+        echo json_encode(['success' => false, 'error' => 'Missing schedule ID']);
+        exit;
+    }
+
+    $conn = getDBConnection();
     
-    // Delete the schedule
-    $deleteQuery = "DELETE FROM WorkSchedule WHERE schedule_id = :schedule_id AND staff_id IS NOT NULL";
+    // Delete the schedule (only if it has a staff_id, not templates)
+    $deleteQuery = "DELETE FROM work_schedule WHERE schedule_id = ? AND staff_id IS NOT NULL";
     
-    $deleteStmt = $conn->prepare($deleteQuery);
-    $deleteStmt->bindParam(':schedule_id', $scheduleId);
-    $deleteStmt->execute();
+    $result = executeQuery($conn, $deleteQuery, 'i', [$scheduleId]);
     
-    if ($deleteStmt->rowCount() === 0) {
+    // Check if any rows were affected
+    // Note: executeQuery doesn't return affected rows, so we verify by checking if schedule still exists
+    $checkQuery = "SELECT schedule_id FROM work_schedule WHERE schedule_id = ?";
+    $checkResults = executeQuery($conn, $checkQuery, 'i', [$scheduleId]);
+    
+    closeDBConnection($conn);
+    
+    if (!empty($checkResults)) {
         echo json_encode(['success' => false, 'error' => 'Schedule not found or cannot be deleted']);
         exit;
     }
@@ -40,8 +43,8 @@ try {
         'message' => 'Schedule removed successfully'
     ]);
     
-} catch (PDOException $e) {
-    error_log("Database error in remove_staff_schedule.php: " . $e->getMessage());
+} catch (Exception $e) {
+    error_log("Error in remove_staff_schedule.php: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,

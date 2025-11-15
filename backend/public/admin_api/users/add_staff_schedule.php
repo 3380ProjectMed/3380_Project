@@ -1,90 +1,83 @@
 <?php
-session_start();
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'ADMIN') {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-require_once '../../config/database.php';
-
-$input = json_decode(file_get_contents('php://input'), true);
-
-$staffId = $input['staff_id'] ?? null;
-$officeId = $input['office_id'] ?? null;
-$dayOfWeek = $input['day_of_week'] ?? null;
-
-if (!$staffId || !$officeId || !$dayOfWeek) {
-    echo json_encode(['success' => false, 'error' => 'Missing parameters']);
-    exit;
-}
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/session.php';
 
 try {
-    $db = new Database();
-    $conn = $db->getConnection();
+    if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin access required']);
+        exit;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    $staffId = $input['staff_id'] ?? null;
+    $officeId = $input['office_id'] ?? null;
+    $dayOfWeek = $input['day_of_week'] ?? null;
+
+    if (!$staffId || !$officeId || !$dayOfWeek) {
+        echo json_encode(['success' => false, 'error' => 'Missing parameters']);
+        exit;
+    }
+
+    $conn = getDBConnection();
     
     // Get the template schedule for this office and day
     $templateQuery = "
         SELECT start_time, end_time
-        FROM WorkSchedule
-        WHERE office_id = :office_id
-        AND day_of_week = :day_of_week
+        FROM work_schedule
+        WHERE office_id = ?
+        AND day_of_week = ?
         AND staff_id IS NULL
         LIMIT 1";
     
-    $templateStmt = $conn->prepare($templateQuery);
-    $templateStmt->bindParam(':office_id', $officeId);
-    $templateStmt->bindParam(':day_of_week', $dayOfWeek);
-    $templateStmt->execute();
+    $templateResults = executeQuery($conn, $templateQuery, 'is', [$officeId, $dayOfWeek]);
     
-    $template = $templateStmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$template) {
+    if (empty($templateResults)) {
         echo json_encode(['success' => false, 'error' => 'Template schedule not found']);
+        closeDBConnection($conn);
         exit;
     }
+    
+    $template = $templateResults[0];
     
     // Check if staff already has a schedule for this day
     $checkQuery = "
         SELECT schedule_id
-        FROM WorkSchedule
-        WHERE staff_id = :staff_id
-        AND day_of_week = :day_of_week";
+        FROM work_schedule
+        WHERE staff_id = ?
+        AND day_of_week = ?";
     
-    $checkStmt = $conn->prepare($checkQuery);
-    $checkStmt->bindParam(':staff_id', $staffId);
-    $checkStmt->bindParam(':day_of_week', $dayOfWeek);
-    $checkStmt->execute();
+    $checkResults = executeQuery($conn, $checkQuery, 'is', [$staffId, $dayOfWeek]);
     
-    if ($checkStmt->fetch()) {
+    if (!empty($checkResults)) {
         echo json_encode(['success' => false, 'error' => 'Staff already has a schedule for this day']);
+        closeDBConnection($conn);
         exit;
     }
     
     // Create new schedule entry for this staff member
     $insertQuery = "
-        INSERT INTO WorkSchedule (office_id, staff_id, days, start_time, end_time, day_of_week)
-        VALUES (:office_id, :staff_id, :days, :start_time, :end_time, :day_of_week)";
+        INSERT INTO work_schedule (office_id, staff_id, days, start_time, end_time, day_of_week)
+        VALUES (?, ?, ?, ?, ?, ?)";
     
-    $insertStmt = $conn->prepare($insertQuery);
-    $insertStmt->bindParam(':office_id', $officeId);
-    $insertStmt->bindParam(':staff_id', $staffId);
-    $insertStmt->bindParam(':days', $dayOfWeek);
-    $insertStmt->bindParam(':start_time', $template['start_time']);
-    $insertStmt->bindParam(':end_time', $template['end_time']);
-    $insertStmt->bindParam(':day_of_week', $dayOfWeek);
+    executeQuery(
+        $conn, 
+        $insertQuery, 
+        'iissss', 
+        [$officeId, $staffId, $dayOfWeek, $template['start_time'], $template['end_time'], $dayOfWeek]
+    );
     
-    $insertStmt->execute();
+    closeDBConnection($conn);
     
     echo json_encode([
         'success' => true,
         'message' => 'Schedule added successfully'
     ]);
     
-} catch (PDOException $e) {
-    error_log("Database error in add_staff_schedule.php: " . $e->getMessage());
+} catch (Exception $e) {
+    error_log("Error in add_staff_schedule.php: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,
