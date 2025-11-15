@@ -26,6 +26,14 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   const [nurses, setNurses] = useState([]);
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [loadingNurses, setLoadingNurses] = useState(false);
+  
+  // Alert/notification state
+  const [alertModal, setAlertModal] = useState({
+    show: false,
+    type: 'info',
+    title: '',
+    message: ''
+  });
 
   /**
    * Load doctors and appointments when component mounts or date changes
@@ -450,9 +458,19 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       // If insurance validation fails, stop here
       if (!result.success) {
         if (result.error_type === 'INSURANCE_WARNING' || result.error_type === 'INSURANCE_EXPIRED') {
-          alert(`❌ Cannot Check In - Insurance Issue\n\n${result.message || result.error}\n\nPlease update the patient's insurance information before checking in.`);
+          setAlertModal({
+            show: true,
+            type: 'error',
+            title: 'Cannot Check In - Insurance Issue',
+            message: result.message || result.error
+          });
         } else {
-          alert('❌ Failed to check in: ' + (result.error || 'Unknown error'));
+          setAlertModal({
+            show: true,
+            type: 'error',
+            title: 'Check-In Failed',
+            message: result.error || 'Unknown error occurred'
+          });
         }
         setCheckingIn(false);
         return;
@@ -475,14 +493,24 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
           setSelectedNurse(nursesData.nurses[0].nurse_id); // Pre-select first nurse
         }
       } else {
-        alert('❌ Failed to load nurses: ' + (nursesData.error || 'Unknown error'));
+        setAlertModal({
+          show: true,
+          type: 'error',
+          title: 'Failed to Load Nurses',
+          message: nursesData.error || 'Unable to load available nurses'
+        });
         setShowNurseModal(false);
       }
       setLoadingNurses(false);
       
     } catch (error) {
       console.error('Check-in validation error:', error);
-      alert('❌ Failed to validate insurance - Network error');
+      setAlertModal({
+        show: true,
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to validate insurance. Please check your connection and try again.'
+      });
       setCheckingIn(false);
     }
   };
@@ -512,20 +540,40 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       if (result.success) {
         // Check for insurance warnings (expiring soon)
         if (result.insurance_warning) {
-          alert(`✓ Patient checked in successfully!\n\n⚠️ Insurance Warning:\n${result.insurance_warning}`);
+          setAlertModal({
+            show: true,
+            type: 'warning',
+            title: 'Patient Checked In - Insurance Warning',
+            message: result.insurance_warning
+          });
         } else {
-          alert('✓ Patient checked in successfully!');
+          setAlertModal({
+            show: true,
+            type: 'success',
+            title: 'Check-In Successful',
+            message: 'Patient has been checked in successfully!'
+          });
         }
         setShowNurseModal(false);
         setSelectedAppointment(null);
         setSelectedNurse(null);
         loadScheduleData();
       } else {
-        alert('❌ Failed to check in patient: ' + (result.error || 'Unknown error'));
+        setAlertModal({
+          show: true,
+          type: 'error',
+          title: 'Check-In Failed',
+          message: result.error || 'Unknown error occurred'
+        });
       }
     } catch (err) {
       console.error('Failed to check in patient:', err);
-      alert('❌ Failed to check in patient - Network error. Please try again.');
+      setAlertModal({
+        show: true,
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to check in patient. Please check your connection and try again.'
+      });
     } finally {
       setCheckingIn(false);
     }
@@ -915,6 +963,59 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
                 disabled={checkingIn}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ===== ALERT MODAL ===== */}
+      {alertModal.show && (
+        <div className="modal-overlay" onClick={() => setAlertModal({ ...alertModal, show: false })}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {alertModal.type === 'success' && (
+                  <Check size={24} style={{ color: '#10b981' }} />
+                )}
+                {alertModal.type === 'error' && (
+                  <X size={24} style={{ color: '#ef4444' }} />
+                )}
+                {alertModal.type === 'warning' && (
+                  <AlertCircle size={24} style={{ color: '#f59e0b' }} />
+                )}
+                {alertModal.type === 'info' && (
+                  <AlertCircle size={24} style={{ color: '#3b82f6' }} />
+                )}
+                <h2 className="modal-title">{alertModal.title}</h2>
+              </div>
+              <button className="modal-close" onClick={() => setAlertModal({ ...alertModal, show: false })}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p style={{ 
+                fontSize: '1rem', 
+                lineHeight: '1.5',
+                color: '#374151',
+                whiteSpace: 'pre-line'
+              }}>
+                {alertModal.message}
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className={`btn ${
+                  alertModal.type === 'success' ? 'btn-success' : 
+                  alertModal.type === 'error' ? 'btn-danger' :
+                  alertModal.type === 'warning' ? 'btn-warning' :
+                  'btn-primary'
+                }`}
+                onClick={() => setAlertModal({ ...alertModal, show: false })}
+              >
+                OK
               </button>
             </div>
           </div>
