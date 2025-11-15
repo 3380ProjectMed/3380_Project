@@ -75,7 +75,7 @@ export async function saveNurseNote(appointmentId, noteBody) {
 
 export async function saveNurseVitals(appointmentId, vitals) {
   const payload = {
-    appointmentId: appointmentId, // Include appointment ID in payload as well
+    appointmentId: appointmentId, // Include appointment ID in payload
     bp: vitals.bp ?? vitals.bloodPressure ?? '',
     hr: vitals.hr ?? vitals.heartRate ?? '',
     temp: vitals.temp ?? vitals.temperature ?? '',
@@ -83,9 +83,11 @@ export async function saveNurseVitals(appointmentId, vitals) {
   };
   if (vitals.height) payload.height = vitals.height;
   if (vitals.weight) payload.weight = vitals.weight;
-  return fetchJson(`${BASE_URL}/clinical/save-vitals.php`, {
+  
+  // Send appointment_id in both URL params and JSON body for reliability
+  const url = `${BASE_URL}/clinical/save-vitals.php?appointment_id=${appointmentId}`;
+  return fetchJson(url, {
     method: 'POST',
-    params: { appointment_id: appointmentId },
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });

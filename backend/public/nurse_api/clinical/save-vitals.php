@@ -66,7 +66,6 @@ try {
         exit;
     }
 
-    // 3) Parse JSON body for vitals
     $raw = file_get_contents('php://input');
     $payload = json_decode($raw, true) ?? [];
     if (!is_array($payload)) {
@@ -76,7 +75,6 @@ try {
         exit;
     }
 
-    // Extract vitals from payload (normalize input keys)
     $bp     = trim($payload['bp']     ?? '');
     $hr     = trim($payload['hr']     ?? '');
     $temp   = trim($payload['temp']   ?? '');
