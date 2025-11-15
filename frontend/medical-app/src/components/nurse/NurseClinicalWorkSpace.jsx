@@ -62,17 +62,17 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       if (data.success) {
         setPatientData(data);
 
-        // Pre-fill existing vitals
-        if (data.vitals) {
-          const bp = data.vitals.blood_pressure || '';
-          const [systolic, diastolic] = bp.split('/');
+        // Pre-fill existing vitals from visit data
+        if (data.visit) {
+          const bp = data.visit.blood_pressure || '';
+          const [systolic, diastolic] = bp.includes('/') ? bp.split('/') : ['', ''];
 
           setVitals(prev => ({
             ...prev,
             blood_pressure_systolic: systolic || '',
             blood_pressure_diastolic: diastolic || '',
-            temperature: data.vitals.temperature || '',
-            present_illnesses: data.visit?.present_illnesses || ''
+            temperature: data.visit.temperature || '',
+            present_illnesses: data.visit.present_illnesses || ''
           }));
         }
       } else {
@@ -262,7 +262,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         <div className="info-item">
           <Calendar size={18} />
           <div>
-            <strong>{visit.reason}</strong>
+            <strong>{visit.reason_for_visit || visit.reason || 'Not specified'}</strong>
             <span>{new Date(visit.date).toLocaleDateString()}</span>
           </div>
         </div>
