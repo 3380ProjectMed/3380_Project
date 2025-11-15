@@ -166,7 +166,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
           const appointments = data.appointments || [];
           const calculatedStats = {
             total: appointments.length,
-            scheduled: appointments.filter(a => ['Scheduled', 'Ready', 'Upcoming'].includes(a.status || a.Status)).length,
+            // Treat 'Scheduled' and 'Upcoming' as scheduled; do not include 'Ready'
+            scheduled: appointments.filter(a => ['Scheduled', 'Upcoming'].includes(a.status || a.Status)).length,
             checked_in: appointments.filter(a => ['Checked In', 'Completed'].includes(a.status || a.Status)).length,
             completed: appointments.filter(a => (a.status || a.Status) === 'Completed').length,
             payment: {

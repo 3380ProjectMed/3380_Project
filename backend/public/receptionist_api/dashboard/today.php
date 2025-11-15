@@ -154,7 +154,8 @@ try {
                 $displayStatus = 'Upcoming';
             } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
                 // Appointment time is now (within 15 min window)
-                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
+                // Keep 'Scheduled' as the display status for appointments in the current window
+                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Scheduled';
             } elseif ($timeDiff > 15) {
                 // Appointment time has passed by more than 15 minutes
                 if ($dbStatus === 'Scheduled') {
