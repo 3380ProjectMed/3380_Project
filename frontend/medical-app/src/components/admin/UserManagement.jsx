@@ -110,8 +110,6 @@ function UserManagement() {
       'nurse': 'Nurse',
       'RECEPTIONIST': 'Receptionist',
       'receptionist': 'Receptionist',
-      'PATIENT': 'Patient',
-      'patient': 'Patient'
     };
     return labels[userType] || userType;
   };
@@ -194,7 +192,7 @@ function UserManagement() {
               <option value="doctor">Doctors</option>
               <option value="nurse">Nurses</option>
               <option value="receptionist">Receptionists</option>
-              <option value="patient">Patients</option>
+              {/* <option value="patient">Patients</option> */}
             </select>
           </div>
 
@@ -482,30 +480,30 @@ function AddUserModal({ type, onClose, onSuccess }) {
     }));
   };
 
-  // Show info message for patients - admin cannot add patients
-  if (type === 'patient') {
-    return (
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-          <div className="modal-header">
-            <h2>Add Patient</h2>
-            <button className="close-btn" onClick={onClose}>
-              <X size={24} />
-            </button>
-          </div>
-          <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <AlertCircle size={48} style={{ margin: '0 auto 1rem', color: '#f59e0b' }} />
-            <h3 style={{ marginBottom: '1rem' }}>Patient Registration Restricted</h3>
-            <p>Patient accounts cannot be created through the admin portal.</p>
-            <p>Patients must register through the patient registration page.</p>
-            <button className="btn btn-secondary" onClick={onClose} style={{ marginTop: '1.5rem' }}>
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // // Show info message for patients - admin cannot add patients
+  // if (type === 'patient') {
+  //   return (
+  //     <div className="modal-overlay" onClick={onClose}>
+  //       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+  //         <div className="modal-header">
+  //           <h2>Add Patient</h2>
+  //           <button className="close-btn" onClick={onClose}>
+  //             <X size={24} />
+  //           </button>
+  //         </div>
+  //         <div style={{ padding: '2rem', textAlign: 'center' }}>
+  //           <AlertCircle size={48} style={{ margin: '0 auto 1rem', color: '#f59e0b' }} />
+  //           <h3 style={{ marginBottom: '1rem' }}>Patient Registration Restricted</h3>
+  //           <p>Patient accounts cannot be created through the admin portal.</p>
+  //           <p>Patients must register through the patient registration page.</p>
+  //           <button className="btn btn-secondary" onClick={onClose} style={{ marginTop: '1.5rem' }}>
+  //             Close
+  //           </button>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   const getModalTitle = () => {
     if (type === 'doctor') return 'Doctor';
