@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, User, Phone, Mail, Calendar, CreditCard, DollarSign, AlertCircle, UserCheck } from 'lucide-react';
+import { Search, X, User, Phone, Mail, Calendar, CreditCard, DollarSign, AlertCircle, UserCheck, UserPlus } from 'lucide-react';
 // Removed API import as we'll use fetch directly
 import './PatientSearch.css';
 
@@ -16,6 +16,22 @@ function PatientSearch({ onBookAppointment }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    dateOfBirth: '',
+    phone: '',
+    gender: 'male',
+    emergencyContactfn: '',
+    emergencyContactln: '',
+    emergencyContactrl: '',
+    emergencyPhone: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
 
   /**
    * Load initial patients on mount
@@ -121,12 +137,111 @@ function PatientSearch({ onBookAppointment }) {
     setSelectedPatient(null);
   };
 
+  /**
+   * Open create patient modal
+   */
+  const openCreateModal = () => {
+    setShowCreateModal(true);
+    setFormErrors({});
+    setError(null);
+  };
+
+  /**
+   * Close create patient modal
+   */
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      dateOfBirth: '',
+      phone: '',
+      gender: 'male',
+      emergencyContactfn: '',
+      emergencyContactln: '',
+      emergencyContactrl: '',
+      emergencyPhone: ''
+    });
+    setFormErrors({});
+    setError(null);
+  };
+
+  /**
+   * Handle form input change
+   */
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error for this field
+    if (formErrors[name]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  /**
+   * Create new patient
+   */
+  const handleCreatePatient = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setFormErrors({});
+
+    try {
+      const response = await fetch('/api/signup.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Success - close modal and refresh patient list
+        closeCreateModal();
+        handleSearch(); // Refresh patient list
+        alert('Patient created successfully!');
+      } else {
+        // Handle errors
+        if (data.errors) {
+          setFormErrors(data.errors);
+        }
+        setError(data.message || 'Failed to create patient');
+      }
+    } catch (err) {
+      console.error('Create patient error:', err);
+      setError('Failed to create patient. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="patient-search-page">
       {/* ===== PAGE HEADER ===== */}
       <div className="page-header">
-        <h1 className="page-title">Patient Search</h1>
-        <p className="page-subtitle">Search and view patient records</p>
+        <div className="header-content">
+          <div>
+            <h1 className="page-title">Patient Search</h1>
+            <p className="page-subtitle">Search and view patient records</p>
+          </div>
+          <button className="btn-create-patient" onClick={openCreateModal}>
+            <UserPlus size={20} />
+            Create New Patient
+          </button>
+        </div>
       </div>
 
       {/* ===== SEARCH SECTION ===== */}
@@ -459,6 +574,271 @@ function PatientSearch({ onBookAppointment }) {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== CREATE PATIENT MODAL ===== */}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={closeCreateModal}>
+          <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Create New Patient</h2>
+                <p className="modal-subtitle">Register a new patient in the system</p>
+              </div>
+              <button className="modal-close" onClick={closeCreateModal}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePatient}>
+              <div className="modal-body">
+                {/* Error Message */}
+                {error && (
+                  <div className="alert alert-danger">
+                    <AlertCircle size={20} />
+                    {error}
+                  </div>
+                )}
+
+                {/* Personal Information */}
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <User size={20} />
+                    Personal Information
+                  </h3>
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label className="form-label">First Name *</label>
+                      <input
+                        type="text"
+                        name="firstName"
+                        className={`form-input ${formErrors.firstName ? 'input-error' : ''}`}
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      {formErrors.firstName && (
+                        <span className="error-text">{formErrors.firstName}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Last Name *</label>
+                      <input
+                        type="text"
+                        name="lastName"
+                        className={`form-input ${formErrors.lastName ? 'input-error' : ''}`}
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      {formErrors.lastName && (
+                        <span className="error-text">{formErrors.lastName}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Date of Birth *</label>
+                      <input
+                        type="date"
+                        name="dateOfBirth"
+                        className={`form-input ${formErrors.dateOfBirth ? 'input-error' : ''}`}
+                        value={formData.dateOfBirth}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      {formErrors.dateOfBirth && (
+                        <span className="error-text">{formErrors.dateOfBirth}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Gender *</label>
+                      <select
+                        name="gender"
+                        className={`form-input ${formErrors.gender ? 'input-error' : ''}`}
+                        value={formData.gender}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                        <option value="prefer-not-to-say">Prefer not to say</option>
+                      </select>
+                      {formErrors.gender && (
+                        <span className="error-text">{formErrors.gender}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <Mail size={20} />
+                    Contact Information
+                  </h3>
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label className="form-label">Email *</label>
+                      <input
+                        type="email"
+                        name="email"
+                        className={`form-input ${formErrors.email ? 'input-error' : ''}`}
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      {formErrors.email && (
+                        <span className="error-text">{formErrors.email}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Phone *</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        className={`form-input ${formErrors.phone ? 'input-error' : ''}`}
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        placeholder="(123) 456-7890"
+                        required
+                      />
+                      {formErrors.phone && (
+                        <span className="error-text">{formErrors.phone}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Account Security */}
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <CreditCard size={20} />
+                    Account Security
+                  </h3>
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label className="form-label">Password *</label>
+                      <input
+                        type="password"
+                        name="password"
+                        className={`form-input ${formErrors.password ? 'input-error' : ''}`}
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        placeholder="Minimum 8 characters"
+                        required
+                      />
+                      {formErrors.password && (
+                        <span className="error-text">{formErrors.password}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Confirm Password *</label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        className={`form-input ${formErrors.confirmPassword ? 'input-error' : ''}`}
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      {formErrors.confirmPassword && (
+                        <span className="error-text">{formErrors.confirmPassword}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Emergency Contact (Optional) */}
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <Phone size={20} />
+                    Emergency Contact (Optional)
+                  </h3>
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label className="form-label">First Name</label>
+                      <input
+                        type="text"
+                        name="emergencyContactfn"
+                        className="form-input"
+                        value={formData.emergencyContactfn}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Last Name</label>
+                      <input
+                        type="text"
+                        name="emergencyContactln"
+                        className="form-input"
+                        value={formData.emergencyContactln}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Relationship</label>
+                      <input
+                        type="text"
+                        name="emergencyContactrl"
+                        className="form-input"
+                        value={formData.emergencyContactrl}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Spouse, Parent, Friend"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Phone</label>
+                      <input
+                        type="tel"
+                        name="emergencyPhone"
+                        className="form-input"
+                        value={formData.emergencyPhone}
+                        onChange={handleInputChange}
+                        placeholder="(123) 456-7890"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button 
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <div className="loading-spinner"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus size={18} />
+                      Create Patient
+                    </>
+                  )}
+                </button>
+                <button 
+                  type="button"
+                  className="btn btn-ghost" 
+                  onClick={closeCreateModal}
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
