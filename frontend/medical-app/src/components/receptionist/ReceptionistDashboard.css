@@ -1082,11 +1082,15 @@
   font-weight: 700;
   font-size: 0.875rem;
   color: #6b7280;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: linear-gradient(135deg, #f9fafb, #f3f4f6);
   border-radius: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  min-height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .calendar-day {
