@@ -31,7 +31,7 @@ try {
                 pv.visit_id,
                 pv.patient_id,
                 pv.appointment_id,
-                pv.date as visit_date,
+                a.Appointment_date as visit_date,
                 pv.payment,
                 pv.payment_method,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
@@ -40,6 +40,7 @@ try {
                 ec.ec_phone as patient_phone
             FROM patient_visit pv
             INNER JOIN patient p ON pv.patient_id = p.patient_id
+            INNER JOIN appointment a ON pv.appointment_id = a.Appointment_id
             LEFT JOIN emergency_contact ec ON p.emergency_contact_id = ec.emergency_contact_id
             WHERE pv.visit_id = ?";
 
