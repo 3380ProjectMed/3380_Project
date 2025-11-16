@@ -23,10 +23,11 @@ function UserManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState('doctor');
   
-  // Details modal state - MOVED INSIDE THE COMPONENT
+
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  
+
+
   // Filter states
   const [filters, setFilters] = useState({
     role: 'all',
@@ -450,7 +451,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
   const [workSchedules, setWorkSchedules] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [loadingSchedules, setLoadingSchedules] = useState(false);
-
+  const [specialties, setSpecialties] = useState([]);
   // Load work locations on mount
   useEffect(() => {
     loadFormOptions();
@@ -481,7 +482,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
       
       if (data.success) {
         setWorkLocations(data.work_locations || []);
-        
+        setSpecialties(data.specialties || []);
         // Set default work location to first option for nurses/receptionists only
         if (data.work_locations && data.work_locations.length > 0 && (selectedRole === 'nurse' || selectedRole === 'receptionist')) {
           setFormData(prev => ({ ...prev, workLocation: data.work_locations[0].office_id.toString() }));
@@ -806,19 +807,24 @@ function AddUserModal({ type, onClose, onSuccess }) {
 
             {/* For Doctors - Only specialty, NO work location */}
             {selectedRole === 'doctor' && (
-              <div className="form-group">
-                <label htmlFor="specialty">Specialty</label>
-                <input
-                  type="text"
-                  id="specialty"
-                  name="specialty"
-                  value={formData.specialty}
-                  onChange={handleChange}
-                  placeholder="e.g., Cardiology"
-                  required
-                />
-              </div>
-            )}
+            <div className="form-group">
+              <label htmlFor="specialty">Specialty *</label>
+              <select
+                id="specialty"
+                name="specialty"
+                value={formData.specialty}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select a specialty...</option>
+                {specialties.map(spec => (
+                  <option key={spec.id} value={spec.name}>
+                    {spec.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
   {/* For Doctors, Nurses, and Receptionists – require location & schedule */}
   {(selectedRole === 'nurse' || selectedRole === 'receptionist') && (

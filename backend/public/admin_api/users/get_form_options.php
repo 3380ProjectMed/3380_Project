@@ -86,12 +86,22 @@ try {
             'address'   => $row['address'],
         ];
     }, $locRows);
+    $specSql  = "SELECT id, specialty_name AS name FROM specialty ORDER BY name";
+    $specRows = executeQuery($conn, $specSql);
+
+    $specialties = array_map(static function ($row) {
+        return [
+            'id'   => (int)$row['id'],
+            'name' => $row['name'],
+        ];
+    }, $specRows);
 
     closeDBConnection($conn);
 
     echo json_encode([
         'success'        => true,
         'work_locations' => $workLocations,
+        'specialties' => $specialties,
     ]);
 } catch (Exception $e) {
     http_response_code(500);
