@@ -33,8 +33,7 @@ try {
                 s.last_name,
                 CONCAT(s.first_name, ' ', s.last_name) as name,
                 s.gender,
-                s.license_number,
-                s.phone_number";
+                s.license_number";
 
     if ($userType === 'DOCTOR') {
         $query .= ", sp.specialty_name as specialty";
