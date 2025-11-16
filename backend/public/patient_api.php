@@ -3,7 +3,7 @@
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-require_once '/home/site/wwwroot/session.php';
+require_once '/home/site/wwwroot/api/session.php';
 header('Content-Type: application/json');
 
 // Azure App Service HTTPS detection
@@ -34,9 +34,35 @@ function requireAuth($allowed_roles = ['PATIENT'])
         exit();
     }
 
+    // Check if patient_id exists and belongs to current session email
+    if (isset($_SESSION['patient_id'])) {
+        $session_patient_id = $_SESSION['patient_id'];
+        $user_email = $_SESSION['email'];
+        
+        try {
+            $mysqli = getDBConnection();
+            $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE patient_id = ? AND email = ? LIMIT 1");
+            $stmt->bind_param('is', $session_patient_id, $user_email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $patient = $result->fetch_assoc();
+            $stmt->close();
+
+            if (!$patient) {
+                error_log("Patient API: Cached patient_id " . $session_patient_id . " does not belong to email " . $user_email . " - clearing session");
+                unset($_SESSION['patient_id']);
+            } else {
+                error_log("Patient API: Validated cached patient_id = " . $session_patient_id);
+            }
+        } catch (Exception $e) {
+            error_log("Patient auth validation error - " . $e->getMessage());
+            unset($_SESSION['patient_id']);
+        }
+    }
+
     if (!isset($_SESSION['patient_id'])) {
         $user_email = $_SESSION['email'];
-        error_log("Patient API: Session email = " . $user_email);
+        error_log("Patient API: Looking up patient_id for email = " . $user_email);
 
         try {
             $mysqli = getDBConnection();
@@ -51,9 +77,9 @@ function requireAuth($allowed_roles = ['PATIENT'])
                 $_SESSION['patient_id'] = $patient['patient_id'];
                 $_SESSION['role'] = 'PATIENT';
                 $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
-                error_log("Patient auth: Found patient_id = " . $patient['patient_id']);
+                error_log("Patient auth: Set patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
             } else {
-                error_log("Patient auth: No patient found for email");
+                error_log("Patient auth: No patient found for email = " . $user_email);
                 sendResponse(false, [], 'No patient record found for logged-in user', 403);
                 exit();
             }
@@ -111,23 +137,20 @@ try {
 requireAuth(['PATIENT']);
 
 $patient_id = $_SESSION['patient_id'] ?? null;
+$session_email = $_SESSION['email'] ?? null;
 
+error_log("=== PATIENT ID VALIDATION ===");
+error_log("Session ID: " . session_id());
+error_log("Session email: " . ($session_email ?? 'NULL'));
+error_log("Session patient_id: " . ($patient_id ?? 'NULL'));
+error_log("Full session: " . json_encode($_SESSION));
+error_log("============================");
+
+// Patient ID should now be properly set by requireAuth function
 if (!$patient_id) {
     $user_email = $_SESSION['email'] ?? null;
-    if ($user_email) {
-        $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE email = ? LIMIT 1");
-        if ($stmt) {
-            $stmt->bind_param('s', $user_email);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $row = $res ? $res->fetch_assoc() : null;
-            if ($row && isset($row['patient_id'])) {
-                $patient_id = (int) $row['patient_id'];
-                $_SESSION['patient_id'] = $patient_id;
-            }
-            $stmt->close();
-        }
-    }
+    error_log("FALLBACK: patient_id still null after requireAuth for email: " . ($user_email ?? 'NULL'));
+    sendResponse(false, [], 'Patient authentication failed', 403);
 }
 
 if (!$patient_id) {
