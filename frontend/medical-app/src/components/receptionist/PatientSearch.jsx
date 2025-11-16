@@ -341,20 +341,6 @@ function PatientSearch({ onBookAppointment }) {
                       <span className="detail-value">{patient.pcp_name}</span>
                     </div>
                   )}
-                  
-                  {patient.insurance_expiration && (
-                    <div className="detail-item">
-                      <AlertCircle size={16} />
-                      <span className="detail-label">Insurance Exp</span>
-                      <span className={`detail-value ${new Date(patient.insurance_expiration) < new Date() ? 'text-expired' : ''}`}>
-                        {new Date(patient.insurance_expiration).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
               
@@ -375,6 +361,7 @@ function PatientSearch({ onBookAppointment }) {
                         {new Date(patient.insurance_expiration) < new Date() ? '⚠ EXPIRED' : 'Expires'}: {' '}
                         {new Date(patient.insurance_expiration).toLocaleDateString('en-US', {
                           month: 'short',
+                          day: 'numeric',
                           year: 'numeric'
                         })}
                       </p>
