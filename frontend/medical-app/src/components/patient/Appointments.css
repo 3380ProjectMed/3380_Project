@@ -1,9 +1,9 @@
-/* Appointments styles */
-.appointments-section { 
+/* Patient Appointments styles - Scoped to prevent conflicts */
+.patient-appointments-section { 
   margin-bottom: 3rem; 
 }
 
-.appointments-section h2 { 
+.patient-appointments-section h2 { 
   font-size: 1.75rem; 
   font-weight: 700; 
   color: #03045e; 
@@ -107,8 +107,8 @@
   min-width: 140px;
 }
 
-/* Status badges */
-.status-badge { 
+/* Patient Status badges */
+.patient-status-badge { 
   display: inline-flex;
   align-items: center;
   padding: 0.5rem 1rem; 
@@ -119,17 +119,17 @@
   white-space: nowrap; 
 }
 
-.status-badge.scheduled { 
+.patient-status-badge.scheduled { 
   background: #dbeafe; 
   color: #1e40af; 
 }
 
-.status-badge.completed { 
+.patient-status-badge.completed { 
   background: #e5e7eb; 
   color: #374151; 
 }
 
-.status-badge.cancelled { 
+.patient-status-badge.cancelled { 
   background: #fee2e2; 
   color: #991b1b; 
 }
@@ -235,12 +235,10 @@
 }
 
 /* Utility classes */
-.text-gray { 
+.patient-text-gray { 
   color: #9ca3af; 
-  font-style: italic; 
-}
-
-.appointments-text-muted { 
+  font-style: italic;
+}.appointments-text-muted { 
   color: #9ca3af; 
   font-style: italic;
   font-size: 0.875rem;
@@ -293,14 +291,14 @@
   line-height: 1.5; 
 }
 
-.specialty {
+.patient-specialty {
   font-size: 0.875rem;
   color: #6b7280;
   font-style: italic;
   margin-top: 0.25rem;
 }
 
-.address {
+.patient-address {
   font-size: 0.875rem;
   color: #6b7280;
   margin-top: 0.25rem;

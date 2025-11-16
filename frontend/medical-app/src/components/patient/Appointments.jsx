@@ -45,7 +45,7 @@ export default function Appointments(props) {
       ) : (
         <>
           {/* UPCOMING APPOINTMENTS SECTION */}
-          <div className="appointments-section">
+          <div className="patient-appointments-section">
             <h2>Upcoming Appointments</h2>
             {upcomingAppointments.length === 0 ? (
               <div className="appointments-empty-state">
@@ -95,7 +95,7 @@ export default function Appointments(props) {
 
                     {/* RIGHT SECTION - Actions */}
                     <div className="appointment-actions">
-                      <span className={`status-badge ${apt.status?.toLowerCase?.() ?? 'scheduled'}`}>
+                      <span className={`patient-status-badge ${apt.status?.toLowerCase?.() ?? 'scheduled'}`}>
                         {apt.status ?? 'Scheduled'}
                       </span>
                       <button 
@@ -112,7 +112,7 @@ export default function Appointments(props) {
           </div>
 
           {/* APPOINTMENT HISTORY SECTION */}
-          <div className="appointments-section">
+          <div className="patient-appointments-section">
             <h2>Appointment History</h2>
             {appointmentHistory.length === 0 ? (
               <div className="appointments-empty-state">
@@ -195,7 +195,7 @@ export default function Appointments(props) {
                   <div className="visit-info-value">
                     {visitDetails.doctor_name}
                     {visitDetails.specialty_name && (
-                      <div className="specialty">{visitDetails.specialty_name}</div>
+                      <div className="patient-specialty">{visitDetails.specialty_name}</div>
                     )}
                   </div>
                 </div>
@@ -208,7 +208,7 @@ export default function Appointments(props) {
                     <div className="visit-info-value">
                       {visitDetails.office_name}
                       {visitDetails.office_address && (
-                        <div className="address">{visitDetails.office_address}</div>
+                        <div className="patient-address">{visitDetails.office_address}</div>
                       )}
                     </div>
                   </div>
