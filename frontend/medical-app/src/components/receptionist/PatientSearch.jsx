@@ -381,9 +381,9 @@ function PatientSearch({ onBookAppointment }) {
             <div className="modal-header">
               <div>
                 <h2 className="modal-title">
-                  {selectedPatient.First_Name} {selectedPatient.Last_Name}
+                  {selectedPatient.First_Name || selectedPatient.first_name || ''} {selectedPatient.Last_Name || selectedPatient.last_name || ''}
                 </h2>
-                <p className="modal-subtitle">Patient ID: {selectedPatient.Patient_ID}</p>
+                <p className="modal-subtitle">Patient ID: {selectedPatient.Patient_ID || selectedPatient.patient_id || ''}</p>
               </div>
               <button className="modal-close" onClick={closeModal}>
                 <X size={24} />
@@ -399,9 +399,16 @@ function PatientSearch({ onBookAppointment }) {
                 </h3>
                 <div className="info-grid">
                   <div className="info-field">
+                    <span className="field-label">Patient ID</span>
+                    <span className="field-value">
+                      {selectedPatient.Patient_ID || selectedPatient.patient_id || 'N/A'}
+                    </span>
+                  </div>
+
+                  <div className="info-field">
                     <span className="field-label">Full Name</span>
                     <span className="field-value">
-                      {selectedPatient.First_Name} {selectedPatient.Last_Name}
+                      {selectedPatient.First_Name || selectedPatient.first_name || ''} {selectedPatient.Last_Name || selectedPatient.last_name || ''}
                     </span>
                   </div>
                   
