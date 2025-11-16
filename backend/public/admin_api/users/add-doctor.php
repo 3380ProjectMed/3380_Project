@@ -90,7 +90,7 @@ try {
 
     echo json_encode([
         'success'  => true,
-        'message'  => 'Doctor created successfully with weekly schedule',
+        'message'  => 'Doctor created successfully',
         'staff_id' => $staffId,
         'username' => $username,
     ]);
