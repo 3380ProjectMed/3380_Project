@@ -44,12 +44,10 @@ try {
     // 2) For NURSE / RECEPTIONIST: enforce single office
     if (in_array($role, ['NURSE', 'RECEPTIONIST'], true)) {
         // Check if they already have any schedule (which defines their office)
-        $officeCheckQuery = "
-            SELECT DISTINCT office_id
-            FROM work_schedule
-            WHERE staff_id = ?
-            LIMIT 1
-        ";
+        $officeCheckQuery = "SELECT DISTINCT office_id
+                                FROM work_schedule
+                                WHERE staff_id = ?
+                                LIMIT 1";
         $officeCheck = executeQuery($conn, $officeCheckQuery, 'i', [$staffId]);
 
         if (!empty($officeCheck)) {
@@ -72,13 +70,11 @@ try {
     }
 
     // 3) Get the template schedule for this office and day
-    $templateQuery = "
-        SELECT start_time, end_time
-        FROM work_schedule_templates
-        WHERE office_id = ?
-          AND day_of_week = ?
-        LIMIT 1
-    ";
+    $templateQuery = "SELECT start_time, end_time
+                        FROM work_schedule_templates
+                        WHERE office_id = ?
+                        AND day_of_week = ?
+                        LIMIT 1";
 
     $templateResults = executeQuery($conn, $templateQuery, 'is', [$officeId, $dayOfWeek]);
 
@@ -111,14 +107,12 @@ try {
     //
     // Overlap condition:
     // NOT (existing_end <= new_start OR existing_start >= new_end)
-    $conflictQuery = "
-        SELECT schedule_id, office_id, start_time, end_time
-        FROM work_schedule
-        WHERE staff_id = ?
-          AND day_of_week = ?
-          AND NOT (end_time <= ? OR start_time >= ?)
-        LIMIT 1
-    ";
+    $conflictQuery = "SELECT schedule_id, office_id, start_time, end_time
+                        FROM work_schedule
+                        WHERE staff_id = ?
+                        AND day_of_week = ?
+                        AND NOT (end_time <= ? OR start_time >= ?)
+                        LIMIT 1";
 
     $conflicts = executeQuery(
         $conn,

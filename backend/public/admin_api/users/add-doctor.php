@@ -9,6 +9,9 @@ require_once __DIR__ . '/../../session.php';
 
 header('Content-Type: application/json');
 
+// TEMP DEBUG: prove the file is executing at all
+error_log('add-doctor.php: script started');
+
 // Require ADMIN
 if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
     http_response_code(403);
@@ -17,14 +20,16 @@ if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
 }
 
 try {
+    error_log('add-doctor.php: entering try block');
+
     $raw  = file_get_contents('php://input');
+    error_log('add-doctor.php: raw body = ' . $raw);
     $data = json_decode($raw, true);
 
     if (!is_array($data)) {
         throw new Exception('Invalid JSON payload');
     }
 
-    // Doctors now also get an initial weekly schedule
     $required = [
         'first_name',
         'last_name',
@@ -52,7 +57,7 @@ try {
         'gender'         => (int)$data['gender'],
         'email'          => $data['email'],
         'password'       => $data['password'],
-        'license_number' => $data['license_number'] ?? null
+        'license_number' => $data['license_number'] ?? null,
     ];
 
     $staffResult = createStaffAndUser(
@@ -64,14 +69,12 @@ try {
     $staffId  = $staffResult['staff_id'];
     $username = $staffResult['username'];
 
-    // Store specialty name directly in doctor table
     $specialtyName = $data['specialty'];
 
     $sqlDoctor = "
         INSERT INTO doctor (staff_id, specialty, phone)
         VALUES (?, ?, ?)
     ";
-
     $stmt = $conn->prepare($sqlDoctor);
     if (!$stmt) {
         throw new Exception('Prepare doctor insert failed: ' . $conn->error);
@@ -98,7 +101,6 @@ try {
         $conn->rollback();
     }
 
-    // Log to server logs so you can see the real stack trace in Kudu / log stream
     error_log('add-doctor.php error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
 
     http_response_code(500);
