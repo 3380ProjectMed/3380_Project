@@ -33,7 +33,6 @@ try {
                 s.last_name,
                 CONCAT(s.first_name, ' ', s.last_name) as name,
                 s.gender,
-                s.phone_number,
                 s.license_number,
                 o.office_id,
                 o.name as work_location,
@@ -94,11 +93,10 @@ try {
     // Get available template schedules from the user's office that aren't already assigned
     $assignedDays = array_column($schedules, 'day_of_week');
 
-    $availableQuery = "
-        SELECT DISTINCT day_of_week, start_time, end_time
-        FROM work_schedule
-        WHERE office_id = ?
-        AND staff_id IS NULL";
+    $availableQuery = "SELECT DISTINCT day_of_week, start_time, end_time
+                        FROM work_schedule
+                        WHERE office_id = ?
+                        AND staff_id IS NULL";
 
     $availableParams = [$user['office_id']];
     $availableTypes = 'i';
