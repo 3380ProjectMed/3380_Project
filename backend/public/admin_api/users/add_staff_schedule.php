@@ -15,6 +15,10 @@ try {
     $staffId = $input['staff_id'] ?? null;
     $officeId = $input['office_id'] ?? null;
     $dayOfWeek = $input['day_of_week'] ?? null;
+    
+    // Accept custom times (optional - will use template if not provided)
+    $customStartTime = $input['start_time'] ?? null;
+    $customEndTime = $input['end_time'] ?? null;
 
     if (!$staffId || !$officeId || !$dayOfWeek) {
         echo json_encode(['success' => false, 'error' => 'Missing parameters']);
@@ -23,10 +27,10 @@ try {
 
     $conn = getDBConnection();
     
-    // Get the template schedule for this office and day
+    // Get the template schedule for this office and day from work_schedule_templates
     $templateQuery = "
         SELECT start_time, end_time
-        FROM work_schedule
+        FROM work_schedule_templates
         WHERE office_id = ?
         AND day_of_week = ?
         LIMIT 1";
@@ -34,12 +38,16 @@ try {
     $templateResults = executeQuery($conn, $templateQuery, 'is', [$officeId, $dayOfWeek]);
     
     if (empty($templateResults)) {
-        echo json_encode(['success' => false, 'error' => 'Template schedule not found']);
+        echo json_encode(['success' => false, 'error' => 'Template schedule not found for this office and day']);
         closeDBConnection($conn);
         exit;
     }
     
     $template = $templateResults[0];
+    
+    // Use custom times if provided, otherwise use template times
+    $startTime = $customStartTime ?? $template['start_time'];
+    $endTime = $customEndTime ?? $template['end_time'];
     
     // Check if staff already has a schedule for this day
     $checkQuery = "
@@ -65,7 +73,7 @@ try {
         $conn, 
         $insertQuery, 
         'iissss', 
-        [$officeId, $staffId, $dayOfWeek, $template['start_time'], $template['end_time'], $dayOfWeek]
+        [$officeId, $staffId, $dayOfWeek, $startTime, $endTime, $dayOfWeek]
     );
     
     closeDBConnection($conn);

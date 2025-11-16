@@ -1,10 +1,9 @@
 <?php
-
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../cors.php';
 require_once __DIR__ . '/../../database.php';
-require_once __DIR__ . '/staff_helpers.php';
+require_once __DIR__ . '/../../staff_helpers.php';
 
 header('Content-Type: application/json');
 
@@ -25,7 +24,8 @@ try {
         throw new Exception('Invalid JSON payload');
     }
 
-    $required = ['first_name', 'last_name', 'email', 'password', 'ssn', 'gender', 'work_location', 'work_schedule', 'license_number', 'specialization'];
+    // Doctors need work_location but NOT work_schedule (assigned later)
+    $required = ['first_name', 'last_name', 'email', 'password', 'ssn', 'gender', 'work_location', 'license_number', 'specialty'];
 
     foreach ($required as $field) {
         if (!isset($data[$field]) || $data[$field] === '') {
@@ -43,8 +43,8 @@ try {
         'gender'         => (int)$data['gender'],
         'email'          => $data['email'],
         'password'       => $data['password'],
-        'work_location'  => (int)$data['work_location'],
-        'work_schedule'  => (int)$data['work_schedule'],
+        'work_location'  => (int)$data['work_location'], // Primary office location
+        'work_schedule'  => null, // Doctors don't get a permanent schedule
         'license_number' => $data['license_number'],
     ];
 
@@ -57,25 +57,11 @@ try {
     $staffId  = $staffResult['staff_id'];
     $username = $staffResult['username'];
 
-    $specialtyName = $data['specialization'];
+    // The specialty field from frontend is the specialty name (text input)
+    // We'll store it directly in the doctor table
+    $specialtyName = $data['specialty'];
 
-    $sqlSpec = "SELECT specialty_id FROM specialty WHERE specialty_name = ?";
-    $stmt = $conn->prepare($sqlSpec);
-    if (!$stmt) {
-        throw new Exception('Prepare specialty lookup failed: ' . $conn->error);
-    }
-    $stmt->bind_param('s', $specialtyName);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    $row = $res ? $res->fetch_assoc() : null;
-    $stmt->close();
-
-    if (!$row) {
-        throw new Exception('Specialty not found: ' . $specialtyName);
-    }
-
-    $specialtyId = (int)$row['specialty_id'];
-
+    // Insert into doctor table with specialty as VARCHAR (not looking up specialty_id)
     $sqlDoctor = "
         INSERT INTO doctor (staff_id, specialty, phone)
         VALUES (?, ?, ?)
@@ -87,7 +73,7 @@ try {
     }
 
     $phone = $data['phone_number'] ?? null;
-    $stmt->bind_param('iis', $staffId, $specialtyId, $phone);
+    $stmt->bind_param('iss', $staffId, $specialtyName, $phone);
 
     if (!$stmt->execute()) {
         throw new Exception('Execute doctor insert failed: ' . $stmt->error);
@@ -112,3 +98,4 @@ try {
         'error'   => $e->getMessage(),
     ]);
 }
+?>
