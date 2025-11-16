@@ -86,12 +86,12 @@ try {
             'address'   => $row['address'],
         ];
     }, $locRows);
-    $specSql  = "SELECT id, specialty_name AS name FROM specialty ORDER BY name";
+    $specSql  = "SELECT specialty_id, specialty_name AS name FROM specialty ORDER BY name";
     $specRows = executeQuery($conn, $specSql);
 
     $specialties = array_map(static function ($row) {
         return [
-            'id'   => (int)$row['id'],
+            'id'   => (int)$row['specialty_id'],
             'name' => $row['name'],
         ];
     }, $specRows);
