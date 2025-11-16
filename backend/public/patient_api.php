@@ -1265,6 +1265,15 @@ elseif ($endpoint === 'insurance') {
 
             if ($stmt->execute()) {
                 if ($stmt->affected_rows > 0) {
+                    // Ensure patient table is linked to this insurance
+                    $update_patient_stmt = $mysqli->prepare("UPDATE patient SET insurance_id = ? WHERE patient_id = ?");
+                    if ($update_patient_stmt) {
+                        $update_patient_stmt->bind_param('ii', $insurance_id, $patient_id);
+                        $update_patient_stmt->execute();
+                        $update_patient_stmt->close();
+                        error_log("Insurance PUT: Ensured patient " . $patient_id . " is linked to insurance " . $insurance_id);
+                    }
+                    
                     $mysqli->commit();
                     sendResponse(true, ['id' => $insurance_id], 'Insurance updated successfully');
                 } else {
@@ -1411,8 +1420,27 @@ elseif ($endpoint === 'insurance') {
 
             if ($stmt->execute()) {
                 $new_insurance_id = $mysqli->insert_id;
+                
+                // Update patient table to link to the new insurance
+                $update_patient_stmt = $mysqli->prepare("UPDATE patient SET insurance_id = ? WHERE patient_id = ?");
+                if (!$update_patient_stmt) {
+                    $mysqli->rollback();
+                    error_log("Insurance POST: Failed to prepare patient update: " . $mysqli->error);
+                    sendResponse(false, [], 'Failed to link insurance to patient: ' . $mysqli->error, 500);
+                    return;
+                }
+                
+                $update_patient_stmt->bind_param('ii', $new_insurance_id, $patient_id);
+                if (!$update_patient_stmt->execute()) {
+                    $mysqli->rollback();
+                    error_log("Insurance POST: Failed to update patient table: " . $update_patient_stmt->error);
+                    sendResponse(false, [], 'Failed to link insurance to patient: ' . $update_patient_stmt->error, 500);
+                    return;
+                }
+                
+                $update_patient_stmt->close();
                 $mysqli->commit();
-                error_log("Insurance POST: Successfully added insurance with ID: " . $new_insurance_id);
+                error_log("Insurance POST: Successfully added insurance ID " . $new_insurance_id . " and linked to patient " . $patient_id);
                 sendResponse(true, ['id' => $new_insurance_id], 'Insurance added successfully');
             } else {
                 $mysqli->rollback();
