@@ -122,11 +122,12 @@ try {
 
     $schedules = executeQuery($conn, $schedulesQuery, 'i', [$user['staff_id']]);
 
-    // ── Build available template schedules (role & conflict aware) ────────────
+    // ── Build available template schedules (role-aware) ──────────────────────
 
     $staffId        = (int)$user['staff_id'];
     $staffRoleUpper = strtoupper($user['staff_role'] ?? '');
 
+    // For NURSE / RECEPTIONIST: determine their "home" office if they already have schedules
     $homeOfficeId = null;
     if (in_array($staffRoleUpper, ['NURSE', 'RECEPTIONIST'], true)) {
         $homeOfficeQuery = "
@@ -141,6 +142,14 @@ try {
         }
     }
 
+    /*
+     * Now build available_schedules from work_schedule_templates:
+     *  - Doctors: all templates from all offices
+     *  - Nurse/Recept with existing schedules: templates only for their home office
+     *  - Nurse/Recept with no schedules yet: templates from all offices
+     *  Overlap and single-office rules are enforced in add_staff_schedule.php.
+     */
+
     $availableSql = "
         SELECT
             t.office_id,
@@ -151,38 +160,42 @@ try {
         FROM work_schedule_templates t
         INNER JOIN office o
             ON o.office_id = t.office_id
-        LEFT JOIN work_schedule w
-            ON w.staff_id   = ?
-           AND w.day_of_week = t.day_of_week
-           AND NOT (w.end_time <= t.start_time OR w.start_time >= t.end_time)
     ";
 
-    $params = [$staffId];
-    $types  = 'i';
-
-    $where = "WHERE w.schedule_id IS NULL";
+    $params = [];
+    $types  = '';
+    $whereClauses = [];
 
     if (in_array($staffRoleUpper, ['NURSE', 'RECEPTIONIST'], true) && $homeOfficeId !== null) {
-        $where   .= " AND t.office_id = ?";
-        $params[] = $homeOfficeId;
-        $types   .= 'i';
+        $whereClauses[] = "t.office_id = ?";
+        $params[]       = $homeOfficeId;
+        $types         .= 'i';
     }
 
+    if (!empty($whereClauses)) {
+        $availableSql .= " WHERE " . implode(' AND ', $whereClauses);
+    }
 
     $availableSql .= "
-        $where
         ORDER BY FIELD(t.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'),
                  o.name
     ";
 
-    $availableSchedules = executeQuery($conn, $availableSql, $types, $params);
+    $availableSchedules = executeQuery(
+        $conn,
+        $types === '' ? $availableSql : $availableSql,
+        $types === '' ? null : $types,
+        $types === '' ? []   : $params
+    );
+
+
 
     closeDBConnection($conn);
 
     echo json_encode([
-        'success'            => true,
-        'user'               => $user,
-        'schedules'          => $schedules,
+        'success'             => true,
+        'user'                => $user,
+        'schedules'           => $schedules,
         'available_schedules' => $availableSchedules
     ]);
 } catch (Exception $e) {
