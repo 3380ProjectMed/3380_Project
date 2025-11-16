@@ -34,23 +34,22 @@ try {
                 CONCAT(s.first_name, ' ', s.last_name) as name,
                 s.gender,
                 s.license_number,
-                o.office_id,
-                o.name as work_location,
-                o.address as office_address";
+                s.phone_number";
 
     if ($userType === 'DOCTOR') {
-        $query .= ", d.specialty";
+        $query .= ", sp.specialty_name as specialty";
     } elseif ($userType === 'NURSE') {
         $query .= ", n.department";
     }
 
     $query .= "
         FROM user_account ua
-        JOIN staff s ON ua.user_id = s.user_id
-        LEFT JOIN office o ON s.office_id = o.office_id";
+        JOIN staff s ON ua.user_id = s.staff_id";
 
     if ($userType === 'DOCTOR') {
-        $query .= " LEFT JOIN doctor d ON s.staff_id = d.staff_id";
+        $query .= " 
+            LEFT JOIN doctor d ON s.staff_id = d.staff_id
+            LEFT JOIN specialty sp ON d.specialty = sp.specialty_id";
     } elseif ($userType === 'NURSE') {
         $query .= " LEFT JOIN nurse n ON s.staff_id = n.staff_id";
     }
@@ -67,13 +66,46 @@ try {
 
     $user = $userResults[0];
 
+    // Get work locations from work_schedule (staff can work at multiple locations)
+    $locationsQuery = "SELECT DISTINCT 
+                            o.office_id,
+                            o.name as office_name,
+                            o.address as office_address
+                        FROM work_schedule ws
+                        JOIN office o ON ws.office_id = o.office_id
+                        WHERE ws.staff_id = ?
+                        ORDER BY o.name";
+
+    $locations = executeQuery($conn, $locationsQuery, 'i', [$user['staff_id']]);
+
+    // Format work locations
+    if (!empty($locations)) {
+        // Use the first location as primary
+        $user['office_id'] = $locations[0]['office_id'];
+        $user['work_location'] = $locations[0]['office_name'];
+        $user['office_address'] = $locations[0]['office_address'];
+
+        // If there are multiple locations, concatenate them
+        if (count($locations) > 1) {
+            $user['work_location'] = implode(', ', array_column($locations, 'office_name'));
+            $user['all_locations'] = $locations; // Include all for detailed view
+        }
+    } else {
+        // No work locations assigned yet
+        $user['office_id'] = null;
+        $user['work_location'] = 'Not assigned';
+        $user['office_address'] = 'N/A';
+        $user['all_locations'] = [];
+    }
+
     // Get assigned schedules for this staff member
     $schedulesQuery = "SELECT 
                             ws.schedule_id, 
                             ws.day_of_week, 
                             ws.start_time, 
                             ws.end_time,
-                            o.name as office_name
+                            o.name as office_name,
+                            o.office_id
                         FROM work_schedule ws
                         LEFT JOIN office o ON ws.office_id = o.office_id
                         WHERE ws.staff_id = ?
@@ -90,37 +122,53 @@ try {
 
     $schedules = executeQuery($conn, $schedulesQuery, 'i', [$user['staff_id']]);
 
-    // Get available template schedules from the user's office that aren't already assigned
-    $assignedDays = array_column($schedules, 'day_of_week');
-
-    $availableQuery = "SELECT DISTINCT day_of_week, start_time, end_time
-                        FROM work_schedule
-                        WHERE office_id = ?
-                        AND staff_id IS NULL";
-
-    $availableParams = [$user['office_id']];
-    $availableTypes = 'i';
-
-    if (!empty($assignedDays)) {
-        $placeholders = implode(',', array_fill(0, count($assignedDays), '?'));
-        $availableQuery .= " AND day_of_week NOT IN ($placeholders)";
-        $availableParams = array_merge($availableParams, $assignedDays);
-        $availableTypes .= str_repeat('s', count($assignedDays));
+    // Get available template schedules from ALL offices where this staff member doesn't have a schedule yet
+    // Build a list of day+office combinations that are already assigned
+    $assignedCombos = [];
+    foreach ($schedules as $schedule) {
+        $assignedCombos[] = $schedule['day_of_week'] . '_' . $schedule['office_id'];
     }
 
-    $availableQuery .= "
-        ORDER BY 
-            CASE day_of_week
-                WHEN 'Monday' THEN 1
-                WHEN 'Tuesday' THEN 2
-                WHEN 'Wednesday' THEN 3
-                WHEN 'Thursday' THEN 4
-                WHEN 'Friday' THEN 5
-                WHEN 'Saturday' THEN 6
-                WHEN 'Sunday' THEN 7
-            END";
+    // Get available schedules from all offices
+    $availableQuery = "SELECT DISTINCT 
+                            ws.day_of_week, 
+                            ws.start_time, 
+                            ws.end_time,
+                            o.office_id,
+                            o.name as office_name
+                        FROM work_schedule ws
+                        JOIN office o ON ws.office_id = o.office_id
+                        WHERE ws.staff_id IS NULL";
 
-    $availableSchedules = executeQuery($conn, $availableQuery, $availableTypes, $availableParams);
+    $availableSchedules = executeQuery($conn, $availableQuery);
+
+    // Filter out already assigned day+office combinations
+    $filteredAvailable = array_filter($availableSchedules, function ($schedule) use ($assignedCombos) {
+        $combo = $schedule['day_of_week'] . '_' . $schedule['office_id'];
+        return !in_array($combo, $assignedCombos);
+    });
+
+    // Sort available schedules
+    usort($filteredAvailable, function ($a, $b) {
+        $dayOrder = [
+            'Monday' => 1,
+            'Tuesday' => 2,
+            'Wednesday' => 3,
+            'Thursday' => 4,
+            'Friday' => 5,
+            'Saturday' => 6,
+            'Sunday' => 7
+        ];
+
+        $aDay = $dayOrder[$a['day_of_week']] ?? 8;
+        $bDay = $dayOrder[$b['day_of_week']] ?? 8;
+
+        if ($aDay !== $bDay) {
+            return $aDay - $bDay;
+        }
+
+        return strcmp($a['office_name'], $b['office_name']);
+    });
 
     closeDBConnection($conn);
 
@@ -128,7 +176,7 @@ try {
         'success' => true,
         'user' => $user,
         'schedules' => $schedules,
-        'available_schedules' => $availableSchedules
+        'available_schedules' => array_values($filteredAvailable)
     ]);
 } catch (Exception $e) {
     error_log("Error in get_user_details.php: " . $e->getMessage());

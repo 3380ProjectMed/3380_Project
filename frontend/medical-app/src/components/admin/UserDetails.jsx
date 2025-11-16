@@ -67,9 +67,12 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
     const value = e.target.value;
     setSelectedSchedule(value);
     
-    // When a schedule is selected, populate the custom time fields with template times
+    // Value format: "day_office_id"
     if (value) {
-      const schedule = availableSchedules.find(s => s.day_of_week === value);
+      const [day, officeId] = value.split('_');
+      const schedule = availableSchedules.find(s => 
+        s.day_of_week === day && s.office_id === parseInt(officeId)
+      );
       if (schedule) {
         setCustomStartTime(schedule.start_time);
         setCustomEndTime(schedule.end_time);
@@ -91,10 +94,13 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
     setError('');
 
     try {
+      // Parse the selected value: "day_office_id"
+      const [dayOfWeek, officeId] = selectedSchedule.split('_');
+
       const payload = {
         staff_id: user.staff_id,
-        office_id: user.office_id,
-        day_of_week: selectedSchedule
+        office_id: parseInt(officeId),
+        day_of_week: dayOfWeek
       };
 
       // Include custom times if the user modified them
@@ -300,14 +306,16 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
             <h3>Work Information</h3>
             <div className="details-grid">
               <div className="detail-item">
-                <label><MapPin size={16} /> Work Location</label>
-                <span>{user.work_location || 'N/A'}</span>
+                <label><MapPin size={16} /> Work Location(s)</label>
+                <span>{user.work_location || 'Not assigned'}</span>
               </div>
 
-              <div className="detail-item">
-                <label>Office Address</label>
-                <span>{user.office_address || 'N/A'}</span>
-              </div>
+              {user.office_address && user.office_address !== 'N/A' && (
+                <div className="detail-item">
+                  <label>Primary Office Address</label>
+                  <span>{user.office_address}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -328,20 +336,29 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
             {showAddSchedule && (
               <div className="add-schedule-form">
                 <div className="form-group">
-                  <label htmlFor="scheduleSelect">Select Day</label>
+                  <label htmlFor="scheduleSelect">Select Day & Location</label>
                   <select
                     id="scheduleSelect"
                     value={selectedSchedule}
                     onChange={handleScheduleSelect}
                     className="form-control"
                   >
-                    <option value="">Select a day...</option>
-                    {availableSchedules.map((schedule) => (
-                      <option key={schedule.day_of_week} value={schedule.day_of_week}>
-                        {schedule.day_of_week} (Default: {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)})
-                      </option>
-                    ))}
+                    <option value="">Select a day and location...</option>
+                    {availableSchedules.map((schedule) => {
+                      const value = `${schedule.day_of_week}_${schedule.office_id}`;
+                      return (
+                        <option key={value} value={value}>
+                          {schedule.day_of_week} at {schedule.office_name} 
+                          ({formatTime(schedule.start_time)} - {formatTime(schedule.end_time)})
+                        </option>
+                      );
+                    })}
                   </select>
+                  {availableSchedules.length === 0 && (
+                    <small className="text-muted">
+                      All available schedules have been assigned. Contact system admin to create more schedule templates.
+                    </small>
+                  )}
                 </div>
 
                 {selectedSchedule && (
