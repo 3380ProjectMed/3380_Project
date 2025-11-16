@@ -88,8 +88,10 @@ function UserManagement() {
     }));
   };
 
-  const handleAddUser = (type) => {
-    setModalType(type);
+  const handleAddUser = () => {
+    // Pass 'all' if no filter is set, otherwise pass the filtered role
+    const typeToAdd = filters.role !== 'all' ? filters.role : 'all';
+    setModalType(typeToAdd);
     setShowAddModal(true);
   };
 
@@ -169,7 +171,7 @@ function UserManagement() {
         </div>
         <button 
           className="btn btn-primary"
-          onClick={() => handleAddUser(filters.role !== 'all' ? filters.role : 'doctor')}
+          onClick={handleAddUser}
         >
           <UserPlus size={20} />
           Add User
@@ -424,6 +426,7 @@ function UserManagement() {
 }
 
 function AddUserModal({ type, onClose, onSuccess }) {
+  const [selectedRole, setSelectedRole] = useState(type === 'all' ? 'doctor' : type);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -455,10 +458,10 @@ function AddUserModal({ type, onClose, onSuccess }) {
 
   // Load schedules when office changes (for nurses and receptionists)
   useEffect(() => {
-    if (formData.workLocation && (type === 'nurse' || type === 'receptionist')) {
+    if (formData.workLocation && (selectedRole === 'nurse' || selectedRole === 'receptionist')) {
       loadScheduleOptions(formData.workLocation);
     }
-  }, [formData.workLocation, type]);
+  }, [formData.workLocation, selectedRole]);
 
   const loadFormOptions = async () => {
     setLoadingOptions(true);
@@ -476,8 +479,8 @@ function AddUserModal({ type, onClose, onSuccess }) {
       if (data.success) {
         setWorkLocations(data.work_locations || []);
         
-        // Set default work location to first option
-        if (data.work_locations && data.work_locations.length > 0) {
+        // Set default work location to first option for nurses/receptionists only
+        if (data.work_locations && data.work_locations.length > 0 && (selectedRole === 'nurse' || selectedRole === 'receptionist')) {
           setFormData(prev => ({ ...prev, workLocation: data.work_locations[0].office_id.toString() }));
         }
       } else {
@@ -557,9 +560,9 @@ function AddUserModal({ type, onClose, onSuccess }) {
     setError('');
 
     try {
-      const endpoint = type === 'doctor'
+      const endpoint = selectedRole === 'doctor'
         ? '/admin_api/users/add-doctor.php'
-        : type === 'nurse'
+        : selectedRole === 'nurse'
         ? '/admin_api/users/add-nurse.php'
         : '/admin_api/users/add-receptionist.php';
 
@@ -571,14 +574,17 @@ function AddUserModal({ type, onClose, onSuccess }) {
         ssn: formData.ssn.replace(/\D/g, ''),
         gender: parseInt(formData.gender),
         phone_number: formData.phoneNumber.replace(/\D/g, ''),
-        work_location: parseInt(formData.workLocation),
-        //work_schedule: parseInt(formData.workSchedule),
         license_number: formData.licenseNumber,
       };
 
-      if (type === 'doctor') {
+      // Only add work_location for nurses and receptionists
+      if (selectedRole === 'nurse' || selectedRole === 'receptionist') {
+        payload.work_location = parseInt(formData.workLocation);
+      }
+
+      if (selectedRole === 'doctor') {
         payload.specialty = formData.specialty;
-      } else if (type === 'nurse') {
+      } else if (selectedRole === 'nurse') {
         payload.department = formData.department;
       }
 
@@ -627,9 +633,9 @@ function AddUserModal({ type, onClose, onSuccess }) {
   };
 
   const getModalTitle = () => {
-    if (type === 'doctor') return 'Doctor';
-    if (type === 'nurse') return 'Nurse';
-    if (type === 'receptionist') return 'Receptionist';
+    if (selectedRole === 'doctor') return 'Doctor';
+    if (selectedRole === 'nurse') return 'Nurse';
+    if (selectedRole === 'receptionist') return 'Receptionist';
     return '';
   };
 
@@ -637,7 +643,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Add New {getModalTitle()}</h2>
+          <h2>Add New {type === 'all' ? 'User' : getModalTitle()}</h2>
           <button className="close-btn" onClick={onClose}>
             <X size={24} />
           </button>
@@ -659,6 +665,23 @@ function AddUserModal({ type, onClose, onSuccess }) {
               <div className="alert alert-error">
                 <AlertCircle size={20} />
                 <span>{error}</span>
+              </div>
+            )}
+
+            {/* Role selector - only show when type is 'all' */}
+            {type === 'all' && (
+              <div className="form-group">
+                <label htmlFor="roleSelect">Role *</label>
+                <select
+                  id="roleSelect"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  required
+                >
+                  <option value="doctor">Doctor</option>
+                  <option value="nurse">Nurse</option>
+                  <option value="receptionist">Receptionist</option>
+                </select>
               </div>
             )}
 
@@ -757,29 +780,6 @@ function AddUserModal({ type, onClose, onSuccess }) {
               />
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="workLocation">Work Location *</label>
-                <select
-                  id="workLocation"
-                  name="workLocation"
-                  value={formData.workLocation}
-                  onChange={handleChange}
-                  required
-                >
-                  {workLocations.length === 0 ? (
-                    <option value="">No locations available</option>
-                  ) : (
-                    workLocations.map(location => (
-                      <option key={location.office_id} value={location.office_id}>
-                        {location.name} - {location.address}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-            </div>
-
             <div className="form-group">
               <label htmlFor="licenseNumber">License Number</label>
               <input
@@ -792,33 +792,23 @@ function AddUserModal({ type, onClose, onSuccess }) {
               />
             </div>
 
-            {/* For Doctors - Only work location, no schedule */}
-            {type === 'doctor' && (
+            {/* For Doctors - Only specialty, NO work location */}
+            {selectedRole === 'doctor' && (
               <div className="form-group">
-                <label htmlFor="workLocation">Primary Work Location *</label>
-                <select
-                  id="workLocation"
-                  name="workLocation"
-                  value={formData.workLocation}
+                <label htmlFor="specialty">Specialty</label>
+                <input
+                  type="text"
+                  id="specialty"
+                  name="specialty"
+                  value={formData.specialty}
                   onChange={handleChange}
-                  required
-                >
-                  {workLocations.length === 0 ? (
-                    <option value="">No locations available</option>
-                  ) : (
-                    workLocations.map(location => (
-                      <option key={location.office_id} value={location.office_id}>
-                        {location.name} - {location.address}
-                      </option>
-                    ))
-                  )}
-                </select>
-                <small>Additional schedules can be assigned later</small>
+                  placeholder="e.g., Cardiology"
+                />
               </div>
             )}
 
-            {/* For Nurses and Receptionists - Work location and schedule */}
-            {(type === 'nurse' || type === 'receptionist') && (
+            {/* For Nurses and Receptionists - Work location and schedule (full width) */}
+            {(selectedRole === 'nurse' || selectedRole === 'receptionist') && (
               <>
                 <div className="form-group">
                   <label htmlFor="workLocation">Work Location *</label>
@@ -867,6 +857,20 @@ function AddUserModal({ type, onClose, onSuccess }) {
                     )}
                   </select>
                 </div>
+
+                {selectedRole === 'nurse' && (
+                  <div className="form-group">
+                    <label htmlFor="department">Department</label>
+                    <input
+                      type="text"
+                      id="department"
+                      name="department"
+                      value={formData.department}
+                      onChange={handleChange}
+                      placeholder="e.g., Emergency"
+                    />
+                  </div>
+                )}
               </>
             )}
 
