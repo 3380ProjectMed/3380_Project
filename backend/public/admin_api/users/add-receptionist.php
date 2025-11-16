@@ -5,10 +5,10 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../cors.php';
 require_once __DIR__ . '/../../database.php';
 require_once __DIR__ . '/../../staff_helpers.php';
+require_once __DIR__ . '/../../session.php';
 
 header('Content-Type: application/json');
 
-session_start();
 
 if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
     http_response_code(403);
@@ -75,13 +75,17 @@ try {
         'staff_id' => $staffId,
         'username' => $username,
     ]);
-} catch (Exception $e) {
+} catch (Throwable $e) {
     if (isset($conn) && $conn instanceof mysqli) {
         $conn->rollback();
     }
-    http_response_code(400);
+
+    // Log to server logs so you can see the real stack trace in Kudu / log stream
+    error_log('add-receptionist.php error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+
+    http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error'   => $e->getMessage(),
+        'error'   => 'Server error: ' . $e->getMessage(),
     ]);
 }
