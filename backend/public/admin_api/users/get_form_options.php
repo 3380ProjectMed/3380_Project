@@ -1,90 +1,102 @@
 <?php
-require_once '/home/site/wwwroot/cors.php';
-require_once '/home/site/wwwroot/database.php';
-require_once '/home/site/wwwroot/session.php';
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../cors.php';
+require_once __DIR__ . '/../../database.php';
+require_once __DIR__ . '/../../session.php';
+
+header('Content-Type: application/json');
+
+session_start();
+
+if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Admin access required']);
+    exit;
+}
 
 try {
-    if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'error' => 'Admin access required']);
+    $conn = getDBConnection();
+
+    // ── Branch 1: schedules for a specific office ────────────────────────────
+    if (isset($_GET['office_id']) && $_GET['office_id'] !== '') {
+        $officeId = (int)$_GET['office_id'];
+
+        $sql = "
+            SELECT
+                t.office_id,
+                t.start_time,
+                t.end_time,
+                GROUP_CONCAT(
+                    DISTINCT t.day_of_week
+                    ORDER BY FIELD(
+                        t.day_of_week,
+                        'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
+                    )
+                    SEPARATOR ', '
+                ) AS days
+            FROM work_schedule_templates t
+            WHERE t.office_id = ?
+            GROUP BY t.office_id, t.start_time, t.end_time
+            ORDER BY t.start_time, t.end_time
+        ";
+
+        $rows = executeQuery($conn, $sql, 'i', [$officeId]);
+
+        $workSchedules = [];
+        foreach ($rows as $row) {
+            $start = substr($row['start_time'], 0, 5);
+            $end   = substr($row['end_time'],   0, 5);
+
+            $label = sprintf(
+                '%s (%s - %s)',
+                $row['days'] ?: 'Days',
+                $start,
+                $end
+            );
+
+            $workSchedules[] = [
+                'office_id'      => (int)$row['office_id'],
+                'start_time'     => $row['start_time'],
+                'end_time'       => $row['end_time'],
+                'schedule_label' => $label,
+            ];
+        }
+
+        echo json_encode([
+            'success'        => true,
+            'work_schedules' => $workSchedules,
+        ]);
         exit;
     }
 
-    $conn = getDBConnection();
-    
-    // Get work locations from Office table
-    $locationsQuery = "SELECT office_id, name, address FROM office ORDER BY name";
-    $workLocations = executeQuery($conn, $locationsQuery, '', []);
-    
-    // Get schedule templates - optionally filtered by office_id
-    $officeId = $_GET['office_id'] ?? null;
-    
-    $schedulesQuery = "
-        SELECT 
-            office_id,
-            GROUP_CONCAT(day_of_week ORDER BY 
-                CASE day_of_week
-                    WHEN 'Monday' THEN 1
-                    WHEN 'Tuesday' THEN 2
-                    WHEN 'Wednesday' THEN 3
-                    WHEN 'Thursday' THEN 4
-                    WHEN 'Friday' THEN 5
-                    WHEN 'Saturday' THEN 6
-                    WHEN 'Sunday' THEN 7
-                END
-                SEPARATOR ', ') as days,
-            start_time,
-            end_time,
-            CONCAT(
-                GROUP_CONCAT(
-                    SUBSTRING(day_of_week, 1, 3) 
-                    ORDER BY 
-                        CASE day_of_week
-                            WHEN 'Monday' THEN 1
-                            WHEN 'Tuesday' THEN 2
-                            WHEN 'Wednesday' THEN 3
-                            WHEN 'Thursday' THEN 4
-                            WHEN 'Friday' THEN 5
-                            WHEN 'Saturday' THEN 6
-                            WHEN 'Sunday' THEN 7
-                        END
-                    SEPARATOR ', '
-                ),
-                ' (',
-                DATE_FORMAT(start_time, '%h:%i %p'),
-                ' - ',
-                DATE_FORMAT(end_time, '%h:%i %p'),
-                ')'
-            ) as schedule_label
-        FROM work_schedule_templates";
-    
-    $scheduleParams = [];
-    $scheduleTypes = '';
-    
-    if ($officeId && $officeId !== 'all') {
-        $schedulesQuery .= " WHERE office_id = ?";
-        $scheduleParams = [(int)$officeId];
-        $scheduleTypes = 'i';
-    }
-    
-    $schedulesQuery .= " GROUP BY office_id, start_time, end_time ORDER BY office_id, start_time";
-    
-    $workSchedules = executeQuery($conn, $schedulesQuery, $scheduleTypes, $scheduleParams);
-    
+    // ── Branch 2: base form options (work locations, etc.) ───────────────────
+    $locSql = "
+        SELECT office_id, name, address
+        FROM office
+        ORDER BY name
+    ";
+    $locRows = executeQuery($conn, $locSql);
+
+    $workLocations = array_map(static function ($row) {
+        return [
+            'office_id' => (int)$row['office_id'],
+            'name'      => $row['name'],
+            'address'   => $row['address'],
+        ];
+    }, $locRows);
+
     closeDBConnection($conn);
-    
+
     echo json_encode([
-        'success' => true,
+        'success'        => true,
         'work_locations' => $workLocations,
-        'work_schedules' => $workSchedules
     ]);
-    
 } catch (Exception $e) {
-    error_log("Error in get_form_options.php: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Database error: ' . $e->getMessage()
+        'error'   => 'Error loading form options: ' . $e->getMessage(),
     ]);
 }
-?>

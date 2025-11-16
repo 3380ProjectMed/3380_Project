@@ -458,7 +458,10 @@ function AddUserModal({ type, onClose, onSuccess }) {
 
   // Load schedules when office changes (for nurses and receptionists)
   useEffect(() => {
-    if (formData.workLocation && (selectedRole === 'nurse' || selectedRole === 'receptionist')) {
+    if (
+      formData.workLocation &&
+      (selectedRole === 'nurse' || selectedRole === 'receptionist')
+    ) {
       loadScheduleOptions(formData.workLocation);
     }
   }, [formData.workLocation, selectedRole]);
@@ -509,24 +512,31 @@ function AddUserModal({ type, onClose, onSuccess }) {
       
       if (data.success) {
         setWorkSchedules(data.work_schedules || []);
-        
-        // Set default schedule to first option
+
+        // Default to first schedule if available
         if (data.work_schedules && data.work_schedules.length > 0) {
           setFormData(prev => ({ 
             ...prev, 
             workSchedule: `${data.work_schedules[0].office_id}-${data.work_schedules[0].start_time}-${data.work_schedules[0].end_time}`
           }));
+        } else {
+          setFormData(prev => ({ ...prev, workSchedule: '' }));
         }
       } else {
         setError(data.error || 'Failed to load schedule options');
+        setWorkSchedules([]);
+        setFormData(prev => ({ ...prev, workSchedule: '' }));
       }
     } catch (err) {
       setError(err.message);
       console.error('Error loading schedule options:', err);
+      setWorkSchedules([]);
+      setFormData(prev => ({ ...prev, workSchedule: '' }));
     } finally {
       setLoadingSchedules(false);
     }
   };
+
 
   // Format SSN as 000-00-0000
   const formatSSN = (value) => {
@@ -577,9 +587,10 @@ function AddUserModal({ type, onClose, onSuccess }) {
         license_number: formData.licenseNumber,
       };
 
-      // Only add work_location for nurses and receptionists
+      // All staff roles get a base location + schedule
       if (selectedRole === 'nurse' || selectedRole === 'receptionist') {
         payload.work_location = parseInt(formData.workLocation);
+        payload.work_schedule = formData.workSchedule;  
       }
 
       if (selectedRole === 'doctor') {
@@ -789,6 +800,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
                 value={formData.licenseNumber}
                 onChange={handleChange}
                 placeholder="RN123456"
+                required={selectedRole === 'doctor'}
               />
             </div>
 
@@ -803,76 +815,83 @@ function AddUserModal({ type, onClose, onSuccess }) {
                   value={formData.specialty}
                   onChange={handleChange}
                   placeholder="e.g., Cardiology"
+                  required
                 />
               </div>
             )}
 
-            {/* For Nurses and Receptionists - Work location and schedule (full width) */}
-            {(selectedRole === 'nurse' || selectedRole === 'receptionist') && (
-              <>
-                <div className="form-group">
-                  <label htmlFor="workLocation">Work Location *</label>
-                  <select
-                    id="workLocation"
-                    name="workLocation"
-                    value={formData.workLocation}
-                    onChange={handleChange}
-                    required
-                  >
-                    {workLocations.length === 0 ? (
-                      <option value="">No locations available</option>
-                    ) : (
-                      workLocations.map(location => (
-                        <option key={location.office_id} value={location.office_id}>
-                          {location.name} - {location.address}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </div>
+  {/* For Doctors, Nurses, and Receptionists – require location & schedule */}
+  {(selectedRole === 'nurse' || selectedRole === 'receptionist') && (
+    <>
+      <div className="form-group">
+        <label htmlFor="workLocation">Work Location *</label>
+        <select
+          id="workLocation"
+          name="workLocation"
+          value={formData.workLocation}
+          onChange={handleChange}
+          required
+        >
+          {workLocations.length === 0 ? (
+            <option value="">No locations available</option>
+          ) : (
+            <>
+              <option value="">Select a location...</option>
+              {workLocations.map(location => (
+                <option key={location.office_id} value={location.office_id}>
+                  {location.name} - {location.address}
+                </option>
+              ))}
+            </>
+          )}
+        </select>
+      </div>
 
-                <div className="form-group">
-                  <label htmlFor="workSchedule">Work Schedule *</label>
-                  <select
-                    id="workSchedule"
-                    name="workSchedule"
-                    value={formData.workSchedule}
-                    onChange={handleChange}
-                    required
-                    disabled={loadingSchedules}
-                  >
-                    {loadingSchedules ? (
-                      <option value="">Loading schedules...</option>
-                    ) : workSchedules.length === 0 ? (
-                      <option value="">No schedules available for this location</option>
-                    ) : (
-                      workSchedules.map((schedule, index) => (
-                        <option 
-                          key={`${schedule.office_id}-${schedule.start_time}-${schedule.end_time}`} 
-                          value={`${schedule.office_id}-${schedule.start_time}-${schedule.end_time}`}
-                        >
-                          {schedule.schedule_label}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </div>
+      <div className="form-group">
+        <label htmlFor="workSchedule">Work Schedule *</label>
+        <select
+          id="workSchedule"
+          name="workSchedule"
+          value={formData.workSchedule}
+          onChange={handleChange}
+          required
+          disabled={loadingSchedules || !formData.workLocation}
+        >
+          {loadingSchedules ? (
+            <option value="">Loading schedules...</option>
+          ) : !formData.workLocation ? (
+            <option value="">Select a location first...</option>
+          ) : workSchedules.length === 0 ? (
+            <option value="">No schedules available for this location</option>
+          ) : (
+            workSchedules.map(schedule => (
+              <option
+                key={`${schedule.office_id}-${schedule.start_time}-${schedule.end_time}`}
+                value={`${schedule.office_id}-${schedule.start_time}-${schedule.end_time}`}
+              >
+                {schedule.schedule_label}
+              </option>
+            ))
+          )}
+        </select>
+      </div>
 
-                {selectedRole === 'nurse' && (
-                  <div className="form-group">
-                    <label htmlFor="department">Department</label>
-                    <input
-                      type="text"
-                      id="department"
-                      name="department"
-                      value={formData.department}
-                      onChange={handleChange}
-                      placeholder="e.g., Emergency"
-                    />
-                  </div>
-                )}
-              </>
-            )}
+      {selectedRole === 'nurse' && (
+        <div className="form-group">
+          <label htmlFor="department">Department</label>
+          <input
+            type="text"
+            id="department"
+            name="department"
+            value={formData.department}
+            onChange={handleChange}
+            placeholder="e.g., Emergency"
+            required
+          />
+        </div>
+      )}
+    </>
+  )}
 
             <div className="modal-actions">
               <button
