@@ -689,90 +689,254 @@ export default function PatientPortal({ onLogout }) {
   ];
 
   // --- Booking modal renderer ---
-  const renderBookingModal = () => (
-    <div className="modal-overlay" onClick={() => setShowBookingModal(false)}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>Book Appointment</h3>
-          <button className="btn" onClick={() => setShowBookingModal(false)}><X /></button>
-        </div>
+const renderBookingModal = () => (
+  <div className="modal-overlay" onClick={() => setShowBookingModal(false)}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      {/* MODAL HEADER */}
+      <div className="modal-header">
+        <h2>
+          <Calendar className="icon" />
+          Book Appointment
+        </h2>
+        <button className="modal-close" onClick={() => setShowBookingModal(false)}>
+          <X className="icon" />
+        </button>
+      </div>
 
-        <div style={{ marginTop: 12 }}>
+      {/* MODAL BODY */}
+      <div className="modal-body">
+        {/* DOCTOR SELECTION */}
+        <div className="form-group">
           <label>Doctor</label>
-            <select className="form-input" value={selectedDoctor ? String(selectedDoctor.doctor_id) : ''}
+          <select 
+            value={selectedDoctor ? String(selectedDoctor.doctor_id) : ''}
             onChange={(e) => {
               const id = e.target.value;
-              // doctor_id from backend may be a string; compare loosely or coerce
               const d = doctors.find(x => String(x.doctor_id) === String(id)) || null;
               setSelectedDoctor(d);
-            }}>
+            }}
+          >
             <option value="">Select doctor</option>
             {doctors.map(d => (
-              <option key={d.doctor_id} value={d.doctor_id}>{d.name} — {d.specialty_name}</option>
+              <option key={d.doctor_id} value={d.doctor_id}>
+                {d.name} — {d.specialty_name}
+              </option>
             ))}
           </select>
-          {doctorsLoadError && <div className="form-error">{doctorsLoadError}</div>}
-
-          <label style={{ marginTop: 8 }}>Date</label>
-          <input className="form-input" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
-
-          <label style={{ marginTop: 8 }}>Time</label>
-          <select className="form-input" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)} disabled={!selectedDoctor || !selectedDate || loadingTimeSlots}>
-            <option value="">
-              {loadingTimeSlots ? 'Loading available times...' : 
-               !selectedDoctor ? 'Select a doctor first' :
-               !selectedDate ? 'Select a date first' : 
-               'Select time'}
-            </option>
-            {availableTimeSlots.map(t => (<option key={t} value={t}>{t}</option>))}
-          </select>
-          {availableTimeSlots.length === 0 && selectedDoctor && selectedDate && !loadingTimeSlots && (
-            <div className="form-info" style={{ marginTop: 4, fontSize: '0.875rem', color: '#d97706' }}>
-              No available time slots for this date. Please select a different date.
+          {doctorsLoadError && (
+            <div className="form-error">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              {doctorsLoadError}
             </div>
           )}
+        </div>
 
-          {/* Office information - displayed after time selection */}
-          {selectedDoctor && selectedDate && (
-            <>
-              <label style={{ marginTop: 8 }}>Office Location</label>
-              {loadingDoctorOffices ? (
-                <div className="form-input" style={{ color: '#6b7280', fontStyle: 'italic' }}>
-                  Loading office information...
-                </div>
-              ) : doctorOfficesForDate.length > 0 ? (
-                <div className="form-input" style={{ background: '#f9fafb', color: '#374151' }}>
-                  {doctorOfficesForDate.map((office, index) => (
-                    <div key={office.office_id}>
-                      <strong>{office.office_name}</strong><br />
-                      {office.full_address}
-                      {office.phone && <><br />Phone: {office.phone}</>}
-                      {doctorOfficesForDate.length > 1 && index < doctorOfficesForDate.length - 1 && <hr style={{ margin: '8px 0' }} />}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="form-error">
-                  Doctor is not scheduled to work on this date. Please select a different date.
-                </div>
-              )}
-            </>
-          )}
+        {/* DATE & TIME ROW */}
+        <div className="form-row">
+          <div className="form-group">
+            <label>Date</label>
+            <input 
+              type="date" 
+              value={selectedDate} 
+              onChange={(e) => setSelectedDate(e.target.value)} 
+            />
+          </div>
 
-          <label style={{ marginTop: 8 }}>Reason</label>
-          <textarea className="form-input" rows={3} value={appointmentReason} onChange={(e) => setAppointmentReason(e.target.value)} />
-
-          {bookingError && <div className="form-error" style={{ marginTop: 8 }}>{bookingError}</div>}
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-            <button className="btn" onClick={() => { setShowBookingModal(false); setBookingStep(1); }} disabled={bookingLoading}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleBookingSubmit} disabled={bookingLoading || !selectedDoctor || !selectedDate || !selectedTime || doctorOfficesForDate.length === 0}>
-              {bookingLoading ? 'Booking…' : 'Book Appointment'}
-            </button>
+          <div className="form-group">
+            <label>Time</label>
+            <select 
+              value={selectedTime} 
+              onChange={(e) => setSelectedTime(e.target.value)} 
+              disabled={!selectedDoctor || !selectedDate || loadingTimeSlots}
+            >
+              <option value="">
+                {loadingTimeSlots ? 'Loading available times...' : 
+                 !selectedDoctor ? 'Select a doctor first' :
+                 !selectedDate ? 'Select a date first' : 
+                 'Select time'}
+              </option>
+              {availableTimeSlots.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            {availableTimeSlots.length === 0 && selectedDoctor && selectedDate && !loadingTimeSlots && (
+              <div className="helper-text" style={{ background: '#fff3cd', borderLeft: '3px solid #ffc107' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                No available time slots for this date. Please select a different date.
+              </div>
+            )}
           </div>
         </div>
+
+        {/* OFFICE LOCATION INFORMATION */}
+        {selectedDoctor && selectedDate && (
+          <div className="form-group">
+            <label>
+              <MapPin style={{ width: '1rem', height: '1rem', marginLeft: '-0.25rem' }} />
+              Office Location
+            </label>
+            {loadingDoctorOffices ? (
+              <div style={{ 
+                padding: '1rem 1.25rem', 
+                background: 'var(--fifth-color)', 
+                borderRadius: '0.75rem',
+                color: 'var(--gray)',
+                fontStyle: 'italic',
+                border: '2px solid var(--border)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div className="modal-loading-spinner" style={{ width: '20px', height: '20px', borderWidth: '2px' }}></div>
+                  Loading office information...
+                </div>
+              </div>
+            ) : doctorOfficesForDate.length > 0 ? (
+              <div style={{ 
+                padding: '1.25rem 1.5rem', 
+                background: 'linear-gradient(135deg, var(--fifth-color), white)',
+                borderRadius: '0.75rem',
+                border: '2px solid var(--forth-color)',
+                boxShadow: '0 2px 4px rgba(0, 119, 182, 0.08)'
+              }}>
+                {doctorOfficesForDate.map((office, index) => (
+                  <div key={office.office_id}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'flex-start', 
+                      gap: '0.5rem',
+                      marginBottom: '0.5rem'
+                    }}>
+                      <MapPin style={{ 
+                        width: '1.25rem', 
+                        height: '1.25rem', 
+                        color: 'var(--secondary-color)',
+                        flexShrink: 0,
+                        marginTop: '0.125rem'
+                      }} />
+                      <div>
+                        <div style={{ 
+                          fontWeight: '700', 
+                          color: 'var(--primary-color)',
+                          fontSize: '1rem',
+                          marginBottom: '0.375rem'
+                        }}>
+                          {office.office_name}
+                        </div>
+                        <div style={{ 
+                          color: 'var(--dark)', 
+                          lineHeight: '1.6',
+                          fontSize: '0.95rem'
+                        }}>
+                          {office.full_address}
+                        </div>
+                        {office.phone && (
+                          <div style={{ 
+                            color: 'var(--gray)', 
+                            marginTop: '0.25rem',
+                            fontSize: '0.9rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem'
+                          }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                            </svg>
+                            {office.phone}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {doctorOfficesForDate.length > 1 && index < doctorOfficesForDate.length - 1 && (
+                      <hr style={{ 
+                        margin: '1rem 0', 
+                        border: 'none', 
+                        borderTop: '2px solid var(--forth-color)' 
+                      }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="form-error">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                Doctor is not scheduled to work on this date. Please select a different date.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* REASON FOR VISIT */}
+        <div className="form-group">
+          <label>Reason for Visit</label>
+          <textarea 
+            rows={4} 
+            value={appointmentReason} 
+            onChange={(e) => setAppointmentReason(e.target.value)}
+            placeholder="Please describe your reason for this appointment..."
+          />
+          <div className="helper-text">
+            <Info style={{ width: '1rem', height: '1rem' }} />
+            Provide details about symptoms or concerns you'd like to discuss with your doctor.
+          </div>
+        </div>
+
+        {/* BOOKING ERROR */}
+        {bookingError && (
+          <div className="form-error">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            {bookingError}
+          </div>
+        )}
+      </div>
+
+      {/* MODAL FOOTER */}
+      <div className="modal-footer">
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => { 
+            setShowBookingModal(false); 
+            setBookingStep(1); 
+          }} 
+          disabled={bookingLoading}
+        >
+          Cancel
+        </button>
+        <button 
+          className="btn btn-primary" 
+          onClick={handleBookingSubmit} 
+          disabled={bookingLoading || !selectedDoctor || !selectedDate || !selectedTime || doctorOfficesForDate.length === 0}
+        >
+          {bookingLoading ? (
+            <>
+              <div className="modal-loading-spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }}></div>
+              Booking...
+            </>
+          ) : (
+            <>
+              <Calendar style={{ width: '1.125rem', height: '1.125rem' }} />
+              Book Appointment
+            </>
+          )}
+        </button>
       </div>
     </div>
-  );
+  </div>
+);
 
   // --- PCP Selection Modal Renderer ---
   const renderPcpModal = () => (
