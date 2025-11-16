@@ -204,24 +204,24 @@ try {
     $blood_type         = (isset($input['bloodType'])         && $input['bloodType']         !== '') ? $input['bloodType']              : null;
 
     $stmt = $mysqli->prepare(
-    "INSERT INTO Patient (
-        first_name,
-        last_name,
-        dob,
-        ssn,
-        assigned_at_birth_gender,
-        gender,
-        ethnicity,
-        race,
-        email,
-        primary_doctor,
-        specialty_doctor,
-        insurance_id,
-        insurance_provider,
-        prescription,
-        allergies,
-        blood_type
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO patient (
+            first_name,
+            last_name,
+            dob,
+            ssn,
+            assigned_at_birth_gender,
+            gender,
+            ethnicity,
+            race,
+            email,
+            primary_doctor,
+            specialty_doctor,
+            insurance_id,
+            insurance_provider,
+            prescription,
+            allergies,
+            blood_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
 
 // types: 'ssss' + 'iiii' + 's' + 'iiiiii' + 's'  => 16 params
@@ -269,6 +269,21 @@ if ($ec_fn || $ec_ln || $ec_rel || $ec_ph) {
         throw new Exception('Failed to create emergency contact: ' . $stmt->error);
     }
     $stmt->close();
+    $ec_id = $mysqli->insert_id;
+
+    $stmt = $mysqli->prepare(
+        "UPDATE patient SET emergency_contact_id = ? WHERE patient_id = ?"
+    );
+
+    if (!$stmt) {
+        throw new Exception("Prepare failed (update patient): " . $mysqli->error);
+    }
+
+    $stmt->bind_param("ii", $ec_id, $patient_id);
+
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed (update patient): " . $stmt->error);
+    }
 }
     
     // Commit transaction
@@ -276,12 +291,7 @@ if ($ec_fn || $ec_ln || $ec_rel || $ec_ph) {
     
     $response['success'] = true;
     $response['message'] = 'Account created successfully';
-    $response['data'] = [
-        'user_id' => $user_id,
-        'patient_id' => $patient_id,
-        'username' => $username,
-        'password_hash' => $password_hash  // Return hash so you can use it for other users
-    ];
+
     
 } catch (Exception $e) {
     // Rollback transaction on error
