@@ -434,7 +434,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
     email: '',
     password: '',
     ssn: '',
-    gender: '1',
+    gender: '',
     phoneNumber: '',
     workLocation: '',
     workSchedule: '', // Keep this for nurses and receptionists
@@ -452,12 +452,19 @@ function AddUserModal({ type, onClose, onSuccess }) {
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [loadingSchedules, setLoadingSchedules] = useState(false);
   const [specialties, setSpecialties] = useState([]);
+  const [genders, setGenders] = useState([]);
   // Load work locations on mount
   useEffect(() => {
     loadFormOptions();
   }, []);
 
-  // Load schedules when office changes (for nurses and receptionists)
+  useEffect(() => {
+    if (!formData.gender && genders.length > 0) {
+      setFormData(prev => ({ ...prev, gender: String(genders[0].id) }));
+    }
+  }, [genders]);
+  
+
   useEffect(() => {
     if (
       formData.workLocation &&
@@ -483,6 +490,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
       if (data.success) {
         setWorkLocations(data.work_locations || []);
         setSpecialties(data.specialties || []);
+        setGenders(data.genders || []);
         // Set default work location to first option for nurses/receptionists only
         if (data.work_locations && data.work_locations.length > 0 && (selectedRole === 'nurse' || selectedRole === 'receptionist')) {
           setFormData(prev => ({ ...prev, workLocation: data.work_locations[0].office_id.toString() }));
@@ -749,6 +757,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
               <small>Minimum 8 characters</small>
             </div>
 
+            {/* Row 1: SSN + Gender */}
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="ssn">SSN *</label>
@@ -773,36 +782,43 @@ function AddUserModal({ type, onClose, onSuccess }) {
                   onChange={handleChange}
                   required
                 >
-                  <option value="1">Male</option>
-                  <option value="2">Female</option>
+                  <option value="">Select gender...</option>
+                  {genders.map(g => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="phoneNumber">Phone Number</label>
-              <input
-                type="tel"
-                id="phoneNumber"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-                placeholder="000-000-0000"
-                maxLength={12}
-              />
-            </div>
+            {/* Row 2: Phone + License */}
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="phoneNumber">Phone Number</label>
+                <input
+                  type="tel"
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  placeholder="000-000-0000"
+                  maxLength={12}
+                />
+              </div>
 
-            <div className="form-group">
-              <label htmlFor="licenseNumber">License Number</label>
-              <input
-                type="text"
-                id="licenseNumber"
-                name="licenseNumber"
-                value={formData.licenseNumber}
-                onChange={handleChange}
-                placeholder="RN123456"
-                required={selectedRole === 'doctor'}
-              />
+              <div className="form-group">
+                <label htmlFor="licenseNumber">License Number</label>
+                <input
+                  type="text"
+                  id="licenseNumber"
+                  name="licenseNumber"
+                  value={formData.licenseNumber}
+                  onChange={handleChange}
+                  placeholder="RN123456"
+                  required={selectedRole === 'doctor'}
+                />
+              </div>
             </div>
 
             {/* For Doctors - Only specialty, NO work location */}
