@@ -516,6 +516,10 @@
   gap: 0.5rem;
 }
 
+.form-field.full-width {
+  grid-column: 1 / -1;
+}
+
 .form-label {
   font-size: 0.875rem;
   font-weight: 700;
