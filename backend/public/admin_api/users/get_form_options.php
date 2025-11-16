@@ -22,24 +22,22 @@ try {
     if (isset($_GET['office_id']) && $_GET['office_id'] !== '') {
         $officeId = (int)$_GET['office_id'];
 
-        $sql = "
-            SELECT
-                t.office_id,
-                t.start_time,
-                t.end_time,
-                GROUP_CONCAT(
-                    DISTINCT t.day_of_week
-                    ORDER BY FIELD(
-                        t.day_of_week,
-                        'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
-                    )
-                    SEPARATOR ', '
-                ) AS days
-            FROM work_schedule_templates t
-            WHERE t.office_id = ?
-            GROUP BY t.office_id, t.start_time, t.end_time
-            ORDER BY t.start_time, t.end_time
-        ";
+        $sql = "SELECT
+                    t.office_id,
+                    t.start_time,
+                    t.end_time,
+                    GROUP_CONCAT(
+                        DISTINCT t.day_of_week
+                        ORDER BY FIELD(
+                            t.day_of_week,
+                            'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
+                        )
+                        SEPARATOR ', '
+                    ) AS days
+                FROM work_schedule_templates t
+                WHERE t.office_id = ?
+                GROUP BY t.office_id, t.start_time, t.end_time
+                ORDER BY t.start_time, t.end_time";
 
         $rows = executeQuery($conn, $sql, 'i', [$officeId]);
 

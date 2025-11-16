@@ -617,16 +617,29 @@ function AddUserModal({ type, onClose, onSuccess }) {
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        setSuccess(true);
-        setTimeout(() => {
-          onSuccess();
-        }, 1500);
-      } else {
-        setError(data.error || 'Failed to add user');
+      // Read raw text first
+      const text = await response.text();
+      console.log('add-doctor raw response:', text);
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (e) {
+        console.error('Non-JSON response from', endpoint, 'status:', response.status, 'body:', text);
+        throw new Error(`Invalid JSON from server (status ${response.status})`);
       }
+
+      if (!response.ok || !data || data.success === false) {
+        const msg =
+          (data && data.error) ||
+          text ||
+          `Request failed with status ${response.status}`;
+        throw new Error(msg);
+      }
+
+      setSuccess(true);
+      setTimeout(() => {
+        onSuccess();
+      }, 1500);
     } catch (err) {
       setError(err.message);
     } finally {

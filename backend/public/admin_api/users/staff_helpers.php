@@ -112,17 +112,15 @@ function createStaffAndUser(
         $startTime = $parts[1];
         $endTime   = $parts[2];
 
-        $templateSql = "
-            SELECT day_of_week, start_time, end_time
-            FROM work_schedule_templates
-            WHERE office_id  = ?
-              AND start_time = ?
-              AND end_time   = ?
-            ORDER BY FIELD(
-                day_of_week,
-                'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
-            )
-        ";
+        $templateSql = "SELECT day_of_week, start_time, end_time
+                        FROM work_schedule_templates
+                        WHERE office_id  = ?
+                        AND start_time = ?
+                        AND end_time   = ?
+                        ORDER BY FIELD(
+                            day_of_week,
+                            'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
+                        )";
 
         $templateStmt = $conn->prepare($templateSql);
         if (!$templateStmt) {
