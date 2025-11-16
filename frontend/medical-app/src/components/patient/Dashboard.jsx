@@ -3,7 +3,7 @@ import { Calendar, User, Activity, Clock, MapPin, Phone, Mail, Check, Plus, Stet
 import './Dashboard.css';
 
 export default function Dashboard(props) {
-  const { displayName, loading, upcomingAppointments = [], pcp, recentActivity = [], referrals = { active: [], used: [] }, setShowBookingModal, handleCancelAppointment, setSelectedDoctor } = props;
+  const { displayName, loading, upcomingAppointments = [], pcp, recentActivity = [], referrals = { active: [], used: [] }, setShowBookingModal, handleCancelAppointment, setSelectedDoctor, showPcpSelection } = props;
 
   const getUrgencyIcon = (urgencyLevel) => {
     switch (urgencyLevel) {
@@ -95,7 +95,7 @@ export default function Dashboard(props) {
               <h2><User className="icon" /> Primary Care Physician</h2>
             </div>
             <div className="card-content">
-              {pcp ? (
+              {pcp && pcp.name ? (
                 <div className="pcp-info">
                   <div className="pcp-avatar"><Stethoscope /></div>
                   <div>
@@ -106,7 +106,12 @@ export default function Dashboard(props) {
                   </div>
                 </div>
               ) : (
-                <p className="text-gray">No PCP assigned</p>
+                <div className="no-pcp-section">
+                  <p className="text-gray">No PCP assigned</p>
+                  <button className="btn btn-primary btn-sm" onClick={showPcpSelection}>
+                    <UserCheck className="small-icon" /> Choose Your PCP
+                  </button>
+                </div>
               )}
             </div>
           </div>

@@ -154,7 +154,8 @@ try {
                 $displayStatus = 'Upcoming';
             } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
                 // Appointment time is now (within 15 min window)
-                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
+                // Keep 'Scheduled' as the display status for appointments in the current window
+                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Scheduled';
             } elseif ($timeDiff > 15) {
                 // Appointment time has passed by more than 15 minutes
                 if ($dbStatus === 'Scheduled') {
@@ -197,7 +198,7 @@ try {
             'id' => $apt['Appointment_id'],
             'Appointment_id' => $apt['Appointment_id'],
             'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
-
+            'Office_id' => $office_id, 
             // Patient fields
             'patientId' => $apt['Patient_id'],
             'Patient_id' => $apt['Patient_id'],
