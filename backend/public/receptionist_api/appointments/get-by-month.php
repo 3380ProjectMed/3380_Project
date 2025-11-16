@@ -68,6 +68,7 @@ try {
     $office_id = (int) $rows[0]['office_id'];
 
     // Fetch appointments for the entire month
+    // Only show appointments where the doctor has a work schedule at this office
     $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
@@ -89,6 +90,11 @@ try {
             LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
             WHERE a.Office_id = ?
             AND DATE(a.Appointment_date) BETWEEN ? AND ?
+            AND EXISTS (
+                SELECT 1 FROM work_schedule ws 
+                WHERE ws.staff_id = d.staff_id 
+                AND ws.office_id = a.Office_id
+            )
             ORDER BY a.Appointment_date ASC";
 
     $appointments = executeQuery($conn, $sql, 'iss', [$office_id, $start_date, $end_date]);

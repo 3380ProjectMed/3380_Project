@@ -51,7 +51,7 @@ try {
                 pv.visit_id,
                 pv.patient_id,
                 pv.appointment_id,
-                pv.date as visit_date,
+                a.Appointment_date as visit_date,
                 pv.reason_for_visit,
                 pv.payment,
                 pv.payment_method,
@@ -62,6 +62,7 @@ try {
                 p.dob as patient_dob
             FROM patient_visit pv
             INNER JOIN patient p ON pv.patient_id = p.patient_id
+            LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
             WHERE pv.office_id = ?
             AND pv.status IN ('Checked In', 'Scheduled', 'Completed')";
 
