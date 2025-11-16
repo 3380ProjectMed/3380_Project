@@ -88,8 +88,10 @@ function UserManagement() {
     }));
   };
 
-  const handleAddUser = (type) => {
-    setModalType(type);
+  const handleAddUser = () => {
+    // Pass 'all' if no filter is set, otherwise pass the filtered role
+    const typeToAdd = filters.role !== 'all' ? filters.role : 'all';
+    setModalType(typeToAdd);
     setShowAddModal(true);
   };
 
@@ -169,7 +171,7 @@ function UserManagement() {
         </div>
         <button 
           className="btn btn-primary"
-          onClick={() => handleAddUser(filters.role !== 'all' ? filters.role : 'doctor')}
+          onClick={handleAddUser}
         >
           <UserPlus size={20} />
           Add User
@@ -423,9 +425,8 @@ function UserManagement() {
   );
 }
 
-// Add User Modal Component
 function AddUserModal({ type, onClose, onSuccess }) {
-  // ... rest of your AddUserModal code stays the same
+  const [selectedRole, setSelectedRole] = useState(type === 'all' ? 'doctor' : type);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -435,7 +436,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
     gender: '1',
     phoneNumber: '',
     workLocation: '',
-    workSchedule: '',
+    workSchedule: '', // Keep this for nurses and receptionists
     licenseNumber: '',
     specialty: '',
     department: '',
@@ -448,11 +449,22 @@ function AddUserModal({ type, onClose, onSuccess }) {
   const [workLocations, setWorkLocations] = useState([]);
   const [workSchedules, setWorkSchedules] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
+  const [loadingSchedules, setLoadingSchedules] = useState(false);
 
-  // Load dynamic options on mount
+  // Load work locations on mount
   useEffect(() => {
     loadFormOptions();
   }, []);
+
+  // Load schedules when office changes (for nurses and receptionists)
+  useEffect(() => {
+    if (
+      formData.workLocation &&
+      (selectedRole === 'nurse' || selectedRole === 'receptionist')
+    ) {
+      loadScheduleOptions(formData.workLocation);
+    }
+  }, [formData.workLocation, selectedRole]);
 
   const loadFormOptions = async () => {
     setLoadingOptions(true);
@@ -469,14 +481,10 @@ function AddUserModal({ type, onClose, onSuccess }) {
       
       if (data.success) {
         setWorkLocations(data.work_locations || []);
-        setWorkSchedules(data.work_schedules || []);
         
-        // Set default values to first option
-        if (data.work_locations && data.work_locations.length > 0) {
+        // Set default work location to first option for nurses/receptionists only
+        if (data.work_locations && data.work_locations.length > 0 && (selectedRole === 'nurse' || selectedRole === 'receptionist')) {
           setFormData(prev => ({ ...prev, workLocation: data.work_locations[0].office_id.toString() }));
-        }
-        if (data.work_schedules && data.work_schedules.length > 0) {
-          setFormData(prev => ({ ...prev, workSchedule: data.work_schedules[0].schedule_id.toString() }));
         }
       } else {
         setError(data.error || 'Failed to load form options');
@@ -488,6 +496,47 @@ function AddUserModal({ type, onClose, onSuccess }) {
       setLoadingOptions(false);
     }
   };
+
+  const loadScheduleOptions = async (officeId) => {
+    setLoadingSchedules(true);
+    try {
+      const response = await fetch(`/admin_api/users/get_form_options.php?office_id=${officeId}`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setWorkSchedules(data.work_schedules || []);
+
+        // Default to first schedule if available
+        if (data.work_schedules && data.work_schedules.length > 0) {
+          setFormData(prev => ({ 
+            ...prev, 
+            workSchedule: `${data.work_schedules[0].office_id}-${data.work_schedules[0].start_time}-${data.work_schedules[0].end_time}`
+          }));
+        } else {
+          setFormData(prev => ({ ...prev, workSchedule: '' }));
+        }
+      } else {
+        setError(data.error || 'Failed to load schedule options');
+        setWorkSchedules([]);
+        setFormData(prev => ({ ...prev, workSchedule: '' }));
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('Error loading schedule options:', err);
+      setWorkSchedules([]);
+      setFormData(prev => ({ ...prev, workSchedule: '' }));
+    } finally {
+      setLoadingSchedules(false);
+    }
+  };
+
 
   // Format SSN as 000-00-0000
   const formatSSN = (value) => {
@@ -521,9 +570,9 @@ function AddUserModal({ type, onClose, onSuccess }) {
     setError('');
 
     try {
-      const endpoint = type === 'doctor'
+      const endpoint = selectedRole === 'doctor'
         ? '/admin_api/users/add-doctor.php'
-        : type === 'nurse'
+        : selectedRole === 'nurse'
         ? '/admin_api/users/add-nurse.php'
         : '/admin_api/users/add-receptionist.php';
 
@@ -535,14 +584,18 @@ function AddUserModal({ type, onClose, onSuccess }) {
         ssn: formData.ssn.replace(/\D/g, ''),
         gender: parseInt(formData.gender),
         phone_number: formData.phoneNumber.replace(/\D/g, ''),
-        work_location: parseInt(formData.workLocation),
-        work_schedule: parseInt(formData.workSchedule),
         license_number: formData.licenseNumber,
       };
 
-      if (type === 'doctor') {
+      // All staff roles get a base location + schedule
+      if (selectedRole === 'nurse' || selectedRole === 'receptionist') {
+        payload.work_location = parseInt(formData.workLocation);
+        payload.work_schedule = formData.workSchedule;  
+      }
+
+      if (selectedRole === 'doctor') {
         payload.specialty = formData.specialty;
-      } else if (type === 'nurse') {
+      } else if (selectedRole === 'nurse') {
         payload.department = formData.department;
       }
 
@@ -577,6 +630,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
     
     let formattedValue = value;
     
+    // Apply formatting for specific fields
     if (name === 'ssn') {
       formattedValue = formatSSN(value);
     } else if (name === 'phoneNumber') {
@@ -590,9 +644,9 @@ function AddUserModal({ type, onClose, onSuccess }) {
   };
 
   const getModalTitle = () => {
-    if (type === 'doctor') return 'Doctor';
-    if (type === 'nurse') return 'Nurse';
-    if (type === 'receptionist') return 'Receptionist';
+    if (selectedRole === 'doctor') return 'Doctor';
+    if (selectedRole === 'nurse') return 'Nurse';
+    if (selectedRole === 'receptionist') return 'Receptionist';
     return '';
   };
 
@@ -600,7 +654,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Add New {getModalTitle()}</h2>
+          <h2>Add New {type === 'all' ? 'User' : getModalTitle()}</h2>
           <button className="close-btn" onClick={onClose}>
             <X size={24} />
           </button>
@@ -622,6 +676,23 @@ function AddUserModal({ type, onClose, onSuccess }) {
               <div className="alert alert-error">
                 <AlertCircle size={20} />
                 <span>{error}</span>
+              </div>
+            )}
+
+            {/* Role selector - only show when type is 'all' */}
+            {type === 'all' && (
+              <div className="form-group">
+                <label htmlFor="roleSelect">Role *</label>
+                <select
+                  id="roleSelect"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  required
+                >
+                  <option value="doctor">Doctor</option>
+                  <option value="nurse">Nurse</option>
+                  <option value="receptionist">Receptionist</option>
+                </select>
               </div>
             )}
 
@@ -720,50 +791,6 @@ function AddUserModal({ type, onClose, onSuccess }) {
               />
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="workLocation">Work Location *</label>
-                <select
-                  id="workLocation"
-                  name="workLocation"
-                  value={formData.workLocation}
-                  onChange={handleChange}
-                  required
-                >
-                  {workLocations.length === 0 ? (
-                    <option value="">No locations available</option>
-                  ) : (
-                    workLocations.map(location => (
-                      <option key={location.office_id} value={location.office_id}>
-                        {location.name} - {location.address}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="workSchedule">Work Schedule *</label>
-                <select
-                  id="workSchedule"
-                  name="workSchedule"
-                  value={formData.workSchedule}
-                  onChange={handleChange}
-                  required
-                >
-                  {workSchedules.length === 0 ? (
-                    <option value="">No schedules available</option>
-                  ) : (
-                    workSchedules.map(schedule => (
-                      <option key={schedule.schedule_id} value={schedule.schedule_id}>
-                        {schedule.shift_type}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-            </div>
-
             <div className="form-group">
               <label htmlFor="licenseNumber">License Number</label>
               <input
@@ -773,43 +800,98 @@ function AddUserModal({ type, onClose, onSuccess }) {
                 value={formData.licenseNumber}
                 onChange={handleChange}
                 placeholder="RN123456"
+                required={selectedRole === 'doctor'}
               />
             </div>
 
-            {type === 'doctor' && (
+            {/* For Doctors - Only specialty, NO work location */}
+            {selectedRole === 'doctor' && (
               <div className="form-group">
-                <label htmlFor="specialty">Specialization *</label>
+                <label htmlFor="specialty">Specialty</label>
                 <input
                   type="text"
                   id="specialty"
                   name="specialty"
                   value={formData.specialty}
                   onChange={handleChange}
-                  placeholder="e.g., Cardiology, Pediatrics"
+                  placeholder="e.g., Cardiology"
                   required
                 />
               </div>
             )}
 
-            {type === 'nurse' && (
-              <div className="form-group">
-                <label htmlFor="department">Department *</label>
-                <select
-                  id="department"
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select Department</option>
-                  <option value="Emergency">Emergency</option>
-                  <option value="ICU">ICU</option>
-                  <option value="Pediatrics">Pediatrics</option>
-                  <option value="Orthopedics">Orthopedics</option>
-                  <option value="Cardiology">Cardiology</option>
-                </select>
-              </div>
-            )}
+  {/* For Doctors, Nurses, and Receptionists – require location & schedule */}
+  {(selectedRole === 'nurse' || selectedRole === 'receptionist') && (
+    <>
+      <div className="form-group">
+        <label htmlFor="workLocation">Work Location *</label>
+        <select
+          id="workLocation"
+          name="workLocation"
+          value={formData.workLocation}
+          onChange={handleChange}
+          required
+        >
+          {workLocations.length === 0 ? (
+            <option value="">No locations available</option>
+          ) : (
+            <>
+              <option value="">Select a location...</option>
+              {workLocations.map(location => (
+                <option key={location.office_id} value={location.office_id}>
+                  {location.name} - {location.address}
+                </option>
+              ))}
+            </>
+          )}
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="workSchedule">Work Schedule *</label>
+        <select
+          id="workSchedule"
+          name="workSchedule"
+          value={formData.workSchedule}
+          onChange={handleChange}
+          required
+          disabled={loadingSchedules || !formData.workLocation}
+        >
+          {loadingSchedules ? (
+            <option value="">Loading schedules...</option>
+          ) : !formData.workLocation ? (
+            <option value="">Select a location first...</option>
+          ) : workSchedules.length === 0 ? (
+            <option value="">No schedules available for this location</option>
+          ) : (
+            workSchedules.map(schedule => (
+              <option
+                key={`${schedule.office_id}-${schedule.start_time}-${schedule.end_time}`}
+                value={`${schedule.office_id}-${schedule.start_time}-${schedule.end_time}`}
+              >
+                {schedule.schedule_label}
+              </option>
+            ))
+          )}
+        </select>
+      </div>
+
+      {selectedRole === 'nurse' && (
+        <div className="form-group">
+          <label htmlFor="department">Department</label>
+          <input
+            type="text"
+            id="department"
+            name="department"
+            value={formData.department}
+            onChange={handleChange}
+            placeholder="e.g., Emergency"
+            required
+          />
+        </div>
+      )}
+    </>
+  )}
 
             <div className="modal-actions">
               <button

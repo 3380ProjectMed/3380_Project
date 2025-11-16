@@ -1,44 +1,102 @@
 <?php
-session_start();
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../cors.php';
+require_once __DIR__ . '/../../database.php';
+require_once __DIR__ . '/../../session.php';
+
 header('Content-Type: application/json');
 
-// Check if user is logged in and is an admin
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'ADMIN') {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+session_start();
+
+if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Admin access required']);
     exit;
 }
 
-require_once '../../config/database.php';
-
 try {
-    $db = new Database();
-    $conn = $db->getConnection();
-    
-    // Get work locations from Office table
-    $locationsQuery = "SELECT office_id, name, address FROM Office ORDER BY name";
-    $locationsStmt = $conn->prepare($locationsQuery);
-    $locationsStmt->execute();
-    $workLocations = $locationsStmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Get work schedules from WorkSchedule table
-    $schedulesQuery = "SELECT schedule_id, shift_type FROM WorkSchedule ORDER BY schedule_id";
-    $schedulesStmt = $conn->prepare($schedulesQuery);
-    $schedulesStmt->execute();
-    $workSchedules = $schedulesStmt->fetchAll(PDO::FETCH_ASSOC);
-    
+    $conn = getDBConnection();
+
+    // ── Branch 1: schedules for a specific office ────────────────────────────
+    if (isset($_GET['office_id']) && $_GET['office_id'] !== '') {
+        $officeId = (int)$_GET['office_id'];
+
+        $sql = "
+            SELECT
+                t.office_id,
+                t.start_time,
+                t.end_time,
+                GROUP_CONCAT(
+                    DISTINCT t.day_of_week
+                    ORDER BY FIELD(
+                        t.day_of_week,
+                        'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
+                    )
+                    SEPARATOR ', '
+                ) AS days
+            FROM work_schedule_templates t
+            WHERE t.office_id = ?
+            GROUP BY t.office_id, t.start_time, t.end_time
+            ORDER BY t.start_time, t.end_time
+        ";
+
+        $rows = executeQuery($conn, $sql, 'i', [$officeId]);
+
+        $workSchedules = [];
+        foreach ($rows as $row) {
+            $start = substr($row['start_time'], 0, 5);
+            $end   = substr($row['end_time'],   0, 5);
+
+            $label = sprintf(
+                '%s (%s - %s)',
+                $row['days'] ?: 'Days',
+                $start,
+                $end
+            );
+
+            $workSchedules[] = [
+                'office_id'      => (int)$row['office_id'],
+                'start_time'     => $row['start_time'],
+                'end_time'       => $row['end_time'],
+                'schedule_label' => $label,
+            ];
+        }
+
+        echo json_encode([
+            'success'        => true,
+            'work_schedules' => $workSchedules,
+        ]);
+        exit;
+    }
+
+    // ── Branch 2: base form options (work locations, etc.) ───────────────────
+    $locSql = "
+        SELECT office_id, name, address
+        FROM office
+        ORDER BY name
+    ";
+    $locRows = executeQuery($conn, $locSql);
+
+    $workLocations = array_map(static function ($row) {
+        return [
+            'office_id' => (int)$row['office_id'],
+            'name'      => $row['name'],
+            'address'   => $row['address'],
+        ];
+    }, $locRows);
+
+    closeDBConnection($conn);
+
     echo json_encode([
-        'success' => true,
+        'success'        => true,
         'work_locations' => $workLocations,
-        'work_schedules' => $workSchedules
     ]);
-    
-} catch (PDOException $e) {
-    error_log("Database error in get_form_options.php: " . $e->getMessage());
+} catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Database error: ' . $e->getMessage()
+        'error'   => 'Error loading form options: ' . $e->getMessage(),
     ]);
 }
-?>

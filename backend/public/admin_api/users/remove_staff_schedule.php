@@ -1,47 +1,55 @@
 <?php
-session_start();
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'ADMIN') {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-require_once '../../config/database.php';
-
-$input = json_decode(file_get_contents('php://input'), true);
-
-$scheduleId = $input['schedule_id'] ?? null;
-
-if (!$scheduleId) {
-    echo json_encode(['success' => false, 'error' => 'Missing schedule ID']);
-    exit;
-}
+require_once '/home/site/wwwroot/cors.php';
+require_once '/home/site/wwwroot/database.php';
+require_once '/home/site/wwwroot/session.php';
 
 try {
-    $db = new Database();
-    $conn = $db->getConnection();
-    
-    // Delete the schedule
-    $deleteQuery = "DELETE FROM WorkSchedule WHERE schedule_id = :schedule_id AND staff_id IS NOT NULL";
-    
-    $deleteStmt = $conn->prepare($deleteQuery);
-    $deleteStmt->bindParam(':schedule_id', $scheduleId);
-    $deleteStmt->execute();
-    
-    if ($deleteStmt->rowCount() === 0) {
-        echo json_encode(['success' => false, 'error' => 'Schedule not found or cannot be deleted']);
+    if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Admin access required']);
         exit;
     }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    $scheduleId = $input['schedule_id'] ?? null;
+
+    if (!$scheduleId) {
+        echo json_encode(['success' => false, 'error' => 'Missing schedule ID']);
+        exit;
+    }
+
+    $conn = getDBConnection();
+    
+    // First check if the schedule exists and has a staff_id (not a template)
+    $checkQuery = "SELECT schedule_id, staff_id FROM work_schedule WHERE schedule_id = ?";
+    $checkResults = executeQuery($conn, $checkQuery, 'i', [$scheduleId]);
+    
+    if (empty($checkResults)) {
+        echo json_encode(['success' => false, 'error' => 'Schedule not found']);
+        closeDBConnection($conn);
+        exit;
+    }
+    
+    if ($checkResults[0]['staff_id'] === null) {
+        echo json_encode(['success' => false, 'error' => 'Cannot delete template schedules']);
+        closeDBConnection($conn);
+        exit;
+    }
+    
+    // Delete the schedule
+    $deleteQuery = "DELETE FROM work_schedule WHERE schedule_id = ?";
+    executeQuery($conn, $deleteQuery, 'i', [$scheduleId]);
+    
+    closeDBConnection($conn);
     
     echo json_encode([
         'success' => true,
         'message' => 'Schedule removed successfully'
     ]);
     
-} catch (PDOException $e) {
-    error_log("Database error in remove_staff_schedule.php: " . $e->getMessage());
+} catch (Exception $e) {
+    error_log("Error in remove_staff_schedule.php: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,

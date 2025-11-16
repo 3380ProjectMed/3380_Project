@@ -198,7 +198,7 @@ try {
             'id' => $apt['Appointment_id'],
             'Appointment_id' => $apt['Appointment_id'],
             'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
-
+            'Office_id' => $office_id, 
             // Patient fields
             'patientId' => $apt['Patient_id'],
             'Patient_id' => $apt['Patient_id'],
