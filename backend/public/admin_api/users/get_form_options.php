@@ -8,7 +8,6 @@ require_once __DIR__ . '/../../session.php';
 
 header('Content-Type: application/json');
 
-session_start();
 
 if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
     http_response_code(403);
