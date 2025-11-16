@@ -86,6 +86,8 @@ try {
             'address'   => $row['address'],
         ];
     }, $locRows);
+
+    // Specialties
     $specSql  = "SELECT specialty_id, specialty_name AS name FROM specialty ORDER BY name";
     $specRows = executeQuery($conn, $specSql);
 
@@ -96,12 +98,28 @@ try {
         ];
     }, $specRows);
 
+    // Genders
+    $genderSql = "
+        SELECT gender_code, gender_text
+        FROM codes_gender
+        ORDER BY gender_text
+    ";
+    $genderRows = executeQuery($conn, $genderSql);
+
+    $genders = array_map(static function ($row) {
+        return [
+            'id'     => (int)$row['gender_code'],
+            'label'  => $row['gender_text'],
+        ];
+    }, $genderRows);
+
     closeDBConnection($conn);
 
     echo json_encode([
         'success'        => true,
         'work_locations' => $workLocations,
-        'specialties' => $specialties,
+        'specialties'    => $specialties,
+        'genders'        => $genders,
     ]);
 } catch (Exception $e) {
     http_response_code(500);
