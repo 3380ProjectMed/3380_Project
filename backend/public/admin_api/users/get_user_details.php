@@ -55,7 +55,7 @@ try {
         $query .= " LEFT JOIN nurse n ON s.staff_id = n.staff_id";
     }
 
-    $query .= " WHERE ua.user_id = ? AND ua.user_type = ?";
+    $query .= " WHERE ua.user_id = ? AND ua.role = ?";
 
     $userResults = executeQuery($conn, $query, 'is', [$userId, $userType]);
 
