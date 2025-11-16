@@ -252,7 +252,7 @@ function PatientSearch({ onBookAppointment }) {
                     {patient.copay && (
                       <p className="insurance-copay">
                         <DollarSign size={14} />
-                        Copay: ${patient.copay.toFixed(2)}
+                        Copay: ${typeof patient.copay === 'number' ? patient.copay.toFixed(2) : parseFloat(patient.copay).toFixed(2)}
                       </p>
                     )}
                     {patient.insurance_expiration && (
@@ -376,7 +376,9 @@ function PatientSearch({ onBookAppointment }) {
                         <div className="insurance-detail">
                           <span className="insurance-label">Copay</span>
                           <span className="insurance-value insurance-copay">
-                            ${selectedPatient.insurance.copay.toFixed(2)}
+                            ${typeof selectedPatient.insurance.copay === 'number' 
+                              ? selectedPatient.insurance.copay.toFixed(2) 
+                              : parseFloat(selectedPatient.insurance.copay).toFixed(2)}
                           </span>
                         </div>
                       )}
@@ -384,7 +386,9 @@ function PatientSearch({ onBookAppointment }) {
                         <div className="insurance-detail">
                           <span className="insurance-label">Deductible</span>
                           <span className="insurance-value">
-                            ${selectedPatient.insurance.deductible_individ.toFixed(2)}
+                            ${typeof selectedPatient.insurance.deductible_individ === 'number'
+                              ? selectedPatient.insurance.deductible_individ.toFixed(2)
+                              : parseFloat(selectedPatient.insurance.deductible_individ).toFixed(2)}
                           </span>
                         </div>
                       )}
