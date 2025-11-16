@@ -12,6 +12,7 @@ import './Schedule.css';
  * - Real-time data from API
  * - Appointment display with time and patient name
  * - Weekend highlighting based on work schedule
+ * - Today's date highlighted with a circle
  */
 function Schedule({ onAppointmentClick }) {
   const [currentDate, setCurrentDate] = useState(new Date()); 
@@ -103,14 +104,13 @@ function Schedule({ onAppointmentClick }) {
   /**
    * Get assigned location for a specific day based on work schedule
    */
-// Around line 118 - Fix getDailyLocation function
 const getDailyLocation = (year, month, day) => {
   const date = new Date(year, month, day);
   const dayOfWeekName = getDayOfWeekName(date);
   
   // Find work schedule entry for this day of week
   const scheduleEntry = workSchedule.find(
-    s => (s.day_of_week || s.Day_of_week) === dayOfWeekName  // ← Handle both cases
+    s => (s.day_of_week || s.Day_of_week) === dayOfWeekName
   );
   
   if (!scheduleEntry) {
@@ -128,7 +128,6 @@ const getDailyLocation = (year, month, day) => {
   };
 };
 
-// Around line 145 - Fix getUniqueLocations function
 const getUniqueLocations = () => {
   const locations = new Map();
   workSchedule.forEach(schedule => {
@@ -352,10 +351,16 @@ const getUniqueLocations = () => {
             const appointments = getAppointmentsForDay(day);
             const isVisible = isDayVisible(day);
             
+            // Check if this is today's date
+            const today = new Date();
+            const isToday = day === today.getDate() && 
+                           currentDate.getMonth() === today.getMonth() && 
+                           currentDate.getFullYear() === today.getFullYear();
+            
             return (
               <div 
                 key={day} 
-                className={`calendar-day ${isNotWorking ? 'weekend' : ''} ${!isVisible && !isNotWorking ? 'filtered' : ''}`}
+                className={`calendar-day ${isNotWorking ? 'weekend' : ''} ${!isVisible && !isNotWorking ? 'filtered' : ''} ${isToday ? 'today' : ''}`}
               >
                 {/* Day Header */}
                 <div className="day-header">

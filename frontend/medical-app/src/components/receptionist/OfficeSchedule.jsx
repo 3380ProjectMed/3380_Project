@@ -20,6 +20,20 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
+  
+  // Nurse selection state
+  const [showNurseModal, setShowNurseModal] = useState(false);
+  const [nurses, setNurses] = useState([]);
+  const [selectedNurse, setSelectedNurse] = useState(null);
+  const [loadingNurses, setLoadingNurses] = useState(false);
+  
+  // Alert/notification state
+  const [alertModal, setAlertModal] = useState({
+    show: false,
+    type: 'info',
+    title: '',
+    message: ''
+  });
 
   /**
    * Load doctors and appointments when component mounts or date changes
@@ -417,18 +431,15 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   };
 
   /**
-   * Check in patient for appointment
+   * Check in patient for appointment - Step 1: Validate insurance first
    */
   const handleCheckInAppointment = async () => {
     if (!selectedAppointment || !selectedAppointment.appointment_id) return;
     
-    if (!window.confirm('Check in this patient?')) {
-      return;
-    }
+    // First, validate insurance by attempting check-in with a dummy nurse_id
+    setCheckingIn(true);
     
     try {
-      setCheckingIn(true);
-      
       const response = await fetch('/receptionist_api/appointments/check-in.php', {
         method: 'POST',
         headers: {
@@ -436,24 +447,143 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         },
         credentials: 'include',
         body: JSON.stringify({
-          Appointment_id: selectedAppointment.appointment_id
+          Appointment_id: selectedAppointment.appointment_id,
+          nurse_id: 0, // Dummy value for validation
+          validate_only: true
+        })
+      });
+      
+      const result = await response.json();
+      
+      // If insurance validation fails, stop here
+      if (!result.success) {
+        if (result.error_type === 'INSURANCE_WARNING' || result.error_type === 'INSURANCE_EXPIRED') {
+          setAlertModal({
+            show: true,
+            type: 'error',
+            title: 'Cannot Check In - Insurance Issue',
+            message: result.message || result.error
+          });
+        } else {
+          setAlertModal({
+            show: true,
+            type: 'error',
+            title: 'Check-In Failed',
+            message: result.error || 'Unknown error occurred'
+          });
+        }
+        setCheckingIn(false);
+        return;
+      }
+      
+      // Check if there's an insurance warning (expiring soon) during validation
+      if (result.insurance_warning) {
+        setAlertModal({
+          show: true,
+          type: 'warning',
+          title: 'Insurance Warning',
+          message: result.insurance_warning
+        });
+      }
+      
+      // Insurance validation passed, now load nurses and show selection modal
+      setCheckingIn(false);
+      setLoadingNurses(true);
+      setShowNurseModal(true);
+      
+      const nursesResponse = await fetch(`/receptionist_api/nurses/get-by-office.php?office_id=${officeId}`, {
+        credentials: 'include'
+      });
+      
+      const nursesData = await nursesResponse.json();
+      
+      if (nursesData.success && nursesData.nurses) {
+        setNurses(nursesData.nurses);
+        if (nursesData.nurses.length > 0) {
+          setSelectedNurse(nursesData.nurses[0].nurse_id); // Pre-select first nurse
+        }
+      } else {
+        setAlertModal({
+          show: true,
+          type: 'error',
+          title: 'Failed to Load Nurses',
+          message: nursesData.error || 'Unable to load available nurses'
+        });
+        setShowNurseModal(false);
+      }
+      setLoadingNurses(false);
+      
+    } catch (error) {
+      console.error('Check-in validation error:', error);
+      setAlertModal({
+        show: true,
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to validate insurance. Please check your connection and try again.'
+      });
+      setCheckingIn(false);
+    }
+  };
+  
+  /**
+   * Handle check-in confirmation - Step 2: Perform actual check-in with selected nurse
+   */
+  const handleConfirmCheckIn = async () => {
+    if (!selectedAppointment || !selectedNurse) return;
+    
+    setCheckingIn(true);
+    try {
+      const response = await fetch('/receptionist_api/appointments/check-in.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          Appointment_id: selectedAppointment.appointment_id,
+          nurse_id: selectedNurse
         })
       });
       
       const result = await response.json();
       
       if (result.success) {
-        // Close modal
+        // Check for insurance warnings (expiring soon)
+        if (result.insurance_warning) {
+          setAlertModal({
+            show: true,
+            type: 'warning',
+            title: 'Patient Checked In - Insurance Warning',
+            message: result.insurance_warning
+          });
+        } else {
+          setAlertModal({
+            show: true,
+            type: 'success',
+            title: 'Check-In Successful',
+            message: 'Patient has been checked in successfully!'
+          });
+        }
+        setShowNurseModal(false);
         setSelectedAppointment(null);
-        // Reload schedule data
+        setSelectedNurse(null);
         loadScheduleData();
-        alert('Patient checked in successfully');
       } else {
-        alert('Failed to check in patient: ' + (result.error || 'Unknown error'));
+        setAlertModal({
+          show: true,
+          type: 'error',
+          title: 'Check-In Failed',
+          message: result.error || 'Unknown error occurred'
+        });
       }
     } catch (err) {
       console.error('Failed to check in patient:', err);
-      alert('Failed to check in patient. Please try again.');
+      setAlertModal({
+        show: true,
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to check in patient. Please check your connection and try again.'
+      });
     } finally {
       setCheckingIn(false);
     }
@@ -466,7 +596,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     const normalizedStatus = (status || 'scheduled').toLowerCase();
     const statusMap = {
       'scheduled': 'status-scheduled',
-      'ready': 'status-ready',
       'waiting': 'status-waiting',
       'checked-in': 'status-checked-in',
       'checked in': 'status-checked-in',
@@ -759,6 +888,143 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
               </button>
               <button className="btn btn-ghost" onClick={() => setSelectedAppointment(null)}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ===== NURSE SELECTION MODAL ===== */}
+      {showNurseModal && selectedAppointment && (
+        <div className="modal-overlay" onClick={() => setShowNurseModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Select Nurse</h2>
+                <p className="modal-subtitle">
+                  Patient: {selectedAppointment.patient_name}
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => setShowNurseModal(false)}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {loadingNurses ? (
+                <p style={{ textAlign: 'center', padding: '20px' }}>Loading nurses...</p>
+              ) : nurses.length === 0 ? (
+                <p style={{ textAlign: 'center', padding: '20px', color: '#ef4444' }}>
+                  No nurses available at this office
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {nurses.map(nurse => (
+                    <label 
+                      key={nurse.nurse_id} 
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        border: selectedNurse === nurse.nurse_id ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        backgroundColor: selectedNurse === nurse.nurse_id ? '#eff6ff' : 'white'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="nurse"
+                        value={nurse.nurse_id}
+                        checked={selectedNurse === nurse.nurse_id}
+                        onChange={() => setSelectedNurse(nurse.nurse_id)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '500', color: '#111827' }}>
+                          {nurse.first_name} {nurse.last_name}
+                        </div>
+                        {nurse.specialization && (
+                          <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '2px' }}>
+                            {nurse.specialization}
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="btn btn-success" 
+                onClick={handleConfirmCheckIn}
+                disabled={checkingIn || !selectedNurse || loadingNurses}
+              >
+                <Check size={18} />
+                {checkingIn ? 'Checking In...' : 'Confirm Check In'}
+              </button>
+              <button 
+                className="btn btn-ghost" 
+                onClick={() => setShowNurseModal(false)}
+                disabled={checkingIn}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ===== ALERT MODAL ===== */}
+      {alertModal.show && (
+        <div className="modal-overlay" onClick={() => setAlertModal({ ...alertModal, show: false })}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {alertModal.type === 'success' && (
+                  <Check size={24} style={{ color: '#10b981' }} />
+                )}
+                {alertModal.type === 'error' && (
+                  <X size={24} style={{ color: '#ef4444' }} />
+                )}
+                {alertModal.type === 'warning' && (
+                  <AlertCircle size={24} style={{ color: '#f59e0b' }} />
+                )}
+                {alertModal.type === 'info' && (
+                  <AlertCircle size={24} style={{ color: '#3b82f6' }} />
+                )}
+                <h2 className="modal-title">{alertModal.title}</h2>
+              </div>
+              <button className="modal-close" onClick={() => setAlertModal({ ...alertModal, show: false })}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p style={{ 
+                fontSize: '1rem', 
+                lineHeight: '1.5',
+                color: '#374151',
+                whiteSpace: 'pre-line'
+              }}>
+                {alertModal.message}
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className={`btn ${
+                  alertModal.type === 'success' ? 'btn-success' : 
+                  alertModal.type === 'error' ? 'btn-danger' :
+                  alertModal.type === 'warning' ? 'btn-warning' :
+                  'btn-primary'
+                }`}
+                onClick={() => setAlertModal({ ...alertModal, show: false })}
+              >
+                OK
               </button>
             </div>
           </div>
