@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../cors.php';
@@ -17,15 +18,24 @@ if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
 }
 
 try {
-    $raw = file_get_contents('php://input');
+    $raw  = file_get_contents('php://input');
     $data = json_decode($raw, true);
 
     if (!is_array($data)) {
         throw new Exception('Invalid JSON payload');
     }
 
-    // Doctors need work_location but NOT work_schedule (assigned later)
-    $required = ['first_name', 'last_name', 'email', 'password', 'ssn', 'gender', 'work_location', 'license_number', 'specialty'];
+    // Doctors now also get an initial weekly schedule
+    $required = [
+        'first_name',
+        'last_name',
+        'email',
+        'password',
+        'ssn',
+        'gender',
+        'license_number',
+        'specialty'
+    ];
 
     foreach ($required as $field) {
         if (!isset($data[$field]) || $data[$field] === '') {
@@ -43,9 +53,7 @@ try {
         'gender'         => (int)$data['gender'],
         'email'          => $data['email'],
         'password'       => $data['password'],
-        'work_location'  => (int)$data['work_location'], // Primary office location
-        'work_schedule'  => null, // Doctors don't get a permanent schedule
-        'license_number' => $data['license_number'],
+        'license_number' => $data['license_number'] ?? null
     ];
 
     $staffResult = createStaffAndUser(
@@ -57,11 +65,9 @@ try {
     $staffId  = $staffResult['staff_id'];
     $username = $staffResult['username'];
 
-    // The specialty field from frontend is the specialty name (text input)
-    // We'll store it directly in the doctor table
+    // Store specialty name directly in doctor table
     $specialtyName = $data['specialty'];
 
-    // Insert into doctor table with specialty as VARCHAR (not looking up specialty_id)
     $sqlDoctor = "
         INSERT INTO doctor (staff_id, specialty, phone)
         VALUES (?, ?, ?)
@@ -84,7 +90,7 @@ try {
 
     echo json_encode([
         'success'  => true,
-        'message'  => 'Doctor created successfully',
+        'message'  => 'Doctor created successfully with weekly schedule',
         'staff_id' => $staffId,
         'username' => $username,
     ]);
@@ -98,4 +104,3 @@ try {
         'error'   => $e->getMessage(),
     ]);
 }
-?>
