@@ -10,13 +10,9 @@ function createStaffAndUser(
     string $userRole
 ): array {
     // --- 1) Insert into staff ----------------------------------------------
-    $sqlStaff = "
-        INSERT INTO staff (
-            first_name, last_name, ssn, gender, staff_email, staff_role, work_schedule, license_number
-        ) VALUES (
-            ?, ?, ?, ?, ?, ?, NULL, ?
-        )
-    ";
+    $sqlStaff = "INSERT INTO staff (first_name, last_name, ssn, gender, staff_email, staff_role, license_number)
+                    VALUES (
+                        ?, ?, ?, ?, ?, ?, NULL, ?)";
 
     $stmt = $conn->prepare($sqlStaff);
     if (!$stmt) {
@@ -55,13 +51,8 @@ function createStaffAndUser(
     $username     = strtolower(substr($staffRole, 0, 1)) . $staffId; // d205 / n101 / r501
     $passwordHash = password_hash($payload['password'], PASSWORD_BCRYPT);
 
-    $sqlUser = "
-        INSERT INTO user_account (
-            user_id, username, email, password_hash, role, mfa_enabled, is_active
-        ) VALUES (
-            ?, ?, ?, ?, ?, 0, 1
-        )
-    ";
+    $sqlUser = "INSERT INTO user_account (user_id, username, email, password_hash, role, mfa_enabled, is_active) 
+                    VALUES (?, ?, ?, ?, ?, 0, 1)";
 
     $stmt = $conn->prepare($sqlUser);
     if (!$stmt) {
@@ -91,85 +82,6 @@ function createStaffAndUser(
 
     // --- 3) Optional work_schedule row -------------------------------------
     $workScheduleCode = $payload['work_schedule'] ?? null;
-
-    if ($workScheduleCode !== null) {
-        switch ((int)$workScheduleCode) {
-            case 1:
-                $start = '08:00:00';
-                $end = '16:00:00';
-                break; // Day
-            case 2:
-                $start = '16:00:00';
-                $end = '00:00:00';
-                break; // Night
-            case 3:
-                $start = '09:00:00';
-                $end = '17:00:00';
-                break; // Rotating
-            case 4:
-                $start = '08:00:00';
-                $end = '12:00:00';
-                break; // Part-time
-            default:
-                $start = null;
-                $end = null;
-                break;
-        }
-
-        $sqlWs = "
-            INSERT INTO work_schedule (
-                office_id, staff_id, doctor_id, nurse_id, days, start_time, end_time, day_of_week
-            ) VALUES (
-                ?, ?, NULL, NULL, NULL, ?, ?, NULL
-            )
-        ";
-
-        $stmt = $conn->prepare($sqlWs);
-        if (!$stmt) {
-            throw new Exception('Prepare work_schedule failed: ' . $conn->error);
-        }
-
-        $officeId    = (int)$payload['work_location'];
-        $staffIdWs   = $staffId;
-
-        if (!$stmt->bind_param(
-            'iiss',  // office_id, staff_id, start_time, end_time
-            $officeId,
-            $staffIdWs,
-            $start,
-            $end
-        )) {
-            throw new Exception('bind_param work_schedule failed: ' . $stmt->error);
-        }
-
-        if (!$stmt->execute()) {
-            throw new Exception('Execute work_schedule failed: ' . $stmt->error);
-        }
-
-        $scheduleId = (int)$conn->insert_id;
-        $stmt->close();
-
-        // Update staff.work_schedule FK
-        $sqlUpdateStaff = "UPDATE staff SET work_schedule = ? WHERE staff_id = ?";
-
-        $stmt = $conn->prepare($sqlUpdateStaff);
-        if (!$stmt) {
-            throw new Exception('Prepare update staff.work_schedule failed: ' . $conn->error);
-        }
-
-        $wsId = $scheduleId;
-        $stId = $staffId;
-
-        if (!$stmt->bind_param('ii', $wsId, $stId)) {
-            throw new Exception('bind_param update staff failed: ' . $stmt->error);
-        }
-
-        if (!$stmt->execute()) {
-            throw new Exception('Execute update staff failed: ' . $stmt->error);
-        }
-
-        $stmt->close();
-    }
 
     return [
         'staff_id' => $staffId,

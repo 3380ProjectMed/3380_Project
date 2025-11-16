@@ -423,9 +423,7 @@ function UserManagement() {
   );
 }
 
-// Add User Modal Component
 function AddUserModal({ type, onClose, onSuccess }) {
-  // ... rest of your AddUserModal code stays the same
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -435,7 +433,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
     gender: '1',
     phoneNumber: '',
     workLocation: '',
-    workSchedule: '',
+    workSchedule: '', // Keep this for nurses and receptionists
     licenseNumber: '',
     specialty: '',
     department: '',
@@ -448,11 +446,19 @@ function AddUserModal({ type, onClose, onSuccess }) {
   const [workLocations, setWorkLocations] = useState([]);
   const [workSchedules, setWorkSchedules] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
+  const [loadingSchedules, setLoadingSchedules] = useState(false);
 
-  // Load dynamic options on mount
+  // Load work locations on mount
   useEffect(() => {
     loadFormOptions();
   }, []);
+
+  // Load schedules when office changes (for nurses and receptionists)
+  useEffect(() => {
+    if (formData.workLocation && (type === 'nurse' || type === 'receptionist')) {
+      loadScheduleOptions(formData.workLocation);
+    }
+  }, [formData.workLocation, type]);
 
   const loadFormOptions = async () => {
     setLoadingOptions(true);
@@ -469,14 +475,10 @@ function AddUserModal({ type, onClose, onSuccess }) {
       
       if (data.success) {
         setWorkLocations(data.work_locations || []);
-        setWorkSchedules(data.work_schedules || []);
         
-        // Set default values to first option
+        // Set default work location to first option
         if (data.work_locations && data.work_locations.length > 0) {
           setFormData(prev => ({ ...prev, workLocation: data.work_locations[0].office_id.toString() }));
-        }
-        if (data.work_schedules && data.work_schedules.length > 0) {
-          setFormData(prev => ({ ...prev, workSchedule: data.work_schedules[0].schedule_id.toString() }));
         }
       } else {
         setError(data.error || 'Failed to load form options');
@@ -486,6 +488,40 @@ function AddUserModal({ type, onClose, onSuccess }) {
       console.error('Error loading form options:', err);
     } finally {
       setLoadingOptions(false);
+    }
+  };
+
+  const loadScheduleOptions = async (officeId) => {
+    setLoadingSchedules(true);
+    try {
+      const response = await fetch(`/admin_api/users/get_form_options.php?office_id=${officeId}`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setWorkSchedules(data.work_schedules || []);
+        
+        // Set default schedule to first option
+        if (data.work_schedules && data.work_schedules.length > 0) {
+          setFormData(prev => ({ 
+            ...prev, 
+            workSchedule: `${data.work_schedules[0].office_id}-${data.work_schedules[0].start_time}-${data.work_schedules[0].end_time}`
+          }));
+        }
+      } else {
+        setError(data.error || 'Failed to load schedule options');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('Error loading schedule options:', err);
+    } finally {
+      setLoadingSchedules(false);
     }
   };
 
@@ -536,7 +572,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
         gender: parseInt(formData.gender),
         phone_number: formData.phoneNumber.replace(/\D/g, ''),
         work_location: parseInt(formData.workLocation),
-        work_schedule: parseInt(formData.workSchedule),
+        //work_schedule: parseInt(formData.workSchedule),
         license_number: formData.licenseNumber,
       };
 
@@ -577,6 +613,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
     
     let formattedValue = value;
     
+    // Apply formatting for specific fields
     if (name === 'ssn') {
       formattedValue = formatSSN(value);
     } else if (name === 'phoneNumber') {
@@ -741,27 +778,6 @@ function AddUserModal({ type, onClose, onSuccess }) {
                   )}
                 </select>
               </div>
-
-              <div className="form-group">
-                <label htmlFor="workSchedule">Work Schedule *</label>
-                <select
-                  id="workSchedule"
-                  name="workSchedule"
-                  value={formData.workSchedule}
-                  onChange={handleChange}
-                  required
-                >
-                  {workSchedules.length === 0 ? (
-                    <option value="">No schedules available</option>
-                  ) : (
-                    workSchedules.map(schedule => (
-                      <option key={schedule.schedule_id} value={schedule.schedule_id}>
-                        {schedule.shift_type}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
             </div>
 
             <div className="form-group">
@@ -776,39 +792,82 @@ function AddUserModal({ type, onClose, onSuccess }) {
               />
             </div>
 
+            {/* For Doctors - Only work location, no schedule */}
             {type === 'doctor' && (
               <div className="form-group">
-                <label htmlFor="specialty">Specialization *</label>
-                <input
-                  type="text"
-                  id="specialty"
-                  name="specialty"
-                  value={formData.specialty}
-                  onChange={handleChange}
-                  placeholder="e.g., Cardiology, Pediatrics"
-                  required
-                />
-              </div>
-            )}
-
-            {type === 'nurse' && (
-              <div className="form-group">
-                <label htmlFor="department">Department *</label>
+                <label htmlFor="workLocation">Primary Work Location *</label>
                 <select
-                  id="department"
-                  name="department"
-                  value={formData.department}
+                  id="workLocation"
+                  name="workLocation"
+                  value={formData.workLocation}
                   onChange={handleChange}
                   required
                 >
-                  <option value="">Select Department</option>
-                  <option value="Emergency">Emergency</option>
-                  <option value="ICU">ICU</option>
-                  <option value="Pediatrics">Pediatrics</option>
-                  <option value="Orthopedics">Orthopedics</option>
-                  <option value="Cardiology">Cardiology</option>
+                  {workLocations.length === 0 ? (
+                    <option value="">No locations available</option>
+                  ) : (
+                    workLocations.map(location => (
+                      <option key={location.office_id} value={location.office_id}>
+                        {location.name} - {location.address}
+                      </option>
+                    ))
+                  )}
                 </select>
+                <small>Additional schedules can be assigned later</small>
               </div>
+            )}
+
+            {/* For Nurses and Receptionists - Work location and schedule */}
+            {(type === 'nurse' || type === 'receptionist') && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="workLocation">Work Location *</label>
+                  <select
+                    id="workLocation"
+                    name="workLocation"
+                    value={formData.workLocation}
+                    onChange={handleChange}
+                    required
+                  >
+                    {workLocations.length === 0 ? (
+                      <option value="">No locations available</option>
+                    ) : (
+                      workLocations.map(location => (
+                        <option key={location.office_id} value={location.office_id}>
+                          {location.name} - {location.address}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="workSchedule">Work Schedule *</label>
+                  <select
+                    id="workSchedule"
+                    name="workSchedule"
+                    value={formData.workSchedule}
+                    onChange={handleChange}
+                    required
+                    disabled={loadingSchedules}
+                  >
+                    {loadingSchedules ? (
+                      <option value="">Loading schedules...</option>
+                    ) : workSchedules.length === 0 ? (
+                      <option value="">No schedules available for this location</option>
+                    ) : (
+                      workSchedules.map((schedule, index) => (
+                        <option 
+                          key={`${schedule.office_id}-${schedule.start_time}-${schedule.end_time}`} 
+                          value={`${schedule.office_id}-${schedule.start_time}-${schedule.end_time}`}
+                        >
+                          {schedule.schedule_label}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              </>
             )}
 
             <div className="modal-actions">
