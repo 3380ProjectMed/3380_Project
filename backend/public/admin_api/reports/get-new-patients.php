@@ -44,54 +44,54 @@ try {
     // 1. DOCTOR PERFORMANCE SUMMARY
     // ============================================================================
     $doctorSql = "SELECT
-                    d.doctor_id,
-                    CONCAT(s.first_name, ' ', s.last_name) AS doctor_name,
-                    COUNT(DISTINCT CASE 
-                        WHEN a.Appointment_date = (
-                            SELECT MIN(a2.Appointment_date)
-                            FROM appointment a2
-                            WHERE a2.Patient_id = a.Patient_id
-                            AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                        )
-                        AND a.Status NOT IN ('Cancelled', 'No-Show')
-                        THEN a.Patient_id 
-                    END) AS new_patients_acquired,
+                        d.doctor_id,
+                        CONCAT(s.first_name, ' ', s.last_name) AS doctor_name,
+                        COUNT(DISTINCT CASE 
+                            WHEN a.Appointment_date = (
+                                SELECT MIN(a2.Appointment_date)
+                                FROM appointment a2
+                                WHERE a2.Patient_id = a.Patient_id
+                                AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                            )
+                            AND a.Status NOT IN ('Cancelled', 'No-Show')
+                            THEN a.Patient_id 
+                        END) AS new_patients_acquired,
 
-                    COUNT(DISTINCT a.Patient_id) AS total_patients_seen,
-                    
-                    SUM(CASE 
-                        WHEN a.Appointment_date = (
-                            SELECT MIN(a2.Appointment_date)
-                            FROM appointment a2
-                            WHERE a2.Patient_id = a.Patient_id
-                            AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                        )
-                        AND a.Status NOT IN ('Cancelled', 'No-Show')
-                        THEN 1 ELSE 0 
-                    END) AS new_patient_appointments,
-                    
-                    COUNT(DISTINCT CASE
-                        WHEN a.Appointment_date = (
-                            SELECT MIN(a2.Appointment_date)
-                            FROM appointment a2
-                            WHERE a2.Patient_id = a.Patient_id
-                            AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                        )
-                        AND (
-                            SELECT COUNT(*)
-                            FROM appointment a3
-                            WHERE a3.Patient_id = a.Patient_id
-                            AND a3.Status NOT IN ('Cancelled', 'No-Show')
-                        ) >= 2
-                        THEN a.Patient_id
-                    END) AS retained_patients,
-                    
-                    SUM(CASE WHEN a.Status = 'Completed' THEN 1 ELSE 0 END) AS total_completed
-                    
-                FROM appointment a
-                JOIN doctor d ON d.doctor_id = a.Doctor_id
-                JOIN staff s ON s.staff_id = d.staff_id
-                WHERE a.Appointment_date BETWEEN ? AND ?";
+                        COUNT(DISTINCT a.Patient_id) AS total_patients_seen,
+                        
+                        SUM(CASE 
+                            WHEN a.Appointment_date = (
+                                SELECT MIN(a2.Appointment_date)
+                                FROM appointment a2
+                                WHERE a2.Patient_id = a.Patient_id
+                                AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                            )
+                            AND a.Status NOT IN ('Cancelled', 'No-Show')
+                            THEN 1 ELSE 0 
+                        END) AS new_patient_appointments,
+                        
+                        COUNT(DISTINCT CASE
+                            WHEN a.Appointment_date = (
+                                SELECT MIN(a2.Appointment_date)
+                                FROM appointment a2
+                                WHERE a2.Patient_id = a.Patient_id
+                                AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                            )
+                            AND (
+                                SELECT COUNT(*)
+                                FROM appointment a3
+                                WHERE a3.Patient_id = a.Patient_id
+                                AND a3.Status NOT IN ('Cancelled', 'No-Show')
+                            ) >= 2
+                            THEN a.Patient_id
+                        END) AS retained_patients,
+                        
+                        SUM(CASE WHEN a.Status = 'Completed' THEN 1 ELSE 0 END) AS total_completed
+                        
+                    FROM appointment a
+                    JOIN doctor d ON d.doctor_id = a.Doctor_id
+                    JOIN staff s ON s.staff_id = d.staff_id
+                    WHERE a.Appointment_date BETWEEN ? AND ?";
 
     $types = 'ss';
     $params = [$start_date . ' 00:00:00', $end_date . ' 23:59:59'];
@@ -129,8 +129,8 @@ try {
         $newPatients = (int)$doc['new_patients_acquired'];
         $retained = (int)$doc['retained_patients'];
         $doc['retention_rate'] = $newPatients > 0 ? round(($retained / $newPatients) * 100, 1) : 0;
-        $doc['avg_visits_per_patient'] = (int)$doc['total_patients_seen'] > 0 
-            ? round((int)$doc['total_completed'] / (int)$doc['total_patients_seen'], 1) 
+        $doc['avg_visits_per_patient'] = (int)$doc['total_patients_seen'] > 0
+            ? round((int)$doc['total_completed'] / (int)$doc['total_patients_seen'], 1)
             : 0;
     }
     unset($doc);
@@ -190,28 +190,26 @@ try {
     // ============================================================================
     // 3. OFFICE BREAKDOWN
     // ============================================================================
-    $officeSql = "
-        SELECT
-            o.office_id,
-            o.name AS office_name,
-            
-            COUNT(DISTINCT CASE 
-                WHEN a.Appointment_date = (
-                    SELECT MIN(a2.Appointment_date)
-                    FROM appointment a2
-                    WHERE a2.Patient_id = a.Patient_id
-                      AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                )
-                AND a.Status NOT IN ('Cancelled', 'No-Show')
-                THEN a.Patient_id 
-            END) AS new_patients,
-            
-            COUNT(DISTINCT a.Patient_id) AS total_patients
-            
-        FROM appointment a
-        JOIN office o ON o.office_id = a.Office_id
-        WHERE a.Appointment_date BETWEEN ? AND ?
-    ";
+    $officeSql = "SELECT
+                        o.office_id,
+                        o.name AS office_name,
+                        
+                        COUNT(DISTINCT CASE 
+                            WHEN a.Appointment_date = (
+                                SELECT MIN(a2.Appointment_date)
+                                FROM appointment a2
+                                WHERE a2.Patient_id = a.Patient_id
+                                AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                            )
+                            AND a.Status NOT IN ('Cancelled', 'No-Show')
+                            THEN a.Patient_id 
+                        END) AS new_patients,
+                        
+                        COUNT(DISTINCT a.Patient_id) AS total_patients
+                        
+                    FROM appointment a
+                    JOIN office o ON o.office_id = a.Office_id
+                    WHERE a.Appointment_date BETWEEN ? AND ?";
 
     if ($office_id !== null) {
         $officeSql .= " AND a.Office_id = ?";
@@ -241,20 +239,18 @@ try {
     $prev_start = date('Y-m-d', strtotime($start_date . " -$periodLength days"));
     $prev_end = date('Y-m-d', strtotime($end_date . " -$periodLength days"));
 
-    $prevSql = "
-        SELECT COUNT(DISTINCT CASE 
-            WHEN a.Appointment_date = (
-                SELECT MIN(a2.Appointment_date)
-                FROM appointment a2
-                WHERE a2.Patient_id = a.Patient_id
-                  AND a2.Status NOT IN ('Cancelled', 'No-Show')
-            )
-            AND a.Status NOT IN ('Cancelled', 'No-Show')
-            THEN a.Patient_id 
-        END) AS prev_new_patients
-        FROM appointment a
-        WHERE a.Appointment_date BETWEEN ? AND ?
-    ";
+    $prevSql = "SELECT COUNT(DISTINCT CASE 
+                    WHEN a.Appointment_date = (
+                        SELECT MIN(a2.Appointment_date)
+                        FROM appointment a2
+                        WHERE a2.Patient_id = a.Patient_id
+                        AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                    )
+                    AND a.Status NOT IN ('Cancelled', 'No-Show')
+                    THEN a.Patient_id 
+                END) AS prev_new_patients
+                FROM appointment a
+                WHERE a.Appointment_date BETWEEN ? AND ?";
 
     $prevParams = [$prev_start . ' 00:00:00', $prev_end . ' 23:59:59'];
     $prevTypes = 'ss';
@@ -307,7 +303,6 @@ try {
         'trend_data' => $trendData,
         'office_breakdown' => $officeBreakdown
     ]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
