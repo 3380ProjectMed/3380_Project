@@ -468,6 +468,12 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
         const message = data.message || 'Treatments saved successfully!';
         showAlert(message, 'success');
         
+        // Clear the selected treatments immediately
+        setSelectedTreatments([]);
+        
+        // Close the treatment selector if it's open
+        setShowTreatmentSelector(false);
+        
         // Refresh patient data to show treatments in previous notes
         if (appointmentId) {
           fetchPatientDetails();
