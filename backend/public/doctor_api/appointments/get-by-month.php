@@ -67,6 +67,7 @@ try {
             WHERE a.Doctor_id = ?
             AND MONTH(a.Appointment_date) = ?
             AND YEAR(a.Appointment_date) = ?
+            AND (a.Status IS NULL OR a.Status != 'Cancelled')
             ORDER BY a.Appointment_date";
 
     $appointments = executeQuery($conn, $sql, 'iii', [$doctor_id, $month, $year]);
