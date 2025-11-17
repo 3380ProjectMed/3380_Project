@@ -1642,40 +1642,108 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
 };
 
 const NewPatientTrendChart = ({ data }) => {
-  const doctorMap = {};
+  const [viewMode, setViewMode] = React.useState('perDoctor'); // 'perDoctor' | 'total'
+
+  if (!data || data.length === 0) {
+    return <p className="chart-empty">No trend data.</p>;
+  }
+
+  // ---- First pass: periods + totals per doctor + totals per period ----
   const periods = [];
+  const doctorTotals = {};
+  const periodTotals = {};
 
   data.forEach(row => {
-    if (!periods.includes(row.period_label)) {
-      periods.push(row.period_label);
+    const period = row.period_label;
+    const doctor = row.doctor_name;
+    const v = parseInt(row.new_patients, 10) || 0;
+
+    if (!periods.includes(period)) {
+      periods.push(period);
     }
 
-    if (!doctorMap[row.doctor_name]) {
-      doctorMap[row.doctor_name] = {};
-    }
-    // store only when > 0; treat 0 as "no point"
-    const v = parseInt(row.new_patients, 10);
-    if (v > 0) {
-      doctorMap[row.doctor_name][row.period_label] = v;
-    }
+    if (!doctorTotals[doctor]) doctorTotals[doctor] = 0;
+    doctorTotals[doctor] += v;
+
+    if (!periodTotals[period]) periodTotals[period] = 0;
+    periodTotals[period] += v;
+  });
+
+  // Order periods as they appeared (already in time order from backend)
+  // Determine top N doctors
+  const TOP_N = 5;
+  const sortedDoctors = Object.entries(doctorTotals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name]) => name);
+
+  const mainDoctors = sortedDoctors.slice(0, TOP_N);
+  const extraDoctors = sortedDoctors.slice(TOP_N);
+
+  // ---- Build doctorMap (top docs individually, rest folded into "Other doctors") ----
+  const doctorMap = {};
+
+  data.forEach(row => {
+    const period = row.period_label;
+    const doctor = row.doctor_name;
+    const raw = parseInt(row.new_patients, 10) || 0;
+    if (raw <= 0) return; // skip zero points completely
+
+    const seriesKey = extraDoctors.includes(doctor)
+      ? 'Other doctors'
+      : doctor;
+
+    if (!doctorMap[seriesKey]) doctorMap[seriesKey] = {};
+    doctorMap[seriesKey][period] = (doctorMap[seriesKey][period] || 0) + raw;
   });
 
   const doctors = Object.keys(doctorMap);
-  const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9'];
 
-  const maxValue = Math.max(...data.map(d => parseInt(d.new_patients, 10)), 1);
+  // ---- Y axis max based on mode ----
+  let maxValue = 1;
+  if (viewMode === 'total') {
+    const totalsArray = Object.values(periodTotals);
+    if (totalsArray.length > 0) {
+      maxValue = Math.max(...totalsArray, 1);
+    }
+  } else {
+    Object.values(doctorMap).forEach(periodMap => {
+      Object.values(periodMap).forEach(v => {
+        if (v > maxValue) maxValue = v;
+      });
+    });
+  }
   const yAxisMax = Math.ceil(maxValue * 1.2);
+
+  const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9'];
 
   const hasMultiplePeriods = periods.length > 1;
   const periodDenominator = hasMultiplePeriods ? (periods.length - 1) : 1;
 
   return (
     <div className="trend-chart-container">
+      {/* View toggle */}
+      <div className="trend-toolbar">
+        <button
+          type="button"
+          className={`btn btn-sm ${viewMode === 'perDoctor' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setViewMode('perDoctor')}
+        >
+          By doctor
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${viewMode === 'total' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setViewMode('total')}
+        >
+          All new patients
+        </button>
+      </div>
+
       <div className="trend-chart">
         <div className="trend-y-axis">
           {[4, 3, 2, 1, 0].map(i => (
             <div key={i} className="y-label">
-              {Math.round(yAxisMax * i / 4)}
+              {Math.round((yAxisMax * i) / 4)}
             </div>
           ))}
         </div>
@@ -1688,55 +1756,96 @@ const NewPatientTrendChart = ({ data }) => {
           </div>
 
           <svg className="trend-svg" viewBox="0 0 800 300" preserveAspectRatio="none">
-            {doctors.map((doctor, doctorIdx) => {
-              // build points only for periods where this doctor has >0 patients
-              const pointsArr = periods.reduce((acc, period, idx) => {
-                const value = doctorMap[doctor][period]; // undefined if no patients
-                if (!value) return acc;
+            {viewMode === 'total' ? (
+              // --------- SINGLE TOTAL LINE VIEW ---------
+              (() => {
+                const pointsArr = periods.map((period, idx) => {
+                  const value = periodTotals[period] || 0;
+                  const x = hasMultiplePeriods ? (idx / periodDenominator) * 800 : 400;
+                  const y = 300 - ((value / yAxisMax) * 300);
+                  return { x, y, period, value };
+                });
 
-                const x = hasMultiplePeriods
-                  ? (idx / periodDenominator) * 800
-                  : 400;
-                const y = 300 - ((value / yAxisMax) * 300);
-                acc.push({ x, y, period, value });
-                return acc;
-              }, []);
+                const points = pointsArr.map(p => `${p.x},${p.y}`).join(' ');
+                const color = '#6366f1';
 
-              if (pointsArr.length === 0) return null;
+                return (
+                  <g>
+                    {pointsArr.length > 1 && (
+                      <polyline
+                        points={points}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    )}
 
-              const points = pointsArr.map(p => `${p.x},${p.y}`).join(' ');
-              const color = colors[doctorIdx % colors.length];
+                    {pointsArr.map((p, idx2) => (
+                      <circle
+                        key={idx2}
+                        cx={p.x}
+                        cy={p.y}
+                        r="5"
+                        fill={color}
+                        className="trend-point"
+                      >
+                        <title>{p.period}: {p.value} new patients</title>
+                      </circle>
+                    ))}
+                  </g>
+                );
+              })()
+            ) : (
+              // --------- PER-DOCTOR VIEW (TOP N + OTHER) ---------
+              doctors.map((doctor, doctorIdx) => {
+                const periodMap = doctorMap[doctor];
+                if (!periodMap) return null;
 
-              return (
-                <g key={doctor}>
-                  {/* line only through non-zero points */}
-                  {pointsArr.length > 1 && (
-                    <polyline
-                      points={points}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  )}
+                const pointsArr = periods.reduce((acc, period, idx) => {
+                  const value = periodMap[period]; // undefined if none for that day
+                  if (!value) return acc;
 
-                  {/* circles only where value > 0 */}
-                  {pointsArr.map((p, idx2) => (
-                    <circle
-                      key={idx2}
-                      cx={p.x}
-                      cy={p.y}
-                      r="5"
-                      fill={color}
-                      className="trend-point"
-                    >
-                      <title>Dr. {doctor} - {p.period}: {p.value} patients</title>
-                    </circle>
-                  ))}
-                </g>
-              );
-            })}
+                  const x = hasMultiplePeriods ? (idx / periodDenominator) * 800 : 400;
+                  const y = 300 - ((value / yAxisMax) * 300);
+                  acc.push({ x, y, period, value });
+                  return acc;
+                }, []);
+
+                if (pointsArr.length === 0) return null;
+
+                const points = pointsArr.map(p => `${p.x},${p.y}`).join(' ');
+                const color = colors[doctorIdx % colors.length];
+
+                return (
+                  <g key={doctor}>
+                    {pointsArr.length > 1 && (
+                      <polyline
+                        points={points}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    )}
+                    {pointsArr.map((p, idx2) => (
+                      <circle
+                        key={idx2}
+                        cx={p.x}
+                        cy={p.y}
+                        r="5"
+                        fill={color}
+                        className="trend-point"
+                      >
+                        <title>{doctor} - {p.period}: {p.value} patients</title>
+                      </circle>
+                    ))}
+                  </g>
+                );
+              })
+            )}
           </svg>
 
           <div className="trend-x-labels">
@@ -1749,17 +1858,20 @@ const NewPatientTrendChart = ({ data }) => {
         </div>
       </div>
 
-      <div className="trend-legend">
-        {doctors.map((doctor, idx) => (
-          <div key={doctor} className="legend-item">
-            <span
-              className="legend-dot"
-              style={{ backgroundColor: colors[idx % colors.length] }}
-            />
-            <span>Dr. {doctor}</span>
-          </div>
-        ))}
-      </div>
+      {/* Legend only for per-doctor view */}
+      {viewMode === 'perDoctor' && (
+        <div className="trend-legend">
+          {doctors.map((doctor, idx) => (
+            <div key={doctor} className="legend-item">
+              <span
+                className="legend-dot"
+                style={{ backgroundColor: colors[idx % colors.length] }}
+              />
+              <span>{doctor}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
