@@ -761,13 +761,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                         className={`day-button ${hasAppointments ? 'has-appointments' : 'no-appointments'} ${today ? 'today-btn' : ''}`}
                         onClick={() => hasAppointments && handleDayClick(day)}
                         disabled={!hasAppointments}
+                        style={{ position: 'relative' }}
                       >
-                        <span className="day-number">{day}</span>
                         {hasAppointments && (
                           <span className="appointment-badge">
-                            {appointments.length} {appointments.length === 1 ? 'appointment' : 'appointments'}
+                            {appointments.length}
                           </span>
                         )}
+                        <span className="day-number">{day}</span>
                         {!hasAppointments && (
                           <span className="no-apt-label">No appointments</span>
                         )}
@@ -1044,7 +1045,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                       </h3>
                       <div className="patient-meta">
                         <span className="patient-id">
-                          ID: {appointment.Patient_id}
+                          ID: {appointment.patient_id || appointment.Patient_id}
                         </span>
                       </div>
                     </div>
