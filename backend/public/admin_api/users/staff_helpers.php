@@ -103,7 +103,7 @@ function createStaffAndUser(
         $roleEnum = $userRole;
 
         if (!$stmt->bind_param(
-            'issss',
+            'ssss',
             $username,
             $email,
             $passwordHash,
