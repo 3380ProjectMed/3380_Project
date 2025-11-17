@@ -540,6 +540,20 @@
   letter-spacing: 0.5px;
 }
 
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1.25rem;
+  color: #6b7280;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .form-input {
   padding: 1rem 1.25rem;
   border: 2px solid #e5e7eb;
@@ -549,6 +563,11 @@
   background: white;
   transition: all 0.2s ease;
   font-weight: 500;
+  width: 100%;
+}
+
+.form-input.with-icon {
+  padding-left: 3.25rem;
 }
 
 .form-input:focus {
