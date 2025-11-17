@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import NurseClinicalWorkspace from './NurseClinicalWorkSpace';
+import NurseVitalsModal from './NurseVitalsModal';
 import './NurseSchedule.css';
 
 function NurseSchedule() {
@@ -39,6 +40,9 @@ function NurseSchedule() {
   // Clinical workspace state
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showClinicalWorkspace, setShowClinicalWorkspace] = useState(false);
+  
+  // Enhanced vitals modal state
+  const [showEnhancedVitalsModal, setShowEnhancedVitalsModal] = useState(false);
 
   const currentDateStr = useMemo(
     () => currentDate.toISOString().split('T')[0],
@@ -87,9 +91,17 @@ function NurseSchedule() {
       visit_id: appointment.visit_id,
       appointment_id: appointment.appointment_id,
       patient_id: appointment.patient_id,
-      patient_name: appointment.patient_name
+      patient_name: appointment.patient_name,
+      // Add more appointment data for the enhanced modal
+      patient_first_name: appointment.patient_name?.split(' ')[0] || '',
+      patient_last_name: appointment.patient_name?.split(' ')[1] || '',
+      appointment_date: appointment.appointment_date,
+      office_name: appointment.office_name
     });
-    setShowClinicalWorkspace(true);
+    
+    // Use the enhanced vitals modal by default
+    // You can add a toggle or preference here to switch between interfaces
+    setShowEnhancedVitalsModal(true);
   };
 
   const handleCloseClinicalWorkspace = () => {
@@ -97,9 +109,20 @@ function NurseSchedule() {
     setSelectedPatient(null);
   };
 
+  const handleCloseEnhancedVitalsModal = () => {
+    setShowEnhancedVitalsModal(false);
+    setSelectedPatient(null);
+  };
+
   const handleVitalsSaved = (visitId) => {
     fetchDailySchedule();
     console.log('Vitals saved for visit:', visitId);
+  };
+
+  const handleEnhancedVitalsSaved = (data) => {
+    fetchDailySchedule();
+    console.log('Enhanced vitals saved:', data);
+    handleCloseEnhancedVitalsModal();
   };
 
   const goToPreviousDay = () => {
@@ -158,6 +181,38 @@ function NurseSchedule() {
         onClose={handleCloseClinicalWorkspace}
         onSave={handleVitalsSaved}
       />
+    );
+  }
+
+  // Show enhanced vitals modal (new workflow)
+  if (showEnhancedVitalsModal && selectedPatient) {
+    return (
+      <div className="nurse-schedule">
+        {/* Background content */}
+        <div className="schedule-content" style={{ filter: 'blur(2px)', pointerEvents: 'none' }}>
+          <div className="schedule-header">
+            <h1>Schedule - Enhanced Vitals Modal Active</h1>
+          </div>
+        </div>
+        
+        {/* Enhanced Vitals Modal */}
+        <NurseVitalsModal
+          patient={{
+            first_name: selectedPatient.patient_first_name,
+            last_name: selectedPatient.patient_last_name,
+            name: selectedPatient.patient_name
+          }}
+          appointment={{
+            Appointment_date: selectedPatient.appointment_date,
+            office_name: selectedPatient.office_name
+          }}
+          appointmentId={selectedPatient.appointment_id}
+          visitId={selectedPatient.visit_id}
+          patientId={selectedPatient.patient_id}
+          onClose={handleCloseEnhancedVitalsModal}
+          onSaved={handleEnhancedVitalsSaved}
+        />
+      </div>
     );
   }
 
