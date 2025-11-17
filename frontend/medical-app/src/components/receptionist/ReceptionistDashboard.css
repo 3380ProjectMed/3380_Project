@@ -1525,7 +1525,7 @@
   }
 
   .calendar-day {
-    min-height: 100px;
+    min-height: 90px;
   }
 
   .apt-patient {
@@ -1695,7 +1695,7 @@
   }
 
   .calendar-day {
-    min-height: 80px;
+    min-height: 90px;
     padding: 0.5rem;
   }
 
@@ -1759,7 +1759,7 @@
   }
 
   .calendar-day {
-    min-height: 120px;
+    min-height: 90px;
     padding: 0.625rem;
   }
 }
