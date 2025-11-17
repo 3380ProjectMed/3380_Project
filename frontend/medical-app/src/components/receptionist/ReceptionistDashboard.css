@@ -545,11 +545,12 @@
 }
 
 .header-content {
-  background: linear-gradient(135deg, #0077b6, #00b4d8);
-  color: white;
+  background: white;
+  color: #03045e;
   padding: 2rem 2.5rem;
   border-radius: 1rem;
-  box-shadow: 0 8px 16px rgba(0, 119, 182, 0.2);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border: 2px solid #e5e7eb;
 }
 
 .dashboard-title {
@@ -565,8 +566,8 @@
   gap: 0.5rem;
   font-size: 1.1rem;
   margin: 0;
-  opacity: 0.95;
-  color: #caf0f8;
+  opacity: 0.8;
+  color: #6b7280;
 }
 
 /* ===== STATS GRID ===== */
