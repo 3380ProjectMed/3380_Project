@@ -7,6 +7,7 @@ require_once '/home/site/wwwroot/session.php';
 
 
 // session_start();
+date_default_timezone_set('America/Chicago');
 
 try {
     if (empty($_SESSION['uid'])) {

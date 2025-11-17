@@ -4,6 +4,8 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
+date_default_timezone_set('America/Chicago');
+
 if (empty($_SESSION['uid'])) {
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'UNAUTHENTICATED']);
