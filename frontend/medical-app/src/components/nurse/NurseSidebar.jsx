@@ -10,12 +10,7 @@ export default function NurseSidebar({ currentPage, setCurrentPage, onLogout }) 
       icon: <Home size={18} />,
       description: "Overview & quick stats"
     },
-    { 
-      id: "schedule", 
-      label: "My Schedule", 
-      icon: <Calendar size={18} />,
-      description: "Daily patient queue"
-    },
+   { id: 'clinical', label: 'Clinical Workspace', icon: <FileText size={18} />, description: "Clinical tasks and patient details" }, 
     { 
       id: "profile", 
       label: "Profile", 

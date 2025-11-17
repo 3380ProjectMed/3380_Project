@@ -71,12 +71,12 @@ export default function NurseDashboard({ setCurrentPage }) {
     return statusMap[(status || '').toLowerCase()] || 'status-scheduled';
   };
 
-  const formatAppointmentId = (id) => {
-    if (!id) return 'N/A';
+  const formatAppointmentId = (appointmentId) => {
+    if (!appointmentId) return 'N/A';
     // If it's already formatted (starts with A), return as-is
-    if (String(id).startsWith('A')) return id;
+    if (String(appointmentId).startsWith('A')) return appointmentId;
     // Otherwise, add A prefix and pad to 4 digits
-    return `A${String(id).padStart(4, '0')}`;
+    return `A${String(appointmentId).padStart(4, '0')}`;
   };
 
   const handleAppointmentRowClick = (appointment) => {
@@ -239,7 +239,7 @@ export default function NurseDashboard({ setCurrentPage }) {
                     }}
                   >
                     <div className="col-time">{appointment.time}</div>
-                    <div className="col-apptid">{formatAppointmentId(appointment.id)}</div>
+                    <div className="col-apptid">{formatAppointmentId(appointment.appointmentId)}</div>
                     <div className="col-patient">
                       <span className="patient-link">{appointment.patientName}</span>
                     </div>
