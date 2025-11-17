@@ -1556,7 +1556,6 @@ elseif ($endpoint === 'billing') {
                             LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
                             LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
                             WHERE v.patient_id = ?
-                            AND tpv.visit_id IS NOT NULL
                             GROUP BY v.visit_id, ipl.copay, ipl.coinsurance_rate, v.payment
                             HAVING ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) > 0
                         ) as visit_balances
@@ -1583,17 +1582,20 @@ elseif ($endpoint === 'billing') {
                             COALESCE(ipl.coinsurance_rate, 0) as coinsurance_rate,
                             SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100) as coinsurance_amount,
                             
-                            -- Treatment details breakdown (JSON format)
-                            JSON_ARRAYAGG(
-                                JSON_OBJECT(
-                                    'treatment_name', tc.name,
-                                    'cpt_code', tc.cpt_code,
-                                    'quantity', tpv.quantity,
-                                    'cost_each', tpv.cost_each,
-                                    'total_cost', tpv.total_cost,
-                                    'notes', tpv.notes
+                            -- Treatment details breakdown (JSON format) - handle NULL case for visits without treatments
+                            CASE 
+                                WHEN COUNT(tpv.visit_id) > 0 THEN JSON_ARRAYAGG(
+                                    JSON_OBJECT(
+                                        'treatment_name', tc.name,
+                                        'cpt_code', tc.cpt_code,
+                                        'quantity', tpv.quantity,
+                                        'cost_each', tpv.cost_each,
+                                        'total_cost', tpv.total_cost,
+                                        'notes', tpv.notes
+                                    )
                                 )
-                            ) as treatment_details,
+                                ELSE JSON_ARRAY()
+                            END as treatment_details,
                             
                             -- Total amount due and balance calculation
                             (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) as amount,
@@ -1621,9 +1623,8 @@ elseif ($endpoint === 'billing') {
                         LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
                         LEFT JOIN treatment_catalog tc ON tpv.treatment_id = tc.treatment_id
                         WHERE v.patient_id = ?
-                        AND tpv.visit_id IS NOT NULL
                         GROUP BY v.visit_id, v.date, doc_staff.first_name, doc_staff.last_name, ipl.copay, ipl.coinsurance_rate, v.payment, ip.name, ipl.plan_name
-                        HAVING (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) > 0
+                        HAVING (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) >= 0
                         ORDER BY v.date DESC
                         LIMIT 50
                     ");
