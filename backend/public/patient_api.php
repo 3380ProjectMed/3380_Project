@@ -390,58 +390,108 @@ elseif ($endpoint === 'profile') {
                 return $row && isset($row[$idCol]) ? (string) $row[$idCol] : '';
             };
 
-            $stmt = $mysqli->prepare(
-                "UPDATE patient
-                SET first_name = ?,
-                    last_name = ?,
-                    email = NULLIF(?, ''),
-                    dob = NULLIF(?, ''),
-                    gender = NULLIF(?, ''),
-                    assigned_at_birth_gender = NULLIF(?, ''),
-                    ethnicity = NULLIF(?, ''),
-                    race = NULLIF(?, ''),
-                    primary_doctor = NULLIF(?, '')
-                WHERE patient_id = ?"
-            );
+            // Build dynamic UPDATE query based on provided fields
+            $updateFields = [];
+            $updateValues = [];
+            $bindTypes = '';
+
+            // Only update fields that are actually provided in the request
+            if (isset($input['first_name'])) {
+                $updateFields[] = "first_name = ?";
+                $updateValues[] = $input['first_name'];
+                $bindTypes .= 's';
+            }
+
+            if (isset($input['last_name'])) {
+                $updateFields[] = "last_name = ?";
+                $updateValues[] = $input['last_name'];
+                $bindTypes .= 's';
+            }
+
+            if (isset($input['email'])) {
+                $updateFields[] = "email = NULLIF(?, '')";
+                $updateValues[] = $input['email'];
+                $bindTypes .= 's';
+            }
+
+            if (isset($input['dob']) && $input['dob'] !== '') {
+                $updateFields[] = "dob = ?";
+                $updateValues[] = $input['dob'];
+                $bindTypes .= 's';
+            }
+
+            if (isset($input['gender'])) {
+                $gender = $mapTextToCode('codes_gender', 'gender_code', 'gender_text', $input['gender']);
+                if ($gender !== '') {
+                    $updateFields[] = "gender = ?";
+                    $updateValues[] = $gender;
+                    $bindTypes .= 's';
+                }
+            }
+
+            if (isset($input['genderAtBirth'])) {
+                $genderAtBirth = $mapTextToCode('codes_assigned_at_birth_gender', 'gender_code', 'gender_text', $input['genderAtBirth']);
+                if ($genderAtBirth !== '') {
+                    $updateFields[] = "assigned_at_birth_gender = ?";
+                    $updateValues[] = $genderAtBirth;
+                    $bindTypes .= 's';
+                }
+            }
+
+            if (isset($input['ethnicity'])) {
+                $ethnicity = $mapTextToCode('codes_ethnicity', 'ethnicity_code', 'ethnicity_text', $input['ethnicity']);
+                if ($ethnicity !== '') {
+                    $updateFields[] = "ethnicity = ?";
+                    $updateValues[] = $ethnicity;
+                    $bindTypes .= 's';
+                }
+            }
+
+            if (isset($input['race'])) {
+                $race = $mapTextToCode('codes_race', 'race_code', 'race_text', $input['race']);
+                if ($race !== '') {
+                    $updateFields[] = "race = ?";
+                    $updateValues[] = $race;
+                    $bindTypes .= 's';
+                }
+            }
+
+            if (isset($input['primary_doctor'])) {
+                $primaryDoctor = trim((string) $input['primary_doctor']);
+                $updateFields[] = "primary_doctor = NULLIF(?, '')";
+                $updateValues[] = $primaryDoctor;
+                $bindTypes .= 's';
+            }
+
+            if (empty($updateFields)) {
+                sendResponse(false, [], 'No valid fields provided for update', 400);
+            }
+
+            // Add patient_id to the end
+            $updateValues[] = $patient_id;
+            $bindTypes .= 'i';
+
+            $sql = "UPDATE patient SET " . implode(', ', $updateFields) . " WHERE patient_id = ?";
+            $stmt = $mysqli->prepare($sql);
 
             if (!$stmt) {
                 sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
             }
 
-            $first = $input['first_name'] ?? '';
-            $last = $input['last_name'] ?? '';
-            $email = $input['email'] ?? '';
-            $dob = $input['dob'] ?? '';
-            $emergencyContact = $input['emergency_contact'] ?? '';
-            $emergencyContactFirstName = $input['emergency_contact_first_name'] ?? '';
-            $emergencyContactLastName = $input['emergency_contact_last_name'] ?? '';
-            $emergencyContactRelationship = $input['emergency_contact_relationship'] ?? '';
-            $gender = $mapTextToCode('codes_gender', 'gender_code', 'gender_text', $input['gender'] ?? '');
-            $genderAtBirth = $mapTextToCode('codes_assigned_at_birth_gender', 'gender_code', 'gender_text', $input['genderAtBirth'] ?? '');
-            $ethnicity = $mapTextToCode('codes_ethnicity', 'ethnicity_code', 'ethnicity_text', $input['ethnicity'] ?? '');
-            $race = $mapTextToCode('codes_race', 'race_code', 'race_text', $input['race'] ?? '');
-            $primaryDoctor = isset($input['primary_doctor']) ? trim((string) $input['primary_doctor']) : '';
-
-            $stmt->bind_param(
-                'sssssssssi',
-                $first,
-                $last,
-                $email,
-                $dob,
-                $gender,
-                $genderAtBirth,
-                $ethnicity,
-                $race,
-                $primaryDoctor,
-                $patient_id
-            );
+            $stmt->bind_param($bindTypes, ...$updateValues);
 
             if ($stmt->execute() === false) {
                 sendResponse(false, [], 'Database execute failed: ' . $stmt->error, 500);
             }
 
-            // Handle emergency contact
-            if (!empty($emergencyContact) || !empty($emergencyContactFirstName) || !empty($emergencyContactLastName) || !empty($emergencyContactRelationship)) {
+            // Handle emergency contact only if emergency contact fields are provided
+            $emergencyContact = $input['emergency_contact'] ?? '';
+            $emergencyContactFirstName = $input['emergency_contact_first_name'] ?? '';
+            $emergencyContactLastName = $input['emergency_contact_last_name'] ?? '';
+            $emergencyContactRelationship = $input['emergency_contact_relationship'] ?? '';
+            
+            if (isset($input['emergency_contact']) || isset($input['emergency_contact_first_name']) || 
+                isset($input['emergency_contact_last_name']) || isset($input['emergency_contact_relationship'])) {
                 $checkStmt = $mysqli->prepare("SELECT emergency_contact_id FROM patient WHERE patient_id = ?");
                 $checkStmt->bind_param('i', $patient_id);
                 $checkStmt->execute();
