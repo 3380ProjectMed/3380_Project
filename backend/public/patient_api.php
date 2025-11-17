@@ -1555,7 +1555,7 @@ elseif ($endpoint === 'billing') {
                             LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id
                             LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
                             LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
-                            WHERE v.patient_id = ?
+                            WHERE v.patient_id = ? AND v.status = 'Complete'
                             GROUP BY v.visit_id, ipl.copay, ipl.coinsurance_rate, v.payment
                             HAVING ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) > 0
                         ) as visit_balances
@@ -1622,7 +1622,7 @@ elseif ($endpoint === 'billing') {
                         LEFT JOIN insurance_payer ip ON ipl.payer_id = ip.payer_id
                         LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
                         LEFT JOIN treatment_catalog tc ON tpv.treatment_id = tc.treatment_id
-                        WHERE v.patient_id = ?
+                        WHERE v.patient_id = ? AND v.status = 'Complete'
                         GROUP BY v.visit_id, v.date, doc_staff.first_name, doc_staff.last_name, ipl.copay, ipl.coinsurance_rate, v.payment, ip.name, ipl.plan_name
                         HAVING (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) >= 0
                         ORDER BY v.date DESC
