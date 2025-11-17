@@ -317,7 +317,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     const timeInMinutes = hour * 60 + minute;
     const startInMinutes = doctor.startTime * 60;
     const endInMinutes = doctor.endTime * 60;
-    return timeInMinutes >= startInMinutes && timeInMinutes < endInMinutes;
+    return timeInMinutes >= startInMinutes && timeInMinutes <= endInMinutes;
   };
 
   /**
