@@ -7,11 +7,9 @@ require_once __DIR__ . '/../../database.php';
 require_once __DIR__ . '/../../session.php';
 require_once __DIR__ . '/staff_helpers.php';
 
-error_log('add-doctor.php: reached after requires');
 header('Content-Type: application/json');
 
 // TEMP DEBUG: prove the file is executing at all
-error_log('add-doctor.php: script started');
 
 // Require ADMIN
 if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
@@ -21,10 +19,8 @@ if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
 }
 
 try {
-    error_log('add-doctor.php: entering try block');
 
     $raw  = file_get_contents('php://input');
-    error_log('add-doctor.php: raw body = ' . $raw);
     $data = json_decode($raw, true);
 
     if (!is_array($data)) {
@@ -72,10 +68,8 @@ try {
 
     $specialtyName = $data['specialty'];
 
-    $sqlDoctor = "
-        INSERT INTO doctor (staff_id, specialty, phone)
-        VALUES (?, ?, ?)
-    ";
+    $sqlDoctor = "INSERT INTO doctor (staff_id, specialty, phone)
+                    VALUES (?, ?, ?)";
     $stmt = $conn->prepare($sqlDoctor);
     if (!$stmt) {
         throw new Exception('Prepare doctor insert failed: ' . $conn->error);
@@ -101,8 +95,6 @@ try {
     if (isset($conn) && $conn instanceof mysqli) {
         $conn->rollback();
     }
-
-    error_log('add-doctor.php error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
 
     http_response_code(500);
     echo json_encode([

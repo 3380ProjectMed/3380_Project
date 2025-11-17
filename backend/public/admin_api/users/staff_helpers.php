@@ -6,13 +6,11 @@ declare(strict_types=1);
 function createStaffAndUser(
     mysqli $conn,
     array $payload,
-    string $staffRole,  // "Doctor", "Nurse", "Receptionist"
-    string $userRole    // "DOCTOR", "NURSE", "RECEPTIONIST"
+    string $staffRole,
+    string $userRole
 ): array {
 
-    // Top-level trace
-    error_log('createStaffAndUser: ENTER role=' . $staffRole . ' userRole=' . $userRole);
-    error_log('createStaffAndUser: payload=' . json_encode($payload));
+
 
     // ---- Upfront payload validation -----------------------------------------
     $required = ['first_name', 'last_name', 'email', 'password', 'ssn', 'gender'];
@@ -22,67 +20,17 @@ function createStaffAndUser(
         }
     }
 
-    // Begin transaction so we don’t leave partial data if something fails
-    $conn->begin_transaction();
-
     try {
-        // --- 1) Insert into staff ------------------------------------------
-        error_log('createStaffAndUser: preparing staff INSERT');
+        // ---------------------------------------------------------------------
+        // 1) Insert into user_account FIRST (source of truth for the ID)
+        // ---------------------------------------------------------------------
 
-        $sqlStaff = "
-            INSERT INTO staff (
-                first_name,
-                last_name,
-                ssn,
-                gender,
-                staff_email,
-                staff_role,
-                license_number
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        ";
-
-        $stmt = $conn->prepare($sqlStaff);
-        if (!$stmt) {
-            error_log('createStaffAndUser: prepare staff failed: ' . $conn->error);
-            throw new Exception('Prepare staff failed: ' . $conn->error);
-        }
-
-        $firstName     = $payload['first_name'];
-        $lastName      = $payload['last_name'];
-        $ssn           = $payload['ssn'];
-        $gender        = (int)$payload['gender'];
-        $staffEmail    = $payload['email'];
-        $staffRoleStr  = $staffRole;
-        $licenseNumber = $payload['license_number'] ?? null;
-
-        if (!$stmt->bind_param(
-            'sssisss',
-            $firstName,
-            $lastName,
-            $ssn,
-            $gender,
-            $staffEmail,
-            $staffRoleStr,
-            $licenseNumber
-        )) {
-            error_log('createStaffAndUser: bind_param staff failed: ' . $stmt->error);
-            throw new Exception('bind_param staff failed: ' . $stmt->error);
-        }
-
-        if (!$stmt->execute()) {
-            error_log('createStaffAndUser: execute staff failed: ' . $stmt->error);
-            throw new Exception('Execute staff failed: ' . $stmt->error);
-        }
-
-        $staffId = (int)$conn->insert_id;
-        error_log('createStaffAndUser: staff INSERT OK, staff_id=' . $staffId);
-        $stmt->close();
-
-        // --- 2) Insert into user_account -----------------------------------
-        error_log('createStaffAndUser: preparing user_account INSERT');
-
-        $username     = strtolower(substr($staffRole, 0, 1)) . $staffId; // d205 / n101 / r501
+        $email        = $payload['email'];
         $passwordHash = password_hash($payload['password'], PASSWORD_BCRYPT);
+        $roleEnum     = $userRole;
+
+        // temporary username, we will update after we know user_id
+        $tmpUsername = uniqid(strtolower(substr($staffRole, 0, 1)));
 
         $sqlUser = "INSERT INTO user_account (
                         username,
@@ -99,32 +47,95 @@ function createStaffAndUser(
             throw new Exception('Prepare user_account failed: ' . $conn->error);
         }
 
-        $email    = $payload['email'];
-        $roleEnum = $userRole;
-
         if (!$stmt->bind_param(
             'ssss',
-            $username,
+            $tmpUsername,
             $email,
             $passwordHash,
             $roleEnum
         )) {
-            error_log('createStaffAndUser: bind_param user_account failed: ' . $stmt->error);
             throw new Exception('bind_param user_account failed: ' . $stmt->error);
         }
 
         if (!$stmt->execute()) {
-            error_log('createStaffAndUser: execute user_account failed: ' . $stmt->error);
             throw new Exception('Execute user_account failed: ' . $stmt->error);
+        }
+
+        $userId = (int)$conn->insert_id;
+        $stmt->close();
+
+        // Now set the "nice" username like d101 / n205 / r501
+        $username = strtolower(substr($staffRole, 0, 1)) . $userId;
+        $stmt = $conn->prepare("UPDATE user_account SET username = ? WHERE user_id = ?");
+        if (!$stmt) {
+            throw new Exception('Prepare username UPDATE failed: ' . $conn->error);
+        }
+        if (!$stmt->bind_param('si', $username, $userId)) {
+            throw new Exception('bind_param username UPDATE failed: ' . $stmt->error);
+        }
+        if (!$stmt->execute()) {
+            throw new Exception('Execute username UPDATE failed: ' . $stmt->error);
         }
         $stmt->close();
 
-        // --- 3) Optional weekly work_schedule from templates ----------------
+        // ---------------------------------------------------------------------
+        // 2) Insert into staff using SAME ID as staff_id
+        // ---------------------------------------------------------------------
+
+        $sqlStaff = "
+            INSERT INTO staff (
+                staff_id,
+                first_name,
+                last_name,
+                ssn,
+                gender,
+                staff_email,
+                staff_role,
+                license_number
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ";
+
+        $stmt = $conn->prepare($sqlStaff);
+        if (!$stmt) {
+            throw new Exception('Prepare staff failed: ' . $conn->error);
+        }
+
+        $firstName     = $payload['first_name'];
+        $lastName      = $payload['last_name'];
+        $ssn           = $payload['ssn'];
+        $gender        = (int)$payload['gender'];
+        $staffEmail    = $payload['email'];
+        $staffRoleStr  = $staffRole;
+        $licenseNumber = $payload['license_number'] ?? null;
+
+        $staffId = $userId;  // shared PK with user_account
+
+        if (!$stmt->bind_param(
+            'isssisss',
+            $staffId,
+            $firstName,
+            $lastName,
+            $ssn,
+            $gender,
+            $staffEmail,
+            $staffRoleStr,
+            $licenseNumber
+        )) {
+            throw new Exception('bind_param staff failed: ' . $stmt->error);
+        }
+
+        if (!$stmt->execute()) {
+            throw new Exception('Execute staff failed: ' . $stmt->error);
+        }
+
+        $stmt->close();
+
+        // ---------------------------------------------------------------------
+        // 3) Optional weekly work_schedule from templates (unchanged logic)
+        // ---------------------------------------------------------------------
         $workScheduleCode = $payload['work_schedule'] ?? null;
-        error_log('createStaffAndUser: work_schedule_code=' . var_export($workScheduleCode, true));
 
         if (!empty($workScheduleCode)) {
-            error_log('createStaffAndUser: entering schedule template block');
 
             $parts = explode('-', $workScheduleCode);
 
@@ -141,7 +152,6 @@ function createStaffAndUser(
                 throw new Exception('Invalid work schedule time range: start_time must be < end_time');
             }
 
-            error_log("createStaffAndUser: schedule lookup office_id=$officeId start=$startTime end=$endTime");
 
             $templateSql = "SELECT day_of_week, start_time, end_time
                             FROM work_schedule_templates
@@ -154,17 +164,14 @@ function createStaffAndUser(
 
             $templateStmt = $conn->prepare($templateSql);
             if (!$templateStmt) {
-                error_log('createStaffAndUser: prepare template query failed: ' . $conn->error);
                 throw new Exception('Prepare template query failed: ' . $conn->error);
             }
 
             if (!$templateStmt->bind_param('iss', $officeId, $startTime, $endTime)) {
-                error_log('createStaffAndUser: bind_param template query failed: ' . $templateStmt->error);
                 throw new Exception('bind_param template query failed: ' . $templateStmt->error);
             }
 
             if (!$templateStmt->execute()) {
-                error_log('createStaffAndUser: execute template query failed: ' . $templateStmt->error);
                 throw new Exception('Execute template query failed: ' . $templateStmt->error);
             }
 
@@ -174,12 +181,10 @@ function createStaffAndUser(
 
             $templateResult = $templateStmt->get_result();
             if ($templateResult === false) {
-                error_log('createStaffAndUser: get_result template query failed: ' . $templateStmt->error);
                 throw new Exception('get_result template query failed: ' . $templateStmt->error);
             }
 
             if ($templateResult->num_rows === 0) {
-                error_log('createStaffAndUser: no templates found for that office/time range');
                 throw new Exception('No schedule templates found for selected office/time range');
             }
 
@@ -193,7 +198,6 @@ function createStaffAndUser(
 
             $insertStmt = $conn->prepare($insertSql);
             if (!$insertStmt) {
-                error_log('createStaffAndUser: prepare schedule insert failed: ' . $conn->error);
                 throw new Exception('Prepare schedule insert failed: ' . $conn->error);
             }
 
@@ -210,7 +214,6 @@ function createStaffAndUser(
                 $tplEnd,
                 $dayOfWeek
             )) {
-                error_log('createStaffAndUser: bind_param schedule insert failed: ' . $insertStmt->error);
                 throw new Exception('bind_param schedule insert failed: ' . $insertStmt->error);
             }
 
@@ -219,10 +222,7 @@ function createStaffAndUser(
                 $tplStart  = $tpl['start_time'];
                 $tplEnd    = $tpl['end_time'];
 
-                error_log("createStaffAndUser: inserting schedule row staff_id=$staffId day=$dayOfWeek $tplStart-$tplEnd");
-
                 if (!$insertStmt->execute()) {
-                    error_log('createStaffAndUser: execute schedule insert failed: ' . $insertStmt->error);
                     throw new Exception('Execute schedule insert failed: ' . $insertStmt->error);
                 }
             }
@@ -230,23 +230,19 @@ function createStaffAndUser(
             $templateResult->free();
             $insertStmt->close();
             $templateStmt->close();
-            error_log('createStaffAndUser: schedule inserts complete');
         } else {
             error_log('createStaffAndUser: no work_schedule_code, skipping schedule block');
         }
 
-        error_log('createStaffAndUser: EXIT OK staff_id=' . $staffId . ' username=' . $username);
 
         // All good — commit transaction
-        $conn->commit();
 
         return [
-            'staff_id' => $staffId,
+            'staff_id' => $staffId,   // == user_id
             'username' => $username,
         ];
     } catch (Throwable $e) {
         // Roll back any partial work
-        $conn->rollback();
         error_log('createStaffAndUser: ERROR ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         throw $e; // bubble up to add-doctor/add-nurse/add-receptionist
     }
