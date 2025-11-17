@@ -1,9 +1,9 @@
 /* Appointments styles - Modern, polished design */
-.appointments-section { 
+.patient-appointments-section { 
   margin-bottom: 3rem; 
 }
 
-.appointments-section h2 { 
+.patient-appointments-section h2 { 
   font-size: 1.75rem; 
   font-weight: 700; 
   color: #03045e; 
@@ -327,14 +327,14 @@
   font-size: 1rem;
 }
 
-.specialty {
+.patient-specialty {
   font-size: 0.875rem;
   color: #6b7280;
   font-style: italic;
   margin-top: 0.25rem;
 }
 
-.address {
+.patient-address {
   font-size: 0.875rem;
   color: #6b7280;
   margin-top: 0.25rem;
