@@ -76,7 +76,9 @@ export default function PatientPortal({ onLogout }) {
         switch (currentPage) {
           case 'dashboard': 
             await loadDashboard(); 
-            await loadReferrals(); 
+            await loadReferrals();
+            // Load profile data to get display name
+            await loadProfile();
             break;
           case 'profile': 
             await loadProfile(); 

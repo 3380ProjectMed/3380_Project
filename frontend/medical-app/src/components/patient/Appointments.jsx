@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Calendar, Clock, MapPin, ChevronRight, X, User, FileText, Thermometer, Activity, Info } from 'lucide-react';
+import { Plus, Calendar, Clock, MapPin, ChevronRight, X, User, FileText, Thermometer, Activity } from 'lucide-react';
 import './Appointments.css';
 import api from '../../patientapi.js';
 
