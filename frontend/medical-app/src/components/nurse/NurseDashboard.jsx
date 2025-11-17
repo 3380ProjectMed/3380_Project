@@ -231,7 +231,7 @@ export default function NurseDashboard({ setCurrentPage }) {
                     }}
                   >
                     <div className="col-time">{appointment.time}</div>
-                    <div className="col-apptid">{appointment.id}</div>
+                    <div className="col-apptid">{appointment.appointmentId}</div>
                     <div className="col-patient">
                       <span className="patient-link">{appointment.patientName}</span>
                     </div>
