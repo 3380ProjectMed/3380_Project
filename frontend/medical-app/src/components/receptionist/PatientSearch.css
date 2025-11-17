@@ -8,11 +8,11 @@
 /* ===== PAGE HEADER ===== */
 .page-header {
   margin-bottom: 2rem;
-  background: white;
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  color: white;
   padding: 2rem 2.5rem;
   border-radius: 1rem;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  border: 2px solid #e5e7eb;
+  box-shadow: 0 8px 16px rgba(0, 119, 182, 0.2);
 }
 
 .header-content {
@@ -25,16 +25,17 @@
 .page-title {
   font-size: 2.5rem;
   font-weight: 800;
-  color: #03045e;
+  color: white;
   margin: 0 0 0.5rem 0;
   line-height: 1.2;
 }
 
 .page-subtitle {
   font-size: 1.1rem;
-  color: #6b7280;
+  color: #caf0f8;
   margin: 0;
   font-weight: 500;
+  opacity: 0.95;
 }
 
 /* Create Patient Button */
