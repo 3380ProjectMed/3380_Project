@@ -113,14 +113,19 @@ function Report() {
       end_date: endDate,
       group_by: groupBy
     });
-    
-    if (selectedOffice !== 'all') params.append('office_id', selectedOffice);
+
+    // Only apply office filter for Financial & New Patients reports
+    if (activeReport !== 'office' && selectedOffice !== 'all') {
+      params.append('office_id', selectedOffice);
+    }
+
     if (selectedDoctor !== 'all') params.append('doctor_id', selectedDoctor);
     if (selectedInsurance !== 'all') params.append('insurance_id', selectedInsurance);
     if (statusFilter !== 'all') params.append('status', statusFilter);
-    
+
     return params.toString();
   };
+
 
   const fetchFinancialReport = async () => {
     try {
@@ -186,6 +191,7 @@ function Report() {
   };
 
   const handleSelectReport = (reportType) => {
+    resetFilters();
     setActiveReport(reportType);
     setShowFilters(false);
     setSortConfig({ key: null, direction: 'desc' });
@@ -440,17 +446,22 @@ function Report() {
               </select>
             </div>
 
-            <div className="filter-group">
-              <label>Office</label>
-              <select value={selectedOffice} onChange={(e) => setSelectedOffice(e.target.value)}>
-                <option value="all">All Offices</option>
-                {offices.map(office => (
-                  <option key={office.office_id} value={office.office_id}>
-                    {office.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {activeReport !== 'office' && (
+              <div className="filter-group">
+                <label>Office</label>
+                <select
+                  value={selectedOffice}
+                  onChange={(e) => setSelectedOffice(e.target.value)}
+                >
+                  <option value="all">All Offices</option>
+                  {offices.map(office => (
+                    <option key={office.office_id} value={office.office_id}>
+                      {office.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {(activeReport === 'financial' || activeReport === 'newPatients') && (
               <div className="filter-group">
@@ -1457,17 +1468,27 @@ const OfficeUtilizationPie = ({ offices }) => {
 const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
   const [hoveredBar, setHoveredBar] = React.useState(null);
   const [clickedBar, setClickedBar] = React.useState(null);
-  
+
   if (!data || data.length === 0) return null;
 
-  const revenues = data.map((d) => {
+  // Colors used everywhere (bars, legend, tooltip dots)
+  const COLORS = {
+    gross: '#1d4ed8',       // blue
+    collected: '#10b981',   // green
+    outstanding: '#f97316', // orange
+  };
+
+  // Reverse so earliest period is on the LEFT
+  const sortedData = [...data].reverse();
+
+  const revenues = sortedData.map((d) => {
     const parsed = parseFloat(d.gross_revenue);
     return isNaN(parsed) ? 0 : parsed;
   });
-  
-  const maxRevenue = Math.max(...revenues);
+
+  const maxRevenue = Math.max(...revenues, 0);
   const yAxisMax = Math.max(Math.ceil(maxRevenue * 1.1), 100);
-  
+
   const yAxisSteps = 5;
   const yAxisLabels = [];
   for (let i = yAxisSteps; i >= 0; i--) {
@@ -1493,7 +1514,7 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
   const handleOutsideClick = () => {
     setClickedBar(null);
     if (onBarSelect) {
-      onBarSelect(null);  
+      onBarSelect(null);
     }
   };
 
@@ -1509,7 +1530,7 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
       setClickedBar(null);
     }
   }, [selectedPeriod]);
-  
+
   return (
     <div className="simple-chart">
       <div className="chart-wrapper">
@@ -1520,27 +1541,39 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
             </div>
           ))}
         </div>
-        
+
         <div className="chart-area">
           <div className="chart-gridlines">
             {yAxisLabels.map((_, idx) => (
               <div key={idx} className="gridline" />
             ))}
           </div>
-          
+
           <div className="chart-bars">
-            {data.map((item, idx) => {
+            {sortedData.map((item, idx) => {
               const grossRevenue = parseFloat(item.gross_revenue) || 0;
               const collected = parseFloat(item.collected_payments) || 0;
               const outstanding = parseFloat(item.outstanding_balance) || 0;
-              
-              const height = yAxisMax > 0 ? (grossRevenue / yAxisMax) * 100 : 0;
-              const collectedHeight = yAxisMax > 0 ? (collected / yAxisMax) * 100 : 0;
-              
-              const safeHeight = isNaN(height) || height < 0 ? 0 : Math.min(height, 100);
-              const safeCollectedPct = (grossRevenue > 0 && collectedHeight > 0) 
-                ? Math.min((collectedHeight / height) * 100, 100) 
-                : 0;  
+
+              const barHeight = yAxisMax > 0 ? (grossRevenue / yAxisMax) * 100 : 0;
+              const safeHeight =
+                isNaN(barHeight) || barHeight < 0 ? 0 : Math.min(barHeight, 100);
+
+              // Percent of *gross* that is collected / outstanding
+              let collectedPct = 0;
+              let outstandingPct = 0;
+              if (grossRevenue > 0) {
+                collectedPct = (collected / grossRevenue) * 100;
+                outstandingPct = (outstanding / grossRevenue) * 100;
+
+                // Clamp so segments never exceed 100% due to rounding
+                const sum = collectedPct + outstandingPct;
+                if (sum > 100) {
+                  const scale = 100 / sum;
+                  collectedPct *= scale;
+                  outstandingPct *= scale;
+                }
+              }
 
               const isActive =
                 hoveredBar === idx ||
@@ -1563,53 +1596,117 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
                       className={`chart-bar chart-bar-gross ${
                         isActive ? 'hovered' : ''
                       }`}
-                      style={{ height: `${safeHeight}%` }}
+                      style={{
+                        height: `${safeHeight}%`,
+                        backgroundColor: COLORS.gross,
+                        display: 'flex',
+                        flexDirection: 'column-reverse',
+                      }}
                     >
                       {safeHeight > 0 && (
-                        <div
-                          className="chart-bar-collected"
-                          style={{ height: `${safeCollectedPct}%` }}
-                        />
+                        <>
+                          {/* Collected segment (bottom) */}
+                          <div
+                            className="chart-bar-segment chart-bar-collected"
+                            style={{
+                              height: `${collectedPct}%`,
+                              backgroundColor: COLORS.collected,
+                            }}
+                          />
+                          {/* Outstanding segment (stacked above) */}
+                          <div
+                            className="chart-bar-segment chart-bar-outstanding"
+                            style={{
+                              height: `${outstandingPct}%`,
+                              backgroundColor: COLORS.outstanding,
+                            }}
+                          />
+                        </>
                       )}
                     </div>
-                  
+
                     {(hoveredBar === idx || clickedBar === idx) && (
-                      <div className={`chart-tooltip ${clickedBar === idx ? 'clicked' : ''}`}>
+                      <div
+                        className={`chart-tooltip ${
+                          clickedBar === idx ? 'clicked' : ''
+                        }`}
+                      >
                         <div className="tooltip-header">{item.period_label}</div>
+
                         <div className="tooltip-row">
                           <span className="tooltip-label">
-                            <span className="tooltip-dot gross" />
+                            <span
+                              className="tooltip-dot"
+                              style={{ backgroundColor: COLORS.gross }}
+                            />
                             Gross Revenue:
                           </span>
-                          <span className="tooltip-value">${grossRevenue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                          <span className="tooltip-value">
+                            $
+                            {grossRevenue.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
                         </div>
+
                         <div className="tooltip-row">
                           <span className="tooltip-label">
-                            <span className="tooltip-dot collected" />
+                            <span
+                              className="tooltip-dot"
+                              style={{ backgroundColor: COLORS.collected }}
+                            />
                             Collected:
                           </span>
-                          <span className="tooltip-value">${collected.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                          <span className="tooltip-value">
+                            $
+                            {collected.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
                         </div>
+
                         <div className="tooltip-row">
                           <span className="tooltip-label">
-                            <span className="tooltip-dot outstanding" />
+                            <span
+                              className="tooltip-dot"
+                              style={{ backgroundColor: COLORS.outstanding }}
+                            />
                             Outstanding:
                           </span>
-                          <span className="tooltip-value">${outstanding.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                          <span className="tooltip-value">
+                            $
+                            {outstanding.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
                         </div>
+
                         <div className="tooltip-divider" />
+
                         <div className="tooltip-row small">
                           <span className="tooltip-label">Visits:</span>
-                          <span className="tooltip-value">{item.total_visits}</span>
+                          <span className="tooltip-value">
+                            {item.total_visits}
+                          </span>
                         </div>
                         <div className="tooltip-row small">
                           <span className="tooltip-label">Patients:</span>
-                          <span className="tooltip-value">{item.unique_patients}</span>
+                          <span className="tooltip-value">
+                            {item.unique_patients}
+                          </span>
                         </div>
                         <div className="tooltip-row small">
-                          <span className="tooltip-label">Collection Rate:</span>
+                          <span className="tooltip-label">
+                            Collection Rate:
+                          </span>
                           <span className="tooltip-value">
-                            {grossRevenue > 0 ? ((collected / grossRevenue) * 100).toFixed(1) : '0.0'}%
+                            {grossRevenue > 0
+                              ? ((collected / grossRevenue) * 100).toFixed(1)
+                              : '0.0'}
+                            %
                           </span>
                         </div>
                       </div>
@@ -1622,15 +1719,28 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
           </div>
         </div>
       </div>
-      
+
       <div className="chart-legend">
         <div className="legend-item">
-          <span className="legend-color legend-gross" />
+          <span
+            className="legend-color legend-gross"
+            style={{ backgroundColor: COLORS.gross }}
+          />
           <span>Gross Revenue</span>
         </div>
         <div className="legend-item">
-          <span className="legend-color legend-collected" />
+          <span
+            className="legend-color legend-collected"
+            style={{ backgroundColor: COLORS.collected }}
+          />
           <span>Collected</span>
+        </div>
+        <div className="legend-item">
+          <span
+            className="legend-color legend-outstanding"
+            style={{ backgroundColor: COLORS.outstanding }}
+          />
+          <span>Outstanding</span>
         </div>
         <div className="legend-hint">
           <AlertCircle size={14} />
