@@ -73,6 +73,13 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
         setReasonForVisit(editingAppointment.reason);
       }
       
+      // Set booking method/channel
+      if (editingAppointment.method) {
+        // Map database values (Walk-in, Phone, Online) to lowercase for state
+        const methodLower = editingAppointment.method.toLowerCase();
+        setBookingChannel(methodLower);
+      }
+      
       // Start at step 2 since patient is already selected
       setCurrentStep(2);
     }
@@ -343,7 +350,8 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
           Appointment_id: appointmentId,
           Doctor_id: selectedDoctor.Doctor_id,
           Appointment_date: appointmentDateTime,
-          Reason_for_visit: reasonForVisit
+          Reason_for_visit: reasonForVisit,
+          booking_channel: bookingChannel
         };
 
         const response = await fetch(`/receptionist_api/appointments/update.php`, {

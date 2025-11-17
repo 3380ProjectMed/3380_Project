@@ -3,7 +3,7 @@
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-require_once '/home/site/wwwroot/session.php';
+require_once '/home/site/wwwroot/api/session.php';
 header('Content-Type: application/json');
 
 // Azure App Service HTTPS detection
@@ -34,9 +34,35 @@ function requireAuth($allowed_roles = ['PATIENT'])
         exit();
     }
 
+    // Check if patient_id exists and belongs to current session email
+    if (isset($_SESSION['patient_id'])) {
+        $session_patient_id = $_SESSION['patient_id'];
+        $user_email = $_SESSION['email'];
+        
+        try {
+            $mysqli = getDBConnection();
+            $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE patient_id = ? AND email = ? LIMIT 1");
+            $stmt->bind_param('is', $session_patient_id, $user_email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $patient = $result->fetch_assoc();
+            $stmt->close();
+
+            if (!$patient) {
+                error_log("Patient API: Cached patient_id " . $session_patient_id . " does not belong to email " . $user_email . " - clearing session");
+                unset($_SESSION['patient_id']);
+            } else {
+                error_log("Patient API: Validated cached patient_id = " . $session_patient_id);
+            }
+        } catch (Exception $e) {
+            error_log("Patient auth validation error - " . $e->getMessage());
+            unset($_SESSION['patient_id']);
+        }
+    }
+
     if (!isset($_SESSION['patient_id'])) {
         $user_email = $_SESSION['email'];
-        error_log("Patient API: Session email = " . $user_email);
+        error_log("Patient API: Looking up patient_id for email = " . $user_email);
 
         try {
             $mysqli = getDBConnection();
@@ -51,9 +77,9 @@ function requireAuth($allowed_roles = ['PATIENT'])
                 $_SESSION['patient_id'] = $patient['patient_id'];
                 $_SESSION['role'] = 'PATIENT';
                 $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
-                error_log("Patient auth: Found patient_id = " . $patient['patient_id']);
+                error_log("Patient auth: Set patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
             } else {
-                error_log("Patient auth: No patient found for email");
+                error_log("Patient auth: No patient found for email = " . $user_email);
                 sendResponse(false, [], 'No patient record found for logged-in user', 403);
                 exit();
             }
@@ -111,23 +137,20 @@ try {
 requireAuth(['PATIENT']);
 
 $patient_id = $_SESSION['patient_id'] ?? null;
+$session_email = $_SESSION['email'] ?? null;
 
+error_log("=== PATIENT ID VALIDATION ===");
+error_log("Session ID: " . session_id());
+error_log("Session email: " . ($session_email ?? 'NULL'));
+error_log("Session patient_id: " . ($patient_id ?? 'NULL'));
+error_log("Full session: " . json_encode($_SESSION));
+error_log("============================");
+
+// Patient ID should now be properly set by requireAuth function
 if (!$patient_id) {
     $user_email = $_SESSION['email'] ?? null;
-    if ($user_email) {
-        $stmt = $mysqli->prepare("SELECT patient_id FROM patient WHERE email = ? LIMIT 1");
-        if ($stmt) {
-            $stmt->bind_param('s', $user_email);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $row = $res ? $res->fetch_assoc() : null;
-            if ($row && isset($row['patient_id'])) {
-                $patient_id = (int) $row['patient_id'];
-                $_SESSION['patient_id'] = $patient_id;
-            }
-            $stmt->close();
-        }
-    }
+    error_log("FALLBACK: patient_id still null after requireAuth for email: " . ($user_email ?? 'NULL'));
+    sendResponse(false, [], 'Patient authentication failed', 403);
 }
 
 if (!$patient_id) {
@@ -185,7 +208,7 @@ if ($endpoint === 'dashboard') {
                 LEFT JOIN doctor d ON p.primary_doctor = d.doctor_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
-                LEFT JOIN work_schedule ws ON doc_s.staff_id = ws.staff_id
+                LEFT JOIN work_schedule ws ON doc_staff.staff_id = ws.staff_id
                 LEFT JOIN office o ON ws.office_id = o.office_id
                 WHERE p.patient_id = ?
                 GROUP BY d.doctor_id, doc_staff.staff_id, s.specialty_id
@@ -194,6 +217,11 @@ if ($endpoint === 'dashboard') {
             $stmt->execute();
             $result = $stmt->get_result();
             $pcp = $result->fetch_assoc();
+            
+            // Convert empty PCP result to null for proper frontend handling
+            if (empty($pcp) || empty($pcp['name'])) {
+                $pcp = null;
+            }
 
             // Get recent visits
             $stmt = $mysqli->prepare("
@@ -273,6 +301,7 @@ if ($endpoint === 'dashboard') {
             ]);
         } catch (Exception $e) {
             error_log("Dashboard error: " . $e->getMessage());
+            error_log("Dashboard error trace: " . $e->getTraceAsString());
             sendResponse(false, [], 'Failed to load dashboard', 500);
         }
     }
@@ -567,20 +596,20 @@ elseif ($endpoint === 'appointments') {
             }
 
             // Insert appointment - trigger will validate date/time constraints and PCP/referral requirements
-            $stmt = $mysqli->prepare("
-                INSERT INTO appointment (
+            $stmt = $mysqli->prepare("INSERT INTO appointment (
                     Appointment_id, Patient_id, Doctor_id, Office_id, 
-                    Appointment_date, Date_created, Reason_for_visit
-                ) VALUES (?, ?, ?, ?, ?, NOW(), ?)
-            ");
+                    Appointment_date, Date_created, Reason_for_visit, Status, method
+                ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?)");
             $stmt->bind_param(
-                'iiiiss',
+                'iiiissss',
                 $next_id,
                 $patient_id,
                 $input['doctor_id'],
                 $input['office_id'],
                 $appointmentdateTime,
-                $input['reason']
+                $input['reason'],
+                'Scheduled',
+                'Online'
             );
 
             $exec_result = $stmt->execute();
@@ -1236,6 +1265,15 @@ elseif ($endpoint === 'insurance') {
 
             if ($stmt->execute()) {
                 if ($stmt->affected_rows > 0) {
+                    // Ensure patient table is linked to this insurance
+                    $update_patient_stmt = $mysqli->prepare("UPDATE patient SET insurance_id = ? WHERE patient_id = ?");
+                    if ($update_patient_stmt) {
+                        $update_patient_stmt->bind_param('ii', $insurance_id, $patient_id);
+                        $update_patient_stmt->execute();
+                        $update_patient_stmt->close();
+                        error_log("Insurance PUT: Ensured patient " . $patient_id . " is linked to insurance " . $insurance_id);
+                    }
+                    
                     $mysqli->commit();
                     sendResponse(true, ['id' => $insurance_id], 'Insurance updated successfully');
                 } else {
@@ -1252,6 +1290,170 @@ elseif ($endpoint === 'insurance') {
             error_log("Insurance update error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to update insurance', 500);
         }
+    } elseif ($method === 'POST') {
+        // Add new insurance policy
+        error_log("Insurance POST: Starting add insurance process for patient_id: " . $patient_id);
+        
+        $raw_input = file_get_contents('php://input');
+        error_log("Insurance POST: Raw input received: " . $raw_input);
+        
+        if (empty($raw_input)) {
+            error_log("Insurance POST: No data provided");
+            sendResponse(false, [], 'No data provided', 400);
+            return;
+        }
+
+        $data = json_decode($raw_input, true);
+        error_log("Insurance POST: Decoded data: " . json_encode($data));
+        
+        if (!$data) {
+            error_log("Insurance POST: Invalid JSON data");
+            sendResponse(false, [], 'Invalid JSON data', 400);
+            return;
+        }
+
+        try {
+            $mysqli->begin_transaction();
+
+            // Check if patient already has insurance (enforce single policy restriction)
+            $check_stmt = $mysqli->prepare("SELECT COUNT(*) as count FROM patient_insurance WHERE patient_id = ?");
+            $check_stmt->bind_param('i', $patient_id);
+            $check_stmt->execute();
+            $check_result = $check_stmt->get_result();
+            $existing_count = $check_result->fetch_assoc()['count'];
+            $check_stmt->close();
+
+            if ($existing_count > 0) {
+                $mysqli->rollback();
+                sendResponse(false, [], 'Patient already has an insurance policy. Only one policy is allowed.', 400);
+                return;
+            }
+
+            $plan_id = null;
+
+            // If payer_id and plan details are provided, find or create insurance plan
+            if (isset($data['payer_id']) && isset($data['plan_name'])) {
+                // Check if plan already exists
+                $plan_stmt = $mysqli->prepare("
+                    SELECT plan_id FROM insurance_plan 
+                    WHERE payer_id = ? AND plan_name = ? AND plan_type = ?
+                ");
+                $plan_stmt->bind_param('iss', $data['payer_id'], $data['plan_name'], $data['plan_type']);
+                $plan_stmt->execute();
+                $plan_result = $plan_stmt->get_result();
+                $existing_plan = $plan_result->fetch_assoc();
+                $plan_stmt->close();
+
+                if ($existing_plan) {
+                    $plan_id = $existing_plan['plan_id'];
+                } else {
+                    // Create new plan
+                    $new_plan_stmt = $mysqli->prepare("
+                        INSERT INTO insurance_plan (payer_id, plan_name, plan_type) 
+                        VALUES (?, ?, ?)
+                    ");
+                    $new_plan_stmt->bind_param('iss', $data['payer_id'], $data['plan_name'], $data['plan_type']);
+                    
+                    if (!$new_plan_stmt->execute()) {
+                        $mysqli->rollback();
+                        sendResponse(false, [], 'Failed to create insurance plan: ' . $new_plan_stmt->error, 500);
+                        return;
+                    }
+                    
+                    $plan_id = $mysqli->insert_id;
+                    $new_plan_stmt->close();
+                }
+            } elseif (isset($data['plan_id'])) {
+                $plan_id = $data['plan_id'];
+            }
+
+            // Insert patient insurance record
+            $insert_fields = ['patient_id'];
+            $insert_values = [$patient_id];
+            $insert_types = 'i';
+
+            if ($plan_id) {
+                $insert_fields[] = 'plan_id';
+                $insert_values[] = $plan_id;
+                $insert_types .= 'i';
+            }
+
+            if (isset($data['member_id']) && !empty($data['member_id'])) {
+                $insert_fields[] = 'member_id';
+                $insert_values[] = $data['member_id'];
+                $insert_types .= 's';
+            }
+
+            if (isset($data['group_id']) && !empty($data['group_id'])) {
+                $insert_fields[] = 'group_id';
+                $insert_values[] = $data['group_id'];
+                $insert_types .= 's';
+            }
+
+            if (isset($data['effective_date']) && !empty($data['effective_date'])) {
+                $insert_fields[] = 'effective_date';
+                $insert_values[] = $data['effective_date'];
+                $insert_types .= 's';
+            }
+
+            if (isset($data['expiration_date']) && !empty($data['expiration_date'])) {
+                $insert_fields[] = 'expiration_date';
+                $insert_values[] = $data['expiration_date'];
+                $insert_types .= 's';
+            }
+
+            // Set as primary insurance (since we only allow one)
+            $insert_fields[] = 'is_primary';
+            $insert_values[] = 1;
+            $insert_types .= 'i';
+
+            $sql = "INSERT INTO patient_insurance (" . implode(', ', $insert_fields) . ") VALUES (" . str_repeat('?,', count($insert_fields) - 1) . "?)";
+            
+            $stmt = $mysqli->prepare($sql);
+            if (!$stmt) {
+                $mysqli->rollback();
+                sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
+                return;
+            }
+
+            $stmt->bind_param($insert_types, ...$insert_values);
+
+            if ($stmt->execute()) {
+                $new_insurance_id = $mysqli->insert_id;
+                
+                // Update patient table to link to the new insurance
+                $update_patient_stmt = $mysqli->prepare("UPDATE patient SET insurance_id = ? WHERE patient_id = ?");
+                if (!$update_patient_stmt) {
+                    $mysqli->rollback();
+                    error_log("Insurance POST: Failed to prepare patient update: " . $mysqli->error);
+                    sendResponse(false, [], 'Failed to link insurance to patient: ' . $mysqli->error, 500);
+                    return;
+                }
+                
+                $update_patient_stmt->bind_param('ii', $new_insurance_id, $patient_id);
+                if (!$update_patient_stmt->execute()) {
+                    $mysqli->rollback();
+                    error_log("Insurance POST: Failed to update patient table: " . $update_patient_stmt->error);
+                    sendResponse(false, [], 'Failed to link insurance to patient: ' . $update_patient_stmt->error, 500);
+                    return;
+                }
+                
+                $update_patient_stmt->close();
+                $mysqli->commit();
+                error_log("Insurance POST: Successfully added insurance ID " . $new_insurance_id . " and linked to patient " . $patient_id);
+                sendResponse(true, ['id' => $new_insurance_id], 'Insurance added successfully');
+            } else {
+                $mysqli->rollback();
+                error_log("Insurance POST: Failed to execute insert: " . $stmt->error);
+                sendResponse(false, [], 'Failed to add insurance: ' . $stmt->error, 500);
+            }
+
+            $stmt->close();
+        } catch (Exception $e) {
+            error_log("Insurance add error: " . $e->getMessage());
+            $mysqli->rollback();
+            sendResponse(false, [], 'Failed to add insurance', 500);
+        }
     }
 }
 
@@ -1266,12 +1468,21 @@ elseif ($endpoint === 'billing') {
                     error_log("Billing balance query for patient_id: " . $patient_id);
                     $stmt = $mysqli->prepare("
                         SELECT 
-                            COALESCE(SUM(COALESCE(copay_amount_due, 0) - COALESCE(payment, 0)), 0) as outstanding_balance,
+                            COALESCE(SUM(visit_balance), 0) as outstanding_balance,
                             COUNT(*) as visit_count
-                        FROM patient_visit
-                        WHERE patient_id = ?
-                        AND COALESCE(copay_amount_due, 0) > 0
-                        AND (COALESCE(copay_amount_due, 0) - COALESCE(payment, 0)) > 0
+                        FROM (
+                            SELECT 
+                                ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) as visit_balance
+                            FROM patient_visit v
+                            LEFT JOIN patient p ON v.patient_id = p.patient_id
+                            LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id
+                            LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
+                            LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
+                            WHERE v.patient_id = ?
+                            AND tpv.visit_id IS NOT NULL
+                            GROUP BY v.visit_id, ipl.copay, ipl.coinsurance_rate, v.payment
+                            HAVING ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) > 0
+                        ) as visit_balances
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
@@ -1288,19 +1499,54 @@ elseif ($endpoint === 'billing') {
                             v.visit_id as id,
                             DATE(v.date) as date,
                             CONCAT('Appointment with Dr. ', doc_staff.last_name, ' on ', DATE_FORMAT(v.date, '%M %d, %Y')) as service,
-                            COALESCE(v.copay_amount_due, 0) as amount,
-                            (COALESCE(v.copay_amount_due, 0) - COALESCE(v.payment, 0)) as balance,
+                            
+                            -- Cost breakdown components
+                            COALESCE(ipl.copay, 0) as copay_amount,
+                            SUM(COALESCE(tpv.total_cost, 0)) as treatment_cost,
+                            COALESCE(ipl.coinsurance_rate, 0) as coinsurance_rate,
+                            SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100) as coinsurance_amount,
+                            
+                            -- Treatment details breakdown (JSON format)
+                            JSON_ARRAYAGG(
+                                JSON_OBJECT(
+                                    'treatment_name', tc.name,
+                                    'cpt_code', tc.cpt_code,
+                                    'quantity', tpv.quantity,
+                                    'cost_each', tpv.cost_each,
+                                    'total_cost', tpv.total_cost,
+                                    'notes', tpv.notes
+                                )
+                            ) as treatment_details,
+                            
+                            -- Total amount due and balance calculation
+                            (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) as amount,
+                            ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) as balance,
+                            
+                            -- Payment status
                             CASE 
-                                WHEN (COALESCE(v.copay_amount_due, 0) - COALESCE(v.payment, 0)) <= 0 THEN 'Paid'
+                                WHEN ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) <= 0 THEN 'Paid'
                                 WHEN v.payment > 0 THEN 'Partial payment'
                                 ELSE 'Unpaid'
                             END as status,
-                            v.payment
+                            COALESCE(v.payment, 0) as payment_made,
+                            
+                            -- Insurance info for reference
+                            ip.name as insurance_name,
+                            ipl.plan_name as insurance_plan
+                            
                         FROM patient_visit v
                         LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
                         LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
+                        LEFT JOIN patient p ON v.patient_id = p.patient_id
+                        LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id
+                        LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
+                        LEFT JOIN insurance_payer ip ON ipl.payer_id = ip.payer_id
+                        LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
+                        LEFT JOIN treatment_catalog tc ON tpv.treatment_id = tc.treatment_id
                         WHERE v.patient_id = ?
-                        AND COALESCE(v.copay_amount_due, 0) > 0
+                        AND tpv.visit_id IS NOT NULL
+                        GROUP BY v.visit_id, v.date, doc_staff.first_name, doc_staff.last_name, ipl.copay, ipl.coinsurance_rate, v.payment, ip.name, ipl.plan_name
+                        HAVING (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) > 0
                         ORDER BY v.date DESC
                         LIMIT 50
                     ");
@@ -1308,6 +1554,16 @@ elseif ($endpoint === 'billing') {
                     $stmt->execute();
                     $result = $stmt->get_result();
                     $statements = $result->fetch_all(MYSQLI_ASSOC);
+                    
+                    // Parse treatment_details JSON for each statement
+                    foreach ($statements as &$statement) {
+                        if (isset($statement['treatment_details']) && $statement['treatment_details']) {
+                            $statement['treatment_details'] = json_decode($statement['treatment_details'], true);
+                        } else {
+                            $statement['treatment_details'] = [];
+                        }
+                    }
+                    
                     error_log("Billing statements result count: " . count($statements));
                     sendResponse(true, $statements);
                     break;

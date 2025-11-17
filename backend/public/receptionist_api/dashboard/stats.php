@@ -125,34 +125,29 @@ try {
         $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
         $dbStatus = $apt['Status'] ?? 'Scheduled';
 
-        // Determine display status based on time and database status
+        // Use database status directly - no automatic time-based changes
         $displayStatus = $dbStatus;
-        $waitingTime = 0;
 
         if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
             // Keep the database status
             $displayStatus = $dbStatus;
-        } else {
-            // Calculate time difference in minutes
-            $timeDiff = ($currentDateTime->getTimestamp() - $appointmentDateTime->getTimestamp()) / 60;
-
-            if ($timeDiff < -15) {
-                // Appointment is more than 15 minutes in the future
-                $displayStatus = 'Upcoming';
-                $stats['upcoming']++;
-            } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
-                // Appointment time is now (within 15 min window)
-                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
-            } elseif ($timeDiff > 15) {
-                // Appointment time has passed by more than 15 minutes
-                if ($dbStatus === 'Scheduled') {
-                    $displayStatus = 'Waiting';
-                    $waitingTime = round($timeDiff);
-                    $stats['waiting']++;
-                } elseif ($dbStatus === 'In Progress') {
-                    $displayStatus = 'In Progress';
-                }
+        }
+        // Check if patient has actually checked in (using status, not just timestamp)
+        elseif ($dbStatus === 'Checked-in') {
+            if ($dbStatus === 'In Progress') {
+                $displayStatus = 'In Progress';
+            } else {
+                $displayStatus = 'Checked In';
             }
+        }
+        else {
+            // Use database status as-is
+            $displayStatus = $dbStatus;
+        }
+
+        // Count upcoming
+        if ($displayStatus === 'Upcoming') {
+            $stats['upcoming']++;
         }
 
         // Count completed
@@ -165,14 +160,18 @@ try {
             $stats['cancelled']++;
         }
 
-        // Count no-show
+        // Count no show
         if ($displayStatus === 'No-Show') {
             $stats['no_show']++;
         }
 
-        // Count checked in (based on patient_visit records)
-        if ($apt['check_in_time'] && !$apt['completion_time'] && $displayStatus !== 'In Progress') {
-            $displayStatus = 'Checked In';
+        // Count waiting
+        if ($displayStatus === 'Waiting') {
+            $stats['waiting']++;
+        }
+
+        // Count checked in (using status field, not timestamp)
+        if ($displayStatus === 'Checked In') {
             $stats['checked_in']++;
         }
 

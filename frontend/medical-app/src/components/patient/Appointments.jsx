@@ -38,33 +38,70 @@ export default function Appointments(props) {
       </button>
 
       {loading ? (
-        <div className="loading-spinner">Loading...</div>
+        <div className="appointments-loading">
+          <div className="appointments-spinner"></div>
+          <p>Loading appointments...</p>
+        </div>
       ) : (
         <>
-          <div className="appointments-section">
+          {/* UPCOMING APPOINTMENTS SECTION */}
+          <div className="patient-appointments-section">
             <h2>Upcoming Appointments</h2>
             {upcomingAppointments.length === 0 ? (
-              <p className="text-gray">No upcoming appointments</p>
+              <div className="appointments-empty-state">
+                <Calendar style={{ width: '4rem', height: '4rem', color: 'var(--forth-color)' }} />
+                <h3>No Upcoming Appointments</h3>
+                <p>You don't have any scheduled appointments at this time.</p>
+              </div>
             ) : (
               <div className="appointments-list">
                 {upcomingAppointments.map(apt => (
                   <div key={apt.appointment_id} className="appointment-card">
-                    <div className="appointment-header">
-                      <div>
-                        <h3>{apt.doctor_name}</h3>
-                        <p>{apt.specialty_name}</p>
+                    {/* LEFT SECTION - Doctor Info */}
+                    <div className="appointment-doctor-info">
+                      <div className="doctor-avatar">
+                        {apt.doctor_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'DR'}
                       </div>
-                      <span className={`status-badge ${apt.status?.toLowerCase?.() ?? 'scheduled'}`}>
+                      <h3>{apt.doctor_name}</h3>
+                      {apt.specialty_name && (
+                        <span className="specialty-label">{apt.specialty_name}</span>
+                      )}
+                    </div>
+
+                    {/* MIDDLE SECTION - Appointment Details */}
+                    <div className="appointment-details">
+                      <p>
+                        <Calendar className="appointments-small-icon" />
+                        {new Date(apt.appointment_date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <p>
+                        <Clock className="appointments-small-icon" />
+                        {new Date(apt.appointment_date).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </p>
+                      <p>
+                        <MapPin className="appointments-small-icon" />
+                        {apt.office_name}
+                      </p>
+                    </div>
+
+                    {/* RIGHT SECTION - Actions */}
+                    <div className="appointment-actions">
+                      <span className={`patient-status-badge ${apt.status?.toLowerCase?.() ?? 'scheduled'}`}>
                         {apt.status ?? 'Scheduled'}
                       </span>
-                    </div>
-                    <div className="appointment-body">
-                      <p><Calendar className="appointments-small-icon" /> {new Date(apt.appointment_date).toLocaleDateString()}</p>
-                      <p><Clock className="appointments-small-icon" /> {new Date(apt.appointment_date).toLocaleTimeString()}</p>
-                      <p><MapPin className="appointments-small-icon" /> {apt.office_name}</p>
-                    </div>
-                    <div className="appointment-footer">
-                      <button className="btn btn-danger btn-small" onClick={() => handleCancelAppointment(apt.appointment_id)}>
+                      <button 
+                        className="btn btn-danger" 
+                        onClick={() => handleCancelAppointment(apt.appointment_id)}
+                      >
                         Cancel
                       </button>
                     </div>
@@ -74,26 +111,41 @@ export default function Appointments(props) {
             )}
           </div>
 
-          <div className="appointments-section">
+          {/* APPOINTMENT HISTORY SECTION */}
+          <div className="patient-appointments-section">
             <h2>Appointment History</h2>
             {appointmentHistory.length === 0 ? (
-              <p className="text-gray">No appointment history</p>
+              <div className="appointments-empty-state">
+                <FileText style={{ width: '4rem', height: '4rem', color: 'var(--forth-color)' }} />
+                <h3>No Appointment History</h3>
+                <p>Your past appointments will appear here.</p>
+              </div>
             ) : (
               <div className="history-list">
                 {appointmentHistory.map(apt => (
                   <div key={apt.id} className="history-item">
-                    <div>
+                    <div className="history-item-content">
                       <h4>{apt.doctor_name}</h4>
-                      <p>{new Date(apt.date).toLocaleDateString()} — {apt.reason}</p>
-                      {apt.item_type && <span className="item-type-badge">{apt.item_type}</span>}
+                      <p className="history-item-date">
+                        {new Date(apt.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <p className="history-item-reason">{apt.reason}</p>
+                      {apt.item_type && (
+                        <span className="item-type-badge">{apt.item_type}</span>
+                      )}
                     </div>
                     {apt.item_type === 'Visit' ? (
                       <button 
-                        className="btn btn-link" 
+                        className="btn btn-secondary" 
                         onClick={() => handleViewSummary(apt)}
                         disabled={visitLoading}
                       >
-                        {visitLoading ? 'Loading...' : 'View Summary'} <ChevronRight className="appointments-small-icon" />
+                        {visitLoading ? 'Loading...' : 'View Summary'} 
+                        <ChevronRight className="appointments-small-icon" />
                       </button>
                     ) : (
                       <span className="appointments-text-muted">No summary available</span>
@@ -106,16 +158,20 @@ export default function Appointments(props) {
         </>
       )}
 
-      {/* Visit Summary Modal */}
+      {/* VISIT SUMMARY MODAL */}
       {showVisitSummary && visitDetails && (
         <div className="modal-overlay" onClick={() => setShowVisitSummary(false)}>
           <div className="modal-content visit-summary-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Visit Summary</h2>
+              <h2>
+                <FileText className="icon" />
+                Visit Summary
+              </h2>
               <button className="modal-close" onClick={() => setShowVisitSummary(false)}>
                 <X className="icon" />
               </button>
             </div>
+
             <div className="modal-body">
               <div className="visit-info-grid">
                 <div className="visit-info-item">
@@ -123,7 +179,12 @@ export default function Appointments(props) {
                     <Calendar className="appointments-small-icon" /> Date
                   </div>
                   <div className="visit-info-value">
-                    {new Date(visitDetails.date).toLocaleDateString()}
+                    {new Date(visitDetails.date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
                   </div>
                 </div>
 
@@ -134,7 +195,7 @@ export default function Appointments(props) {
                   <div className="visit-info-value">
                     {visitDetails.doctor_name}
                     {visitDetails.specialty_name && (
-                      <div className="specialty">{visitDetails.specialty_name}</div>
+                      <div className="patient-specialty">{visitDetails.specialty_name}</div>
                     )}
                   </div>
                 </div>
@@ -147,7 +208,7 @@ export default function Appointments(props) {
                     <div className="visit-info-value">
                       {visitDetails.office_name}
                       {visitDetails.office_address && (
-                        <div className="address">{visitDetails.office_address}</div>
+                        <div className="patient-address">{visitDetails.office_address}</div>
                       )}
                     </div>
                   </div>

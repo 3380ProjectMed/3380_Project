@@ -84,6 +84,25 @@ try {
         }
     }
 
+    if (isset($input['booking_channel'])) {
+        // Map booking_channel to method (database column)
+        $channel = strtolower($input['booking_channel']);
+        $bookingMethod = null;
+        if ($channel === 'phone') {
+            $bookingMethod = 'Phone';
+        } elseif ($channel === 'online') {
+            $bookingMethod = 'Online';
+        } elseif ($channel === 'walk-in') {
+            $bookingMethod = 'Walk-in';
+        }
+        
+        if ($bookingMethod) {
+            $updateFields[] = 'method = ?';
+            $types .= 's';
+            $values[] = $bookingMethod;
+        }
+    }
+
     if (empty($updateFields)) {
         closeDBConnection($conn);
         http_response_code(400);

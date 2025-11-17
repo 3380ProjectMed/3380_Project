@@ -3,7 +3,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    //session_start();
 
     if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
         http_response_code(403);
@@ -21,12 +20,9 @@ try {
 
     $users = [];
 
-    // Build unified query for all staff roles or specific role
     if ($role === 'all' || in_array($role, ['doctor', 'nurse', 'receptionist'])) {
-        // Start building the UNION query
         $queries = [];
 
-        // DOCTORS query
         if ($role === 'all' || $role === 'doctor') {
             $doctor_query = "SELECT 
                     d.doctor_id,
@@ -36,8 +32,8 @@ try {
                     s.staff_email as email,
                     s.ssn,
                     sp.specialty_name as specialization_dept,
-                    o.name as work_location,
-                    o.office_id as work_location_id,
+                    GROUP_CONCAT(DISTINCT o.name SEPARATOR ', ') as work_location,
+                    MIN(o.office_id) as work_location_id,
                     COALESCE(ua.created_at, NULL) as created_at,
                     COALESCE(ua.is_active, 0) as is_active,
                     CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
@@ -61,10 +57,12 @@ try {
                 $doctor_query .= " AND o.office_id = " . intval($work_location);
             }
 
+            $doctor_query .= " GROUP BY d.doctor_id, ua.user_id, ua.role, s.first_name, s.last_name, 
+                              s.staff_email, s.ssn, sp.specialty_name, ua.created_at, ua.is_active";
+
             $queries[] = $doctor_query;
         }
 
-        // NURSES query
         if ($role === 'all' || $role === 'nurse') {
             $nurse_query = "SELECT 
                     n.nurse_id,
@@ -74,8 +72,8 @@ try {
                     s.staff_email as email,
                     s.ssn,
                     n.department as specialization_dept,
-                    o.name as work_location,
-                    o.office_id as work_location_id,
+                    GROUP_CONCAT(DISTINCT o.name SEPARATOR ', ') as work_location,
+                    MIN(o.office_id) as work_location_id,
                     COALESCE(ua.created_at, NULL) as created_at,
                     COALESCE(ua.is_active, 0) as is_active,
                     CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
@@ -102,6 +100,9 @@ try {
                 $nurse_query .= " AND n.department = '" . $conn->real_escape_string($department) . "'";
             }
 
+            $nurse_query .= " GROUP BY n.nurse_id, ua.user_id, ua.role, s.first_name, s.last_name, 
+                             s.staff_email, s.ssn, n.department, ua.created_at, ua.is_active";
+
             $queries[] = $nurse_query;
         }
 
@@ -115,8 +116,8 @@ try {
                     s.staff_email as email,
                     s.ssn,
                     NULL as specialization_dept,
-                    o.name as work_location,
-                    o.office_id as work_location_id,
+                    GROUP_CONCAT(DISTINCT o.name SEPARATOR ', ') as work_location,
+                    MIN(o.office_id) as work_location_id,
                     COALESCE(ua.created_at, NULL) as created_at,
                     COALESCE(ua.is_active, 0) as is_active,
                     CASE WHEN ua.user_id IS NULL THEN 1 ELSE 0 END as no_account
@@ -138,10 +139,12 @@ try {
                 $receptionist_query .= " AND o.office_id = " . intval($work_location);
             }
 
+            $receptionist_query .= " GROUP BY s.staff_id, ua.user_id, ua.role, s.first_name, s.last_name, 
+                                    s.staff_email, s.ssn, ua.created_at, ua.is_active";
+
             $queries[] = $receptionist_query;
         }
 
-        // Combine all queries with UNION ALL
         $query = implode(' UNION ALL ', $queries);
         $query .= " ORDER BY user_type, name";
 
@@ -149,7 +152,6 @@ try {
         $users = array_merge($users, $staff_users);
     }
 
-    // Handle patients separately with limited information for privacy
     if ($role === 'all' || $role === 'patient') {
         $query = "SELECT 
                     ua.user_id,
@@ -165,7 +167,6 @@ try {
                 FROM user_account ua
                 WHERE ua.role = 'PATIENT'";
 
-        // Apply active status filter
         if ($active_status !== 'all') {
             $is_active = ($active_status === 'active') ? 1 : 0;
             $query .= " AND ua.is_active = $is_active";
@@ -177,13 +178,11 @@ try {
         $users = array_merge($users, $patient_users);
     }
 
-    // Get distinct work locations for filter dropdown
     $locations_query = "SELECT DISTINCT office_id, name 
                         FROM office 
                         ORDER BY name";
     $locations = executeQuery($conn, $locations_query);
 
-    // Get distinct departments for filter dropdown
     $departments_query = "SELECT DISTINCT department 
                           FROM nurse 
                           WHERE department IS NOT NULL 

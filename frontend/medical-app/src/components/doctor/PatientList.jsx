@@ -240,7 +240,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
   return (
     <div className="patient-list">
       {/* ===== HEADER ===== */}
-      <h1 className="patient-list__title">My PCP Patients</h1>
+      <h1 className="patient-list__title">My Patients</h1>
 
       {/* ===== SEARCH BAR ===== */}
       <div className="patient-list__search">

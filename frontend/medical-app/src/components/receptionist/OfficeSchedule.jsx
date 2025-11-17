@@ -4,6 +4,16 @@ import { Calendar, ChevronLeft, ChevronRight, Clock, User, Check, X, Edit, Alert
 import './OfficeSchedule.css';
 
 /**
+ * Helper function to format date as YYYY-MM-DD in local timezone
+ */
+const formatDateLocal = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
  * OfficeSchedule Component (Backend Integrated)
  * 
  * Displays doctor availability grid for appointment booking
@@ -16,6 +26,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   const [selectedSlotData, setSelectedSlotData] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [doctors, setDoctors] = useState([]);
+  const [specialtyFilter, setSpecialtyFilter] = useState('all');
   const [bookedSlots, setBookedSlots] = useState({});
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
@@ -32,7 +43,8 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     show: false,
     type: 'info',
     title: '',
-    message: ''
+    message: '',
+    confirmAction: null
   });
 
   /**
@@ -42,9 +54,45 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     loadScheduleData();
   }, [selectedDate, officeId]);
 
+  /**
+   * Automatic status updates - runs instantly on load and every 30 seconds
+   * Updates Scheduled → Waiting → No-Show based on appointment time
+   */
+  useEffect(() => {
+    checkForStatusUpdates();
+    const statusUpdateInterval = setInterval(() => {
+      checkForStatusUpdates();
+    }, 30000); // Check every 30 seconds for near-instant updates
+    return () => clearInterval(statusUpdateInterval);
+  }, []);
+
+  /**
+   * Check for appointments that should be marked as Waiting or No-Show
+   */
+  const checkForStatusUpdates = async () => {
+    try {
+      const response = await fetch('/receptionist_api/appointments/update-no-shows.php', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      
+      if (data.success && data.updated_count > 0) {
+        console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
+        loadScheduleData();
+      }
+    } catch (err) {
+      console.error('Failed to check for status updates:', err);
+    }
+  };
+
   const loadScheduleData = async () => {
     try {
       setLoading(true);
+      
+      // Update appointment statuses first (non-blocking)
+      checkForStatusUpdates().catch(err => console.error('Status update failed:', err));
+      
       // Get doctors for this office
       const doctorsResponse = await fetch(
         `/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`,
@@ -53,12 +101,37 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       const doctorsResult = await doctorsResponse.json();
       
       if (doctorsResult.success) {
-        // Add colors and working hours to doctors, normalize property names
+        // Add colors to doctors and process work schedule
         const doctorsWithDetails = (doctorsResult.doctors || []).map((doc, index) => {
           const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
+          
+          // Get the day name for the selected date
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const selectedDayName = dayNames[selectedDate.getDay()];
+          
+          // Find the work schedule for the selected day
+          const todaySchedule = (doc.work_schedule || []).find(
+            schedule => schedule.day === selectedDayName
+          );
+          
+          // Convert work schedule days to day numbers (0=Sunday, 1=Monday, etc.)
+          const workDays = (doc.work_schedule || []).map(schedule => {
+            return dayNames.indexOf(schedule.day);
+          }).filter(day => day !== -1);
+          
+          // Get start and end times for today (if doctor works today)
+          let startTime = 9;  // default
+          let endTime = 17;   // default
+          
+          if (todaySchedule) {
+            // Parse HH:MM format
+            startTime = parseInt(todaySchedule.start.split(':')[0]);
+            endTime = parseInt(todaySchedule.end.split(':')[0]);
+          }
+          
           return {
             doctor_id: doc.Doctor_id,
-            Doctor_id: doc.Doctor_id, // Keep both for compatibility
+            Doctor_id: doc.Doctor_id,
             first_name: doc.First_Name,
             First_Name: doc.First_Name,
             last_name: doc.Last_Name,
@@ -66,16 +139,17 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             specialty_name: doc.specialty_name,
             specialty_id: doc.specialty_id,
             color: colors[index % colors.length],
-            workDays: [1, 2, 3, 4, 5], // Monday-Friday (will be fetched from API in production)
-            startTime: 9,
-            endTime: 17
+            workDays: workDays,
+            startTime: startTime,
+            endTime: endTime,
+            work_schedule: doc.work_schedule // Keep full schedule for reference
           };
         });
         setDoctors(doctorsWithDetails);
       }
       
       // Get appointments for selected date
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = formatDateLocal(selectedDate);
       const appointmentsResponse = await fetch(
         `/receptionist_api/appointments/get-by-date.php?date=${dateStr}`,
         { credentials: 'include' }
@@ -184,7 +258,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
    */
   const generateTimeSlots = () => {
     const slots = [];
-    for (let hour = 8; hour <= 18; hour++) {
+    for (let hour = 5; hour <= 18; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         slots.push({ hour, minute });
       }
@@ -193,6 +267,30 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   };
 
   const timeSlots = generateTimeSlots();
+
+  /**
+   * Get unique specialties from doctors
+   */
+  const getUniqueSpecialties = () => {
+    const specialties = doctors
+      .map(doc => doc.specialty_name)
+      .filter((specialty, index, self) => specialty && self.indexOf(specialty) === index)
+      .sort();
+    return specialties;
+  };
+
+  /**
+   * Get filtered doctors based on specialty filter
+   */
+  const getFilteredDoctors = () => {
+    if (specialtyFilter === 'all') {
+      return doctors;
+    }
+    return doctors.filter(doc => doc.specialty_name === specialtyFilter);
+  };
+
+  const filteredDoctors = getFilteredDoctors();
+  const uniqueSpecialties = getUniqueSpecialties();
 
   /**
    * Format time slot for display
@@ -219,7 +317,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     const timeInMinutes = hour * 60 + minute;
     const startInMinutes = doctor.startTime * 60;
     const endInMinutes = doctor.endTime * 60;
-    return timeInMinutes >= startInMinutes && timeInMinutes < endInMinutes;
+    return timeInMinutes >= startInMinutes && timeInMinutes <= endInMinutes;
   };
 
   /**
@@ -227,7 +325,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
    * Each appointment only shows at ONE slot - the nearest one (earlier if equidistant)
    */
   const isSlotBooked = (doctorId, hour, minute) => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = formatDateLocal(selectedDate);
     const slotTimeInMinutes = hour * 60 + minute;
     
     // Check all booked slots for this doctor on this date
@@ -277,7 +375,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
    * Prioritizes the closest slot, with preference for earlier slots
    */
   const getAppointmentForSlot = (doctorId, hour, minute) => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = formatDateLocal(selectedDate);
     const slotTimeInMinutes = hour * 60 + minute;
     
     let closestAppointment = null;
@@ -375,14 +473,27 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   };
 
   /**
-   * Cancel appointment
+   * Show cancel confirmation modal
    */
-  const handleCancelAppointment = async () => {
+  const handleCancelAppointment = () => {
     if (!selectedAppointment || !selectedAppointment.appointment_id) return;
     
-    if (!window.confirm('Are you sure you want to cancel this appointment?')) {
-      return;
-    }
+    setAlertModal({
+      show: true,
+      type: 'warning',
+      title: 'Cancel Appointment',
+      message: 'Are you sure you want to cancel this appointment? This action cannot be undone.',
+      confirmAction: confirmCancelAppointment
+    });
+  };
+
+  /**
+   * Execute appointment cancellation
+   */
+  const confirmCancelAppointment = async () => {
+    if (!selectedAppointment || !selectedAppointment.appointment_id) return;
+    
+    setAlertModal({ ...alertModal, show: false });
     
     try {
       setCanceling(true);
@@ -402,16 +513,30 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       const result = await response.json();
       
       if (result.success) {
-        // Close modal
+        setAlertModal({
+          show: true,
+          type: 'success',
+          title: 'Appointment Cancelled',
+          message: 'The appointment has been successfully cancelled.'
+        });
         setSelectedAppointment(null);
-        // Reload schedule data
         loadScheduleData();
       } else {
-        alert('Failed to cancel appointment: ' + (result.error || 'Unknown error'));
+        setAlertModal({
+          show: true,
+          type: 'error',
+          title: 'Cancellation Failed',
+          message: result.error || 'Failed to cancel appointment. Please try again.'
+        });
       }
     } catch (err) {
       console.error('Failed to cancel appointment:', err);
-      alert('Failed to cancel appointment. Please try again.');
+      setAlertModal({
+        show: true,
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to cancel appointment. Please check your connection and try again.'
+      });
     } finally {
       setCanceling(false);
     }
@@ -596,7 +721,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     const normalizedStatus = (status || 'scheduled').toLowerCase();
     const statusMap = {
       'scheduled': 'status-scheduled',
-      'ready': 'status-ready',
       'waiting': 'status-waiting',
       'checked-in': 'status-checked-in',
       'checked in': 'status-checked-in',
@@ -675,6 +799,28 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         </div>
       </div>
 
+      {/* ===== SPECIALTY FILTER ===== */}
+      {doctors.length > 0 && uniqueSpecialties.length > 1 && (
+        <div className="specialty-filter-section">
+          <label className="filter-label">Filter by Specialty:</label>
+          <select 
+            className="specialty-filter-select"
+            value={specialtyFilter}
+            onChange={(e) => setSpecialtyFilter(e.target.value)}
+          >
+            <option value="all">All Specialties ({doctors.length} doctors)</option>
+            {uniqueSpecialties.map(specialty => {
+              const count = doctors.filter(d => d.specialty_name === specialty).length;
+              return (
+                <option key={specialty} value={specialty}>
+                  {specialty} ({count} {count === 1 ? 'doctor' : 'doctors'})
+                </option>
+              );
+            })}
+          </select>
+        </div>
+      )}
+
       {/* ===== AVAILABILITY GRID ===== */}
       <div className="availability-grid-container">
         {loading ? (
@@ -691,21 +837,29 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
               Go to Today
             </button>
           </div>
-        ) : doctors.length === 0 ? (
+        ) : filteredDoctors.length === 0 ? (
           <div className="empty-state">
             <User size={64} />
-            <h3>No Doctors Available</h3>
-            <p>No doctors are assigned to this office.</p>
+            <h3>No Doctors Match Filter</h3>
+            <p>No doctors available for the selected specialty. Try a different filter.</p>
+            <button className="btn-primary" onClick={() => setSpecialtyFilter('all')}>
+              Show All Doctors
+            </button>
           </div>
         ) : (
           <div className="availability-grid">
             {/* Header Row - Doctor Names */}
-            <div className="grid-header">
+            <div 
+              className="grid-header"
+              style={{ 
+                gridTemplateColumns: `120px repeat(${filteredDoctors.length}, minmax(240px, 1fr))` 
+              }}
+            >
               <div className="time-column-header">
                 <Clock size={18} />
                 <span>Time</span>
               </div>
-              {doctors.map(doctor => (
+              {filteredDoctors.map(doctor => (
                 <div 
                   key={doctor.Doctor_id} 
                   className="doctor-column-header"
@@ -732,14 +886,20 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             {/* Time Slots Grid */}
             <div className="grid-body">
               {timeSlots.map(({ hour, minute }) => (
-                <div key={`${hour}-${minute}`} className="grid-row">
+                <div 
+                  key={`${hour}-${minute}`} 
+                  className="grid-row"
+                  style={{ 
+                    gridTemplateColumns: `120px repeat(${filteredDoctors.length}, minmax(240px, 1fr))` 
+                  }}
+                >
                   {/* Time Label */}
                   <div className="time-cell">
                     <span className="time-label">{formatTimeSlot(hour, minute)}</span>
                   </div>
 
                   {/* Doctor Slots */}
-                  {doctors.map(doctor => {
+                  {filteredDoctors.map(doctor => {
                     const status = getSlotStatus(doctor, hour, minute);
                     const isSelected = isSlotSelected(doctor.Doctor_id, hour, minute);
                     
@@ -1016,17 +1176,36 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             </div>
 
             <div className="modal-footer">
-              <button 
-                className={`btn ${
-                  alertModal.type === 'success' ? 'btn-success' : 
-                  alertModal.type === 'error' ? 'btn-danger' :
-                  alertModal.type === 'warning' ? 'btn-warning' :
-                  'btn-primary'
-                }`}
-                onClick={() => setAlertModal({ ...alertModal, show: false })}
-              >
-                OK
-              </button>
+              {alertModal.confirmAction ? (
+                <>
+                  <button 
+                    className="btn btn-ghost" 
+                    onClick={() => setAlertModal({ ...alertModal, show: false })}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className={`btn ${
+                      alertModal.type === 'warning' ? 'btn-danger' : 'btn-primary'
+                    }`}
+                    onClick={alertModal.confirmAction}
+                  >
+                    Confirm
+                  </button>
+                </>
+              ) : (
+                <button 
+                  className={`btn ${
+                    alertModal.type === 'success' ? 'btn-success' : 
+                    alertModal.type === 'error' ? 'btn-danger' :
+                    alertModal.type === 'warning' ? 'btn-warning' :
+                    'btn-primary'
+                  }`}
+                  onClick={() => setAlertModal({ ...alertModal, show: false })}
+                >
+                  OK
+                </button>
+              )}
             </div>
           </div>
         </div>

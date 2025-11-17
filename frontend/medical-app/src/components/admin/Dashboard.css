@@ -16,16 +16,28 @@
 
 .welcome-section {
   background: linear-gradient(135deg, #03045e, #0077b6);
-  color: white;
+  color: #e0f2ff;              /* default text: soft light blue */
   padding: 2rem 2.5rem;
   border-radius: 1rem;
   box-shadow: 0 8px 16px rgba(3, 4, 94, 0.15);
 }
 
+/* "Admin Dashboard" */
 .welcome-section h1 {
-  margin: 0 0 0.5rem 0;
-  font-size: 2.5rem;
+  color: #f9fafb;              /* soft off-white, high contrast */
+  font-size: 1.8rem;
   font-weight: 700;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  margin: 0;
+}
+
+/* "System Overview" */
+.welcome-section p {
+  color: #cfe8ff;              /* muted light blue for softer emphasis */
+  font-size: 0.95rem;
+  margin-top: 0.35rem;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
 }
 
 .office-info {
@@ -572,71 +584,4 @@
 .table-header .col-actions {
   flex: 0 0 120px;
   text-align: right;
-}
-
-/* Additional CSS for Dashboard.css - Add to existing file */
-
-/* Checked-in status badge */
-.status-checked-in {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border: none;
-}
-
-/* Last update timestamp */
-.section-header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.last-update {
-  font-size: 0.75rem;
-  color: #64748b;
-  font-weight: normal;
-}
-
-/* Refresh button */
-.refresh-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #64748b;
-}
-
-.refresh-btn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #3b82f6;
-}
-
-.refresh-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.refresh-btn.refreshing svg {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Update section controls to accommodate refresh button */
-.section-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
 }

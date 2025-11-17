@@ -58,6 +58,7 @@ try {
                 a.Appointment_date,
                 a.Reason_for_visit,
                 a.Status as apt_status,
+                a.method,
                 a.Patient_id,
                 a.Doctor_id,
                 a.Office_id,
@@ -85,13 +86,23 @@ try {
         $visitStatus = $apt['visit_status'] ?? null;
 
         // Determine display status
+        // Priority: 1. visit_status if set, 2. appointment status, 3. check start_at for legacy data
         $displayStatus = $dbStatus;
+        
         if ($visitStatus === 'Completed') {
             $displayStatus = 'Completed';
-        } elseif ($visitStatus === 'Checked In' || $apt['Check_in_time']) {
+        } elseif ($visitStatus === 'Checked In') {
             $displayStatus = 'Checked-in';
-        } elseif ($dbStatus === 'Cancelled') {
+        } elseif ($dbStatus === 'Checked-in') {
+            $displayStatus = 'Checked-in';
+        } elseif ($dbStatus === 'Cancelled' || $dbStatus === 'Canceled') {
             $displayStatus = 'Cancelled';
+        } elseif ($dbStatus === 'No-Show') {
+            $displayStatus = 'No-Show';
+        } elseif ($dbStatus === 'In Progress') {
+            $displayStatus = 'In Progress';
+        } elseif ($dbStatus === 'Waiting') {
+            $displayStatus = 'Waiting';
         } else {
             $displayStatus = 'Scheduled';
         }

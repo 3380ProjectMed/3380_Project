@@ -26,6 +26,10 @@ try {
     }
 
     $conn = getDBConnection();
+    
+    // Set timezone to match appointment times (US Central Time)
+    $conn->query("SET time_zone = '-06:00'");
+    
     $conn->begin_transaction();
 
     try {
@@ -58,7 +62,7 @@ try {
                             a.Doctor_id,
                             a.Appointment_date,
                             a.Status,
-                            NOW() as current_time,
+                            NOW() as `current_time`,
                             TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past
                         FROM appointment a
                         WHERE a.Status IN ('Scheduled', 'Waiting')

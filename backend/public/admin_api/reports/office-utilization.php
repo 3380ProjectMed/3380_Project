@@ -4,11 +4,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    // DEBUG - Log session state
-    error_log("office-utilization.php - Session ID: " . session_id());
-    error_log("office-utilization.php - Session data: " . print_r($_SESSION, true));
-    error_log("office-utilization.php - Cookie: " . print_r($_COOKIE, true));
-
     if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
         http_response_code(403);
         echo json_encode([

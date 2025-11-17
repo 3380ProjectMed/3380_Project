@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, User, Phone, Mail, Calendar, CreditCard, DollarSign, AlertCircle, UserCheck } from 'lucide-react';
+import { Search, X, User, Phone, Mail, Calendar, CreditCard, DollarSign, AlertCircle, UserCheck, UserPlus } from 'lucide-react';
 // Removed API import as we'll use fetch directly
 import './PatientSearch.css';
 
@@ -16,6 +16,26 @@ function PatientSearch({ onBookAppointment }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    dateOfBirth: '',
+    phone: '',
+    gender: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    emergencyContactfn: '',
+    emergencyContactln: '',
+    emergencyContactrl: '',
+    emergencyPhone: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
 
   /**
    * Load initial patients on mount
@@ -121,12 +141,178 @@ function PatientSearch({ onBookAppointment }) {
     setSelectedPatient(null);
   };
 
+  /**
+   * Open create patient modal
+   */
+  const openCreateModal = () => {
+    setShowCreateModal(true);
+    setFormErrors({});
+    setError(null);
+  };
+
+  /**
+   * Close create patient modal
+   */
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      dateOfBirth: '',
+      phone: '',
+      gender: '',
+      address: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      emergencyContactfn: '',
+      emergencyContactln: '',
+      emergencyContactrl: '',
+      emergencyPhone: ''
+    });
+    setFormErrors({});
+    setError(null);
+  };
+
+  /**
+   * Handle form input change with phone formatting
+   */
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    let formattedValue = value;
+    
+    // Auto-format phone numbers
+    if (name === 'phone' || name === 'emergencyPhone') {
+      formattedValue = formatPhoneNumber(value);
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: formattedValue
+    }));
+    // Clear error for this field
+    if (formErrors[name]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  /**
+   * Format phone number as (XXX) XXX-XXXX
+   */
+  const formatPhoneNumber = (value) => {
+    // Remove all non-digits
+    const cleaned = value.replace(/\D/g, '');
+    
+    // Limit to 10 digits
+    const limited = cleaned.substring(0, 10);
+    
+    // Format based on length
+    if (limited.length === 0) return '';
+    if (limited.length <= 3) return `(${limited}`;
+    if (limited.length <= 6) return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
+    return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
+  };
+
+  /**
+   * Validate form inputs
+   */
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+    if (!formData.gender) newErrors.gender = 'Gender is required';
+
+    setFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  /**
+   * Create new patient
+   */
+  const handleCreatePatient = async (e) => {
+    e.preventDefault();
+    
+    // Validate form first
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/signup.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Success - close modal and refresh patient list
+        closeCreateModal();
+        handleSearch(); // Refresh patient list
+        alert('Patient created successfully!');
+      } else {
+        // Handle errors
+        if (data.errors) {
+          setFormErrors(data.errors);
+        }
+        setError(data.message || 'Failed to create patient');
+      }
+    } catch (err) {
+      console.error('Create patient error:', err);
+      setError('Failed to create patient. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="patient-search-page">
       {/* ===== PAGE HEADER ===== */}
       <div className="page-header">
-        <h1 className="page-title">Patient Search</h1>
-        <p className="page-subtitle">Search and view patient records</p>
+        <div className="header-content">
+          <div>
+            <h1 className="page-title">Patient Search</h1>
+            <p className="page-subtitle">Search and view patient records</p>
+          </div>
+          <button className="btn-create-patient" onClick={openCreateModal}>
+            <UserPlus size={20} />
+            Create New Patient
+          </button>
+        </div>
       </div>
 
       {/* ===== SEARCH SECTION ===== */}
@@ -226,20 +412,6 @@ function PatientSearch({ onBookAppointment }) {
                       <span className="detail-value">{patient.pcp_name}</span>
                     </div>
                   )}
-                  
-                  {patient.insurance_expiration && (
-                    <div className="detail-item">
-                      <AlertCircle size={16} />
-                      <span className="detail-label">Insurance Exp</span>
-                      <span className={`detail-value ${new Date(patient.insurance_expiration) < new Date() ? 'text-expired' : ''}`}>
-                        {new Date(patient.insurance_expiration).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
               
@@ -252,7 +424,7 @@ function PatientSearch({ onBookAppointment }) {
                     {patient.copay && (
                       <p className="insurance-copay">
                         <DollarSign size={14} />
-                        Copay: ${patient.copay.toFixed(2)}
+                        Copay: ${typeof patient.copay === 'number' ? patient.copay.toFixed(2) : parseFloat(patient.copay).toFixed(2)}
                       </p>
                     )}
                     {patient.insurance_expiration && (
@@ -260,6 +432,7 @@ function PatientSearch({ onBookAppointment }) {
                         {new Date(patient.insurance_expiration) < new Date() ? '⚠ EXPIRED' : 'Expires'}: {' '}
                         {new Date(patient.insurance_expiration).toLocaleDateString('en-US', {
                           month: 'short',
+                          day: 'numeric',
                           year: 'numeric'
                         })}
                       </p>
@@ -279,9 +452,9 @@ function PatientSearch({ onBookAppointment }) {
             <div className="modal-header">
               <div>
                 <h2 className="modal-title">
-                  {selectedPatient.First_Name} {selectedPatient.Last_Name}
+                  {selectedPatient.First_Name || selectedPatient.first_name || ''} {selectedPatient.Last_Name || selectedPatient.last_name || ''}
                 </h2>
-                <p className="modal-subtitle">Patient ID: {selectedPatient.Patient_ID}</p>
+                <p className="modal-subtitle">Patient ID: {selectedPatient.Patient_ID || selectedPatient.patient_id || ''}</p>
               </div>
               <button className="modal-close" onClick={closeModal}>
                 <X size={24} />
@@ -297,9 +470,16 @@ function PatientSearch({ onBookAppointment }) {
                 </h3>
                 <div className="info-grid">
                   <div className="info-field">
+                    <span className="field-label">Patient ID</span>
+                    <span className="field-value">
+                      {selectedPatient.Patient_ID || selectedPatient.patient_id || 'N/A'}
+                    </span>
+                  </div>
+
+                  <div className="info-field">
                     <span className="field-label">Full Name</span>
                     <span className="field-value">
-                      {selectedPatient.First_Name} {selectedPatient.Last_Name}
+                      {selectedPatient.First_Name || selectedPatient.first_name || ''} {selectedPatient.Last_Name || selectedPatient.last_name || ''}
                     </span>
                   </div>
                   
@@ -376,7 +556,9 @@ function PatientSearch({ onBookAppointment }) {
                         <div className="insurance-detail">
                           <span className="insurance-label">Copay</span>
                           <span className="insurance-value insurance-copay">
-                            ${selectedPatient.insurance.copay.toFixed(2)}
+                            ${typeof selectedPatient.insurance.copay === 'number' 
+                              ? selectedPatient.insurance.copay.toFixed(2) 
+                              : parseFloat(selectedPatient.insurance.copay).toFixed(2)}
                           </span>
                         </div>
                       )}
@@ -384,7 +566,9 @@ function PatientSearch({ onBookAppointment }) {
                         <div className="insurance-detail">
                           <span className="insurance-label">Deductible</span>
                           <span className="insurance-value">
-                            ${selectedPatient.insurance.deductible_individ.toFixed(2)}
+                            ${typeof selectedPatient.insurance.deductible_individ === 'number'
+                              ? selectedPatient.insurance.deductible_individ.toFixed(2)
+                              : parseFloat(selectedPatient.insurance.deductible_individ).toFixed(2)}
                           </span>
                         </div>
                       )}
@@ -455,6 +639,347 @@ function PatientSearch({ onBookAppointment }) {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== CREATE PATIENT MODAL ===== */}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={closeCreateModal}>
+          <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Create New Patient</h2>
+                <p className="modal-subtitle">Register a new patient in the system</p>
+              </div>
+              <button className="modal-close" onClick={closeCreateModal}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePatient}>
+              <div className="modal-body">
+                {/* Error Message */}
+                {error && (
+                  <div className="alert alert-danger">
+                    <AlertCircle size={20} />
+                    {error}
+                  </div>
+                )}
+
+                {/* Personal Information */}
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <User size={20} />
+                    Personal Information
+                  </h3>
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label className="form-label">First Name *</label>
+                      <div className="input-with-icon">
+                        <User className="input-icon" size={18} />
+                        <input
+                          type="text"
+                          name="firstName"
+                          className={`form-input with-icon ${formErrors.firstName ? 'input-error' : ''}`}
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      {formErrors.firstName && (
+                        <span className="error-text">{formErrors.firstName}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Last Name *</label>
+                      <div className="input-with-icon">
+                        <User className="input-icon" size={18} />
+                        <input
+                          type="text"
+                          name="lastName"
+                          className={`form-input with-icon ${formErrors.lastName ? 'input-error' : ''}`}
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      {formErrors.lastName && (
+                        <span className="error-text">{formErrors.lastName}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Date of Birth *</label>
+                      <div className="input-with-icon">
+                        <Calendar className="input-icon" size={18} />
+                        <input
+                          type="date"
+                          name="dateOfBirth"
+                          className={`form-input with-icon ${formErrors.dateOfBirth ? 'input-error' : ''}`}
+                          value={formData.dateOfBirth}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      {formErrors.dateOfBirth && (
+                        <span className="error-text">{formErrors.dateOfBirth}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Gender *</label>
+                      <select
+                        name="gender"
+                        className={`form-input ${formErrors.gender ? 'input-error' : ''}`}
+                        value={formData.gender}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        <option value="">Select gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                        <option value="prefer-not-to-say">Prefer not to say</option>
+                      </select>
+                      {formErrors.gender && (
+                        <span className="error-text">{formErrors.gender}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <Mail size={20} />
+                    Contact Information
+                  </h3>
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label className="form-label">Email Address *</label>
+                      <div className="input-with-icon">
+                        <Mail className="input-icon" size={18} />
+                        <input
+                          type="email"
+                          name="email"
+                          className={`form-input with-icon ${formErrors.email ? 'input-error' : ''}`}
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="example@email.com"
+                          required
+                        />
+                      </div>
+                      {formErrors.email && (
+                        <span className="error-text">{formErrors.email}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Phone Number *</label>
+                      <div className="input-with-icon">
+                        <Phone className="input-icon" size={18} />
+                        <input
+                          type="tel"
+                          name="phone"
+                          className={`form-input with-icon ${formErrors.phone ? 'input-error' : ''}`}
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          placeholder="(555) 123-4567"
+                          required
+                        />
+                      </div>
+                      {formErrors.phone && (
+                        <span className="error-text">{formErrors.phone}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field full-width">
+                      <label className="form-label">Street Address</label>
+                      <input
+                        type="text"
+                        name="address"
+                        className="form-input"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        placeholder="123 Main Street"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">City</label>
+                      <input
+                        type="text"
+                        name="city"
+                        className="form-input"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        placeholder="Houston"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">State</label>
+                      <input
+                        type="text"
+                        name="state"
+                        className="form-input"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        placeholder="TX"
+                        maxLength="2"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">ZIP Code</label>
+                      <input
+                        type="text"
+                        name="zipCode"
+                        className="form-input"
+                        value={formData.zipCode}
+                        onChange={handleInputChange}
+                        placeholder="77001"
+                        maxLength="10"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Emergency Contact */}
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <Phone size={20} />
+                    Emergency Contact
+                  </h3>
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label className="form-label">Contact First Name</label>
+                      <div className="input-with-icon">
+                        <User className="input-icon" size={18} />
+                        <input
+                          type="text"
+                          name="emergencyContactfn"
+                          className="form-input with-icon"
+                          value={formData.emergencyContactfn}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Contact Last Name</label>
+                      <div className="input-with-icon">
+                        <User className="input-icon" size={18} />
+                        <input
+                          type="text"
+                          name="emergencyContactln"
+                          className="form-input with-icon"
+                          value={formData.emergencyContactln}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Contact Relation to Patient</label>
+                      <input
+                        type="text"
+                        name="emergencyContactrl"
+                        className="form-input"
+                        value={formData.emergencyContactrl}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Spouse, Parent, Friend"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Contact Phone</label>
+                      <div className="input-with-icon">
+                        <Phone className="input-icon" size={18} />
+                        <input
+                          type="tel"
+                          name="emergencyPhone"
+                          className="form-input with-icon"
+                          value={formData.emergencyPhone}
+                          onChange={handleInputChange}
+                          placeholder="(555) 123-4567"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Create Password */}
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <CreditCard size={20} />
+                    Create Password
+                  </h3>
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label className="form-label">Password *</label>
+                      <input
+                        type="password"
+                        name="password"
+                        className={`form-input ${formErrors.password ? 'input-error' : ''}`}
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        placeholder="Minimum 8 characters"
+                        required
+                      />
+                      {formErrors.password && (
+                        <span className="error-text">{formErrors.password}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Confirm Password *</label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        className={`form-input ${formErrors.confirmPassword ? 'input-error' : ''}`}
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        required
+                      />
+                      {formErrors.confirmPassword && (
+                        <span className="error-text">{formErrors.confirmPassword}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button 
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <div className="loading-spinner"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus size={18} />
+                      Create Patient
+                    </>
+                  )}
+                </button>
+                <button 
+                  type="button"
+                  className="btn btn-ghost" 
+                  onClick={closeCreateModal}
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -11,7 +11,8 @@ import {
   AlertCircle,
   Loader,
   Plus,
-  Trash2
+  Trash2,
+  Edit2
 } from 'lucide-react';
 import './UserDetails.css';
 
@@ -23,6 +24,9 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
   const [error, setError] = useState('');
   const [showAddSchedule, setShowAddSchedule] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState('');
+  const [customStartTime, setCustomStartTime] = useState('');
+  const [customEndTime, setCustomEndTime] = useState('');
+  const [useCustomTimes, setUseCustomTimes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -59,6 +63,27 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
     }
   };
 
+  const handleScheduleSelect = (e) => {
+    const value = e.target.value;
+    setSelectedSchedule(value);
+    
+    // Value format: "day_office_id"
+    if (value) {
+      const [day, officeId] = value.split('_');
+      const schedule = availableSchedules.find(s => 
+        s.day_of_week === day && s.office_id === parseInt(officeId)
+      );
+      if (schedule) {
+        setCustomStartTime(schedule.start_time);
+        setCustomEndTime(schedule.end_time);
+      }
+    } else {
+      setCustomStartTime('');
+      setCustomEndTime('');
+    }
+    setUseCustomTimes(false);
+  };
+
   const handleAddSchedule = async () => {
     if (!selectedSchedule) {
       setError('Please select a schedule');
@@ -69,17 +94,28 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
     setError('');
 
     try {
+      // Parse the selected value: "day_office_id"
+      const [dayOfWeek, officeId] = selectedSchedule.split('_');
+
+      const payload = {
+        staff_id: user.staff_id,
+        office_id: parseInt(officeId),
+        day_of_week: dayOfWeek
+      };
+
+      // Include custom times if the user modified them
+      if (useCustomTimes) {
+        payload.start_time = customStartTime;
+        payload.end_time = customEndTime;
+      }
+
       const response = await fetch('/admin_api/users/add_staff_schedule.php', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          staff_id: user.staff_id,
-          office_id: user.office_id,
-          day_of_week: selectedSchedule
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -87,7 +123,17 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
       if (data.success) {
         setShowAddSchedule(false);
         setSelectedSchedule('');
-        loadUserDetails(); // Reload to show new schedule
+        setCustomStartTime('');
+        setCustomEndTime('');
+        setUseCustomTimes(false);
+
+        // Reload modal data
+        await loadUserDetails();
+
+        // 🔔 Tell parent to refresh list / work_location
+        if (typeof onUpdate === 'function') {
+          onUpdate();
+        }
       } else {
         setError(data.error || 'Failed to add schedule');
       }
@@ -121,7 +167,13 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
       const data = await response.json();
 
       if (data.success) {
-        loadUserDetails(); // Reload to reflect removal
+        // Reload modal data
+        await loadUserDetails();
+
+        // 🔔 Tell parent to refresh list / work_location
+        if (typeof onUpdate === 'function') {
+          onUpdate();
+        }
       } else {
         setError(data.error || 'Failed to remove schedule');
       }
@@ -267,19 +319,16 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
             <h3>Work Information</h3>
             <div className="details-grid">
               <div className="detail-item">
-                <label><MapPin size={16} /> Work Location</label>
-                <span>{user.work_location}</span>
+                <label><MapPin size={16} /> Work Location(s)</label>
+                <span>{user.work_location || 'Not assigned'}</span>
               </div>
 
-              <div className="detail-item">
-                <label>Office Address</label>
-                <span>{user.office_address}</span>
-              </div>
-
-              <div className="detail-item">
-                <label>Base Schedule Type</label>
-                <span>{user.shift_type}</span>
-              </div>
+              {user.office_address && user.office_address !== 'N/A' && (
+                <div className="detail-item">
+                  <label>Primary Office Address</label>
+                  <span>{user.office_address}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -300,27 +349,83 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
             {showAddSchedule && (
               <div className="add-schedule-form">
                 <div className="form-group">
-                  <label htmlFor="scheduleSelect">Select Day Schedule</label>
+                  <label htmlFor="scheduleSelect">Select Day & Location</label>
                   <select
                     id="scheduleSelect"
                     value={selectedSchedule}
-                    onChange={(e) => setSelectedSchedule(e.target.value)}
+                    onChange={handleScheduleSelect}
                     className="form-control"
                   >
-                    <option value="">Select a day...</option>
-                    {availableSchedules.map((schedule) => (
-                      <option key={schedule.day_of_week} value={schedule.day_of_week}>
-                        {schedule.day_of_week} ({formatTime(schedule.start_time)} - {formatTime(schedule.end_time)})
-                      </option>
-                    ))}
+                    <option value="">Select a day and location...</option>
+                    {availableSchedules.map((schedule) => {
+                      const value = `${schedule.day_of_week}_${schedule.office_id}`;
+                      return (
+                        <option key={value} value={value}>
+                          {schedule.day_of_week} at {schedule.office_name} 
+                          ({formatTime(schedule.start_time)} - {formatTime(schedule.end_time)})
+                        </option>
+                      );
+                    })}
                   </select>
+                  {availableSchedules.length === 0 && (
+                    <small className="text-muted">
+                      All available schedules have been assigned. Contact system admin to create more schedule templates.
+                    </small>
+                  )}
                 </div>
+
+                {selectedSchedule && (
+                  <>
+                    <div className="form-group">
+                      <div className="custom-time-toggle">
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={useCustomTimes}
+                            onChange={(e) => setUseCustomTimes(e.target.checked)}
+                          />
+                          <Edit2 size={16} />
+                          Customize times
+                        </label>
+                      </div>
+                    </div>
+
+                    {useCustomTimes && (
+                      <div className="time-inputs">
+                        <div className="form-group">
+                          <label htmlFor="startTime">Start Time</label>
+                          <input
+                            type="time"
+                            id="startTime"
+                            value={customStartTime}
+                            onChange={(e) => setCustomStartTime(e.target.value)}
+                            className="form-control"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="endTime">End Time</label>
+                          <input
+                            type="time"
+                            id="endTime"
+                            value={customEndTime}
+                            onChange={(e) => setCustomEndTime(e.target.value)}
+                            className="form-control"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
                 <div className="form-actions">
                   <button 
                     className="btn btn-secondary btn-sm"
                     onClick={() => {
                       setShowAddSchedule(false);
                       setSelectedSchedule('');
+                      setCustomStartTime('');
+                      setCustomEndTime('');
+                      setUseCustomTimes(false);
                     }}
                   >
                     Cancel
@@ -330,7 +435,7 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
                     onClick={handleAddSchedule}
                     disabled={!selectedSchedule || submitting}
                   >
-                    {submitting ? 'Adding...' : 'Add'}
+                    {submitting ? 'Adding...' : 'Add Schedule'}
                   </button>
                 </div>
               </div>
@@ -348,9 +453,17 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
                     <div key={schedule.schedule_id} className="schedule-card">
                       <div className="schedule-info">
                         <div className="schedule-day">{schedule.day_of_week}</div>
-                        <div className="schedule-time">
-                          <Clock size={16} />
-                          {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
+                        <div className="schedule-details">
+                          <div className="schedule-time">
+                            <Clock size={16} />
+                            {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
+                          </div>
+                          {schedule.office_name && (
+                            <div className="schedule-location">
+                              <MapPin size={14} />
+                              {schedule.office_name}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <button

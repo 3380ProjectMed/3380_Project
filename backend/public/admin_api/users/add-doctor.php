@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../cors.php';
 require_once __DIR__ . '/../../database.php';
+require_once __DIR__ . '/../../session.php';
 require_once __DIR__ . '/staff_helpers.php';
 
 header('Content-Type: application/json');
 
-session_start();
+// TEMP DEBUG: prove the file is executing at all
 
 // Require ADMIN
 if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
@@ -18,14 +19,24 @@ if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
 }
 
 try {
-    $raw = file_get_contents('php://input');
+
+    $raw  = file_get_contents('php://input');
     $data = json_decode($raw, true);
 
     if (!is_array($data)) {
         throw new Exception('Invalid JSON payload');
     }
 
-    $required = ['first_name', 'last_name', 'email', 'password', 'ssn', 'gender', 'work_location', 'work_schedule', 'license_number', 'specialization'];
+    $required = [
+        'first_name',
+        'last_name',
+        'email',
+        'password',
+        'ssn',
+        'gender',
+        'license_number',
+        'specialty'
+    ];
 
     foreach ($required as $field) {
         if (!isset($data[$field]) || $data[$field] === '') {
@@ -43,9 +54,7 @@ try {
         'gender'         => (int)$data['gender'],
         'email'          => $data['email'],
         'password'       => $data['password'],
-        'work_location'  => (int)$data['work_location'],
-        'work_schedule'  => (int)$data['work_schedule'],
-        'license_number' => $data['license_number'],
+        'license_number' => $data['license_number'] ?? null,
     ];
 
     $staffResult = createStaffAndUser(
@@ -57,37 +66,17 @@ try {
     $staffId  = $staffResult['staff_id'];
     $username = $staffResult['username'];
 
-    $specialtyName = $data['specialization'];
+    $specialtyName = $data['specialty'];
 
-    $sqlSpec = "SELECT specialty_id FROM specialty WHERE specialty_name = ?";
-    $stmt = $conn->prepare($sqlSpec);
-    if (!$stmt) {
-        throw new Exception('Prepare specialty lookup failed: ' . $conn->error);
-    }
-    $stmt->bind_param('s', $specialtyName);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    $row = $res ? $res->fetch_assoc() : null;
-    $stmt->close();
-
-    if (!$row) {
-        throw new Exception('Specialty not found: ' . $specialtyName);
-    }
-
-    $specialtyId = (int)$row['specialty_id'];
-
-    $sqlDoctor = "
-        INSERT INTO doctor (staff_id, specialty, phone)
-        VALUES (?, ?, ?)
-    ";
-
+    $sqlDoctor = "INSERT INTO doctor (staff_id, specialty, phone)
+                    VALUES (?, ?, ?)";
     $stmt = $conn->prepare($sqlDoctor);
     if (!$stmt) {
         throw new Exception('Prepare doctor insert failed: ' . $conn->error);
     }
 
     $phone = $data['phone_number'] ?? null;
-    $stmt->bind_param('iis', $staffId, $specialtyId, $phone);
+    $stmt->bind_param('iis', $staffId, $specialtyName, $phone);
 
     if (!$stmt->execute()) {
         throw new Exception('Execute doctor insert failed: ' . $stmt->error);
@@ -102,13 +91,14 @@ try {
         'staff_id' => $staffId,
         'username' => $username,
     ]);
-} catch (Exception $e) {
+} catch (Throwable $e) {
     if (isset($conn) && $conn instanceof mysqli) {
         $conn->rollback();
     }
-    http_response_code(400);
+
+    http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error'   => $e->getMessage(),
+        'error'   => 'Server error: ' . $e->getMessage(),
     ]);
 }

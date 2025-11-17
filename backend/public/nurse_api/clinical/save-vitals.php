@@ -4,6 +4,7 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
+
 if (empty($_SESSION['uid'])) {
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'UNAUTHENTICATED']);
@@ -34,7 +35,6 @@ try {
         closeDBConnection($conn);
         exit;
     }
-
     $nurseId = (int)$rows[0]['nurse_id'];
     error_log('[save-vitals] Found nurse_id: ' . $nurseId);
 
@@ -193,6 +193,26 @@ try {
 
     error_log('[save-vitals] SQL executed successfully');
 
+    // ========================================
+    // 🆕 NEW: Update appointment status to "Ready"
+    // ========================================
+    // This signals to the doctor that vitals are recorded and patient is ready to be seen
+    try {
+        $updateStatusSql = "UPDATE appointment 
+                           SET Status = 'Ready'
+                           WHERE Appointment_id = ?
+                           AND Status IN ('Checked-in', 'Scheduled')";
+        
+        executeQuery($conn, $updateStatusSql, 'i', [$appointmentId]);
+        error_log('[save-vitals] Updated appointment status to Ready for appointment_id: ' . $appointmentId);
+        $newStatus = 'Ready';
+    } catch (Exception $statusError) {
+        // Log but don't fail the whole operation if status update fails
+        error_log('[save-vitals] Failed to update appointment status: ' . $statusError->getMessage());
+        $newStatus = null;
+    }
+    // ========================================
+
     closeDBConnection($conn);
 
     echo json_encode([
@@ -200,6 +220,7 @@ try {
         'visitId' => $visitId,
         'appointmentId' => $appointmentId,
         'patientId' => $patientId,
+        'new_status' => $newStatus, // 🆕 NEW: Return the new status
         'vitals' => [
             'bp' => $bp,
             'hr' => $hr,

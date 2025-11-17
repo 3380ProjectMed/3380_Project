@@ -8,21 +8,62 @@
 /* ===== PAGE HEADER ===== */
 .page-header {
   margin-bottom: 2rem;
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  color: white;
+  padding: 2rem 2.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 8px 16px rgba(0, 119, 182, 0.2);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
 }
 
 .page-title {
   font-size: 2.5rem;
   font-weight: 800;
-  color: #03045e;
+  color: white;
   margin: 0 0 0.5rem 0;
   line-height: 1.2;
 }
 
 .page-subtitle {
   font-size: 1.1rem;
-  color: #6b7280;
+  color: #caf0f8;
   margin: 0;
   font-weight: 500;
+  opacity: 0.95;
+}
+
+/* Create Patient Button */
+.btn-create-patient {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
+  white-space: nowrap;
+}
+
+.btn-create-patient:hover {
+  background: linear-gradient(135deg, #005f8a, #0096b8);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 119, 182, 0.4);
+}
+
+.btn-create-patient:active {
+  transform: translateY(0);
 }
 
 /* ===== SEARCH SECTION ===== */
@@ -158,25 +199,29 @@
 
 .detail-item {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .detail-item svg {
   color: #6b7280;
-  margin-bottom: 0.125rem;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
 }
 
 .detail-label {
-  font-size: 0.75rem;
+  font-size: 0.625rem;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .detail-value {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #1f2937;
 }
@@ -189,12 +234,15 @@
 /* Insurance Badge */
 .patient-insurance-badge {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
   padding: 1rem;
   background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
   border: 2px solid #bae6fd;
   border-radius: 0.75rem;
+  text-align: center;
 }
 
 .patient-insurance-badge svg {
@@ -215,6 +263,24 @@
   margin: 0;
   font-family: 'Courier New', monospace;
   font-weight: 600;
+}
+
+.insurance-copay {
+  font-size: 0.875rem;
+  color: #1f2937;
+  margin: 0.25rem 0;
+  font-weight: 600;
+}
+
+.insurance-expiration {
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.insurance-expiration.expired {
+  color: #dc2626;
+  font-weight: 700;
 }
 
 /* Balance Alert */
@@ -261,24 +327,30 @@
 
 /* ===== MODAL STYLES ===== */
 .modal-large {
-  max-width: 900px;
+  max-width: 1400px !important;
+  width: 98% !important;
 }
 
 /* Info Sections */
 .info-section {
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
 }
 
 .section-heading {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.25rem;
+  gap: 0.75rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #03045e;
-  margin: 0 0 1rem 0;
-  padding-bottom: 0.75rem;
-  border-bottom: 2px solid #e5e7eb;
+  margin: 0 0 1.5rem 0;
+  padding-bottom: 1rem;
+  border-bottom: 3px solid #e5e7eb;
+}
+
+.section-heading svg {
+  color: #0077b6;
+  flex-shrink: 0;
 }
 
 .info-grid {
@@ -441,6 +513,262 @@
   margin: 0.25rem 0 0 0;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+/* ===== FORM STYLES ===== */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2.5rem 3rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1.25rem;
+  color: #6b7280;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.form-input {
+  padding: 1rem 1.25rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 1.05rem;
+  color: #1f2937;
+  background: white;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  width: 100%;
+}
+
+.form-input.with-icon {
+  padding-left: 3.25rem;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #00b4d8;
+  box-shadow: 0 0 0 4px rgba(0, 180, 216, 0.1);
+  background: #f8fafc;
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.input-error {
+  border-color: #dc2626;
+}
+
+.input-error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.error-text {
+  font-size: 0.75rem;
+  color: #dc2626;
+  font-weight: 600;
+  margin-top: -0.25rem;
+}
+
+.alert {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+}
+
+.alert-danger {
+  background: #fee2e2;
+  border: 2px solid #fecaca;
+  color: #991b1b;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  min-width: 140px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #005f8a, #0096b8);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 119, 182, 0.4);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  background: white;
+  color: #6b7280;
+  border: 2px solid #d1d5db;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem 0.5rem;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: white;
+  border-radius: 1.5rem;
+  max-width: 1400px !important;
+  width: 98% !important;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 2.5rem 3.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.modal-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #03045e;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.modal-subtitle {
+  font-size: 1.05rem;
+  color: #6b7280;
+  margin: 0.5rem 0 0 0;
+  font-weight: 500;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  padding: 3rem 3.5rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1.25rem;
+  padding: 2rem 3.5rem;
+  border-top: 2px solid #e5e7eb;
+  background: #f9fafb;
+  border-bottom-left-radius: 1.5rem;
+  border-bottom-right-radius: 1.5rem;
 }
 
 /* ===== RESPONSIVE DESIGN ===== */

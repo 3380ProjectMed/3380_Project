@@ -355,3 +355,18 @@
   font-style: italic;
   color: #059669;
 }
+
+/* No PCP Section */
+.no-pcp-section {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.no-pcp-section p {
+  margin-bottom: 1rem;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}

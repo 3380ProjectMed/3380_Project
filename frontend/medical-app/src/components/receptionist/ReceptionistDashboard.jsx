@@ -13,6 +13,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDoctor, setSelectedDoctor] = useState('all');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [selectedDayAppointments, setSelectedDayAppointments] = useState(null);
+  const [selectedDayDate, setSelectedDayDate] = useState(null);
   
   // State for API data
   const [stats, setStats] = useState(null);
@@ -32,7 +34,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   // Alert/notification state
   const [alertModal, setAlertModal] = useState({
     show: false,
-    type: 'info', // 'success', 'error', 'warning', 'info'
+    type: 'info',
     title: '',
     message: ''
   });
@@ -45,26 +47,24 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   ];
 
   /**
-   * Load dashboard data on mount
+   * Load dashboard data on mount and when officeId changes
    */
   useEffect(() => {
-    loadDoctors();
-    loadDashboardData();
+    if (officeId) {
+      loadDoctors();
+      loadDashboardData();
+    }
   }, [officeId]);
 
   /**
-   * Automatic No-Show checker - runs every 2 minutes
+   * Automatic status updates - runs instantly on load and every 30 seconds
+   * Updates Scheduled → Waiting → No-Show based on appointment time
    */
   useEffect(() => {
-    // Check for no-shows immediately on mount
     checkForNoShows();
-    
-    // Set up interval to check every 2 minutes (120000 ms)
     const noShowInterval = setInterval(() => {
       checkForNoShows();
-    }, 120000);
-    
-    // Cleanup interval on unmount
+    }, 30000); // Check every 30 seconds for near-instant updates
     return () => clearInterval(noShowInterval);
   }, []);
 
@@ -72,15 +72,13 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
    * Load calendar when month changes
    */
   useEffect(() => {
-    // Always attempt to load calendar data when the month, office, or doctors list changes.
-    // Previously this waited for doctors.length > 0 which could skip the calendar fetch
-    // if the doctors API was delayed — causing the calendar to show incomplete data.
-    loadCalendarData();
+    if (officeId) {
+      loadCalendarData();
+    }
   }, [currentDate, officeId, doctors]);
 
   /**
    * Check for appointments that should be marked as No-Show
-   * Called automatically every 2 minutes
    */
   const checkForNoShows = async () => {
     try {
@@ -90,32 +88,13 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       });
       const data = await response.json();
       
-      if (data.success) {
-        if (data.updated_count > 0) {
-          console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
-          
-          // Log detailed no-show information
-          if (data.no_show_appointments && data.no_show_appointments.length > 0) {
-            console.log('No-Show Details:', data.no_show_appointments.map(apt => ({
-              id: apt.appointment_id,
-              appointmentTime: apt.appointment_date,
-              serverTime: apt.current_time,
-              minutesPast: apt.minutes_past
-            })));
-          }
-          
-          // Reload dashboard data to reflect changes
-          loadDashboardData();
-          loadCalendarData();
-        } else {
-          console.log('No appointment status updates needed');
-        }
-      } else {
-        console.error('Failed to update appointments:', data.error);
+      if (data.success && data.updated_count > 0) {
+        console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
+        loadDashboardData();
+        loadCalendarData();
       }
     } catch (err) {
       console.error('Failed to check for no-shows:', err);
-      // Silently fail - this is a background task
     }
   };
 
@@ -123,12 +102,13 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
    * Fetch doctors from the database
    */
   const loadDoctors = async () => {
+    if (!officeId) return;
+    
     try {
       const response = await fetch(`/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success) {
-        // Assign colors to doctors and normalize property names
         const doctorsWithColors = (data.doctors || []).map((doc, index) => ({
           doctor_id: doc.Doctor_id,
           first_name: doc.First_Name,
@@ -146,27 +126,28 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
 
   /**
    * Load dashboard statistics and today's appointments
+   * Automatically updates appointment statuses first
    */
   const loadDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Use today.php which returns both appointments and stats
+      // Update appointment statuses first (non-blocking)
+      checkForNoShows().catch(err => console.error('Status update failed:', err));
+      
       const response = await fetch('/receptionist_api/dashboard/today.php', { credentials: 'include' });
       const data = await response.json();
 
       if (data.success) {
         setTodayAppointments(data.appointments || []);
         
-        // Set stats from API response
         if (data.stats) {
           setStats(data.stats);
         } else {
-          // Fallback: calculate stats from appointments if not provided
           const appointments = data.appointments || [];
           const calculatedStats = {
             total: appointments.length,
-            scheduled: appointments.filter(a => ['Scheduled', 'Ready', 'Upcoming'].includes(a.status || a.Status)).length,
+            scheduled: appointments.filter(a => ['Scheduled', 'Upcoming'].includes(a.status || a.Status)).length,
             checked_in: appointments.filter(a => ['Checked In', 'Completed'].includes(a.status || a.Status)).length,
             completed: appointments.filter(a => (a.status || a.Status) === 'Completed').length,
             payment: {
@@ -196,7 +177,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const loadCalendarData = async () => {
     try {
       const year = currentDate.getFullYear();
-      const month = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+      const month = currentDate.getMonth() + 1;
       
       const response = await fetch(
         `/receptionist_api/appointments/get-by-month.php?year=${year}&month=${month}`,
@@ -205,10 +186,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       const data = await response.json();
       
       if (data.success) {
-        // Group appointments by date
         const groupedAppointments = {};
         (data.appointments || []).forEach(apt => {
-          const date = apt.Appointment_date.split(' ')[0]; // Get YYYY-MM-DD
+          const date = apt.Appointment_date.split(' ')[0];
           if (!groupedAppointments[date]) {
             groupedAppointments[date] = [];
           }
@@ -227,8 +207,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const handleCheckInAppointment = async () => {
     if (!selectedAppointment) return;
     
-    // First, validate insurance by attempting check-in with a dummy nurse_id
-    // We'll use nurse_id = 0 as a validation flag
     setCheckingIn(true);
     
     try {
@@ -238,14 +216,13 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         credentials: 'include',
         body: JSON.stringify({ 
           Appointment_id: selectedAppointment.Appointment_id,
-          nurse_id: 0, // Dummy value for validation
-          validate_only: true // Flag to indicate this is just validation
+          nurse_id: 0,
+          validate_only: true
         })
       });
       
       const data = await response.json();
       
-      // If insurance validation fails, stop here
       if (!data.success) {
         if (data.error_type === 'INSURANCE_WARNING' || data.error_type === 'INSURANCE_EXPIRED') {
           setAlertModal({
@@ -266,7 +243,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         return;
       }
       
-      // Check if there's an insurance warning (expiring soon) during validation
       if (data.insurance_warning) {
         setAlertModal({
           show: true,
@@ -276,12 +252,11 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         });
       }
       
-      // Insurance validation passed, now load nurses and show selection modal
       setCheckingIn(false);
       setLoadingNurses(true);
       setShowNurseModal(true);
       
-      const nursesResponse = await fetch(`/receptionist_api/nurses/get-by-office.php?office_id=${selectedAppointment.Office_id}`, {
+      const nursesResponse = await fetch(`/receptionist_api/nurses/get-by-office.php?office_id=${officeId}`, {
         credentials: 'include'
       });
       
@@ -290,7 +265,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       if (nursesData.success && nursesData.nurses) {
         setNurses(nursesData.nurses);
         if (nursesData.nurses.length > 0) {
-          setSelectedNurse(nursesData.nurses[0].nurse_id); // Pre-select first nurse
+          setSelectedNurse(nursesData.nurses[0].nurse_id);
         }
       } else {
         setAlertModal({
@@ -336,7 +311,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       const data = await response.json();
       
       if (data.success) {
-        // Check for insurance warnings (expiring soon)
         if (data.insurance_warning) {
           setAlertModal({
             show: true,
@@ -355,8 +329,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         setShowNurseModal(false);
         setSelectedAppointment(null);
         setSelectedNurse(null);
-        loadDashboardData(); // Reload today's appointments and stats
-        loadCalendarData(); // Reload calendar data
+        loadDashboardData();
+        loadCalendarData();
       } else {
         setAlertModal({
           show: true,
@@ -378,11 +352,10 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     }
   };
 
-  // Calculate dashboard statistics
   const dashStats = stats ? {
     total: stats.total || 0,
-    scheduled: (stats.scheduled || 0) + (stats.upcoming || 0), // Combine scheduled and upcoming for "Pending Check-in"
-    checked_in: (stats.checked_in || 0) + (stats.completed || 0), // Combine checked in and completed for "Awaiting Payment"
+    scheduled: (stats.scheduled || 0) + (stats.upcoming || 0),
+    checked_in: (stats.checked_in || 0) + (stats.completed || 0),
     completed: stats.completed || 0,
     payment: {
       total_collected: stats.payment?.total_collected || '0.00'
@@ -392,14 +365,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     scheduled: 0,
     checked_in: 0,
     completed: 0,
-    payment: {
-      total_collected: '0.00'
-    }
+    payment: { total_collected: '0.00' }
   };
 
-  /**
-   * Calendar helper functions
-   */
   const getDaysInMonth = (date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
@@ -434,13 +402,10 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
 
   const getAppointmentsForDay = (day) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    
     let dayAppointments = calendarAppointments[dateStr] || [];
-
     if (selectedDoctor !== 'all') {
       dayAppointments = dayAppointments.filter(apt => apt.Doctor_id === parseInt(selectedDoctor));
     }
-
     return dayAppointments;
   };
 
@@ -501,6 +466,26 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     });
   };
 
+  /**
+   * Handle clicking on a calendar day to view its appointments
+   */
+  const handleDayClick = (day) => {
+    const appointments = getAppointmentsForDay(day);
+    if (appointments.length === 0) return;
+    
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateObj = new Date(dateStr);
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    setSelectedDayDate(formattedDate);
+    setSelectedDayAppointments(appointments);
+  };
+
   const currentMonthName = currentDate.toLocaleString('default', { month: 'long' });
   const currentYear = currentDate.getFullYear();
   const daysInMonth = getDaysInMonth(currentDate);
@@ -509,7 +494,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
 
   return (
     <div className="receptionist-dashboard">
-      {/* ===== HEADER ===== */}
       <div className="dashboard-header">
         <div className="header-content">
           <h1 className="dashboard-title">Front Desk Dashboard</h1>
@@ -520,107 +504,69 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         </div>
       </div>
 
-      {/* ===== STATS GRID ===== */}
       <div className="stats-grid">
         <div className="stat-card stat-primary">
-          <div className="stat-icon">
-            <Calendar size={24} />
-          </div>
+          <div className="stat-icon"><Calendar size={24} /></div>
           <div className="stat-content">
-            <div className="stat-value">
-              {loading ? '...' : dashStats.total}
-            </div>
+            <div className="stat-value">{loading ? '...' : dashStats.total}</div>
             <div className="stat-label">Total Appointments</div>
           </div>
         </div>
 
         <div className="stat-card stat-success">
-          <div className="stat-icon">
-            <Check size={24} />
-          </div>
+          <div className="stat-icon"><Check size={24} /></div>
           <div className="stat-content">
-            <div className="stat-value">
-              {loading ? '...' : dashStats.checked_in}
-            </div>
+            <div className="stat-value">{loading ? '...' : dashStats.checked_in}</div>
             <div className="stat-label">Awaiting Payment</div>
           </div>
         </div>
 
         <div className="stat-card stat-warning">
-          <div className="stat-icon">
-            <Clock size={24} />
-          </div>
+          <div className="stat-icon"><Clock size={24} /></div>
           <div className="stat-content">
-            <div className="stat-value">
-              {loading ? '...' : dashStats.scheduled}
-            </div>
+            <div className="stat-value">{loading ? '...' : dashStats.scheduled}</div>
             <div className="stat-label">Pending Check-in</div>
           </div>
         </div>
 
         <div className="stat-card stat-success">
-          <div className="stat-icon">
-            <DollarSign size={24} />
-          </div>
+          <div className="stat-icon"><DollarSign size={24} /></div>
           <div className="stat-content">
-            <div className="stat-value">
-              {loading ? '...' : `$${dashStats.payment?.total_collected || '0.00'}`}
-            </div>
+            <div className="stat-value">{loading ? '...' : `$${dashStats.payment?.total_collected || '0.00'}`}</div>
             <div className="stat-label">Collected Today</div>
           </div>
         </div>
       </div>
 
-      {/* ===== QUICK ACTIONS ===== */}
       <div className="quick-actions-section">
         <h2 className="section-title">Quick Actions</h2>
         <div className="quick-actions-grid">
-          <button 
-            className="action-card action-primary"
-            onClick={() => setCurrentPage('booking')}
-          >
-            <div className="action-icon">
-              <Plus size={24} />
-            </div>
+          <button className="action-card action-primary" onClick={() => setCurrentPage('booking')}>
+            <div className="action-icon"><Plus size={24} /></div>
             <div className="action-content">
               <h3 className="action-title">New Appointment</h3>
               <p className="action-description">Schedule patient visit</p>
             </div>
           </button>
 
-          <button 
-            className="action-card action-secondary"
-            onClick={() => setCurrentPage('patients')}
-          >
-            <div className="action-icon">
-              <Users size={24} />
-            </div>
+          <button className="action-card action-secondary" onClick={() => setCurrentPage('patients')}>
+            <div className="action-icon"><Users size={24} /></div>
             <div className="action-content">
               <h3 className="action-title">Patient Search</h3>
               <p className="action-description">Find patient records</p>
             </div>
           </button>
 
-          <button 
-            className="action-card action-success"
-            onClick={() => setCurrentPage('payment')}
-          >
-            <div className="action-icon">
-              <DollarSign size={24} />
-            </div>
+          <button className="action-card action-success" onClick={() => setCurrentPage('payment')}>
+            <div className="action-icon"><DollarSign size={24} /></div>
             <div className="action-content">
               <h3 className="action-title">Record Payment</h3>
               <p className="action-description">Process copayment</p>
             </div>
           </button>
 
-          <button 
-            className="action-card action-info"
-            onClick={() => setCurrentPage('schedule')}
-          >
-            <div className="action-icon">
-              <Clock size={24} />
-            </div>
+          <button className="action-card action-info" onClick={() => setCurrentPage('schedule')}>
+            <div className="action-icon"><Clock size={24} /></div>
             <div className="action-content">
               <h3 className="action-title">Doctor Availability</h3>
               <p className="action-description">View daily schedule</p>
@@ -629,30 +575,19 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         </div>
       </div>
 
-      {/* ===== COMBINED VIEW ===== */}
       <div className="combined-view-section">
-        {/* TODAY'S APPOINTMENTS */}
         <div className="appointments-section">
           <div className="section-header">
             <h2 className="section-title">Today's Appointments</h2>
             
             <div className="filter-buttons">
-              <button 
-                className={`filter-btn ${selectedFilter === 'all' ? 'filter-active' : ''}`}
-                onClick={() => setSelectedFilter('all')}
-              >
+              <button className={`filter-btn ${selectedFilter === 'all' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('all')}>
                 All ({todayAppointments.length})
               </button>
-              <button 
-                className={`filter-btn ${selectedFilter === 'scheduled' ? 'filter-active' : ''}`}
-                onClick={() => setSelectedFilter('scheduled')}
-              >
+              <button className={`filter-btn ${selectedFilter === 'scheduled' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('scheduled')}>
                 Scheduled
               </button>
-              <button 
-                className={`filter-btn ${selectedFilter === 'completed' ? 'filter-active' : ''}`}
-                onClick={() => setSelectedFilter('completed')}
-              >
+              <button className={`filter-btn ${selectedFilter === 'completed' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('completed')}>
                 Completed
               </button>
             </div>
@@ -713,21 +648,13 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                       {appointment.status || appointment.Status || 'Scheduled'}
                     </span>
                     {appointment.waitingMinutes > 0 && (
-                      <span className="waiting-time">
-                        {appointment.waitingMinutes} min
-                      </span>
+                      <span className="waiting-time">{appointment.waitingMinutes} min</span>
                     )}
                   </div>
 
                   <div className="appointment-actions">
                     {(appointment.status || appointment.Status) === 'Scheduled' && (
-                      <button 
-                        className="btn-check-in"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Check-in functionality can be added here
-                        }}
-                      >
+                      <button className="btn-check-in" onClick={(e) => e.stopPropagation()}>
                         <Check size={16} />
                         Check In
                       </button>
@@ -764,7 +691,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
           </div>
         </div>
 
-        {/* CALENDAR VIEW */}
         <div className="calendar-view-section">
           <h2 className="section-title">Monthly Calendar</h2>
           
@@ -782,11 +708,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
 
             <div className="doctor-filter">
               <Filter size={18} />
-              <select 
-                value={selectedDoctor}
-                onChange={(e) => setSelectedDoctor(e.target.value)}
-                className="filter-select"
-              >
+              <select value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)} className="filter-select">
                 <option value="all">All Doctors</option>
                 {doctors.map(doc => (
                   <option key={doc.doctor_id} value={doc.doctor_id}>
@@ -825,48 +747,30 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                 const appointments = getAppointmentsForDay(day);
                 const weekend = isWeekend(day);
                 const today = isToday(day);
+                const hasAppointments = appointments.length > 0;
 
                 return (
-                  <div 
-                    key={day}
-                    className={`calendar-day ${weekend ? 'weekend' : ''} ${today ? 'today' : ''}`}
-                  >
-                    <div className="day-header">
-                      <span className="day-number">{day}</span>
-                      {appointments.length > 0 && (
-                        <span className="appointment-count">{appointments.length}</span>
-                      )}
-                    </div>
-
-                    <div className="day-appointments">
-                      {weekend ? (
-                        <p className="no-appointments">Closed</p>
-                      ) : appointments.length > 0 ? (
-                        appointments.map(apt => {
-                          const doctor = getDoctorById(apt.Doctor_id);
-                          return (
-                            <div
-                              key={apt.Appointment_id}
-                              className="appointment-item"
-                              style={{ borderLeftColor: doctor?.color || '#6b7280' }}
-                              onClick={() => setSelectedAppointment(apt)}
-                            >
-                              <div className="apt-time">
-                                {formatTime(apt.Appointment_date)}
-                              </div>
-                              <div className="apt-patient">
-                                {apt.Patient_First} {apt.Patient_Last}
-                              </div>
-                              <div className="apt-doctor" style={{ color: doctor?.color || '#6b7280' }}>
-                                Dr. {doctor?.last_name || 'Unknown'}
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <p className="no-appointments">No appointments</p>
-                      )}
-                    </div>
+                  <div key={day} className={`calendar-day ${weekend ? 'weekend' : ''} ${today ? 'today' : ''}`}>
+                    {weekend ? (
+                      <div className="day-closed">
+                        <span className="day-number">{day}</span>
+                        <span className="closed-label">Closed</span>
+                      </div>
+                    ) : (
+                      <button
+                        className={`day-button ${hasAppointments ? 'has-appointments' : 'no-appointments'} ${today ? 'today-btn' : ''}`}
+                        onClick={() => hasAppointments && handleDayClick(day)}
+                        disabled={!hasAppointments}
+                        style={{ position: 'relative' }}
+                      >
+                        {hasAppointments && (
+                          <span className="appointment-badge">
+                            {appointments.length}
+                          </span>
+                        )}
+                        <span className="day-number">{day}</span>
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -875,7 +779,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         </div>
       </div>
 
-      {/* ===== APPOINTMENT DETAILS MODAL ===== */}
       {selectedAppointment && (
         <div className="modal-overlay" onClick={() => setSelectedAppointment(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -1096,6 +999,76 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                 onClick={() => setAlertModal({ ...alertModal, show: false })}
               >
                 OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ===== DAY APPOINTMENTS MODAL ===== */}
+      {selectedDayAppointments && (
+        <div className="modal-overlay" onClick={() => setSelectedDayAppointments(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '80vh' }}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Appointments for {selectedDayDate}</h2>
+                <p className="modal-subtitle">{selectedDayAppointments.length} appointment{selectedDayAppointments.length !== 1 ? 's' : ''}</p>
+              </div>
+              <button className="modal-close" onClick={() => setSelectedDayAppointments(null)}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '0', maxHeight: '60vh', overflowY: 'auto' }}>
+              <div className="appointments-list" style={{ padding: '20px' }}>
+                {selectedDayAppointments.map((appointment) => (
+                  <div 
+                    key={appointment.Appointment_id} 
+                    className="appointment-card"
+                    onClick={() => {
+                      setSelectedDayAppointments(null);
+                      setSelectedAppointment(appointment);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="appointment-time">
+                      <Clock size={20} />
+                      <span>{formatTime(appointment.Appointment_date)}</span>
+                    </div>
+
+                    <div className="appointment-patient">
+                      <h3 className="patient-name">
+                        {appointment.Patient_First} {appointment.Patient_Last}
+                      </h3>
+                      <div className="patient-meta">
+                        <span className="patient-id">
+                          ID: {appointment.patient_id || appointment.Patient_id}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="appointment-details">
+                      <p className="appointment-reason">
+                        {appointment.Reason_for_visit}
+                      </p>
+                      <p className="appointment-doctor">
+                        Dr. {appointment.Doctor_First} {appointment.Doctor_Last}
+                      </p>
+                    </div>
+
+                    <div className="appointment-status">
+                      <span className={`status-badge ${getStatusClass(appointment.Status)}`}>
+                        {appointment.Status || 'Scheduled'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setSelectedDayAppointments(null)}>
+                Close
               </button>
             </div>
           </div>

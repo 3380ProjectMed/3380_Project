@@ -47,7 +47,8 @@
   display: flex;
   gap: 1rem;
   font-size: 0.95rem;
-  color: white;
+  color: var(--dark);
+  font-weight: 600;
   flex-wrap: wrap;
   text-align: center;
 }
@@ -56,6 +57,7 @@
   display: flex;
   align-items: center;
   gap: 0.375rem;
+  color: var(--dark);
 }
 
 .btn-close {

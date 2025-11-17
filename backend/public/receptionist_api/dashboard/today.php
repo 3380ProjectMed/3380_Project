@@ -75,6 +75,7 @@ try {
                 a.Appointment_date,
                 a.Reason_for_visit,
                 a.Status,
+                a.method,
                 a.Patient_id,
                 a.Doctor_id,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
@@ -126,44 +127,27 @@ try {
         // Parse appointment datetime and normalize to Chicago timezone
         $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
         $dbStatus = $apt['Status'] ?? 'Scheduled';
+        $visitStatus = $apt['visit_status'] ?? null;
 
-        // Determine display status based on time and database status
+        // Use database status directly - no automatic time-based changes
         $displayStatus = $dbStatus;
-        $waitingTime = 0;
 
         // Priority 1: Check for final/terminal statuses
         if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
             // Keep the database status
             $displayStatus = $dbStatus;
         }
-        // Priority 2: Check if patient has checked in (should override time-based status)
-        elseif ($apt['check_in_time'] && !$apt['completion_time']) {
+        // Priority 2: Check if patient has actually checked in (using status fields)
+        elseif ($dbStatus === 'Checked-in' || $visitStatus === 'Checked In') {
             if ($dbStatus === 'In Progress') {
                 $displayStatus = 'In Progress';
             } else {
                 $displayStatus = 'Checked In';
             }
         }
-        // Priority 3: Time-based status calculation for appointments that haven't checked in yet
+        // Priority 3: Use database status as-is (Scheduled, Waiting, etc.)
         else {
-            // Calculate time difference in minutes
-            $timeDiff = ($currentDateTime->getTimestamp() - $appointmentDateTime->getTimestamp()) / 60;
-
-            if ($timeDiff < -15) {
-                // Appointment is more than 15 minutes in the future
-                $displayStatus = 'Upcoming';
-            } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
-                // Appointment time is now (within 15 min window)
-                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
-            } elseif ($timeDiff > 15) {
-                // Appointment time has passed by more than 15 minutes
-                if ($dbStatus === 'Scheduled') {
-                    $displayStatus = 'Waiting';
-                    $waitingTime = round($timeDiff);
-                } elseif ($dbStatus === 'In Progress') {
-                    $displayStatus = 'In Progress';
-                }
-            }
+            $displayStatus = $dbStatus;
         }
 
         // Update statistics based on final displayStatus
@@ -197,7 +181,7 @@ try {
             'id' => $apt['Appointment_id'],
             'Appointment_id' => $apt['Appointment_id'],
             'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
-
+            'Office_id' => $office_id, 
             // Patient fields
             'patientId' => $apt['Patient_id'],
             'Patient_id' => $apt['Patient_id'],
@@ -222,7 +206,7 @@ try {
             'status' => $displayStatus,
             'Status' => $displayStatus,
             'dbStatus' => $dbStatus,
-            'waitingMinutes' => $waitingTime,
+            'waitingMinutes' => 0,
 
             // Other fields
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
