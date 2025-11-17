@@ -2149,3 +2149,10 @@
     gap: 0.75rem;
   }
 }
+
+.trend-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
