@@ -26,11 +26,6 @@ try {
         echo json_encode(['success' => false, 'error' => 'MISSING_EMAIL']);
         exit;
     }
-     // Use America/Chicago timezone
-    $tz = new DateTimeZone('America/Chicago');
-    $dt = new DateTime('now', $tz);
-    $today = $dt->format('Y-m-d');
-    $currentDateTime = new DateTime('now', $tz);
     // nurse ↔ staff ↔ staff_email
     $rows = executeQuery(
         $conn,
