@@ -135,12 +135,25 @@ $visitSql = $baseSelect . ", a.Appointment_date, a.Reason_for_visit as appointme
             LIMIT 1";
 $rows = executeQuery($conn, $visitSql, 'i', [$appointment_id]);
 
-// Add debug logging
-error_log(sprintf(
-    '[get-patient-details] Searching for visit with appointment_id=%d, found %d records',
-    $appointment_id,
-    count($rows)
-));
+// DEBUG: Log what we found
+if (!empty($rows)) {
+    error_log('[get-patient-details] Found visit: visit_id=' . $rows[0]['visit_id'] . 
+              ', patient_id=' . $rows[0]['patient_id'] . 
+              ', nurse_id=' . $rows[0]['nurse_id'] .
+              ', bp=' . ($rows[0]['blood_pressure'] ?? 'null'));
+} else {
+    error_log('[get-patient-details] No visit found for appointment_id=' . $appointment_id);
+    
+    // DEBUG: Check if ANY visit exists for this appointment
+    $debugSql = "SELECT visit_id, appointment_id, patient_id, nurse_id, blood_pressure 
+                 FROM patient_visit 
+                 WHERE appointment_id = ?";
+    $debugRows = executeQuery($conn, $debugSql, 'i', [$appointment_id]);
+    error_log('[get-patient-details] Direct query found ' . count($debugRows) . ' visits');
+    if (!empty($debugRows)) {
+        error_log('[get-patient-details] First visit: ' . json_encode($debugRows[0]));
+    }
+}
 // Step 3: If no patient_visit found for this appointment date
 if (empty($rows)) {
     // Calculate age
