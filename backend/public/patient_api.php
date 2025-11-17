@@ -612,6 +612,10 @@ elseif ($endpoint === 'appointments') {
                     `Appointment_id`, `Patient_id`, `Doctor_id`, `Office_id`, 
                     `Appointment_date`, `Date_created`, `Reason_for_visit`, `Status`, `method`
                 ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?)");
+            // Store literal values in variables for bind_param (requires references)
+            $status = 'Scheduled';
+            $method = 'Online';
+            
             $stmt->bind_param(
                 'iiiissss',
                 $next_id,
@@ -620,8 +624,8 @@ elseif ($endpoint === 'appointments') {
                 $input['office_id'],
                 $appointmentdateTime,
                 $input['reason'],
-                'Scheduled',
-                'Online'
+                $status,
+                $method
             );
 
             // Enhanced error logging for debugging
