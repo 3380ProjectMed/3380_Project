@@ -76,7 +76,9 @@ export default function PatientPortal({ onLogout }) {
         switch (currentPage) {
           case 'dashboard': 
             await loadDashboard(); 
-            await loadReferrals(); 
+            await loadReferrals();
+            // Load profile data to get display name
+            await loadProfile();
             break;
           case 'profile': 
             await loadProfile(); 
@@ -192,7 +194,6 @@ export default function PatientPortal({ onLogout }) {
     console.log('Profile API response:', r);
     if (r.success) {
       setProfile(r.data);
-      setPcp(r.data);
       // populate editable form fields with current profile values
       setFormData(fd => ({
         ...fd,

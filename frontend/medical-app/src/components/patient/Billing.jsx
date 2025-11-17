@@ -106,14 +106,57 @@ export default function Billing(props) {
             ) : (
               <div className="appointments-list">
                 {billingStatements.map(s => (
-                  <div key={s.id} className="appointment-card">
-                    <div className="appointment-header">
-                      <h3>{s.service}</h3>
-                      <p>${Number(s.balance).toFixed(2)}</p>
+                  <div key={s.id} className="billing-statement-card">
+                    <div className="statement-header">
+                      <div className="statement-info">
+                        <h3>{s.service}</h3>
+                        <p className="statement-date">{s.date}</p>
+                        <span className={`status-badge ${s.status.toLowerCase().replace(' ', '-')}`}>
+                          {s.status}
+                        </span>
+                      </div>
+                      <div className="statement-balance">
+                        <div className="balance-label">Amount Due</div>
+                        <div className="balance-amount">${Number(s.balance).toFixed(2)}</div>
+                      </div>
                     </div>
-                    <div className="appointment-body">
-                      <p className="text-small">Date: {s.date}</p>
-                      <p className="text-small">Status: {s.status}</p>
+                    
+                    <div className="cost-breakdown">
+                      <h4>Cost Breakdown</h4>
+                      <div className="breakdown-grid">
+                        <div className="breakdown-item">
+                          <span className="breakdown-label">Copay:</span>
+                          <span className="breakdown-amount">${Number(s.copay_amount || 0).toFixed(2)}</span>
+                        </div>
+                        
+                        <div className="breakdown-item">
+                          <span className="breakdown-label">Treatment Cost:</span>
+                          <span className="breakdown-amount">${Number(s.treatment_cost || 0).toFixed(2)}</span>
+                        </div>
+                        
+                        <div className="breakdown-item">
+                          <span className="breakdown-label">Your Share ({Number(s.coinsurance_rate || 0).toFixed(0)}%):</span>
+                          <span className="breakdown-amount">${Number(s.coinsurance_amount || 0).toFixed(2)}</span>
+                        </div>
+                        
+                        <div className="breakdown-item breakdown-total">
+                          <span className="breakdown-label"><strong>Total Amount:</strong></span>
+                          <span className="breakdown-amount"><strong>${Number(s.amount || 0).toFixed(2)}</strong></span>
+                        </div>
+                        
+                        {s.payment_made > 0 && (
+                          <div className="breakdown-item payment-made">
+                            <span className="breakdown-label">Payment Made:</span>
+                            <span className="breakdown-amount">-${Number(s.payment_made).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {s.insurance_name && (
+                        <div className="insurance-info">
+                          <p className="text-small">Insurance: {s.insurance_name} - {s.insurance_plan}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -27,10 +27,10 @@ export default function NurseDashboard({ setCurrentPage }) {
         
         if (mounted && s) {
           setStats({
-            total: s.totalAppointments || 0,
-            waiting: s.waitingCount || 0,
-            upcoming: s.upcomingCount || 0,
-            completed: s.completedCount || 0
+            total: s.total,
+            waiting: s.waiting,
+            upcoming: s.upcoming,
+            completed: s.completed
           });
         }
         
@@ -69,14 +69,6 @@ export default function NurseDashboard({ setCurrentPage }) {
       'ready': 'status-ready',
     };
     return statusMap[(status || '').toLowerCase()] || 'status-scheduled';
-  };
-
-  const formatAppointmentId = (appointmentId) => {
-    if (!appointmentId) return 'N/A';
-    // If it's already formatted (starts with A), return as-is
-    if (String(appointmentId).startsWith('A')) return appointmentId;
-    // Otherwise, add A prefix and pad to 4 digits
-    return `A${String(appointmentId).padStart(4, '0')}`;
   };
 
   const handleAppointmentRowClick = (appointment) => {
@@ -239,7 +231,7 @@ export default function NurseDashboard({ setCurrentPage }) {
                     }}
                   >
                     <div className="col-time">{appointment.time}</div>
-                    <div className="col-apptid">{formatAppointmentId(appointment.appointmentId)}</div>
+                    <div className="col-apptid">{appointment.appointmentId}</div>
                     <div className="col-patient">
                       <span className="patient-link">{appointment.patientName}</span>
                     </div>

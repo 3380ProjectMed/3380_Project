@@ -4,7 +4,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
-date_default_timezone_set('America/Chicago');
 
 if (empty($_SESSION['uid'])) {
     http_response_code(401);
@@ -36,12 +35,6 @@ try {
         closeDBConnection($conn);
         exit;
     }
-     // Use America/Chicago timezone
-    $tz = new DateTimeZone('America/Chicago');
-    $dt = new DateTime('now', $tz);
-    $today = $dt->format('Y-m-d');
-    $currentDateTime = new DateTime('now', $tz);
-
     $nurseId = (int)$rows[0]['nurse_id'];
     error_log('[save-vitals] Found nurse_id: ' . $nurseId);
 
