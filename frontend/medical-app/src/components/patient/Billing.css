@@ -497,6 +497,49 @@
 }
 
 /* Mobile Responsiveness */
+/* Treatment Details Styles */
+.treatment-details-section {
+  width: 100%;
+}
+
+.treatment-details-header {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.treatment-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.treatment-detail-item:last-child {
+  border-bottom: none;
+}
+
+.treatment-name {
+  font-weight: 400;
+  color: #4b5563;
+  flex: 1;
+}
+
+.treatment-cost {
+  font-weight: 500;
+  color: #111827;
+  min-width: 80px;
+  text-align: right;
+}
+
+.treatment-total {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 2px solid #e5e7eb;
+}
+
 @media (max-width: 768px) {
   .statement-header {
     flex-direction: column;
@@ -509,5 +552,16 @@
   
   .breakdown-item {
     padding: 0.75rem 0;
+  }
+
+  .treatment-detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .treatment-cost {
+    text-align: left;
+    min-width: auto;
   }
 }

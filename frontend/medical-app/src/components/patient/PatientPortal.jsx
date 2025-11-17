@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Calendar, User, FileText, CreditCard, Activity, Clock, MapPin, Phone, Mail,
   Heart, Pill, AlertCircle, ChevronRight, Plus, X, Check, Shield, Stethoscope,
-  LogOut, Home
+  LogOut, Home, Info
 } from 'lucide-react';
 import './PatientPortal.css';
 import Sidebar from './Sidebar.jsx';

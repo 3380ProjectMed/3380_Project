@@ -43,7 +43,8 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     show: false,
     type: 'info',
     title: '',
-    message: ''
+    message: '',
+    confirmAction: null
   });
 
   /**
@@ -53,9 +54,45 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     loadScheduleData();
   }, [selectedDate, officeId]);
 
+  /**
+   * Automatic status updates - runs instantly on load and every 30 seconds
+   * Updates Scheduled → Waiting → No-Show based on appointment time
+   */
+  useEffect(() => {
+    checkForStatusUpdates();
+    const statusUpdateInterval = setInterval(() => {
+      checkForStatusUpdates();
+    }, 30000); // Check every 30 seconds for near-instant updates
+    return () => clearInterval(statusUpdateInterval);
+  }, []);
+
+  /**
+   * Check for appointments that should be marked as Waiting or No-Show
+   */
+  const checkForStatusUpdates = async () => {
+    try {
+      const response = await fetch('/receptionist_api/appointments/update-no-shows.php', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      
+      if (data.success && data.updated_count > 0) {
+        console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
+        loadScheduleData();
+      }
+    } catch (err) {
+      console.error('Failed to check for status updates:', err);
+    }
+  };
+
   const loadScheduleData = async () => {
     try {
       setLoading(true);
+      
+      // Update appointment statuses first (non-blocking)
+      checkForStatusUpdates().catch(err => console.error('Status update failed:', err));
+      
       // Get doctors for this office
       const doctorsResponse = await fetch(
         `/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`,
@@ -436,14 +473,27 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   };
 
   /**
-   * Cancel appointment
+   * Show cancel confirmation modal
    */
-  const handleCancelAppointment = async () => {
+  const handleCancelAppointment = () => {
     if (!selectedAppointment || !selectedAppointment.appointment_id) return;
     
-    if (!window.confirm('Are you sure you want to cancel this appointment?')) {
-      return;
-    }
+    setAlertModal({
+      show: true,
+      type: 'warning',
+      title: 'Cancel Appointment',
+      message: 'Are you sure you want to cancel this appointment? This action cannot be undone.',
+      confirmAction: confirmCancelAppointment
+    });
+  };
+
+  /**
+   * Execute appointment cancellation
+   */
+  const confirmCancelAppointment = async () => {
+    if (!selectedAppointment || !selectedAppointment.appointment_id) return;
+    
+    setAlertModal({ ...alertModal, show: false });
     
     try {
       setCanceling(true);
@@ -463,16 +513,30 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       const result = await response.json();
       
       if (result.success) {
-        // Close modal
+        setAlertModal({
+          show: true,
+          type: 'success',
+          title: 'Appointment Cancelled',
+          message: 'The appointment has been successfully cancelled.'
+        });
         setSelectedAppointment(null);
-        // Reload schedule data
         loadScheduleData();
       } else {
-        alert('Failed to cancel appointment: ' + (result.error || 'Unknown error'));
+        setAlertModal({
+          show: true,
+          type: 'error',
+          title: 'Cancellation Failed',
+          message: result.error || 'Failed to cancel appointment. Please try again.'
+        });
       }
     } catch (err) {
       console.error('Failed to cancel appointment:', err);
-      alert('Failed to cancel appointment. Please try again.');
+      setAlertModal({
+        show: true,
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to cancel appointment. Please check your connection and try again.'
+      });
     } finally {
       setCanceling(false);
     }
@@ -1112,17 +1176,36 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             </div>
 
             <div className="modal-footer">
-              <button 
-                className={`btn ${
-                  alertModal.type === 'success' ? 'btn-success' : 
-                  alertModal.type === 'error' ? 'btn-danger' :
-                  alertModal.type === 'warning' ? 'btn-warning' :
-                  'btn-primary'
-                }`}
-                onClick={() => setAlertModal({ ...alertModal, show: false })}
-              >
-                OK
-              </button>
+              {alertModal.confirmAction ? (
+                <>
+                  <button 
+                    className="btn btn-ghost" 
+                    onClick={() => setAlertModal({ ...alertModal, show: false })}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className={`btn ${
+                      alertModal.type === 'warning' ? 'btn-danger' : 'btn-primary'
+                    }`}
+                    onClick={alertModal.confirmAction}
+                  >
+                    Confirm
+                  </button>
+                </>
+              ) : (
+                <button 
+                  className={`btn ${
+                    alertModal.type === 'success' ? 'btn-success' : 
+                    alertModal.type === 'error' ? 'btn-danger' :
+                    alertModal.type === 'warning' ? 'btn-warning' :
+                    'btn-primary'
+                  }`}
+                  onClick={() => setAlertModal({ ...alertModal, show: false })}
+                >
+                  OK
+                </button>
+              )}
             </div>
           </div>
         </div>

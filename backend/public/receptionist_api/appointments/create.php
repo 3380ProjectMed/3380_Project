@@ -87,17 +87,32 @@ try {
                         Reason_for_visit, 
                         Office_id,
                         Status,
+                        method,
                         Date_created
-                      ) VALUES (?, ?, ?, ?, ?, 'Scheduled', NOW())";
+                      ) VALUES (?, ?, ?, ?, ?, 'Scheduled', ?, NOW())";
 
         $reason = $input['Reason_for_visit'] ?? 'General Visit';
+        
+        // Map booking_channel to method (database column)
+        $bookingMethod = 'Walk-in'; // default
+        if (isset($input['booking_channel'])) {
+            $channel = strtolower($input['booking_channel']);
+            if ($channel === 'phone') {
+                $bookingMethod = 'Phone';
+            } elseif ($channel === 'online') {
+                $bookingMethod = 'Online';
+            } elseif ($channel === 'walk-in') {
+                $bookingMethod = 'Walk-in';
+            }
+        }
 
-        executeQuery($conn, $insertSql, 'iissi', [
+        executeQuery($conn, $insertSql, 'iissis', [
             $input['Patient_id'],
             $input['Doctor_id'],
             $input['Appointment_date'],
             $reason,
-            $input['Office_id']
+            $input['Office_id'],
+            $bookingMethod
         ]);
 
         $appointment_id = $conn->insert_id;
