@@ -573,6 +573,22 @@ function AddUserModal({ type, onClose, onSuccess }) {
     }
   };
 
+  const normalizeLicenseForRole = (value, role) => {
+    const digits = value.replace(/\D/g, '');
+
+    if (!digits) return '';
+
+    const six = digits.slice(0, 6); 
+
+    if (role === 'doctor') {
+      return `TXMD${six}`;
+    }
+    if (role === 'nurse') {
+      return `RN${six}`;
+    }
+    return value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -593,7 +609,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
         ssn: formData.ssn.replace(/\D/g, ''),
         gender: parseInt(formData.gender),
         phone_number: formData.phoneNumber.replace(/\D/g, ''),
-        license_number: formData.licenseNumber,
+        license_number: normalizeLicenseForRole(formData.licenseNumber || '', selectedRole),
       };
 
       if (selectedRole === 'nurse' || selectedRole === 'receptionist') {
@@ -602,7 +618,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
       }
 
       if (selectedRole === 'doctor') {
-        payload.specialty = formData.specialty;
+        payload.specialty = parseInt(formData.specialty, 10);
       } else if (selectedRole === 'nurse') {
         payload.department = formData.department;
       }
@@ -659,11 +675,13 @@ function AddUserModal({ type, onClose, onSuccess }) {
     
     let formattedValue = value;
     
-    // Apply formatting for specific fields
     if (name === 'ssn') {
       formattedValue = formatSSN(value);
     } else if (name === 'phoneNumber') {
       formattedValue = formatPhoneNumber(value);
+    } else if (name === 'licenseNumber') {
+      // Live standardization based on selectedRole
+      formattedValue = normalizeLicenseForRole(value, selectedRole);
     }
     
     setFormData(prev => ({
@@ -835,8 +853,15 @@ function AddUserModal({ type, onClose, onSuccess }) {
                   name="licenseNumber"
                   value={formData.licenseNumber}
                   onChange={handleChange}
-                  placeholder="RN123456"
-                  required={selectedRole === 'doctor'}
+                  placeholder={
+                    selectedRole === 'doctor'
+                      ? 'TXMD123456'
+                      : selectedRole === 'nurse'
+                      ? 'RN123456'
+                      : 'License ID'
+                  }
+                  maxLength={selectedRole === 'doctor' ? 10 : selectedRole === 'nurse' ? 8 : 20}
+                  required={selectedRole === 'doctor' || selectedRole === 'nurse'}
                 />
               </div>
             </div>
@@ -854,7 +879,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
               >
                 <option value="">Select a specialty...</option>
                 {specialties.map(spec => (
-                  <option key={spec.id} value={spec.name}>
+                  <option key={spec.id} value={spec.id}>
                     {spec.name}
                   </option>
                 ))}

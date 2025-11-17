@@ -82,7 +82,7 @@ try {
     }
 
     $phone = $data['phone_number'] ?? null;
-    $stmt->bind_param('iss', $staffId, $specialtyName, $phone);
+    $stmt->bind_param('iis', $staffId, $specialtyName, $phone);
 
     if (!$stmt->execute()) {
         throw new Exception('Execute doctor insert failed: ' . $stmt->error);
