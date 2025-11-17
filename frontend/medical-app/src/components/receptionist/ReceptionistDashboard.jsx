@@ -13,6 +13,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDoctor, setSelectedDoctor] = useState('all');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [selectedDayAppointments, setSelectedDayAppointments] = useState(null);
+  const [selectedDayDate, setSelectedDayDate] = useState(null);
   
   // State for API data
   const [stats, setStats] = useState(null);
@@ -22,7 +24,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [checkingIn, setCheckingIn] = useState(false);
-  const [canceling, setCanceling] = useState(false);
   
   // Nurse selection state
   const [showNurseModal, setShowNurseModal] = useState(false);
@@ -56,13 +57,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   }, [officeId]);
 
   /**
-   * Automatic No-Show checker - runs every 2 minutes
+   * Automatic status updates - runs instantly on load and every 30 seconds
+   * Updates Scheduled → Waiting → No-Show based on appointment time
    */
   useEffect(() => {
     checkForNoShows();
     const noShowInterval = setInterval(() => {
       checkForNoShows();
-    }, 120000);
+    }, 30000); // Check every 30 seconds for near-instant updates
     return () => clearInterval(noShowInterval);
   }, []);
 
@@ -124,10 +126,15 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
 
   /**
    * Load dashboard statistics and today's appointments
+   * Automatically updates appointment statuses first
    */
   const loadDashboardData = async () => {
     try {
       setLoading(true);
+      
+      // Update appointment statuses first (non-blocking)
+      checkForNoShows().catch(err => console.error('Status update failed:', err));
+      
       const response = await fetch('/receptionist_api/dashboard/today.php', { credentials: 'include' });
       const data = await response.json();
 
@@ -345,64 +352,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     }
   };
 
-  /**
-   * Cancel appointment - Can cancel even if checked-in
-   */
-  const handleCancelAppointment = async () => {
-    if (!selectedAppointment || !selectedAppointment.Appointment_id) return;
-    
-    if (!window.confirm('Are you sure you want to cancel this appointment? This action will update the appointment status to Cancelled.')) {
-      return;
-    }
-    
-    setCanceling(true);
-    
-    try {
-      const response = await fetch('/receptionist_api/appointments/cancel.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          Appointment_id: selectedAppointment.Appointment_id,
-          cancellation_reason: 'Cancelled by receptionist'
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        setAlertModal({
-          show: true,
-          type: 'success',
-          title: 'Appointment Cancelled',
-          message: 'The appointment has been successfully cancelled.'
-        });
-        setSelectedAppointment(null);
-        loadDashboardData();
-        loadCalendarData();
-      } else {
-        setAlertModal({
-          show: true,
-          type: 'error',
-          title: 'Cancellation Failed',
-          message: result.error || 'Unknown error occurred'
-        });
-      }
-    } catch (err) {
-      console.error('Failed to cancel appointment:', err);
-      setAlertModal({
-        show: true,
-        type: 'error',
-        title: 'Network Error',
-        message: 'Failed to cancel appointment. Please try again.'
-      });
-    } finally {
-      setCanceling(false);
-    }
-  };
-
   const dashStats = stats ? {
     total: stats.total || 0,
     scheduled: (stats.scheduled || 0) + (stats.upcoming || 0),
@@ -515,6 +464,26 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       month: 'long', 
       day: 'numeric' 
     });
+  };
+
+  /**
+   * Handle clicking on a calendar day to view its appointments
+   */
+  const handleDayClick = (day) => {
+    const appointments = getAppointmentsForDay(day);
+    if (appointments.length === 0) return;
+    
+    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateObj = new Date(dateStr);
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    setSelectedDayDate(formattedDate);
+    setSelectedDayAppointments(appointments);
   };
 
   const currentMonthName = currentDate.toLocaleString('default', { month: 'long' });
@@ -778,41 +747,32 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                 const appointments = getAppointmentsForDay(day);
                 const weekend = isWeekend(day);
                 const today = isToday(day);
+                const hasAppointments = appointments.length > 0;
 
                 return (
                   <div key={day} className={`calendar-day ${weekend ? 'weekend' : ''} ${today ? 'today' : ''}`}>
-                    <div className="day-header">
-                      <span className="day-number">{day}</span>
-                      {appointments.length > 0 && (
-                        <span className="appointment-count">{appointments.length}</span>
-                      )}
-                    </div>
-
-                    <div className="day-appointments">
-                      {weekend ? (
-                        <p className="no-appointments">Closed</p>
-                      ) : appointments.length > 0 ? (
-                        appointments.map(apt => {
-                          const doctor = getDoctorById(apt.Doctor_id);
-                          return (
-                            <div
-                              key={apt.Appointment_id}
-                              className="appointment-item"
-                              style={{ borderLeftColor: doctor?.color || '#6b7280' }}
-                              onClick={() => setSelectedAppointment(apt)}
-                            >
-                              <div className="apt-time">{formatTime(apt.Appointment_date)}</div>
-                              <div className="apt-patient">{apt.Patient_First} {apt.Patient_Last}</div>
-                              <div className="apt-doctor" style={{ color: doctor?.color || '#6b7280' }}>
-                                Dr. {doctor?.last_name || 'Unknown'}
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <p className="no-appointments">No appointments</p>
-                      )}
-                    </div>
+                    {weekend ? (
+                      <div className="day-closed">
+                        <span className="day-number">{day}</span>
+                        <span className="closed-label">Closed</span>
+                      </div>
+                    ) : (
+                      <button
+                        className={`day-button ${hasAppointments ? 'has-appointments' : 'no-appointments'} ${today ? 'today-btn' : ''}`}
+                        onClick={() => hasAppointments && handleDayClick(day)}
+                        disabled={!hasAppointments}
+                      >
+                        <span className="day-number">{day}</span>
+                        {hasAppointments && (
+                          <span className="appointment-badge">
+                            {appointments.length} {appointments.length === 1 ? 'appointment' : 'appointments'}
+                          </span>
+                        )}
+                        {!hasAppointments && (
+                          <span className="no-apt-label">No appointments</span>
+                        )}
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -901,14 +861,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
               <button className="btn btn-primary">
                 <Edit size={18} />
                 Edit Appointment
-              </button>
-              <button 
-                className="btn btn-danger"
-                onClick={handleCancelAppointment}
-                disabled={canceling || selectedAppointment.Status === 'Cancelled' || selectedAppointment.Status === 'Completed'}
-              >
-                <X size={18} />
-                {canceling ? 'Canceling...' : 'Cancel Appointment'}
               </button>
               <button className="btn btn-ghost" onClick={() => setSelectedAppointment(null)}>
                 Close
@@ -1049,6 +1001,76 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                 onClick={() => setAlertModal({ ...alertModal, show: false })}
               >
                 OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ===== DAY APPOINTMENTS MODAL ===== */}
+      {selectedDayAppointments && (
+        <div className="modal-overlay" onClick={() => setSelectedDayAppointments(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '80vh' }}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Appointments for {selectedDayDate}</h2>
+                <p className="modal-subtitle">{selectedDayAppointments.length} appointment{selectedDayAppointments.length !== 1 ? 's' : ''}</p>
+              </div>
+              <button className="modal-close" onClick={() => setSelectedDayAppointments(null)}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '0', maxHeight: '60vh', overflowY: 'auto' }}>
+              <div className="appointments-list" style={{ padding: '20px' }}>
+                {selectedDayAppointments.map((appointment) => (
+                  <div 
+                    key={appointment.Appointment_id} 
+                    className="appointment-card"
+                    onClick={() => {
+                      setSelectedDayAppointments(null);
+                      setSelectedAppointment(appointment);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="appointment-time">
+                      <Clock size={20} />
+                      <span>{formatTime(appointment.Appointment_date)}</span>
+                    </div>
+
+                    <div className="appointment-patient">
+                      <h3 className="patient-name">
+                        {appointment.Patient_First} {appointment.Patient_Last}
+                      </h3>
+                      <div className="patient-meta">
+                        <span className="patient-id">
+                          ID: {appointment.Patient_id}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="appointment-details">
+                      <p className="appointment-reason">
+                        {appointment.Reason_for_visit}
+                      </p>
+                      <p className="appointment-doctor">
+                        Dr. {appointment.Doctor_First} {appointment.Doctor_Last}
+                      </p>
+                    </div>
+
+                    <div className="appointment-status">
+                      <span className={`status-badge ${getStatusClass(appointment.Status)}`}>
+                        {appointment.Status || 'Scheduled'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setSelectedDayAppointments(null)}>
+                Close
               </button>
             </div>
           </div>
