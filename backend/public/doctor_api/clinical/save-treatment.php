@@ -89,7 +89,7 @@ try {
             
             if ($treatment_id > 0) {
                 // Check if this exact treatment already exists for this visit
-                $checkSql = "SELECT tpv_id FROM treatment_per_visit 
+                $checkSql = "SELECT visit_treatment_id FROM treatment_per_visit 
                             WHERE visit_id = ? AND treatment_id = ? 
                             LIMIT 1";
                 $existing = executeQuery($conn, $checkSql, 'ii', [$visit_id, $treatment_id]);
