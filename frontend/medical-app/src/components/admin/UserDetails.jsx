@@ -126,7 +126,14 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
         setCustomStartTime('');
         setCustomEndTime('');
         setUseCustomTimes(false);
-        loadUserDetails(); // Reload to show new schedule
+
+        // Reload modal data
+        await loadUserDetails();
+
+        // 🔔 Tell parent to refresh list / work_location
+        if (typeof onUpdate === 'function') {
+          onUpdate();
+        }
       } else {
         setError(data.error || 'Failed to add schedule');
       }
@@ -160,7 +167,13 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
       const data = await response.json();
 
       if (data.success) {
-        loadUserDetails(); // Reload to reflect removal
+        // Reload modal data
+        await loadUserDetails();
+
+        // 🔔 Tell parent to refresh list / work_location
+        if (typeof onUpdate === 'function') {
+          onUpdate();
+        }
       } else {
         setError(data.error || 'Failed to remove schedule');
       }
