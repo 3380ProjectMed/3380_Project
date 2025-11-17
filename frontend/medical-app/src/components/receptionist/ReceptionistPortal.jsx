@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import Sidebar from './Sidebar';
@@ -17,7 +17,8 @@ import './ReceptionistPortal.css';
  * Role: Front desk operations (scheduling, patient check-in, payments)
  * 
  * Database Tables Used:
- * - Staff (Staff_id, Work_Location)
+ * - Staff (Staff_id, staff_email)
+ * - work_schedule (staff_id, office_id) - determines receptionist's office
  * - Office (Office_ID, Name)
  * - Appointment (Appointment_id, Patient_id, Doctor_id, Office_id)
  * - Patient (Patient_ID, InsuranceID)
@@ -29,14 +30,35 @@ function ReceptionistPortal() {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
   const [editingAppointment, setEditingAppointment] = useState(null);
+  const [officeInfo, setOfficeInfo] = useState({ id: null, name: 'Loading...' });
   
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  // Get receptionist's assigned office from Staff.Work_Location
-  // In real implementation: SELECT Work_Location FROM Staff WHERE Staff_id = user.staff_id
-  const receptionistOfficeId = user?.work_location || 1; // Office_ID from Office table
-  const receptionistOfficeName = user?.office_name || 'Downtown Medical Center';
+  // Fetch receptionist's office from work_schedule via backend API
+  useEffect(() => {
+    const fetchOfficeInfo = async () => {
+      try {
+        const response = await fetch('/receptionist_api/dashboard/today.php', {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        if (data.success && data.office) {
+          setOfficeInfo({
+            id: data.office.id,
+            name: data.office.name
+          });
+        } else {
+          console.error('Failed to fetch office info from API');
+        }
+      } catch (error) {
+        console.error('Failed to fetch office info:', error);
+      }
+    };
+
+    fetchOfficeInfo();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -97,8 +119,8 @@ function ReceptionistPortal() {
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         onLogout={handleLogout}
-        officeName={receptionistOfficeName}
-        officeId={receptionistOfficeId}
+        officeName={officeInfo.name}
+        officeId={officeInfo.id}
       />
       
       <main className="main-content">
@@ -106,8 +128,8 @@ function ReceptionistPortal() {
           <ReceptionistDashboard
             setCurrentPage={setCurrentPage}
             onProcessPayment={handleProcessPayment}
-            officeId={receptionistOfficeId}
-            officeName={receptionistOfficeName}
+            officeId={officeInfo.id}
+            officeName={officeInfo.name}
           />
         )}
         
@@ -117,8 +139,8 @@ function ReceptionistPortal() {
             onBookAppointment={() => setCurrentPage('booking')}
             onSelectTimeSlot={handleSelectTimeSlot}
             onEditAppointment={handleEditAppointment}
-            officeId={receptionistOfficeId}
-            officeName={receptionistOfficeName}
+            officeId={officeInfo.id}
+            officeName={officeInfo.name}
           />
         )}
         
@@ -147,8 +169,8 @@ function ReceptionistPortal() {
               setSelectedTimeSlot(null);
               setEditingAppointment(null);
             }}
-            officeId={receptionistOfficeId}
-            officeName={receptionistOfficeName}
+            officeId={officeInfo.id}
+            officeName={officeInfo.name}
           />
         )}
         
@@ -160,8 +182,8 @@ function ReceptionistPortal() {
               setCurrentPage('dashboard');
               setSelectedAppointment(null);
             }}
-            officeId={receptionistOfficeId}
-            officeName={receptionistOfficeName}
+            officeId={officeInfo.id}
+            officeName={officeInfo.name}
           />
         )}
       </main>

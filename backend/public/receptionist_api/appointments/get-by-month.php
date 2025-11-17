@@ -74,6 +74,7 @@ try {
                 a.Appointment_date,
                 a.Reason_for_visit,
                 a.Status,
+                a.method,
                 a.Doctor_id,
                 p.patient_id,
                 p.first_name as Patient_First,

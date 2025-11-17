@@ -25,8 +25,8 @@ function PatientSearch({ onBookAppointment }) {
     confirmPassword: '',
     dateOfBirth: '',
     phone: '',
-    gender: 'male',
-    streetAddress: '',
+    gender: '',
+    address: '',
     city: '',
     state: '',
     zipCode: '',
@@ -163,7 +163,11 @@ function PatientSearch({ onBookAppointment }) {
       confirmPassword: '',
       dateOfBirth: '',
       phone: '',
-      gender: 'male',
+      gender: '',
+      address: '',
+      city: '',
+      state: '',
+      zipCode: '',
       emergencyContactfn: '',
       emergencyContactln: '',
       emergencyContactrl: '',
@@ -192,13 +196,51 @@ function PatientSearch({ onBookAppointment }) {
   };
 
   /**
+   * Validate form inputs
+   */
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+    if (!formData.gender) newErrors.gender = 'Gender is required';
+
+    setFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  /**
    * Create new patient
    */
   const handleCreatePatient = async (e) => {
     e.preventDefault();
+    
+    // Validate form first
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    setFormErrors({});
 
     try {
       const response = await fetch('/api/signup.php', {
@@ -661,6 +703,7 @@ function PatientSearch({ onBookAppointment }) {
                         onChange={handleInputChange}
                         required
                       >
+                        <option value="">Select gender</option>
                         <option value="male">Male</option>
                         <option value="female">Female</option>
                         <option value="other">Other</option>
@@ -716,9 +759,9 @@ function PatientSearch({ onBookAppointment }) {
                       <label className="form-label">Street Address</label>
                       <input
                         type="text"
-                        name="streetAddress"
+                        name="address"
                         className="form-input"
-                        value={formData.streetAddress}
+                        value={formData.address}
                         onChange={handleInputChange}
                         placeholder="123 Main Street"
                       />
