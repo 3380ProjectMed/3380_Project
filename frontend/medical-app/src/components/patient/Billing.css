@@ -103,6 +103,7 @@
   flex-direction: column;
   gap: 1.5rem;
   width: 100%;
+  max-width: 1200px;
 }
 
 /* Billing-specific styling for appointment-card when in billing context */
@@ -113,6 +114,7 @@
   padding: 2rem;
   box-shadow: 0 2px 8px rgba(0, 119, 182, 0.06);
   width: 100%;
+  max-width: 100%;
   transition: all 0.2s ease;
   display: block; /* Override appointments flex layout */
 }
@@ -127,7 +129,7 @@
 .billing-summary ~ .portal-content .appointment-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 2rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1.5rem;
@@ -136,23 +138,23 @@
 
 .billing-summary ~ .portal-content .appointment-header h3 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #03045e;
+  line-height: 1.3;
   flex: 1;
-  line-height: 1.4;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
   min-width: 0;
 }
 
 .billing-summary ~ .portal-content .appointment-header p {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: #0077b6;
-  flex-shrink: 0;
-  white-space: nowrap;
   margin: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Billing card body - override appointments styling */
