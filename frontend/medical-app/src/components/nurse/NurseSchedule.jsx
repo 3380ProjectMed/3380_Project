@@ -4,7 +4,32 @@ import NurseClinicalWorkspace from './NurseClinicalWorkSpace';
 import './NurseSchedule.css';
 
 function NurseSchedule() {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const getCurrentChicagoTime = () => {
+    const now = new Date();
+    return new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}));
+  };
+
+  const formatChicagoDate = (date, options = {}) => {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      ...options
+    }).format(new Date(date));
+  };
+
+  const formatTimeStringChicago = (timeString) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  };
+
+  const [currentDate, setCurrentDate] = useState(getCurrentChicagoTime());
   const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -90,7 +115,7 @@ function NurseSchedule() {
   };
 
   const goToToday = () => {
-    setCurrentDate(new Date());
+    setCurrentDate(getCurrentChicagoTime());
   };
 
   const handleDateSelect = (e) => {
@@ -112,7 +137,7 @@ function NurseSchedule() {
   };
 
   const formatDate = (date) =>
-    date.toLocaleDateString('en-US', {
+    formatChicagoDate(date, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -120,8 +145,9 @@ function NurseSchedule() {
     });
 
   const isToday = () => {
-    const today = new Date();
-    return currentDate.toDateString() === today.toDateString();
+    const today = getCurrentChicagoTime();
+    return formatChicagoDate(currentDate, {year: 'numeric', month: '2-digit', day: '2-digit'}) === 
+           formatChicagoDate(today, {year: 'numeric', month: '2-digit', day: '2-digit'});
   };
 
   // Show clinical workspace as full-screen overlay
@@ -336,7 +362,7 @@ function NurseSchedule() {
                     {/* Time */}
                     <div className="appointment-time">
                       <Clock size={18} />
-                      <span>{appointment.appointment_time}</span>
+                      <span>{formatTimeStringChicago(appointment.appointment_time)}</span>
                     </div>
 
                     {/* Patient Info */}

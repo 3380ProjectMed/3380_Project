@@ -9,6 +9,13 @@ import './NurseClinicalWorkSpace.css';
  * When vitals are saved, appointment status automatically changes to "Ready"
  */
 function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
+  const formatChicagoDate = (date, options = {}) => {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      ...options
+    }).format(new Date(date));
+  };
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [patientData, setPatientData] = useState(null);
@@ -259,7 +266,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
           <Calendar size={18} />
           <div>
             <strong>{visit.reason_for_visit || visit.reason || 'Not specified'}</strong>
-            <span>{new Date(visit.date).toLocaleDateString()}</span>
+            <span>{formatChicagoDate(visit.date)}</span>
           </div>
         </div>
         {patient.allergies && patient.allergies !== 'None' && (
