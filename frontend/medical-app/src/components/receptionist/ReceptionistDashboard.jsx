@@ -769,9 +769,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                           </span>
                         )}
                         <span className="day-number">{day}</span>
-                        {!hasAppointments && (
-                          <span className="no-apt-label">No appointments</span>
-                        )}
                       </button>
                     )}
                   </div>
