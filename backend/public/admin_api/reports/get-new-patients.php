@@ -254,7 +254,7 @@ try {
     // 3b. BOOKING METHOD BREAKDOWN
     // =========================================================================
     $bookingSql = "SELECT
-                        a.booking_method,
+                        a.method,
                         COUNT(DISTINCT CASE 
                             WHEN a.Appointment_date = (
                                 SELECT MIN(a2.Appointment_date)
@@ -278,7 +278,7 @@ try {
         $bookingSql .= " AND a.Doctor_id = ?";
     }
 
-    $bookingSql .= " GROUP BY a.booking_method
+    $bookingSql .= " GROUP BY a.method
                      ORDER BY new_patients DESC";
 
     $stmt5 = $conn->prepare($bookingSql);
@@ -296,7 +296,7 @@ try {
         $newCount = (int)$row['new_patients'];
         if ($newCount > $topMethodNewPatients) {
             $topMethodNewPatients = $newCount;
-            $topMethod            = $row['booking_method'];
+            $topMethod            = $row['method'];
         }
     }
 
