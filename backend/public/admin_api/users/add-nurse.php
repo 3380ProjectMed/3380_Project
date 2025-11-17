@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../cors.php';
 require_once __DIR__ . '/../../database.php';
-require_once __DIR__ . '/../../staff_helpers.php';
+require_once __DIR__ . '/staff_helpers.php';
 require_once __DIR__ . '/../../session.php';
 
 header('Content-Type: application/json');
