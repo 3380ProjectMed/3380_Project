@@ -238,17 +238,30 @@ function Report() {
         const rate = gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
         csvContent += `${row.period_label},${row.total_visits},${row.gross_revenue},${row.collected_payments},${row.outstanding_balance},${row.unique_patients},${rate}\n`;
       });
+
     } else if (activeReport === 'office' && officeData) {
       filename = `office_utilization_${startDate}_to_${endDate}.csv`;
       csvContent = 'Office Name,Address,Total Appointments,Completed,Cancelled,No-Shows,Scheduled,No-Show Rate,Avg Wait Time (min),Utilization Rate\n';
       (officeData.office_stats || []).forEach(row => {
         csvContent += `"${row.office_name}","${row.address}",${row.total_appointments},${row.completed},${row.cancelled},${row.no_shows},${row.scheduled},${row.no_show_rate},${row.avg_wait_minutes || 'N/A'},${row.utilization_rate}\n`;
       });
+
     } else if (activeReport === 'newPatients' && newPatientsData) {
       filename = `new_patients_${startDate}_to_${endDate}.csv`;
+
+      // Doctor performance section
       csvContent = 'Doctor,New Patients,Retained,Retention Rate,Total Patients,Avg Visits,Completed\n';
       (newPatientsData.doctor_performance || []).forEach(doc => {
         csvContent += `"Dr. ${doc.doctor_name}",${doc.new_patients_acquired},${doc.retained_patients},${doc.retention_rate}%,${doc.total_patients_seen},${doc.avg_visits_per_patient},${doc.total_completed}\n`;
+      });
+
+      // Booking method breakdown section
+      csvContent += '\nBooking Method,New Patients,Total Appointments,Completed,Unique Patients,Completion Rate\n';
+      (newPatientsData.booking_breakdown || []).forEach(row => {
+        const total = Number(row.total_appointments || 0);
+        const completed = Number(row.completed_appointments || 0);
+        const rate = total > 0 ? ((completed / total) * 100).toFixed(1) : '0.0';
+        csvContent += `${row.booking_method},${row.new_patients},${row.total_appointments},${row.completed_appointments},${row.unique_patients},${rate}\n`;
       });
     }
     
@@ -919,6 +932,17 @@ function Report() {
               value={newPatientsData.summary?.top_doctor_count || 0}
               subtitle={`Dr. ${newPatientsData.summary?.top_doctor || 'N/A'}`}
             />
+            <StatCard 
+              type="info"
+              icon={<Calendar size={20} />}
+              label="Top Channel"
+              value={newPatientsData.summary?.top_booking_method || 'N/A'}
+              subtitle={
+                newPatientsData.summary?.top_booking_method_count
+                  ? `${newPatientsData.summary.top_booking_method_count} new patients`
+                  : 'No channel data'
+              }
+            />
           </div>
 
           {newPatientsData.trend_data && newPatientsData.trend_data.length > 0 && (
@@ -1043,6 +1067,61 @@ function Report() {
                     </div>
                   );
                 })}
+              </div>
+            </section>
+          )}
+          {newPatientsData.booking_breakdown && newPatientsData.booking_breakdown.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>New Patients by Booking Method</h3>
+                <p className="section-subtitle">
+                  How patients are entering the system during this period
+                </p>
+              </div>
+
+              <div className="table-container">
+                <table className="report-table sortable-table">
+                  <thead>
+                    <tr>
+                      <th>Booking Method</th>
+                      <th className="text-right">New Patients</th>
+                      <th className="text-right">Total Appointments</th>
+                      <th className="text-right">Completed</th>
+                      <th className="text-right">Unique Patients</th>
+                      <th className="text-right">Completion Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {newPatientsData.booking_breakdown.map((row, idx) => {
+                      const total = Number(row.total_appointments || 0);
+                      const completed = Number(row.completed_appointments || 0);
+                      const completionRate = total > 0 
+                        ? ((completed / total) * 100).toFixed(1)
+                        : '0.0';
+
+                      return (
+                        <tr key={idx}>
+                          <td className="text-bold">{row.booking_method}</td>
+                          <td className="text-right text-primary">{row.new_patients}</td>
+                          <td className="text-right">{row.total_appointments}</td>
+                          <td className="text-right text-success">{row.completed_appointments}</td>
+                          <td className="text-right">{row.unique_patients}</td>
+                          <td className="text-right">
+                            <span className={`badge ${
+                              Number(completionRate) >= 80
+                                ? 'badge-success'
+                                : Number(completionRate) >= 60
+                                ? 'badge-warning'
+                                : 'badge-danger'
+                            }`}>
+                              {completionRate}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </section>
           )}
@@ -1559,7 +1638,7 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
   );
 };
 
-const NewPatientTrendChart = ({ data, groupBy }) => {
+const NewPatientTrendChart = ({ data }) => {
   const doctorMap = {};
   const periods = [];
   
@@ -1579,6 +1658,9 @@ const NewPatientTrendChart = ({ data, groupBy }) => {
 
   const maxValue = Math.max(...data.map(d => parseInt(d.new_patients)), 1);
   const yAxisMax = Math.ceil(maxValue * 1.2);
+
+  const hasMultiplePeriods = periods.length > 1;
+  const periodDenominator = hasMultiplePeriods ? (periods.length - 1) : 1;
 
   return (
     <div className="trend-chart-container">
@@ -1602,26 +1684,34 @@ const NewPatientTrendChart = ({ data, groupBy }) => {
             {doctors.map((doctor, doctorIdx) => {
               const points = periods.map((period, idx) => {
                 const value = doctorMap[doctor][period] || 0;
-                const x = (idx / (periods.length - 1)) * 800;
+                const x = hasMultiplePeriods
+                  ? (idx / periodDenominator) * 800
+                  : 400; // center if only one period
                 const y = 300 - ((value / yAxisMax) * 300);
                 return `${x},${y}`;
               }).join(' ');
 
+              const polylineShouldRender = periods.length > 1;
+
               return (
                 <g key={doctor}>
-                  <polyline
-                    points={points}
-                    fill="none"
-                    stroke={colors[doctorIdx % colors.length]}
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  {polylineShouldRender && (
+                    <polyline
+                      points={points}
+                      fill="none"
+                      stroke={colors[doctorIdx % colors.length]}
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
                   {periods.map((period, idx) => {
                     const value = doctorMap[doctor][period] || 0;
                     if (value === 0) return null;
                     
-                    const x = (idx / (periods.length - 1)) * 800;
+                    const x = hasMultiplePeriods
+                      ? (idx / periodDenominator) * 800
+                      : 400;
                     const y = 300 - ((value / yAxisMax) * 300);
                     
                     return (
