@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
+date_default_timezone_set('America/Chicago');
 
 try {
     //session_start();
