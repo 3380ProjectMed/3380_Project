@@ -507,7 +507,7 @@
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .form-field {
@@ -521,14 +521,14 @@
 }
 
 .form-label {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: #374151;
   text-transform: capitalize;
 }
 
 .form-input {
-  padding: 0.75rem 1rem;
+  padding: 0.875rem 1.125rem;
   border: 2px solid #e5e7eb;
   border-radius: 0.5rem;
   font-size: 1rem;
@@ -651,7 +651,7 @@
 .modal {
   background: white;
   border-radius: 1rem;
-  max-width: 600px;
+  max-width: 900px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
