@@ -22,8 +22,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [checkingIn, setCheckingIn] = useState(false);
-  const [receptionistOfficeId, setReceptionistOfficeId] = useState(null);
-  const [receptionistOfficeName, setReceptionistOfficeName] = useState('Loading...');
+  const [canceling, setCanceling] = useState(false);
   
   // Nurse selection state
   const [showNurseModal, setShowNurseModal] = useState(false);
@@ -47,18 +46,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   ];
 
   /**
-   * Load dashboard data on mount
+   * Load dashboard data on mount and when officeId changes
    */
   useEffect(() => {
-    fetchReceptionistOffice();
-  }, []);
-
-  useEffect(() => {
-    if (receptionistOfficeId) {
+    if (officeId) {
       loadDoctors();
       loadDashboardData();
     }
-  }, [receptionistOfficeId]);
+  }, [officeId]);
 
   /**
    * Automatic No-Show checker - runs every 2 minutes
@@ -75,10 +70,10 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
    * Load calendar when month changes
    */
   useEffect(() => {
-    if (receptionistOfficeId) {
+    if (officeId) {
       loadCalendarData();
     }
-  }, [currentDate, receptionistOfficeId, doctors]);
+  }, [currentDate, officeId, doctors]);
 
   /**
    * Check for appointments that should be marked as No-Show
@@ -102,33 +97,13 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   };
 
   /**
-   * Fetch receptionist's office ID from session
-   */
-  const fetchReceptionistOffice = async () => {
-    try {
-      const response = await fetch('/receptionist_api/dashboard/today.php', { credentials: 'include' });
-      const data = await response.json();
-      
-      if (data.success && data.office) {
-        setReceptionistOfficeId(data.office.id);
-        setReceptionistOfficeName(data.office.name);
-      } else {
-        setError('Failed to fetch office information');
-      }
-    } catch (err) {
-      console.error('Failed to fetch receptionist office:', err);
-      setError('Failed to fetch office information');
-    }
-  };
-
-  /**
    * Fetch doctors from the database
    */
   const loadDoctors = async () => {
-    if (!receptionistOfficeId) return;
+    if (!officeId) return;
     
     try {
-      const response = await fetch(`/receptionist_api/doctors/get-by-office.php?office_id=${receptionistOfficeId}`, { credentials: 'include' });
+      const response = await fetch(`/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success) {
@@ -274,7 +249,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       setLoadingNurses(true);
       setShowNurseModal(true);
       
-      const nursesResponse = await fetch(`/receptionist_api/nurses/get-by-office.php?office_id=${receptionistOfficeId}`, {
+      const nursesResponse = await fetch(`/receptionist_api/nurses/get-by-office.php?office_id=${officeId}`, {
         credentials: 'include'
       });
       
@@ -367,6 +342,64 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       });
     } finally {
       setCheckingIn(false);
+    }
+  };
+
+  /**
+   * Cancel appointment - Can cancel even if checked-in
+   */
+  const handleCancelAppointment = async () => {
+    if (!selectedAppointment || !selectedAppointment.Appointment_id) return;
+    
+    if (!window.confirm('Are you sure you want to cancel this appointment? This action will update the appointment status to Cancelled.')) {
+      return;
+    }
+    
+    setCanceling(true);
+    
+    try {
+      const response = await fetch('/receptionist_api/appointments/cancel.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          Appointment_id: selectedAppointment.Appointment_id,
+          cancellation_reason: 'Cancelled by receptionist'
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setAlertModal({
+          show: true,
+          type: 'success',
+          title: 'Appointment Cancelled',
+          message: 'The appointment has been successfully cancelled.'
+        });
+        setSelectedAppointment(null);
+        loadDashboardData();
+        loadCalendarData();
+      } else {
+        setAlertModal({
+          show: true,
+          type: 'error',
+          title: 'Cancellation Failed',
+          message: result.error || 'Unknown error occurred'
+        });
+      }
+    } catch (err) {
+      console.error('Failed to cancel appointment:', err);
+      setAlertModal({
+        show: true,
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to cancel appointment. Please try again.'
+      });
+    } finally {
+      setCanceling(false);
     }
   };
 
@@ -497,7 +530,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
           <h1 className="dashboard-title">Front Desk Dashboard</h1>
           <p className="dashboard-subtitle">
             <Calendar size={18} />
-            {getCurrentDate()} • {receptionistOfficeName}
+            {getCurrentDate()} • {officeName}
           </p>
         </div>
       </div>
@@ -868,6 +901,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
               <button className="btn btn-primary">
                 <Edit size={18} />
                 Edit Appointment
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={handleCancelAppointment}
+                disabled={canceling || selectedAppointment.Status === 'Cancelled' || selectedAppointment.Status === 'Completed'}
+              >
+                <X size={18} />
+                {canceling ? 'Canceling...' : 'Cancel Appointment'}
               </button>
               <button className="btn btn-ghost" onClick={() => setSelectedAppointment(null)}>
                 Close
