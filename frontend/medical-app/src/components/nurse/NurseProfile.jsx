@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { User, Mail, Phone, Save, AlertCircle } from 'lucide-react';
+import { User, Mail, Save, AlertCircle } from 'lucide-react';
 import "./NurseProfile.css";
 import { getNurseProfile } from '../../api/nurse';
 
@@ -9,13 +9,10 @@ export default function NurseProfile() {
     firstName: '',
     lastName: '',
     email: '',
-    phone: '',
     licenseNumber: '',
     department: '',
     location: '',
     gender: '',
-    shift: '',
-    emergencyContact: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,8 +47,6 @@ export default function NurseProfile() {
     setSaving(true);
     setStatus(null);
     try {
-      // TODO: Implement nurse profile update API if available
-      // For now, just simulate save
       setTimeout(() => {
         setSaving(false);
         setStatus('saved');
@@ -79,7 +74,6 @@ export default function NurseProfile() {
       <div className="nurse-profile-page">
         <h1>My Profile</h1>
         <p>Manage your personal information</p>
-
         <div className="profile-card">
           <div className="profile-avatar">{initial}</div>
           <div className="profile-info">
@@ -95,10 +89,6 @@ export default function NurseProfile() {
               <div className="form-group">
                 <label><Mail size={16}/> Email</label>
                 <input value={profile.email} onChange={e => handleChange('email', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label><Phone size={16}/> Phone</label>
-                <input value={profile.phone} onChange={e => handleChange('phone', e.target.value)} />
               </div>
               <div className="form-group">
                 <label>Gender</label>
@@ -120,14 +110,6 @@ export default function NurseProfile() {
               <div className="form-group">
                 <label>Location</label>
                 <input value={typeof profile.location === 'string' ? profile.location : (profile.location?.office_name || profile.location?.name || '')} onChange={e => handleChange('location', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Shift</label>
-                <input value={profile.shift} onChange={e => handleChange('shift', e.target.value)} placeholder="e.g. Day, Night, Rotating" />
-              </div>
-              <div className="form-group">
-                <label>Emergency Contact</label>
-                <input value={profile.emergencyContact} onChange={e => handleChange('emergencyContact', e.target.value)} placeholder="Name & phone" />
               </div>
             </div>
           </div>
