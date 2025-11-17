@@ -26,6 +26,10 @@ function PatientSearch({ onBookAppointment }) {
     dateOfBirth: '',
     phone: '',
     gender: 'male',
+    streetAddress: '',
+    city: '',
+    state: '',
+    zipCode: '',
     emergencyContactfn: '',
     emergencyContactln: '',
     emergencyContactrl: '',
@@ -677,13 +681,14 @@ function PatientSearch({ onBookAppointment }) {
                   </h3>
                   <div className="form-grid">
                     <div className="form-field">
-                      <label className="form-label">Email *</label>
+                      <label className="form-label">Email Address *</label>
                       <input
                         type="email"
                         name="email"
                         className={`form-input ${formErrors.email ? 'input-error' : ''}`}
                         value={formData.email}
                         onChange={handleInputChange}
+                        placeholder="example@email.com"
                         required
                       />
                       {formErrors.email && (
@@ -692,28 +697,133 @@ function PatientSearch({ onBookAppointment }) {
                     </div>
 
                     <div className="form-field">
-                      <label className="form-label">Phone *</label>
+                      <label className="form-label">Phone Number *</label>
                       <input
                         type="tel"
                         name="phone"
                         className={`form-input ${formErrors.phone ? 'input-error' : ''}`}
                         value={formData.phone}
                         onChange={handleInputChange}
-                        placeholder="(123) 456-7890"
+                        placeholder="(555) 123-4567"
                         required
                       />
                       {formErrors.phone && (
                         <span className="error-text">{formErrors.phone}</span>
                       )}
                     </div>
+
+                    <div className="form-field full-width">
+                      <label className="form-label">Street Address</label>
+                      <input
+                        type="text"
+                        name="streetAddress"
+                        className="form-input"
+                        value={formData.streetAddress}
+                        onChange={handleInputChange}
+                        placeholder="123 Main Street"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">City</label>
+                      <input
+                        type="text"
+                        name="city"
+                        className="form-input"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        placeholder="Houston"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">State</label>
+                      <input
+                        type="text"
+                        name="state"
+                        className="form-input"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        placeholder="TX"
+                        maxLength="2"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">ZIP Code</label>
+                      <input
+                        type="text"
+                        name="zipCode"
+                        className="form-input"
+                        value={formData.zipCode}
+                        onChange={handleInputChange}
+                        placeholder="77001"
+                        maxLength="10"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Account Security */}
+                {/* Emergency Contact */}
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <Phone size={20} />
+                    Emergency Contact
+                  </h3>
+                  <div className="form-grid">
+                    <div className="form-field">
+                      <label className="form-label">Contact First Name</label>
+                      <input
+                        type="text"
+                        name="emergencyContactfn"
+                        className="form-input"
+                        value={formData.emergencyContactfn}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Contact Last Name</label>
+                      <input
+                        type="text"
+                        name="emergencyContactln"
+                        className="form-input"
+                        value={formData.emergencyContactln}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Contact Relation to Patient</label>
+                      <input
+                        type="text"
+                        name="emergencyContactrl"
+                        className="form-input"
+                        value={formData.emergencyContactrl}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Spouse, Parent, Friend"
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label className="form-label">Contact Phone</label>
+                      <input
+                        type="tel"
+                        name="emergencyPhone"
+                        className="form-input"
+                        value={formData.emergencyPhone}
+                        onChange={handleInputChange}
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Create Password */}
                 <div className="info-section">
                   <h3 className="section-heading">
                     <CreditCard size={20} />
-                    Account Security
+                    Create Password
                   </h3>
                   <div className="form-grid">
                     <div className="form-field">
@@ -745,61 +855,6 @@ function PatientSearch({ onBookAppointment }) {
                       {formErrors.confirmPassword && (
                         <span className="error-text">{formErrors.confirmPassword}</span>
                       )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Emergency Contact (Optional) */}
-                <div className="info-section">
-                  <h3 className="section-heading">
-                    <Phone size={20} />
-                    Emergency Contact (Optional)
-                  </h3>
-                  <div className="form-grid">
-                    <div className="form-field">
-                      <label className="form-label">First Name</label>
-                      <input
-                        type="text"
-                        name="emergencyContactfn"
-                        className="form-input"
-                        value={formData.emergencyContactfn}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-
-                    <div className="form-field">
-                      <label className="form-label">Last Name</label>
-                      <input
-                        type="text"
-                        name="emergencyContactln"
-                        className="form-input"
-                        value={formData.emergencyContactln}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-
-                    <div className="form-field">
-                      <label className="form-label">Relationship</label>
-                      <input
-                        type="text"
-                        name="emergencyContactrl"
-                        className="form-input"
-                        value={formData.emergencyContactrl}
-                        onChange={handleInputChange}
-                        placeholder="e.g., Spouse, Parent, Friend"
-                      />
-                    </div>
-
-                    <div className="form-field">
-                      <label className="form-label">Phone</label>
-                      <input
-                        type="tel"
-                        name="emergencyPhone"
-                        className="form-input"
-                        value={formData.emergencyPhone}
-                        onChange={handleInputChange}
-                        placeholder="(123) 456-7890"
-                      />
                     </div>
                   </div>
                 </div>
