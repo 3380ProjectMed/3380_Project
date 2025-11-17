@@ -393,7 +393,7 @@ const getUniqueLocations = () => {
               >
                 {/* Day Header */}
                 <div className="day-header">
-                  <span className="day-number">{day}</span>
+                  <span className={`day-number ${isToday ? '' : 'regular-day'}`}>{day}</span>
                   
                   {/* Location Badge */}
                   {assignedLocation && (

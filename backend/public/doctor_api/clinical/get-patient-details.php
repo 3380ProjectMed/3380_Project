@@ -191,7 +191,7 @@ if (empty($rows)) {
             'appointment_id' => $appt['Appointment_id'],
             'patient_id' => $patient_id,
             'date' => $appt['Appointment_date'],
-            'status' => $appointmentStatus,  // Change this from 'Scheduled' to use actual status
+            'status' => $appt['Status'] ?? 'Scheduled', // Change this from 'Scheduled' to use actual status
             'reason' => $appt['Reason_for_visit'] ?? '',
             'department' => null,
             'diagnosis' => null,
