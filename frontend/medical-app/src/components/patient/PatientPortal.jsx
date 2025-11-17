@@ -377,7 +377,7 @@ export default function PatientPortal({ onLogout }) {
 
   async function handleSavePcp() {
     if (!pcpFormData.primary_doctor) {
-      alert('Please select a Primary Care Physician');
+      setToast({ message: 'Please select a Primary Care Physician', type: 'error' });
       return;
     }
 
@@ -389,17 +389,18 @@ export default function PatientPortal({ onLogout }) {
 
       const res = await api.profile.updateProfile(payload);
       if (res.success) {
-        // Refresh profile data
+        // Refresh both profile and dashboard data to ensure PCP updates everywhere
         await loadProfile();
+        await loadDashboard();
         hidePcpSelection();
-        alert('Primary Care Physician updated successfully!');
+        setToast({ message: 'Primary Care Physician updated successfully!', type: 'success' });
       } else {
         console.error('Failed to update PCP:', res);
-        alert('Failed to update Primary Care Physician. Please try again.');
+        setToast({ message: res?.message || 'Failed to update Primary Care Physician. Please try again.', type: 'error' });
       }
     } catch (err) {
       console.error('Error updating PCP:', err);
-      alert('An error occurred while updating Primary Care Physician. Please try again.');
+      setToast({ message: err?.message || 'An error occurred while updating Primary Care Physician. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }
