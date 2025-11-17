@@ -4,6 +4,16 @@ import { Calendar, ChevronLeft, ChevronRight, Clock, User, Check, X, Edit, Alert
 import './OfficeSchedule.css';
 
 /**
+ * Helper function to format date as YYYY-MM-DD in local timezone
+ */
+const formatDateLocal = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
  * OfficeSchedule Component (Backend Integrated)
  * 
  * Displays doctor availability grid for appointment booking
@@ -75,7 +85,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       }
       
       // Get appointments for selected date
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = formatDateLocal(selectedDate);
       const appointmentsResponse = await fetch(
         `/receptionist_api/appointments/get-by-date.php?date=${dateStr}`,
         { credentials: 'include' }
@@ -227,7 +237,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
    * Each appointment only shows at ONE slot - the nearest one (earlier if equidistant)
    */
   const isSlotBooked = (doctorId, hour, minute) => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = formatDateLocal(selectedDate);
     const slotTimeInMinutes = hour * 60 + minute;
     
     // Check all booked slots for this doctor on this date
@@ -277,7 +287,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
    * Prioritizes the closest slot, with preference for earlier slots
    */
   const getAppointmentForSlot = (doctorId, hour, minute) => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = formatDateLocal(selectedDate);
     const slotTimeInMinutes = hour * 60 + minute;
     
     let closestAppointment = null;
