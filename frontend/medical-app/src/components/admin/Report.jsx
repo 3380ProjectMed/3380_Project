@@ -1644,22 +1644,26 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
 const NewPatientTrendChart = ({ data }) => {
   const doctorMap = {};
   const periods = [];
-  
+
   data.forEach(row => {
     if (!periods.includes(row.period_label)) {
       periods.push(row.period_label);
     }
-    
+
     if (!doctorMap[row.doctor_name]) {
       doctorMap[row.doctor_name] = {};
     }
-    doctorMap[row.doctor_name][row.period_label] = parseInt(row.new_patients);
+    // store only when > 0; treat 0 as "no point"
+    const v = parseInt(row.new_patients, 10);
+    if (v > 0) {
+      doctorMap[row.doctor_name][row.period_label] = v;
+    }
   });
 
   const doctors = Object.keys(doctorMap);
   const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9'];
 
-  const maxValue = Math.max(...data.map(d => parseInt(d.new_patients)), 1);
+  const maxValue = Math.max(...data.map(d => parseInt(d.new_patients, 10)), 1);
   const yAxisMax = Math.ceil(maxValue * 1.2);
 
   const hasMultiplePeriods = periods.length > 1;
@@ -1685,51 +1689,51 @@ const NewPatientTrendChart = ({ data }) => {
 
           <svg className="trend-svg" viewBox="0 0 800 300" preserveAspectRatio="none">
             {doctors.map((doctor, doctorIdx) => {
-              const points = periods.map((period, idx) => {
-                const value = doctorMap[doctor][period] || 0;
+              // build points only for periods where this doctor has >0 patients
+              const pointsArr = periods.reduce((acc, period, idx) => {
+                const value = doctorMap[doctor][period]; // undefined if no patients
+                if (!value) return acc;
+
                 const x = hasMultiplePeriods
                   ? (idx / periodDenominator) * 800
-                  : 400; // center if only one period
+                  : 400;
                 const y = 300 - ((value / yAxisMax) * 300);
-                return `${x},${y}`;
-              }).join(' ');
+                acc.push({ x, y, period, value });
+                return acc;
+              }, []);
 
-              const polylineShouldRender = periods.length > 1;
+              if (pointsArr.length === 0) return null;
+
+              const points = pointsArr.map(p => `${p.x},${p.y}`).join(' ');
+              const color = colors[doctorIdx % colors.length];
 
               return (
                 <g key={doctor}>
-                  {polylineShouldRender && (
+                  {/* line only through non-zero points */}
+                  {pointsArr.length > 1 && (
                     <polyline
                       points={points}
                       fill="none"
-                      stroke={colors[doctorIdx % colors.length]}
+                      stroke={color}
                       strokeWidth="3"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                   )}
-                  {periods.map((period, idx) => {
-                    const value = doctorMap[doctor][period] || 0;
-                    if (value === 0) return null;
-                    
-                    const x = hasMultiplePeriods
-                      ? (idx / periodDenominator) * 800
-                      : 400;
-                    const y = 300 - ((value / yAxisMax) * 300);
-                    
-                    return (
-                      <circle
-                        key={idx}
-                        cx={x}
-                        cy={y}
-                        r="5"
-                        fill={colors[doctorIdx % colors.length]}
-                        className="trend-point"
-                      >
-                        <title>Dr. {doctor} - {period}: {value} patients</title>
-                      </circle>
-                    );
-                  })}
+
+                  {/* circles only where value > 0 */}
+                  {pointsArr.map((p, idx2) => (
+                    <circle
+                      key={idx2}
+                      cx={p.x}
+                      cy={p.y}
+                      r="5"
+                      fill={color}
+                      className="trend-point"
+                    >
+                      <title>Dr. {doctor} - {p.period}: {p.value} patients</title>
+                    </circle>
+                  ))}
                 </g>
               );
             })}
@@ -1748,8 +1752,8 @@ const NewPatientTrendChart = ({ data }) => {
       <div className="trend-legend">
         {doctors.map((doctor, idx) => (
           <div key={doctor} className="legend-item">
-            <span 
-              className="legend-dot" 
+            <span
+              className="legend-dot"
               style={{ backgroundColor: colors[idx % colors.length] }}
             />
             <span>Dr. {doctor}</span>
@@ -1759,5 +1763,6 @@ const NewPatientTrendChart = ({ data }) => {
     </div>
   );
 };
+
 
 export default Report;
