@@ -54,7 +54,6 @@ try {
         'password'       => $data['password'],
         'license_number' => $data['license_number'] ?? null,
         'work_location'  => (int)$data['work_location'],
-        // This code (officeId-start-end) is what staff_helpers.php uses
         'work_schedule'  => $data['work_schedule'],
     ];
 
