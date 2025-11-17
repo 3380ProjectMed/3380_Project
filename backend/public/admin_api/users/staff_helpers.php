@@ -85,14 +85,13 @@ function createStaffAndUser(
         $passwordHash = password_hash($payload['password'], PASSWORD_BCRYPT);
 
         $sqlUser = "INSERT INTO user_account (
-                        user_id,
                         username,
                         email,
                         password_hash,
                         role,
                         mfa_enabled,
                         is_active
-                    ) VALUES (?, ?, ?, ?, ?, 0, 1)";
+                    ) VALUES (?, ?, ?, ?, 0, 1)";
 
         $stmt = $conn->prepare($sqlUser);
         if (!$stmt) {
@@ -100,13 +99,11 @@ function createStaffAndUser(
             throw new Exception('Prepare user_account failed: ' . $conn->error);
         }
 
-        $userId   = $staffId;
         $email    = $payload['email'];
         $roleEnum = $userRole;
 
         if (!$stmt->bind_param(
             'issss',
-            $userId,
             $username,
             $email,
             $passwordHash,
@@ -120,8 +117,6 @@ function createStaffAndUser(
             error_log('createStaffAndUser: execute user_account failed: ' . $stmt->error);
             throw new Exception('Execute user_account failed: ' . $stmt->error);
         }
-
-        error_log('createStaffAndUser: user_account INSERT OK for user_id=' . $userId);
         $stmt->close();
 
         // --- 3) Optional weekly work_schedule from templates ----------------
