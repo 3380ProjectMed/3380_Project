@@ -8,7 +8,6 @@ require_once __DIR__ . '/../../session.php';
 
 header('Content-Type: application/json');
 
-session_start();
 
 if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
     http_response_code(403);
@@ -23,24 +22,22 @@ try {
     if (isset($_GET['office_id']) && $_GET['office_id'] !== '') {
         $officeId = (int)$_GET['office_id'];
 
-        $sql = "
-            SELECT
-                t.office_id,
-                t.start_time,
-                t.end_time,
-                GROUP_CONCAT(
-                    DISTINCT t.day_of_week
-                    ORDER BY FIELD(
-                        t.day_of_week,
-                        'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
-                    )
-                    SEPARATOR ', '
-                ) AS days
-            FROM work_schedule_templates t
-            WHERE t.office_id = ?
-            GROUP BY t.office_id, t.start_time, t.end_time
-            ORDER BY t.start_time, t.end_time
-        ";
+        $sql = "SELECT
+                    t.office_id,
+                    t.start_time,
+                    t.end_time,
+                    GROUP_CONCAT(
+                        DISTINCT t.day_of_week
+                        ORDER BY FIELD(
+                            t.day_of_week,
+                            'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'
+                        )
+                        SEPARATOR ', '
+                    ) AS days
+                FROM work_schedule_templates t
+                WHERE t.office_id = ?
+                GROUP BY t.office_id, t.start_time, t.end_time
+                ORDER BY t.start_time, t.end_time";
 
         $rows = executeQuery($conn, $sql, 'i', [$officeId]);
 
@@ -87,11 +84,39 @@ try {
         ];
     }, $locRows);
 
+    // Specialties
+    $specSql  = "SELECT specialty_id, specialty_name AS name FROM specialty ORDER BY name";
+    $specRows = executeQuery($conn, $specSql);
+
+    $specialties = array_map(static function ($row) {
+        return [
+            'id'   => (int)$row['specialty_id'],
+            'name' => $row['name'],
+        ];
+    }, $specRows);
+
+    // Genders
+    $genderSql = "
+        SELECT gender_code, gender_text
+        FROM codes_gender
+        ORDER BY gender_text
+    ";
+    $genderRows = executeQuery($conn, $genderSql);
+
+    $genders = array_map(static function ($row) {
+        return [
+            'id'     => (int)$row['gender_code'],
+            'label'  => $row['gender_text'],
+        ];
+    }, $genderRows);
+
     closeDBConnection($conn);
 
     echo json_encode([
         'success'        => true,
         'work_locations' => $workLocations,
+        'specialties'    => $specialties,
+        'genders'        => $genders,
     ]);
 } catch (Exception $e) {
     http_response_code(500);

@@ -3,43 +3,24 @@
  * Chronic Disease Management Dashboard API
  * Location: /doctor_api/reports/get-chronic-disease-report.php
  * 
- * PURPOSE: Help doctors manage patients with chronic conditions
- * Shows WHO needs attention, WHY they need it, and WHAT to do about it
- * 
- * Drill-down approach:
- * 1. Summary stats (how many patients need attention)
- * 2. Risk categories (critical, due soon, on track)
- * 3. Individual patient details (specific vitals, meds, last visit)
- * 4. Actionable data (exactly which patients to call today)
+ * AUTHENTICATION: Uses exact same pattern as get-patient-details.php
  */
-
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
-error_log("=== Chronic Disease Management Report API Called ===");
-
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
 try {
-    header('Content-Type: application/json; charset=utf-8');
-
     session_start();
-    
-    if (!isset($_SESSION['uid'])) {
+    if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
-    $conn = getDBConnection();
-    if (!$conn) {
-        throw new Exception('Database connection failed');
-    }
-    
+
     $user_id = intval($_SESSION['uid']);
     
     // Get user role and doctor info
+    $conn = getDBConnection();
+    
     $userQuery = "SELECT ua.role, d.doctor_id, CONCAT(s.first_name, ' ', s.last_name) as doctor_name
               FROM user_account ua 
               LEFT JOIN staff s ON ua.user_id = s.staff_id
@@ -61,16 +42,14 @@ try {
     
     if ($userRole !== 'DOCTOR' && $userRole !== 'ADMIN') {
         http_response_code(403);
-        echo json_encode(['success' => false, 'error' => 'Access denied']);
+        echo json_encode(['success' => false, 'error' => 'Access denied. Only doctors and admins can access reports.']);
         closeDBConnection($conn);
         exit;
     }
     
     // Get filters
     $conditionFilter = isset($_GET['condition']) ? $_GET['condition'] : 'all';
-    $riskFilter = isset($_GET['risk']) ? $_GET['risk'] : 'all'; // critical, due_soon, on_track
-    $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : date('Y-m-d', strtotime('-6 months'));
-    $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : date('Y-m-d');
+    $riskFilter = isset($_GET['risk']) ? $_GET['risk'] : 'all';
     
     // Build WHERE clause for doctor filter
     $doctorWhere = "";
@@ -84,7 +63,7 @@ try {
     }
     
     // ============================================================================
-    // MAIN QUERY: Get all chronic disease patients with comprehensive details
+    // MAIN QUERY: Get all chronic disease patients
     // ============================================================================
     $sql = "SELECT 
         p.patient_id,
@@ -94,12 +73,10 @@ try {
         cg.gender_text as gender,
         p.phone,
         
-        -- Chronic condition details
         mc.condition_name,
         mc.diagnosis_date,
         DATEDIFF(CURDATE(), mc.diagnosis_date) as days_since_diagnosis,
         
-        -- Last visit information
         latest_visit.visit_id as last_visit_id,
         latest_visit.visit_date as last_visit_date,
         latest_visit.blood_pressure as last_bp,
@@ -108,10 +85,8 @@ try {
         latest_visit.treatment as last_treatment,
         latest_visit.doctor_name as last_seen_by,
         
-        -- Time since last visit (KEY METRIC for follow-up)
         DATEDIFF(CURDATE(), latest_visit.visit_date) as days_since_last_visit,
         
-        -- Risk stratification based on last visit
         CASE 
             WHEN latest_visit.visit_date IS NULL THEN 'CRITICAL'
             WHEN DATEDIFF(CURDATE(), latest_visit.visit_date) > 90 THEN 'CRITICAL'
@@ -119,19 +94,11 @@ try {
             ELSE 'ON_TRACK'
         END as followup_risk,
         
-        -- Active medications count
         COALESCE(med_count.active_meds, 0) as active_medications,
-        
-        -- Medications expiring soon
         COALESCE(med_expiring.expiring_soon, 0) as meds_expiring_soon,
-        
-        -- No-show count (compliance indicator)
         COALESCE(noshow_count.no_shows, 0) as no_show_count,
-        
-        -- Total completed visits (engagement indicator)
         COALESCE(completed_count.completed_visits, 0) as total_completed_visits,
         
-        -- Blood pressure control (for hypertension patients)
         CASE 
             WHEN latest_visit.blood_pressure IS NOT NULL THEN
                 CASE 
@@ -143,7 +110,6 @@ try {
             ELSE 'NO_DATA'
         END as bp_control_status,
         
-        -- Next scheduled appointment
         next_appt.next_appointment_date,
         next_appt.next_appointment_reason
         
@@ -151,7 +117,6 @@ try {
     JOIN patient p ON mc.patient_id = p.patient_id
     LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
     
-    -- Get most recent visit
     LEFT JOIN (
         SELECT 
             pv.patient_id,
@@ -174,47 +139,34 @@ try {
         ORDER BY pv.date DESC
     ) latest_visit ON p.patient_id = latest_visit.patient_id
     
-    -- Count active medications
     LEFT JOIN (
-        SELECT 
-            patient_id,
-            COUNT(*) as active_meds
+        SELECT patient_id, COUNT(*) as active_meds
         FROM prescription
         WHERE end_date IS NULL OR end_date >= CURDATE()
         GROUP BY patient_id
     ) med_count ON p.patient_id = med_count.patient_id
     
-    -- Count medications expiring in next 30 days
     LEFT JOIN (
-        SELECT 
-            patient_id,
-            COUNT(*) as expiring_soon
+        SELECT patient_id, COUNT(*) as expiring_soon
         FROM prescription
         WHERE end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
         GROUP BY patient_id
     ) med_expiring ON p.patient_id = med_expiring.patient_id
     
-    -- Count no-shows
     LEFT JOIN (
-        SELECT 
-            patient_id,
-            COUNT(*) as no_shows
+        SELECT patient_id, COUNT(*) as no_shows
         FROM patient_visit
         WHERE status = 'No-Show'
         GROUP BY patient_id
     ) noshow_count ON p.patient_id = noshow_count.patient_id
     
-    -- Count completed visits
     LEFT JOIN (
-        SELECT 
-            patient_id,
-            COUNT(*) as completed_visits
+        SELECT patient_id, COUNT(*) as completed_visits
         FROM patient_visit
         WHERE status = 'Completed'
         GROUP BY patient_id
     ) completed_count ON p.patient_id = completed_count.patient_id
     
-    -- Get next scheduled appointment
     LEFT JOIN (
         SELECT 
             a.Patient_id as patient_id,
@@ -235,6 +187,10 @@ try {
     
     $patients = executeQuery($conn, $sql, $doctorTypes, $doctorParams);
     
+    if (!is_array($patients)) {
+        $patients = [];
+    }
+    
     // Apply filters
     if ($conditionFilter !== 'all') {
         $patients = array_filter($patients, function($p) use ($conditionFilter) {
@@ -248,12 +204,9 @@ try {
         });
     }
     
-    // Reindex array after filtering
     $patients = array_values($patients);
     
-    // ============================================================================
-    // SUMMARY STATISTICS - The "Big Picture Numbers"
-    // ============================================================================
+    // Calculate statistics
     $stats = [
         'total_patients' => count($patients),
         'critical_count' => 0,
@@ -262,39 +215,32 @@ try {
         'uncontrolled_bp_count' => 0,
         'no_bp_data_count' => 0,
         'meds_expiring_count' => 0,
-        'high_risk_no_shows' => 0, // Patients with 2+ no-shows
+        'high_risk_no_shows' => 0,
         'needs_medication_review' => 0,
         'no_scheduled_followup' => 0
     ];
     
     foreach ($patients as $patient) {
-        // Risk stratification
         if ($patient['followup_risk'] === 'CRITICAL') $stats['critical_count']++;
         if ($patient['followup_risk'] === 'DUE_SOON') $stats['due_soon_count']++;
         if ($patient['followup_risk'] === 'ON_TRACK') $stats['on_track_count']++;
         
-        // Blood pressure control
         if ($patient['bp_control_status'] === 'UNCONTROLLED') $stats['uncontrolled_bp_count']++;
         if ($patient['bp_control_status'] === 'NO_DATA') $stats['no_bp_data_count']++;
         
-        // Medication issues
         if ($patient['meds_expiring_soon'] > 0) {
             $stats['meds_expiring_count']++;
             $stats['needs_medication_review']++;
         }
         
-        // Compliance issues
         if ($patient['no_show_count'] >= 2) $stats['high_risk_no_shows']++;
         
-        // No follow-up scheduled
         if (empty($patient['next_appointment_date']) && $patient['followup_risk'] !== 'ON_TRACK') {
             $stats['no_scheduled_followup']++;
         }
     }
     
-    // ============================================================================
-    // CONDITION BREAKDOWN - What conditions am I managing?
-    // ============================================================================
+    // Get condition breakdown
     $conditionBreakdown = [];
     foreach ($patients as $patient) {
         $condition = $patient['condition_name'];
@@ -317,14 +263,11 @@ try {
         if ($patient['bp_control_status'] === 'UNCONTROLLED') $conditionBreakdown[$condition]['uncontrolled_bp']++;
     }
     
-    // Sort by total patients descending
     usort($conditionBreakdown, function($a, $b) {
         return $b['total_patients'] - $a['total_patients'];
     });
     
-    // ============================================================================
-    // GET DETAILED MEDICATION DATA for drill-down
-    // ============================================================================
+    // Get medications for drill-down
     if (!empty($patients)) {
         $patientIds = array_column($patients, 'patient_id');
         $placeholders = implode(',', array_fill(0, count($patientIds), '?'));
@@ -354,30 +297,23 @@ try {
         $medTypes = str_repeat('i', count($patientIds));
         $medications = executeQuery($conn, $medSql, $medTypes, $patientIds);
         
-        // Group medications by patient
         $medicationsByPatient = [];
-        foreach ($medications as $med) {
-            $pid = $med['patient_id'];
-            if (!isset($medicationsByPatient[$pid])) {
-                $medicationsByPatient[$pid] = [];
+        if (is_array($medications)) {
+            foreach ($medications as $med) {
+                $pid = $med['patient_id'];
+                if (!isset($medicationsByPatient[$pid])) {
+                    $medicationsByPatient[$pid] = [];
+                }
+                $medicationsByPatient[$pid][] = $med;
             }
-            $medicationsByPatient[$pid][] = $med;
         }
         
-        // Add medications to patient records
         foreach ($patients as &$patient) {
             $patient['medications'] = $medicationsByPatient[$patient['patient_id']] ?? [];
         }
         unset($patient);
-    }
-    
-    // ============================================================================
-    // GET VISIT HISTORY for each patient (last 5 visits for trend analysis)
-    // ============================================================================
-    if (!empty($patients)) {
-        $patientIds = array_column($patients, 'patient_id');
-        $placeholders = implode(',', array_fill(0, count($patientIds), '?'));
         
+        // Get visit history
         $visitSql = "SELECT 
             pv.patient_id,
             pv.visit_id,
@@ -396,19 +332,19 @@ try {
         $visitTypes = str_repeat('i', count($patientIds));
         $visits = executeQuery($conn, $visitSql, $visitTypes, $patientIds);
         
-        // Group visits by patient (limit to last 5)
         $visitsByPatient = [];
-        foreach ($visits as $visit) {
-            $pid = $visit['patient_id'];
-            if (!isset($visitsByPatient[$pid])) {
-                $visitsByPatient[$pid] = [];
-            }
-            if (count($visitsByPatient[$pid]) < 5) {
-                $visitsByPatient[$pid][] = $visit;
+        if (is_array($visits)) {
+            foreach ($visits as $visit) {
+                $pid = $visit['patient_id'];
+                if (!isset($visitsByPatient[$pid])) {
+                    $visitsByPatient[$pid] = [];
+                }
+                if (count($visitsByPatient[$pid]) < 5) {
+                    $visitsByPatient[$pid][] = $visit;
+                }
             }
         }
         
-        // Add visit history to patient records
         foreach ($patients as &$patient) {
             $patient['recent_visits'] = $visitsByPatient[$patient['patient_id']] ?? [];
         }
@@ -426,16 +362,12 @@ try {
             'doctor_name' => $doctorName,
             'filters' => [
                 'condition' => $conditionFilter,
-                'risk' => $riskFilter,
-                'start_date' => $startDate,
-                'end_date' => $endDate
+                'risk' => $riskFilter
             ]
         ]
     ]);
     
 } catch (Exception $e) {
-    error_log("Error in get-chronic-disease-report.php: " . $e->getMessage());
-    error_log("Stack trace: " . $e->getTraceAsString());
     http_response_code(500);
     echo json_encode([
         'success' => false, 

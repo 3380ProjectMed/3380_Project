@@ -121,7 +121,7 @@
   gap: 0.5rem;
   width: 100%;
   box-sizing: border-box;
-  grid-auto-rows: 12rem;
+  grid-auto-rows: minmax(9rem, auto); /* Use minmax for consistent minimum height */
   align-items: stretch;
 }
 
@@ -155,8 +155,8 @@
 
 /* Each Calendar Day Cell */
 .calendar-day {
-  min-height: 9rem;
-  max-height: 140px;
+  min-height: 7rem; /* Reduced from 9rem for more compact display */
+  max-height: 12rem; /* Allow growth up to 12rem for days with many appointments */
   padding: 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 0.75rem;
