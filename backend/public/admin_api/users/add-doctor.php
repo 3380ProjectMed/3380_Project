@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../cors.php';
 require_once __DIR__ . '/../../database.php';
-require_once __DIR__ . '/../../staff_helpers.php';
 require_once __DIR__ . '/../../session.php';
+require_once __DIR__ . '/staff_helpers.php';
+
 error_log('add-doctor.php: reached after requires');
 header('Content-Type: application/json');
 

@@ -14,6 +14,17 @@ function createStaffAndUser(
     error_log('createStaffAndUser: ENTER role=' . $staffRole . ' userRole=' . $userRole);
     error_log('createStaffAndUser: payload=' . json_encode($payload));
 
+    // ---- Upfront payload validation -----------------------------------------
+    $required = ['first_name', 'last_name', 'email', 'password', 'ssn', 'gender'];
+    foreach ($required as $key) {
+        if (!array_key_exists($key, $payload) || $payload[$key] === '' || $payload[$key] === null) {
+            throw new InvalidArgumentException("Missing required field: {$key}");
+        }
+    }
+
+    // Begin transaction so we don’t leave partial data if something fails
+    $conn->begin_transaction();
+
     try {
         // --- 1) Insert into staff ------------------------------------------
         error_log('createStaffAndUser: preparing staff INSERT');
@@ -130,13 +141,18 @@ function createStaffAndUser(
             $startTime = $parts[1];
             $endTime   = $parts[2];
 
+            // Simple sanity check: start < end (valid HH:MM:SS strings)
+            if ($startTime >= $endTime) {
+                throw new Exception('Invalid work schedule time range: start_time must be < end_time');
+            }
+
             error_log("createStaffAndUser: schedule lookup office_id=$officeId start=$startTime end=$endTime");
 
             $templateSql = "SELECT day_of_week, start_time, end_time
                             FROM work_schedule_templates
                             WHERE office_id  = ?
-                            AND start_time = ?
-                            AND end_time   = ?
+                              AND start_time = ?
+                              AND end_time   = ?
                             ORDER BY FIELD(
                                 day_of_week,
                                 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')";
@@ -158,7 +174,6 @@ function createStaffAndUser(
             }
 
             if (!method_exists($templateStmt, 'get_result')) {
-                // This will clearly show if mysqlnd / get_result is missing.
                 throw new Exception('mysqli_stmt::get_result() not available; check mysqlnd extension');
             }
 
@@ -176,16 +191,32 @@ function createStaffAndUser(
             $insertSql = "INSERT INTO work_schedule (
                             office_id,
                             staff_id,
-                            days,
                             start_time,
                             end_time,
                             day_of_week
-                        ) VALUES (?, ?, ?, ?, ?, ?)";
+                        ) VALUES (?, ?, ?, ?, ?)";
 
             $insertStmt = $conn->prepare($insertSql);
             if (!$insertStmt) {
                 error_log('createStaffAndUser: prepare schedule insert failed: ' . $conn->error);
                 throw new Exception('Prepare schedule insert failed: ' . $conn->error);
+            }
+
+            // Bind once, update variable values inside the loop
+            $dayOfWeek = null;
+            $tplStart  = null;
+            $tplEnd    = null;
+
+            if (!$insertStmt->bind_param(
+                'iisss',
+                $officeId,
+                $staffId,
+                $tplStart,
+                $tplEnd,
+                $dayOfWeek
+            )) {
+                error_log('createStaffAndUser: bind_param schedule insert failed: ' . $insertStmt->error);
+                throw new Exception('bind_param schedule insert failed: ' . $insertStmt->error);
             }
 
             while ($tpl = $templateResult->fetch_assoc()) {
@@ -195,25 +226,13 @@ function createStaffAndUser(
 
                 error_log("createStaffAndUser: inserting schedule row staff_id=$staffId day=$dayOfWeek $tplStart-$tplEnd");
 
-                if (!$insertStmt->bind_param(
-                    'iissss',
-                    $officeId,
-                    $staffId,
-                    $dayOfWeek,
-                    $tplStart,
-                    $tplEnd,
-                    $dayOfWeek
-                )) {
-                    error_log('createStaffAndUser: bind_param schedule insert failed: ' . $insertStmt->error);
-                    throw new Exception('bind_param schedule insert failed: ' . $insertStmt->error);
-                }
-
                 if (!$insertStmt->execute()) {
                     error_log('createStaffAndUser: execute schedule insert failed: ' . $insertStmt->error);
                     throw new Exception('Execute schedule insert failed: ' . $insertStmt->error);
                 }
             }
 
+            $templateResult->free();
             $insertStmt->close();
             $templateStmt->close();
             error_log('createStaffAndUser: schedule inserts complete');
@@ -223,13 +242,17 @@ function createStaffAndUser(
 
         error_log('createStaffAndUser: EXIT OK staff_id=' . $staffId . ' username=' . $username);
 
+        // All good — commit transaction
+        $conn->commit();
+
         return [
             'staff_id' => $staffId,
             'username' => $username,
         ];
     } catch (Throwable $e) {
-        // Centralized logging so we see *any* failure in this helper
+        // Roll back any partial work
+        $conn->rollback();
         error_log('createStaffAndUser: ERROR ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-        throw $e; // bubble up to add-doctor/add-nurse/add-receptionist, where you already catch Throwable
+        throw $e; // bubble up to add-doctor/add-nurse/add-receptionist
     }
 }
