@@ -256,13 +256,15 @@ function Report() {
       });
 
       // Booking method breakdown section
+// Booking method breakdown section
       csvContent += '\nBooking Method,New Patients,Total Appointments,Completed,Unique Patients,Completion Rate\n';
       (newPatientsData.booking_breakdown || []).forEach(row => {
         const total = Number(row.total_appointments || 0);
         const completed = Number(row.completed_appointments || 0);
         const rate = total > 0 ? ((completed / total) * 100).toFixed(1) : '0.0';
-        csvContent += `${row.booking_method},${row.new_patients},${row.total_appointments},${row.completed_appointments},${row.unique_patients},${rate}\n`;
+        csvContent += `${row.method},${row.new_patients},${row.total_appointments},${row.completed_appointments},${row.unique_patients},${rate}\n`;
       });
+
     }
     
     if (!filename) return;
@@ -1101,7 +1103,7 @@ function Report() {
 
                       return (
                         <tr key={idx}>
-                          <td className="text-bold">{row.booking_method}</td>
+                          <td className="text-bold">{row.method}</td> {/* ← here */}
                           <td className="text-right text-primary">{row.new_patients}</td>
                           <td className="text-right">{row.total_appointments}</td>
                           <td className="text-right text-success">{row.completed_appointments}</td>
@@ -1125,6 +1127,7 @@ function Report() {
               </div>
             </section>
           )}
+
         </>
       )}
 
