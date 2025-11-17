@@ -20,38 +20,59 @@ try {
 
     $conn = getDBConnection();
 
-    // Get doctors who are scheduled to work at this office via work_schedule table
-    // Join: work_schedule -> staff -> doctor -> specialty
+    // First, get all doctors who work at this office
     $sql = "SELECT DISTINCT 
                 d.doctor_id, 
                 s.first_name, 
                 s.last_name,
+                s.staff_id,
                 sp.specialty_name, 
-                sp.specialty_id,
-                MIN(ws.start_time) as earliest_start,
-                MAX(ws.end_time) as latest_end
+                sp.specialty_id
             FROM work_schedule ws
             JOIN staff s ON ws.staff_id = s.staff_id
             JOIN doctor d ON s.staff_id = d.staff_id
             JOIN specialty sp ON d.specialty = sp.specialty_id
             WHERE ws.office_id = ?
-            GROUP BY d.doctor_id, s.first_name, s.last_name, sp.specialty_name, sp.specialty_id
             ORDER BY s.last_name, s.first_name";
 
-    $rows = executeQuery($conn, $sql, 'i', [$officeId]);
-    closeDBConnection($conn);
-
-    $doctors = array_map(function ($r) {
-        return [
-            'Doctor_id' => (int) $r['doctor_id'],
-            'First_Name' => $r['first_name'],
-            'Last_Name' => $r['last_name'],
-            'specialty_name' => $r['specialty_name'],
-            'specialty_id' => (int) $r['specialty_id'],
-            'earliest_start' => $r['earliest_start'],
-            'latest_end' => $r['latest_end']
+    $doctorRows = executeQuery($conn, $sql, 'i', [$officeId]);
+    
+    $doctors = [];
+    
+    // For each doctor, get their work schedule at this office
+    foreach ($doctorRows as $doctor) {
+        $scheduleSQL = "SELECT 
+                            day_of_week,
+                            start_time,
+                            end_time
+                        FROM work_schedule
+                        WHERE staff_id = ? AND office_id = ?
+                        ORDER BY FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')";
+        
+        $scheduleRows = executeQuery($conn, $scheduleSQL, 'ii', [(int)$doctor['staff_id'], $officeId]);
+        
+        $workSchedule = [];
+        foreach ($scheduleRows as $schedule) {
+            if ($schedule['day_of_week']) {
+                $workSchedule[] = [
+                    'day' => $schedule['day_of_week'],
+                    'start' => substr($schedule['start_time'], 0, 5), // HH:MM format
+                    'end' => substr($schedule['end_time'], 0, 5)
+                ];
+            }
+        }
+        
+        $doctors[] = [
+            'Doctor_id' => (int) $doctor['doctor_id'],
+            'First_Name' => $doctor['first_name'],
+            'Last_Name' => $doctor['last_name'],
+            'specialty_name' => $doctor['specialty_name'],
+            'specialty_id' => (int) $doctor['specialty_id'],
+            'work_schedule' => $workSchedule
         ];
-    }, $rows);
+    }
+    
+    closeDBConnection($conn);
 
     echo json_encode(['success' => true, 'doctors' => $doctors, 'count' => count($doctors)]);
 

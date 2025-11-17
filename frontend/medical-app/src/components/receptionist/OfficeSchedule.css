@@ -194,6 +194,50 @@
   font-size: 0.95rem;
 }
 
+/* ===== SPECIALTY FILTER ===== */
+.specialty-filter-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: white;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 2px solid #e5e7eb;
+}
+
+.filter-label {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.specialty-filter-select {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: white;
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 250px;
+}
+
+.specialty-filter-select:hover {
+  border-color: #00b4d8;
+}
+
+.specialty-filter-select:focus {
+  outline: none;
+  border-color: #0077b6;
+  box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
+}
+
 /* ===== AVAILABILITY GRID ===== */
 .availability-grid-container {
   background: white;
@@ -205,13 +249,13 @@
 }
 
 .availability-grid {
-  min-width: 1200px;
+  min-width: 800px;
+  width: 100%;
 }
 
 /* Grid Header */
 .grid-header {
   display: grid;
-  grid-template-columns: 120px repeat(4, 1fr);
   gap: 1rem;
   margin-bottom: 1rem;
   position: sticky;
@@ -302,7 +346,6 @@
 
 .grid-row {
   display: grid;
-  grid-template-columns: 120px repeat(4, 1fr);
   gap: 1rem;
   align-items: center;
 }
