@@ -596,10 +596,9 @@ function AddUserModal({ type, onClose, onSuccess }) {
         license_number: formData.licenseNumber,
       };
 
-      // All staff roles get a base location + schedule
       if (selectedRole === 'nurse' || selectedRole === 'receptionist') {
         payload.work_location = parseInt(formData.workLocation);
-        payload.work_schedule = formData.workSchedule;  
+        payload.work_schedule = formData.workSchedule;
       }
 
       if (selectedRole === 'doctor') {
@@ -607,6 +606,8 @@ function AddUserModal({ type, onClose, onSuccess }) {
       } else if (selectedRole === 'nurse') {
         payload.department = formData.department;
       }
+
+      console.log('AddUserModal handleSubmit → endpoint:', endpoint, 'payload:', payload);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -617,14 +618,19 @@ function AddUserModal({ type, onClose, onSuccess }) {
         body: JSON.stringify(payload),
       });
 
-      // Read raw text first
       const text = await response.text();
-      console.log('add-doctor raw response:', text);
+      console.log('AddUserModal raw response:', {
+        status: response.status,
+        ok: response.ok,
+        textLength: text.length,
+        text,
+      });
+
       let data = null;
       try {
         data = text ? JSON.parse(text) : null;
       } catch (e) {
-        console.error('Non-JSON response from', endpoint, 'status:', response.status, 'body:', text);
+        console.error('AddUserModal JSON parse error:', e);
         throw new Error(`Invalid JSON from server (status ${response.status})`);
       }
 
@@ -641,6 +647,7 @@ function AddUserModal({ type, onClose, onSuccess }) {
         onSuccess();
       }, 1500);
     } catch (err) {
+      console.error('AddUserModal handleSubmit error:', err);
       setError(err.message);
     } finally {
       setSubmitting(false);

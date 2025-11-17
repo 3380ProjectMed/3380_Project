@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../cors.php';
 require_once __DIR__ . '/../../database.php';
 require_once __DIR__ . '/../../staff_helpers.php';
 require_once __DIR__ . '/../../session.php';
-
+error_log('add-doctor.php: reached after requires');
 header('Content-Type: application/json');
 
 // TEMP DEBUG: prove the file is executing at all
