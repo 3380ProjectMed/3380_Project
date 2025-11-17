@@ -75,7 +75,6 @@ export default function NurseProfile() {
         <h1>My Profile</h1>
         <p>Manage your personal information</p>
         <div className="profile-card">
-          <div className="profile-avatar">{initial}</div>
           <div className="profile-info">
             <div className="form-grid">
               <div className="form-group">
