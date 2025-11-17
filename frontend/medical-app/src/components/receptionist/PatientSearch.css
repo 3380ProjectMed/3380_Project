@@ -321,7 +321,7 @@
 
 /* ===== MODAL STYLES ===== */
 .modal-large {
-  max-width: 900px;
+  max-width: 1400px;
 }
 
 /* Info Sections */
@@ -668,7 +668,7 @@
 .modal {
   background: white;
   border-radius: 1.5rem;
-  max-width: 1200px;
+  max-width: 1600px;
   width: 100%;
   max-height: 92vh;
   overflow-y: auto;
