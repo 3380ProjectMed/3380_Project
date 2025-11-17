@@ -194,7 +194,6 @@ export default function PatientPortal({ onLogout }) {
     console.log('Profile API response:', r);
     if (r.success) {
       setProfile(r.data);
-      setPcp(r.data);
       // populate editable form fields with current profile values
       setFormData(fd => ({
         ...fd,

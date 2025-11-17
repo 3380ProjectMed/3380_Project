@@ -135,7 +135,7 @@ export default function Billing(props) {
                         </div>
                         
                         <div className="breakdown-item">
-                          <span className="breakdown-label">Your Share ({(Number(s.coinsurance_rate || 0) * 100).toFixed(0)}%):</span>
+                          <span className="breakdown-label">Your Share ({Number(s.coinsurance_rate || 0).toFixed(0)}%):</span>
                           <span className="breakdown-amount">${Number(s.coinsurance_amount || 0).toFixed(2)}</span>
                         </div>
                         

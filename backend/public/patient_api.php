@@ -1469,7 +1469,7 @@ elseif ($endpoint === 'billing') {
                         SELECT 
                             COALESCE(SUM(
                                 (COALESCE(ipl.copay, 0) + 
-                                 COALESCE(tpv.total_cost, 0) * COALESCE(ipl.coinsurance_rate, 0)) - 
+                                 COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - 
                                 COALESCE(v.payment, 0)
                             ), 0) as outstanding_balance,
                             COUNT(*) as visit_count
@@ -1479,8 +1479,8 @@ elseif ($endpoint === 'billing') {
                         LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
                         LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
                         WHERE v.patient_id = ?
-                        AND (COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * COALESCE(ipl.coinsurance_rate, 0)) > 0
-                        AND ((COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * COALESCE(ipl.coinsurance_rate, 0)) - COALESCE(v.payment, 0)) > 0
+                        AND (COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) > 0
+                        AND ((COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) > 0
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
@@ -1496,21 +1496,21 @@ elseif ($endpoint === 'billing') {
                         SELECT 
                             v.visit_id as id,
                             DATE(v.date) as date,
-                            CONCAT('Appointment with Dr. ', doc_staff.last_name, ' on ', DATE_FORMAT(v.date, '%M %d, %Y')) as service,
+                            COALESCE(tpv.notes, CONCAT('Appointment with Dr. ', doc_staff.last_name, ' on ', DATE_FORMAT(v.date, '%M %d, %Y'))) as service,
                             
                             -- Cost breakdown components
                             COALESCE(ipl.copay, 0) as copay_amount,
                             COALESCE(tpv.total_cost, 0) as treatment_cost,
                             COALESCE(ipl.coinsurance_rate, 0) as coinsurance_rate,
-                            COALESCE(tpv.total_cost, 0) * COALESCE(ipl.coinsurance_rate, 0) as coinsurance_amount,
+                            COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100) as coinsurance_amount,
                             
                             -- Total amount due and balance calculation
-                            (COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * COALESCE(ipl.coinsurance_rate, 0)) as amount,
-                            ((COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * COALESCE(ipl.coinsurance_rate, 0)) - COALESCE(v.payment, 0)) as balance,
+                            (COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) as amount,
+                            ((COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) as balance,
                             
                             -- Payment status
                             CASE 
-                                WHEN ((COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * COALESCE(ipl.coinsurance_rate, 0)) - COALESCE(v.payment, 0)) <= 0 THEN 'Paid'
+                                WHEN ((COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) <= 0 THEN 'Paid'
                                 WHEN v.payment > 0 THEN 'Partial payment'
                                 ELSE 'Unpaid'
                             END as status,
@@ -1529,7 +1529,7 @@ elseif ($endpoint === 'billing') {
                         LEFT JOIN insurance_payer ip ON ipl.payer_id = ip.payer_id
                         LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
                         WHERE v.patient_id = ?
-                        AND (COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * COALESCE(ipl.coinsurance_rate, 0)) > 0
+                        AND (COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) > 0
                         ORDER BY v.date DESC
                         LIMIT 50
                     ");
