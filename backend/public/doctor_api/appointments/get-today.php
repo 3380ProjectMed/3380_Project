@@ -1,151 +1,144 @@
 <?php
-
 /**
- * Get today's appointments for a doctor with intelligent status calculation
+ * Get today's appointments for a doctor with REAL-TIME status
+ * Returns actual Status from appointment table
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
-require_once '/home/site/wwwroot/session.php';
+
 try {
-    //session_start();
+    session_start();
+    if (empty($_SESSION['uid'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+        exit;
+    }
 
     $conn = getDBConnection();
 
-    // Get doctor_id from query param or derive from session
-    if (isset($_GET['doctor_id'])) {
-        $doctor_id = intval($_GET['doctor_id']);
-    } else {
-        // Verify authentication and role
-        if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
-            http_response_code(401);
-            echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-            exit;
-        }
+    // Get doctor_id from session
+    $doctorSql = "SELECT doctor_id FROM doctor d
+                  JOIN user_account ua ON ua.email = d.email
+                  WHERE ua.user_id = ?";
+    $doctorRows = executeQuery($conn, $doctorSql, 'i', [$_SESSION['uid']]);
 
-        if ($_SESSION['role'] !== 'DOCTOR') {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'Doctor access required']);
-            exit;
-        }
-
-        // user_id = staff_id for doctors, get doctor_id
-        $staff_id = (int)$_SESSION['uid'];
-
-        $rows = executeQuery(
-            $conn,
-            'SELECT doctor_id FROM doctor WHERE staff_id = ? LIMIT 1',
-            'i',
-            [$staff_id]
-        );
-
-        if (empty($rows)) {
-            closeDBConnection($conn);
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'No doctor record found']);
-            exit;
-        }
-
-        $doctor_id = (int)$rows[0]['doctor_id'];
+    if (empty($doctorRows)) {
+        closeDBConnection($conn);
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Doctor account not found']);
+        exit;
     }
 
-    // Use America/Chicago timezone
-    $tz = new DateTimeZone('America/Chicago');
-    $dt = new DateTime('now', $tz);
-    $today = $dt->format('Y-m-d');
-    $currentDateTime = new DateTime('now', $tz);
+    $doctor_id = (int)$doctorRows[0]['doctor_id'];
 
-    // appointment has mixed case, patient/office/codes are lowercase
-    $sql = "SELECT
+    // Get today's appointments with REAL STATUS from database
+    $sql = "SELECT 
                 a.Appointment_id,
+                a.Patient_id,
                 a.Appointment_date,
                 a.Reason_for_visit,
-                a.Office_id,
                 a.Status,
+                a.Office_id,
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
-                p.patient_id,
-                p.allergies as allergy_code,
+                p.dob,
                 ca.allergies_text as allergies,
-                o.name as office_name
+                o.name as office_name,
+                pv.visit_id,
+                pv.blood_pressure,
+                pv.temperature,
+                pv.created_at as checked_in_at
             FROM appointment a
-            INNER JOIN patient p ON a.Patient_id = p.patient_id
+            LEFT JOIN patient p ON a.Patient_id = p.patient_id
             LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             LEFT JOIN office o ON a.Office_id = o.office_id
+            LEFT JOIN patient_visit pv ON pv.appointment_id = a.Appointment_id
             WHERE a.Doctor_id = ?
-            AND DATE(a.Appointment_date) = ?
-            ORDER BY a.Appointment_date";
+            AND DATE(a.Appointment_date) = CURDATE()
+            ORDER BY a.Appointment_date ASC";
 
-    $appointments = executeQuery($conn, $sql, 'is', [$doctor_id, $today]);
+    $rows = executeQuery($conn, $sql, 'i', [$doctor_id]);
 
-    $formatted_appointments = [];
+    if (!is_array($rows)) {
+        $rows = [];
+    }
+
+    $appointments = [];
     $stats = [
         'total' => 0,
-        'upcoming' => 0,
         'waiting' => 0,
+        'pending' => 0,
         'completed' => 0
     ];
 
-    foreach ($appointments as $apt) {
-        $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
-        $dbStatus = $apt['Status'] ?? 'Scheduled';
-
-        // Determine display status
-        $displayStatus = $dbStatus;
-        $waitingTime = 0;
-
-        if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
-            $displayStatus = $dbStatus;
-        } else {
-            $timeDiff = ($currentDateTime->getTimestamp() - $appointmentDateTime->getTimestamp()) / 60;
-
-            if ($timeDiff < -15) {
-                $displayStatus = 'Upcoming';
-                $stats['upcoming']++;
-            } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
-                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
-            } elseif ($timeDiff > 15) {
-                if ($dbStatus === 'Scheduled') {
-                    $displayStatus = 'Waiting';
-                    $waitingTime = round($timeDiff);
-                    $stats['waiting']++;
-                } elseif ($dbStatus === 'In Progress') {
-                    $displayStatus = 'In Progress';
-                }
+    foreach ($rows as $row) {
+        // Calculate age
+        $age = null;
+        if (!empty($row['dob'])) {
+            try {
+                $dob = new DateTime($row['dob']);
+                $now = new DateTime();
+                $age = $now->diff($dob)->y;
+            } catch (Exception $e) {
+                // Keep age as null
             }
         }
 
-        if ($displayStatus === 'Completed') {
-            $stats['completed']++;
+        // Calculate waiting time if checked in
+        $waitingMinutes = 0;
+        if (!empty($row['checked_in_at'])) {
+            try {
+                $checkedIn = new DateTime($row['checked_in_at']);
+                $now = new DateTime();
+                $diff = $now->diff($checkedIn);
+                $waitingMinutes = ($diff->h * 60) + $diff->i;
+            } catch (Exception $e) {
+                // Keep as 0
+            }
         }
 
-        $formatted_appointments[] = [
-            'id' => $apt['Appointment_id'],
-            'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
-            'patientId' => $apt['patient_id'],
-            'patientIdFormatted' => 'P' . str_pad($apt['patient_id'], 3, '0', STR_PAD_LEFT),
-            'patientName' => $apt['patient_name'],
-            'time' => date('g:i A', strtotime($apt['Appointment_date'])),
-            'appointmentDateTime' => $apt['Appointment_date'],
-            'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
-            'status' => $displayStatus,
-            'dbStatus' => $dbStatus,
-            'location' => $apt['office_name'],
-            'allergies' => $apt['allergies'] ?: 'No Known Allergies',
-            'waitingMinutes' => $waitingTime
-        ];
-    }
+        // Use ACTUAL status from database - no more auto-calculation
+        $status = $row['Status'] ?? 'Scheduled';
 
-    $stats['total'] = count($formatted_appointments);
-    $stats['pending'] = $stats['upcoming'];
+        $appointments[] = [
+            'id' => $row['Appointment_id'],
+            'appointmentId' => 'APT-' . str_pad($row['Appointment_id'], 6, '0', STR_PAD_LEFT),
+            'patientId' => $row['Patient_id'],
+            'patientName' => $row['patient_name'],
+            'time' => date('g:i A', strtotime($row['Appointment_date'])),
+            'datetime' => $row['Appointment_date'],
+            'reason' => $row['Reason_for_visit'] ?? 'General Consultation',
+            'status' => $status, // REAL status from database
+            'allergies' => $row['allergies'] ?? 'No Known Allergies',
+            'age' => $age,
+            'officeId' => $row['Office_id'],
+            'officeName' => $row['office_name'],
+            'visitId' => $row['visit_id'],
+            'hasVitals' => !empty($row['blood_pressure']) || !empty($row['temperature']),
+            'waitingMinutes' => $waitingMinutes,
+            'checkedInAt' => $row['checked_in_at']
+        ];
+
+        // Update stats
+        $stats['total']++;
+        
+        $statusLower = strtolower($status);
+        if ($statusLower === 'waiting' || $statusLower === 'ready' || $statusLower === 'checked-in') {
+            $stats['waiting']++;
+        } elseif ($statusLower === 'scheduled' || $statusLower === 'upcoming') {
+            $stats['pending']++;
+        } elseif ($statusLower === 'completed') {
+            $stats['completed']++;
+        }
+    }
 
     closeDBConnection($conn);
 
     echo json_encode([
         'success' => true,
-        'appointments' => $formatted_appointments,
-        'stats' => $stats,
-        'count' => count($formatted_appointments),
-        'currentTime' => $currentDateTime->format('Y-m-d H:i:s')
+        'appointments' => $appointments,
+        'stats' => $stats
     ]);
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -153,3 +146,4 @@ try {
         'error' => $e->getMessage()
     ]);
 }
+?>
