@@ -55,7 +55,7 @@ try {
                 pv.patient_id,
                 pv.doctor_id,
                 pv.date,
-                a.status,
+                a.Status,
                 pv.diagnosis,
                 pv.reason_for_visit,
                 pv.blood_pressure,
