@@ -561,9 +561,16 @@ elseif ($endpoint === 'appointments') {
             $mysqli->begin_transaction();
 
             // Generate appointment ID
-            $result = $mysqli->query("SELECT COALESCE(MAX(Appointment_id), 0) + 1 as next_id FROM Appointment");
+            $result = $mysqli->query("SELECT COALESCE(MAX(`Appointment_id`), 0) + 1 as next_id FROM `appointment`");
+            if (!$result) {
+                $mysqli->rollback();
+                error_log("Failed to generate appointment ID: " . $mysqli->error);
+                sendResponse(false, [], 'Failed to generate appointment ID', 500);
+                return;
+            }
             $row = $result->fetch_assoc();
             $next_id = $row['next_id'];
+            error_log("Generated appointment ID: " . $next_id);
 
             // Parse appointment date
             $appointmentdateTime = $input['appointment_date'];
@@ -597,8 +604,8 @@ elseif ($endpoint === 'appointments') {
 
             // Insert appointment - trigger will validate date/time constraints and PCP/referral requirements
             $stmt = $mysqli->prepare("INSERT INTO appointment (
-                    Appointment_id, Patient_id, Doctor_id, Office_id, 
-                    Appointment_date, Date_created, Reason_for_visit, Status, method
+                    `Appointment_id`, `Patient_id`, `Doctor_id`, `Office_id`, 
+                    `Appointment_date`, `Date_created`, `Reason_for_visit`, `Status`, `method`
                 ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?)");
             $stmt->bind_param(
                 'iiiissss',
@@ -612,13 +619,24 @@ elseif ($endpoint === 'appointments') {
                 'Online'
             );
 
+            // Enhanced error logging for debugging
+            error_log("Attempting to insert appointment with parameters: " . json_encode([
+                'next_id' => $next_id,
+                'patient_id' => $patient_id,
+                'doctor_id' => $input['doctor_id'],
+                'office_id' => $input['office_id'],
+                'appointment_date' => $appointmentdateTime,
+                'reason' => $input['reason']
+            ]));
+
             $exec_result = $stmt->execute();
 
             if (!$exec_result) {
                 $error_msg = $stmt->error;
                 $mysqli->rollback();
                 error_log("SQL execution failed: " . $error_msg);
-                sendResponse(false, [], 'Database error occurred', 500);
+                error_log("MySQL error number: " . $stmt->errno);
+                sendResponse(false, [], 'Database error occurred: ' . $error_msg, 500);
                 return;
             }
 
