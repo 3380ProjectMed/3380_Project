@@ -129,10 +129,27 @@ export default function Billing(props) {
                           <span className="breakdown-amount">${Number(s.copay_amount || 0).toFixed(2)}</span>
                         </div>
                         
-                        <div className="breakdown-item">
-                          <span className="breakdown-label">Treatment Cost:</span>
-                          <span className="breakdown-amount">${Number(s.treatment_cost || 0).toFixed(2)}</span>
-                        </div>
+                        {/* Treatment Details Breakdown */}
+                        {s.treatment_details && s.treatment_details.length > 0 ? (
+                          <div className="treatment-details-section">
+                            <span className="breakdown-label treatment-details-header">Treatments:</span>
+                            {s.treatment_details.map((treatment, idx) => (
+                              <div key={idx} className="treatment-detail-item">
+                                <span className="treatment-name">{treatment.treatment_name}</span>
+                                <span className="treatment-cost">${Number(treatment.total_cost || 0).toFixed(2)}</span>
+                              </div>
+                            ))}
+                            <div className="breakdown-item treatment-total">
+                              <span className="breakdown-label"><strong>Total Treatment Cost:</strong></span>
+                              <span className="breakdown-amount"><strong>${Number(s.treatment_cost || 0).toFixed(2)}</strong></span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="breakdown-item">
+                            <span className="breakdown-label">Treatment Cost:</span>
+                            <span className="breakdown-amount">${Number(s.treatment_cost || 0).toFixed(2)}</span>
+                          </div>
+                        )}
                         
                         <div className="breakdown-item">
                           <span className="breakdown-label">Your Share ({Number(s.coinsurance_rate || 0).toFixed(0)}%):</span>
