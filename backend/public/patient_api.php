@@ -598,16 +598,17 @@ elseif ($endpoint === 'appointments') {
             // Insert appointment - trigger will validate date/time constraints and PCP/referral requirements
             $stmt = $mysqli->prepare("INSERT INTO appointment (
                     Appointment_id, Patient_id, Doctor_id, Office_id, 
-                    Appointment_date, Date_created, Reason_for_visit, method
-                ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)");
+                    Appointment_date, Date_created, Reason_for_visit, Status, method
+                ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?)");
             $stmt->bind_param(
-                'iiiisss',
+                'iiiissss',
                 $next_id,
                 $patient_id,
                 $input['doctor_id'],
                 $input['office_id'],
                 $appointmentdateTime,
                 $input['reason'],
+                'Scheduled',
                 'Online'
             );
 
@@ -1467,20 +1468,21 @@ elseif ($endpoint === 'billing') {
                     error_log("Billing balance query for patient_id: " . $patient_id);
                     $stmt = $mysqli->prepare("
                         SELECT 
-                            COALESCE(SUM(
-                                (COALESCE(ipl.copay, 0) + 
-                                 COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - 
-                                COALESCE(v.payment, 0)
-                            ), 0) as outstanding_balance,
+                            COALESCE(SUM(visit_balance), 0) as outstanding_balance,
                             COUNT(*) as visit_count
-                        FROM patient_visit v
-                        LEFT JOIN patient p ON v.patient_id = p.patient_id
-                        LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id
-                        LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
-                        LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
-                        WHERE v.patient_id = ?
-                        AND (COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) > 0
-                        AND ((COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) > 0
+                        FROM (
+                            SELECT 
+                                ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) as visit_balance
+                            FROM patient_visit v
+                            LEFT JOIN patient p ON v.patient_id = p.patient_id
+                            LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id
+                            LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
+                            LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
+                            WHERE v.patient_id = ?
+                            AND tpv.visit_id IS NOT NULL
+                            GROUP BY v.visit_id, ipl.copay, ipl.coinsurance_rate, v.payment
+                            HAVING ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) > 0
+                        ) as visit_balances
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
@@ -1496,21 +1498,33 @@ elseif ($endpoint === 'billing') {
                         SELECT 
                             v.visit_id as id,
                             DATE(v.date) as date,
-                            COALESCE(tpv.notes, CONCAT('Appointment with Dr. ', doc_staff.last_name, ' on ', DATE_FORMAT(v.date, '%M %d, %Y'))) as service,
+                            CONCAT('Appointment with Dr. ', doc_staff.last_name, ' on ', DATE_FORMAT(v.date, '%M %d, %Y')) as service,
                             
                             -- Cost breakdown components
                             COALESCE(ipl.copay, 0) as copay_amount,
-                            COALESCE(tpv.total_cost, 0) as treatment_cost,
+                            SUM(COALESCE(tpv.total_cost, 0)) as treatment_cost,
                             COALESCE(ipl.coinsurance_rate, 0) as coinsurance_rate,
-                            COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100) as coinsurance_amount,
+                            SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100) as coinsurance_amount,
+                            
+                            -- Treatment details breakdown (JSON format)
+                            JSON_ARRAYAGG(
+                                JSON_OBJECT(
+                                    'treatment_name', tc.name,
+                                    'cpt_code', tc.cpt_code,
+                                    'quantity', tpv.quantity,
+                                    'cost_each', tpv.cost_each,
+                                    'total_cost', tpv.total_cost,
+                                    'notes', tpv.notes
+                                )
+                            ) as treatment_details,
                             
                             -- Total amount due and balance calculation
-                            (COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) as amount,
-                            ((COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) as balance,
+                            (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) as amount,
+                            ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) as balance,
                             
                             -- Payment status
                             CASE 
-                                WHEN ((COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) <= 0 THEN 'Paid'
+                                WHEN ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) <= 0 THEN 'Paid'
                                 WHEN v.payment > 0 THEN 'Partial payment'
                                 ELSE 'Unpaid'
                             END as status,
@@ -1528,8 +1542,11 @@ elseif ($endpoint === 'billing') {
                         LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
                         LEFT JOIN insurance_payer ip ON ipl.payer_id = ip.payer_id
                         LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
+                        LEFT JOIN treatment_catalog tc ON tpv.treatment_id = tc.treatment_id
                         WHERE v.patient_id = ?
-                        AND (COALESCE(ipl.copay, 0) + COALESCE(tpv.total_cost, 0) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) > 0
+                        AND tpv.visit_id IS NOT NULL
+                        GROUP BY v.visit_id, v.date, doc_staff.first_name, doc_staff.last_name, ipl.copay, ipl.coinsurance_rate, v.payment, ip.name, ipl.plan_name
+                        HAVING (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) > 0
                         ORDER BY v.date DESC
                         LIMIT 50
                     ");
@@ -1537,6 +1554,16 @@ elseif ($endpoint === 'billing') {
                     $stmt->execute();
                     $result = $stmt->get_result();
                     $statements = $result->fetch_all(MYSQLI_ASSOC);
+                    
+                    // Parse treatment_details JSON for each statement
+                    foreach ($statements as &$statement) {
+                        if (isset($statement['treatment_details']) && $statement['treatment_details']) {
+                            $statement['treatment_details'] = json_decode($statement['treatment_details'], true);
+                        } else {
+                            $statement['treatment_details'] = [];
+                        }
+                    }
+                    
                     error_log("Billing statements result count: " . count($statements));
                     sendResponse(true, $statements);
                     break;
