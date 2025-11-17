@@ -574,19 +574,23 @@ elseif ($endpoint === 'appointments') {
 
             // Parse appointment date
             $appointmentdateTime = $input['appointment_date'];
+            error_log("Original appointment date from frontend: " . $appointmentdateTime);
+            
             if (strpos($appointmentdateTime, 'AM') !== false || strpos($appointmentdateTime, 'PM') !== false) {
                 // Try multiple format patterns to handle different time formats
                 $formats = [
-                    'Y-m-d g:i A',    // 2026-11-12 2:00 PM
-                    'Y-m-d h:i A',    // 2026-11-12 02:00 PM
-                    'Y-m-d G:i',      // 2026-11-12 14:00
-                    'Y-m-d H:i'       // 2026-11-12 14:00
+                    'Y-m-d g:i A',    // 2026-12-03 9:00 AM (single digit hour)
+                    'Y-m-d h:i A',    // 2026-12-03 09:00 AM (double digit hour)
+                    'Y-m-d G:i',      // 2026-12-03 9:00 (24 hour single digit)
+                    'Y-m-d H:i'       // 2026-12-03 09:00 (24 hour double digit)
                 ];
 
                 $dt = null;
                 foreach ($formats as $format) {
                     $dt = DateTime::createFromFormat($format, $appointmentdateTime);
-                    if ($dt && $dt->format($format) === $appointmentdateTime) {
+                    if ($dt && $dt !== false) {
+                        // Don't check exact format match, just ensure valid parsing
+                        error_log("Successfully parsed date with format: " . $format);
                         break;
                     }
                     $dt = null;
@@ -594,6 +598,7 @@ elseif ($endpoint === 'appointments') {
 
                 if ($dt) {
                     $appointmentdateTime = $dt->format('Y-m-d H:i:s');
+                    error_log("Converted to MySQL format: " . $appointmentdateTime);
                 } else {
                     // Log the parsing error
                     error_log("Date parsing failed for: " . $appointmentdateTime);
