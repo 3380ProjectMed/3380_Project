@@ -36,12 +36,6 @@ try {
         closeDBConnection($conn);
         exit;
     }
-     // Use America/Chicago timezone
-    $tz = new DateTimeZone('America/Chicago');
-    $dt = new DateTime('now', $tz);
-    $today = $dt->format('Y-m-d');
-    $currentDateTime = new DateTime('now', $tz);
-
     $nurseId = (int)$rows[0]['nurse_id'];
     error_log('[save-vitals] Found nurse_id: ' . $nurseId);
 
