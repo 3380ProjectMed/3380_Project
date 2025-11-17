@@ -178,13 +178,21 @@ function PatientSearch({ onBookAppointment }) {
   };
 
   /**
-   * Handle form input change
+   * Handle form input change with phone formatting
    */
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    let formattedValue = value;
+    
+    // Auto-format phone numbers
+    if (name === 'phone' || name === 'emergencyPhone') {
+      formattedValue = formatPhoneNumber(value);
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: formattedValue
     }));
     // Clear error for this field
     if (formErrors[name]) {
@@ -193,6 +201,23 @@ function PatientSearch({ onBookAppointment }) {
         [name]: ''
       }));
     }
+  };
+
+  /**
+   * Format phone number as (XXX) XXX-XXXX
+   */
+  const formatPhoneNumber = (value) => {
+    // Remove all non-digits
+    const cleaned = value.replace(/\D/g, '');
+    
+    // Limit to 10 digits
+    const limited = cleaned.substring(0, 10);
+    
+    // Format based on length
+    if (limited.length === 0) return '';
+    if (limited.length <= 3) return `(${limited}`;
+    if (limited.length <= 6) return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
+    return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
   };
 
   /**
@@ -651,14 +676,17 @@ function PatientSearch({ onBookAppointment }) {
                   <div className="form-grid">
                     <div className="form-field">
                       <label className="form-label">First Name *</label>
-                      <input
-                        type="text"
-                        name="firstName"
-                        className={`form-input ${formErrors.firstName ? 'input-error' : ''}`}
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        required
-                      />
+                      <div className="input-with-icon">
+                        <User className="input-icon" size={18} />
+                        <input
+                          type="text"
+                          name="firstName"
+                          className={`form-input with-icon ${formErrors.firstName ? 'input-error' : ''}`}
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
                       {formErrors.firstName && (
                         <span className="error-text">{formErrors.firstName}</span>
                       )}
@@ -666,14 +694,17 @@ function PatientSearch({ onBookAppointment }) {
 
                     <div className="form-field">
                       <label className="form-label">Last Name *</label>
-                      <input
-                        type="text"
-                        name="lastName"
-                        className={`form-input ${formErrors.lastName ? 'input-error' : ''}`}
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        required
-                      />
+                      <div className="input-with-icon">
+                        <User className="input-icon" size={18} />
+                        <input
+                          type="text"
+                          name="lastName"
+                          className={`form-input with-icon ${formErrors.lastName ? 'input-error' : ''}`}
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
                       {formErrors.lastName && (
                         <span className="error-text">{formErrors.lastName}</span>
                       )}
@@ -681,14 +712,17 @@ function PatientSearch({ onBookAppointment }) {
 
                     <div className="form-field">
                       <label className="form-label">Date of Birth *</label>
-                      <input
-                        type="date"
-                        name="dateOfBirth"
-                        className={`form-input ${formErrors.dateOfBirth ? 'input-error' : ''}`}
-                        value={formData.dateOfBirth}
-                        onChange={handleInputChange}
-                        required
-                      />
+                      <div className="input-with-icon">
+                        <Calendar className="input-icon" size={18} />
+                        <input
+                          type="date"
+                          name="dateOfBirth"
+                          className={`form-input with-icon ${formErrors.dateOfBirth ? 'input-error' : ''}`}
+                          value={formData.dateOfBirth}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
                       {formErrors.dateOfBirth && (
                         <span className="error-text">{formErrors.dateOfBirth}</span>
                       )}
@@ -725,15 +759,18 @@ function PatientSearch({ onBookAppointment }) {
                   <div className="form-grid">
                     <div className="form-field">
                       <label className="form-label">Email Address *</label>
-                      <input
-                        type="email"
-                        name="email"
-                        className={`form-input ${formErrors.email ? 'input-error' : ''}`}
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="example@email.com"
-                        required
-                      />
+                      <div className="input-with-icon">
+                        <Mail className="input-icon" size={18} />
+                        <input
+                          type="email"
+                          name="email"
+                          className={`form-input with-icon ${formErrors.email ? 'input-error' : ''}`}
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="example@email.com"
+                          required
+                        />
+                      </div>
                       {formErrors.email && (
                         <span className="error-text">{formErrors.email}</span>
                       )}
@@ -741,15 +778,18 @@ function PatientSearch({ onBookAppointment }) {
 
                     <div className="form-field">
                       <label className="form-label">Phone Number *</label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        className={`form-input ${formErrors.phone ? 'input-error' : ''}`}
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="(555) 123-4567"
-                        required
-                      />
+                      <div className="input-with-icon">
+                        <Phone className="input-icon" size={18} />
+                        <input
+                          type="tel"
+                          name="phone"
+                          className={`form-input with-icon ${formErrors.phone ? 'input-error' : ''}`}
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          placeholder="(555) 123-4567"
+                          required
+                        />
+                      </div>
                       {formErrors.phone && (
                         <span className="error-text">{formErrors.phone}</span>
                       )}
@@ -816,24 +856,30 @@ function PatientSearch({ onBookAppointment }) {
                   <div className="form-grid">
                     <div className="form-field">
                       <label className="form-label">Contact First Name</label>
-                      <input
-                        type="text"
-                        name="emergencyContactfn"
-                        className="form-input"
-                        value={formData.emergencyContactfn}
-                        onChange={handleInputChange}
-                      />
+                      <div className="input-with-icon">
+                        <User className="input-icon" size={18} />
+                        <input
+                          type="text"
+                          name="emergencyContactfn"
+                          className="form-input with-icon"
+                          value={formData.emergencyContactfn}
+                          onChange={handleInputChange}
+                        />
+                      </div>
                     </div>
 
                     <div className="form-field">
                       <label className="form-label">Contact Last Name</label>
-                      <input
-                        type="text"
-                        name="emergencyContactln"
-                        className="form-input"
-                        value={formData.emergencyContactln}
-                        onChange={handleInputChange}
-                      />
+                      <div className="input-with-icon">
+                        <User className="input-icon" size={18} />
+                        <input
+                          type="text"
+                          name="emergencyContactln"
+                          className="form-input with-icon"
+                          value={formData.emergencyContactln}
+                          onChange={handleInputChange}
+                        />
+                      </div>
                     </div>
 
                     <div className="form-field">
@@ -850,14 +896,17 @@ function PatientSearch({ onBookAppointment }) {
 
                     <div className="form-field">
                       <label className="form-label">Contact Phone</label>
-                      <input
-                        type="tel"
-                        name="emergencyPhone"
-                        className="form-input"
-                        value={formData.emergencyPhone}
-                        onChange={handleInputChange}
-                        placeholder="(555) 123-4567"
-                      />
+                      <div className="input-with-icon">
+                        <Phone className="input-icon" size={18} />
+                        <input
+                          type="tel"
+                          name="emergencyPhone"
+                          className="form-input with-icon"
+                          value={formData.emergencyPhone}
+                          onChange={handleInputChange}
+                          placeholder="(555) 123-4567"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
