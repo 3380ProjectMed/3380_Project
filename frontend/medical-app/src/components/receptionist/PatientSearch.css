@@ -651,8 +651,8 @@
 .modal {
   background: white;
   border-radius: 1rem;
-  max-width: 900px;
-  width: 100%;
+  max-width: 1100px;
+  width: 95%;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -662,7 +662,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 2rem;
+  padding: 2rem 3rem;
   border-bottom: 2px solid #e5e7eb;
 }
 
@@ -695,14 +695,14 @@
 }
 
 .modal-body {
-  padding: 2rem;
+  padding: 2rem 3rem;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  padding: 1.5rem 2rem;
+  padding: 1.5rem 3rem;
   border-top: 2px solid #e5e7eb;
   background: #f9fafb;
   border-bottom-left-radius: 1rem;
