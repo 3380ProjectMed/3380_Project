@@ -596,20 +596,19 @@ elseif ($endpoint === 'appointments') {
             }
 
             // Insert appointment - trigger will validate date/time constraints and PCP/referral requirements
-            $stmt = $mysqli->prepare("
-                INSERT INTO appointment (
+            $stmt = $mysqli->prepare("INSERT INTO appointment (
                     Appointment_id, Patient_id, Doctor_id, Office_id, 
-                    Appointment_date, Date_created, Reason_for_visit
-                ) VALUES (?, ?, ?, ?, ?, NOW(), ?)
-            ");
+                    Appointment_date, Date_created, Reason_for_visit, method
+                ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)");
             $stmt->bind_param(
-                'iiiiss',
+                'iiiisss',
                 $next_id,
                 $patient_id,
                 $input['doctor_id'],
                 $input['office_id'],
                 $appointmentdateTime,
-                $input['reason']
+                $input['reason'],
+                'Online'
             );
 
             $exec_result = $stmt->execute();
