@@ -193,6 +193,26 @@ try {
 
     error_log('[save-vitals] SQL executed successfully');
 
+    // ========================================
+    // 🆕 NEW: Update appointment status to "Ready"
+    // ========================================
+    // This signals to the doctor that vitals are recorded and patient is ready to be seen
+    try {
+        $updateStatusSql = "UPDATE appointment 
+                           SET Status = 'Ready'
+                           WHERE Appointment_id = ?
+                           AND Status IN ('Checked-in', 'Scheduled')";
+        
+        executeQuery($conn, $updateStatusSql, 'i', [$appointmentId]);
+        error_log('[save-vitals] Updated appointment status to Ready for appointment_id: ' . $appointmentId);
+        $newStatus = 'Ready';
+    } catch (Exception $statusError) {
+        // Log but don't fail the whole operation if status update fails
+        error_log('[save-vitals] Failed to update appointment status: ' . $statusError->getMessage());
+        $newStatus = null;
+    }
+    // ========================================
+
     closeDBConnection($conn);
 
     echo json_encode([
@@ -200,6 +220,7 @@ try {
         'visitId' => $visitId,
         'appointmentId' => $appointmentId,
         'patientId' => $patientId,
+        'new_status' => $newStatus, // 🆕 NEW: Return the new status
         'vitals' => [
             'bp' => $bp,
             'hr' => $hr,
