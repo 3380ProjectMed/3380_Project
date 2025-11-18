@@ -123,14 +123,6 @@ function ReceptionistProfile() {
               </div>
 
               <div className="profile-field">
-                <label className="field-label">Phone Number</label>
-                <div className="field-value-display">
-                  <Phone size={18} />
-                  <span>{profile.phoneNumber || 'Not provided'}</span>
-                </div>
-              </div>
-
-              <div className="profile-field">
                 <label className="field-label">Gender</label>
                 <div className="field-value-display">
                   <User size={18} />

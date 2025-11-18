@@ -54,44 +54,9 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     loadScheduleData();
   }, [selectedDate, officeId]);
 
-  /**
-   * Automatic status updates - runs instantly on load and every 30 seconds
-   * Updates Scheduled → Waiting → No-Show based on appointment time
-   */
-  useEffect(() => {
-    checkForStatusUpdates();
-    const statusUpdateInterval = setInterval(() => {
-      checkForStatusUpdates();
-    }, 30000); // Check every 30 seconds for near-instant updates
-    return () => clearInterval(statusUpdateInterval);
-  }, []);
-
-  /**
-   * Check for appointments that should be marked as Waiting or No-Show
-   */
-  const checkForStatusUpdates = async () => {
-    try {
-      const response = await fetch('/receptionist_api/appointments/update-no-shows.php', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      const data = await response.json();
-      
-      if (data.success && data.updated_count > 0) {
-        console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
-        loadScheduleData();
-      }
-    } catch (err) {
-      console.error('Failed to check for status updates:', err);
-    }
-  };
-
   const loadScheduleData = async () => {
     try {
       setLoading(true);
-      
-      // Update appointment statuses first (non-blocking)
-      checkForStatusUpdates().catch(err => console.error('Status update failed:', err));
       
       // Get doctors for this office
       const doctorsResponse = await fetch(
@@ -158,11 +123,11 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       
       if (appointmentsResult.success) {
         // Convert appointments to booked slots lookup
-        // Filter out cancelled appointments so those slots become available
+        // Filter out cancelled and no-show appointments so those slots become available
         const slots = {};
         (appointmentsResult.appointments || []).forEach(apt => {
-          // Skip cancelled appointments - they don't block slots
-          if (apt.status === 'Cancelled' || apt.status === 'Canceled') {
+          // Skip cancelled and no-show appointments - they don't block slots
+          if (apt.status === 'Cancelled' || apt.status === 'Canceled' || apt.status === 'No-Show') {
             return;
           }
           
