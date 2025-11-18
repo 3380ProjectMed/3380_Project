@@ -1,8 +1,8 @@
 <?php
 /**
  * Save treatments for a patient visit
- * Appends new treatments without deleting existing ones
- * Prevents duplicate treatment entries
+ * REPLACES all existing treatments with the new list
+ * This allows proper handling of both additions and deletions
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -47,10 +47,10 @@ try {
         exit;
     }
     
-    if (!is_array($treatments) || empty($treatments)) {
+    if (!is_array($treatments)) {
         closeDBConnection($conn);
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'At least one treatment required']);
+        echo json_encode(['success' => false, 'error' => 'treatments must be an array']);
         exit;
     }
     
@@ -73,29 +73,25 @@ try {
     $conn->begin_transaction();
     
     try {
-        // Insert new treatments (append mode - don't delete existing)
-        $insertSql = "INSERT INTO treatment_per_visit 
-                      (visit_id, treatment_id, quantity, cost_each, notes) 
-                      VALUES (?, ?, ?, ?, ?)";
+        // Step 1: Delete all existing treatments for this visit
+        $deleteSql = "DELETE FROM treatment_per_visit WHERE visit_id = ?";
+        executeQuery($conn, $deleteSql, 'i', [$visit_id]);
         
-        $added_count = 0;
-        $skipped_count = 0;
+        // Step 2: Insert new treatments (if any)
+        $inserted_count = 0;
         
-        foreach ($treatments as $treatment) {
-            $treatment_id = intval($treatment['treatment_id'] ?? 0);
-            $quantity = intval($treatment['quantity'] ?? 1);
-            $cost_each = floatval($treatment['cost_each'] ?? 0);
-            $notes = trim($treatment['notes'] ?? '');
+        if (!empty($treatments)) {
+            $insertSql = "INSERT INTO treatment_per_visit 
+                          (visit_id, treatment_id, quantity, cost_each, notes) 
+                          VALUES (?, ?, ?, ?, ?)";
             
-            if ($treatment_id > 0) {
-                // Check if this exact treatment already exists for this visit
-                $checkSql = "SELECT visit_treatment_id FROM treatment_per_visit 
-                            WHERE visit_id = ? AND treatment_id = ? 
-                            LIMIT 1";
-                $existing = executeQuery($conn, $checkSql, 'ii', [$visit_id, $treatment_id]);
+            foreach ($treatments as $treatment) {
+                $treatment_id = intval($treatment['treatment_id'] ?? 0);
+                $quantity = intval($treatment['quantity'] ?? 1);
+                $cost_each = floatval($treatment['cost_each'] ?? 0);
+                $notes = trim($treatment['notes'] ?? '');
                 
-                if (empty($existing)) {
-                    // Only insert if it doesn't already exist
+                if ($treatment_id > 0) {
                     executeQuery($conn, $insertSql, 'iiids', [
                         $visit_id,
                         $treatment_id,
@@ -103,9 +99,7 @@ try {
                         $cost_each,
                         $notes
                     ]);
-                    $added_count++;
-                } else {
-                    $skipped_count++;
+                    $inserted_count++;
                 }
             }
         }
@@ -114,17 +108,18 @@ try {
         closeDBConnection($conn);
         
         $message = "Treatments saved successfully";
-        if ($added_count > 0 && $skipped_count > 0) {
-            $message = "$added_count treatment(s) added, $skipped_count already existed";
-        } elseif ($skipped_count > 0 && $added_count === 0) {
-            $message = "All selected treatments already exist for this visit";
+        if ($inserted_count === 0) {
+            $message = "All treatments removed";
+        } elseif ($inserted_count === 1) {
+            $message = "1 treatment saved";
+        } else {
+            $message = "$inserted_count treatments saved";
         }
         
         echo json_encode([
             'success' => true,
             'message' => $message,
-            'added_count' => $added_count,
-            'skipped_count' => $skipped_count
+            'count' => $inserted_count
         ]);
         
     } catch (Exception $e) {

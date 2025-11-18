@@ -13,6 +13,7 @@ import './Schedule.css';
  * - Appointment display with time and patient name
  * - Weekend highlighting based on work schedule
  * - Today's date highlighted with a circle
+ * - Click on day to see all appointments for that day
  */
 function Schedule({ onAppointmentClick }) {
   const [currentDate, setCurrentDate] = useState(new Date()); 
@@ -38,7 +39,7 @@ function Schedule({ onAppointmentClick }) {
    */
   const fetchWorkSchedule = async () => {
     try {
-  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
       const response = await fetch(`${API_BASE}/doctor_api/schedule/get-doctor-schedule.php`, { credentials: 'include' });
       const data = await response.json();
       
@@ -60,8 +61,8 @@ function Schedule({ onAppointmentClick }) {
       setLoading(true);
       const month = currentDate.getMonth() + 1; // JS months are 0-indexed
       const year = currentDate.getFullYear();
-  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
-  const response = await fetch(`${API_BASE}/doctor_api/appointments/get-by-month.php?month=${month}&year=${year}`, { credentials: 'include' });
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      const response = await fetch(`${API_BASE}/doctor_api/appointments/get-by-month.php?month=${month}&year=${year}`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success) {
@@ -104,47 +105,47 @@ function Schedule({ onAppointmentClick }) {
   /**
    * Get assigned location for a specific day based on work schedule
    */
-const getDailyLocation = (year, month, day) => {
-  const date = new Date(year, month, day);
-  const dayOfWeekName = getDayOfWeekName(date);
-  
-  // Find work schedule entry for this day of week
-  const scheduleEntry = workSchedule.find(
-    s => (s.day_of_week || s.Day_of_week) === dayOfWeekName
-  );
-  
-  if (!scheduleEntry) {
-    return null; // Not working this day
-  }
-  
-  return {
-    office_id: scheduleEntry.office_id || scheduleEntry.Office_ID,
-    office_name: scheduleEntry.office_name,
-    address: scheduleEntry.address,
-    city: scheduleEntry.city || scheduleEntry.City,
-    state: scheduleEntry.state || scheduleEntry.State,
-    start_time: scheduleEntry.start_time || scheduleEntry.Start_time,
-    end_time: scheduleEntry.end_time || scheduleEntry.End_time
-  };
-};
-
-const getUniqueLocations = () => {
-  const locations = new Map();
-  workSchedule.forEach(schedule => {
-    const officeId = schedule.office_id || schedule.Office_ID;
-    const officeName = schedule.office_name;
-    const city = schedule.city || schedule.City;
+  const getDailyLocation = (year, month, day) => {
+    const date = new Date(year, month, day);
+    const dayOfWeekName = getDayOfWeekName(date);
     
-    if (!locations.has(officeId)) {
-      locations.set(officeId, {
-        id: officeId,
-        name: officeName,
-        city: city
-      });
+    // Find work schedule entry for this day of week
+    const scheduleEntry = workSchedule.find(
+      s => (s.day_of_week || s.Day_of_week) === dayOfWeekName
+    );
+    
+    if (!scheduleEntry) {
+      return null; // Not working this day
     }
-  });
-  return Array.from(locations.values());
-};
+    
+    return {
+      office_id: scheduleEntry.office_id || scheduleEntry.Office_ID,
+      office_name: scheduleEntry.office_name,
+      address: scheduleEntry.address,
+      city: scheduleEntry.city || scheduleEntry.City,
+      state: scheduleEntry.state || scheduleEntry.State,
+      start_time: scheduleEntry.start_time || scheduleEntry.Start_time,
+      end_time: scheduleEntry.end_time || scheduleEntry.End_time
+    };
+  };
+
+  const getUniqueLocations = () => {
+    const locations = new Map();
+    workSchedule.forEach(schedule => {
+      const officeId = schedule.office_id || schedule.Office_ID;
+      const officeName = schedule.office_name;
+      const city = schedule.city || schedule.City;
+      
+      if (!locations.has(officeId)) {
+        locations.set(officeId, {
+          id: officeId,
+          name: officeName,
+          city: city
+        });
+      }
+    });
+    return Array.from(locations.values());
+  };
 
   /**
    * Get appointments for a specific day
@@ -208,6 +209,28 @@ const getUniqueLocations = () => {
   };
 
   /**
+   * Handle day click - show all appointments for that day
+   */
+  const handleDayClick = (day) => {
+    const dayAppointments = getAppointmentsForDay(day);
+    if (dayAppointments.length > 0 && onAppointmentClick) {
+      // If there's only one appointment, open it directly
+      if (dayAppointments.length === 1) {
+        onAppointmentClick(dayAppointments[0]);
+      } else {
+        // For multiple appointments, you can either:
+        // 1. Show a modal with all appointments
+        // 2. Open the first one
+        // For now, let's open the first appointment
+        onAppointmentClick(dayAppointments[0]);
+        
+        // TODO: Consider adding a day view modal that shows all appointments
+        console.log('Day has multiple appointments:', dayAppointments);
+      }
+    }
+  };
+
+  /**
    * Navigation handlers
    */
   const goToPreviousMonth = () => {
@@ -229,7 +252,12 @@ const getUniqueLocations = () => {
   /**
    * Handle appointment click
    */
-  const handleAppointmentClick = (appointment) => {
+  const handleAppointmentClick = (appointment, e) => {
+    // Stop propagation so day click doesn't also trigger
+    if (e) {
+      e.stopPropagation();
+    }
+    
     if (onAppointmentClick) {
       onAppointmentClick(appointment);
     }
@@ -348,7 +376,7 @@ const getUniqueLocations = () => {
               day
             );
             const isNotWorking = !assignedLocation;
-            const appointments = getAppointmentsForDay(day);
+            const dayAppointments = getAppointmentsForDay(day);
             const isVisible = isDayVisible(day);
             
             // Check if this is today's date
@@ -361,6 +389,8 @@ const getUniqueLocations = () => {
               <div 
                 key={day} 
                 className={`calendar-day ${isNotWorking ? 'weekend' : ''} ${!isVisible && !isNotWorking ? 'filtered' : ''} ${isToday ? 'today' : ''}`}
+                onClick={() => !isNotWorking && handleDayClick(day)}
+                style={{ cursor: !isNotWorking && dayAppointments.length > 0 ? 'pointer' : 'default' }}
               >
                 {/* Day Header */}
                 <div className="day-header">
@@ -385,17 +415,17 @@ const getUniqueLocations = () => {
                 <div className="day-content">
                   {isNotWorking ? (
                     <p className="no-appointments">Off</p>
-                  ) : appointments.length > 0 ? (
+                  ) : dayAppointments.length > 0 ? (
                     <div className="appointments">
-                      {appointments.map(app => (
+                      {dayAppointments.map(app => (
                         <div 
                           key={app.appointment_id} 
                           className="appointment-item"
-                          onClick={() => handleAppointmentClick(app)}
+                          onClick={(e) => handleAppointmentClick(app, e)}
                           role="button"
                           tabIndex={0}
                           onKeyPress={(e) => {
-                            if (e.key === 'Enter') handleAppointmentClick(app);
+                            if (e.key === 'Enter') handleAppointmentClick(app, e);
                           }}
                         >
                           <p className="appointment-time">
