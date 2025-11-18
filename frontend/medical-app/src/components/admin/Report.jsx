@@ -986,7 +986,10 @@ function Report() {
                   Share of total appointments in this period
                 </p>
               </div>
-              <OfficeUtilizationPie offices={officeData.office_stats} />
+              <OfficeUtilizationPie 
+                offices={officeData.office_stats}
+                overallUtilization={officeData.summary?.overall_utilization}
+              />
             </section>
           )}
 
@@ -1509,7 +1512,7 @@ function Report() {
   );
 }
 
-const OfficeUtilizationPie = ({ offices }) => {
+const OfficeUtilizationPie = ({ offices, overallUtilization }) => {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const [selectedOffice, setSelectedOffice] = React.useState(null);
 
@@ -1517,6 +1520,11 @@ const OfficeUtilizationPie = ({ offices }) => {
     (sum, o) => sum + (o.total_appointments || 0),
     0
   );
+
+  const combinedPercent =
+    typeof overallUtilization === 'number'
+      ? Math.min(100, Math.max(0, overallUtilization))
+      : 0;
 
   if (!total) {
     return <p className="chart-empty">No appointment data for this period.</p>;
@@ -1533,7 +1541,9 @@ const OfficeUtilizationPie = ({ offices }) => {
 
   const handleSliceClick = (office, e) => {
     e.stopPropagation();
-    setSelectedOffice(selectedOffice?.office_id === office.office_id ? null : office);
+    setSelectedOffice(
+      selectedOffice?.office_id === office.office_id ? null : office
+    );
   };
 
   React.useEffect(() => {
@@ -1548,29 +1558,29 @@ const OfficeUtilizationPie = ({ offices }) => {
   const slices = offices.map((office, idx) => {
     const value = office.total_appointments || 0;
     const slicePercent = value / total;
-    
+
     const startAngle = cumulativePercent * 360;
     const endAngle = (cumulativePercent + slicePercent) * 360;
-    
+
     cumulativePercent += slicePercent;
-    
+
     const startAngleRad = ((startAngle - 90) * Math.PI) / 180;
     const endAngleRad = ((endAngle - 90) * Math.PI) / 180;
-    
+
     const x1 = 200 + 160 * Math.cos(startAngleRad);
     const y1 = 200 + 160 * Math.sin(startAngleRad);
     const x2 = 200 + 160 * Math.cos(endAngleRad);
     const y2 = 200 + 160 * Math.sin(endAngleRad);
-    
+
     const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
-    
+
     const pathData = [
       `M 200 200`,
       `L ${x1} ${y1}`,
       `A 160 160 0 ${largeArcFlag} 1 ${x2} ${y2}`,
       `Z`
     ].join(' ');
-    
+
     return {
       office,
       path: pathData,
@@ -1582,17 +1592,19 @@ const OfficeUtilizationPie = ({ offices }) => {
   return (
     <div className="office-pie-card">
       <div className="pie-chart-container">
-        <svg 
-          viewBox="0 0 400 400" 
-          style={{ 
-            width: '100%', 
+        <svg
+          viewBox="0 0 400 400"
+          style={{
+            width: '100%',
             height: '100%',
             display: 'block'
           }}
         >
           {slices.map(({ office, path, color, index }) => {
-            const isActive = hoveredIndex === index || selectedOffice?.office_id === office.office_id;
-            
+            const isActive =
+              hoveredIndex === index ||
+              selectedOffice?.office_id === office.office_id;
+
             return (
               <path
                 key={office.office_id || index}
@@ -1604,7 +1616,9 @@ const OfficeUtilizationPie = ({ offices }) => {
                   cursor: 'pointer',
                   opacity: isActive ? 1 : 0.95,
                   transition: 'all 0.3s ease',
-                  filter: isActive ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.15))'
+                  filter: isActive
+                    ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))'
+                    : 'drop-shadow(0 2px 6px rgba(0,0,0,0.15))'
                 }}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}
@@ -1612,7 +1626,7 @@ const OfficeUtilizationPie = ({ offices }) => {
               />
             );
           })}
-          
+
           <circle
             cx="200"
             cy="200"
@@ -1620,44 +1634,57 @@ const OfficeUtilizationPie = ({ offices }) => {
             fill="white"
             filter="drop-shadow(0 2px 8px rgba(0,0,0,0.1))"
           />
-          
-          {hoveredIndex !== null && (
-            <text
-              x="200"
-              y="200"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              style={{
-                fontSize: '48px',
-                fontWeight: 'bold',
-                fill: '#0077b6',
-                pointerEvents: 'none'
-              }}
-            >
-              {offices[hoveredIndex].utilization_rate}%
-            </text>
-          )}
+
+          <text
+            x="200"
+            y="200"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            style={{
+              fontSize: '48px',
+              fontWeight: 'bold',
+              fill: '#0077b6',
+              pointerEvents: 'none'
+            }}
+          >
+            {hoveredIndex !== null
+              ? `${offices[hoveredIndex].volume_share ?? 0}%`
+              : `${combinedPercent}%`}
+          </text>
         </svg>
       </div>
 
       <div className="pie-legend">
         {offices.map((office, idx) => {
           const isHovered = hoveredIndex === idx;
-          
+
+          const activeCompleted =
+            (office.completed || 0) +
+            (office.ready || 0) +
+            (office.waiting || 0) +
+            (office.checked_in || 0) +
+            (office.in_progress || 0);
+
+          const scheduledCount = office.scheduled || 0;
+          const noShowCount = office.no_shows || 0;
+          const cancelledCount = office.cancelled || 0;
+
           return (
-            <div 
-              key={office.office_id || idx} 
+            <div
+              key={office.office_id || idx}
               className={`pie-legend-row ${
-                selectedOffice?.office_id === office.office_id ? 'legend-selected' : ''
+                selectedOffice?.office_id === office.office_id
+                  ? 'legend-selected'
+                  : ''
               } ${isHovered ? 'legend-hovered' : ''}`}
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
               onClick={(e) => handleSliceClick(office, e)}
               style={{ cursor: 'pointer' }}
             >
-              <span 
+              <span
                 className="pie-legend-color"
-                style={{ 
+                style={{
                   backgroundColor: colors[idx % colors.length],
                   display: 'block'
                 }}
@@ -1665,13 +1692,15 @@ const OfficeUtilizationPie = ({ offices }) => {
               <div className="pie-legend-text">
                 <div className="pie-legend-title">{office.office_name}</div>
                 <div className="pie-legend-sub">
-                  {office.total_appointments} appts · {office.utilization_rate}%
+                  {office.total_appointments} appts · {office.volume_share}% of
+                  total
                 </div>
                 {isHovered && (
                   <div className="pie-legend-details">
-                    <span>✓ {office.completed} completed</span>
-                    <span>⚠ {office.no_shows} no-shows</span>
-                    <span>📅 {office.scheduled} scheduled</span>
+                    <span>✓ {activeCompleted} active/completed</span>
+                    <span>📅 {scheduledCount} scheduled</span>
+                    <span>⚠ {noShowCount} no-shows</span>
+                    <span>✕ {cancelledCount} cancelled</span>
                   </div>
                 )}
               </div>
@@ -1679,7 +1708,7 @@ const OfficeUtilizationPie = ({ offices }) => {
           );
         })}
       </div>
-
+      
       {selectedOffice && (
         <div className="office-detail-card" onClick={(e) => e.stopPropagation()}>
           <div className="office-detail-header">
