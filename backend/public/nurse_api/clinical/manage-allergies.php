@@ -70,6 +70,9 @@ try {
             $check_existing_sql = "SELECT app_id FROM allergies_per_patient WHERE patient_id = ? AND allergies_code = ?";
             $existing = executeQuery($conn, $check_existing_sql, 'ii', [$patient_id, $allergy_code]);
             
+            error_log("Adding allergy - Patient ID: $patient_id, Allergy Code: $allergy_code, Allergy Text: '$allergy_text'");
+            error_log("Existing check result: " . json_encode($existing));
+            
             if (!empty($existing)) {
                 // Allergy already exists, just update the notes
                 $update_sql = "UPDATE allergies_per_patient SET notes = ?, updated_at = CURRENT_TIMESTAMP WHERE patient_id = ? AND allergies_code = ?";
