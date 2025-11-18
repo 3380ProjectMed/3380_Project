@@ -1,37 +1,102 @@
-/* NurseClinicalWorkspace.css - Updated to match Doctor's Clinical Workspace */
-
-:root {
-  --primary-color: #0077b6;
-  --secondary-color: #00b4d8;
-  --third-color: #0096c7;
-  --fourth-color: #90e0ef;
-  --fifth-color: #caf0f8;
-  --gray: #64748b;
-  --dark: #0f172a;
-  --border: #e6eef8;
-  --success: #059669;
-  --error: #dc2626;
-  --warning: #f59e0b;
-}
+/* NurseClinicalWorkspace.css */
 
 .clinical-workspace {
+  background: transparent;
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--fifth-color), #ffffff);
+  display: flex;
+  flex-direction: column;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ===== DOCTOR-STYLE VITALS DISPLAY ===== */
+.info-card {
+  background: white;
+  border-radius: 1rem;
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 119, 182, 0.08);
+  border: 2px solid #e5e7eb;
+  margin-bottom: 2rem;
+}
+
+.card-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #f3f4f6;
+  background: linear-gradient(135deg, #f8fafc, white);
+}
+
+.card-header h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #03045e;
+}
+
+.vitals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+}
+
+.vital-item {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8fafc, white);
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.vital-icon {
+  flex-shrink: 0;
+}
+
+.vital-icon.bp {
+  color: #dc2626;
+}
+
+.vital-icon.temp {
+  color: #f59e0b;
+}
+
+.vital-label {
+  display: block;
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.vital-value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0077b6;
+}
+
+.vital-footer {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f3f4f6;
+  margin-top: 0.5rem;
 }
 
 /* ===== HEADER ===== */
 .workspace-header {
-  background: white;
-  border-bottom: 2px solid var(--border);
+  background: linear-gradient(135deg, #03045e, #0077b6);
+  color: white;
   padding: 1.5rem 2rem;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: 0 4px 12px rgba(3, 4, 94, 0.15);
 }
 
 .header-left {
@@ -44,35 +109,23 @@
   margin: 0;
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--primary-color);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 .header-title p {
   margin: 0.25rem 0 0 0;
   font-size: 0.95rem;
-  color: var(--gray);
+  opacity: 0.9;
 }
 
 .btn-close-header {
-  background: white;
-  border: 2px solid var(--border);
-  color: var(--primary-color);
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
   padding: 0.5rem;
-  border-radius: 0.5rem;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-close-header:hover {
-  background: var(--fifth-color);
-  border-color: var(--secondary-color);
-  transform: scale(1.05);
+  transition: all 0.2s;
 }
 
 .btn-close-header:hover {
@@ -202,101 +255,29 @@
   word-wrap: break-word;
 }
 
-/* ===== MAIN CONTENT LAYOUT ===== */
+/* ===== MAIN CONTENT ===== */
 .workspace-content {
-  display: grid;
-  grid-template-columns: 450px 1fr;
-  gap: 1.5rem;
+  flex: 1;
   padding: 2rem;
-  max-width: 1600px;
+  overflow-y: auto;
+  max-width: 1200px;
   margin: 0 auto;
-}
-
-/* ===== COLUMNS ===== */
-.workspace-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.left-column {
-  max-height: calc(100vh - 180px);
-  overflow-y: auto;
-  padding-right: 0.5rem;
-}
-
-.right-column {
-  max-height: calc(100vh - 180px);
-  overflow-y: auto;
-  padding-right: 0.5rem;
-}
-
-/* Custom Scrollbar */
-.left-column::-webkit-scrollbar,
-.right-column::-webkit-scrollbar {
-  width: 8px;
-}
-
-.left-column::-webkit-scrollbar-track,
-.right-column::-webkit-scrollbar-track {
-  background: var(--fifth-color);
-  border-radius: 4px;
-}
-
-.left-column::-webkit-scrollbar-thumb,
-.right-column::-webkit-scrollbar-thumb {
-  background: var(--fourth-color);
-  border-radius: 4px;
-}
-
-.left-column::-webkit-scrollbar-thumb:hover,
-.right-column::-webkit-scrollbar-thumb:hover {
-  background: var(--secondary-color);
-}
-
-/* ===== INFO CARDS ===== */
-.info-card {
-  background: white;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  padding: 1.5rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.info-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
-}
-
-.info-card h3 {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 1rem 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--primary-color);
-}
-
-/* Form sections (vitals, allergies, medications) */
-.form-section {
-  background: white;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  padding: 1.5rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.form-section:hover {
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  width: 100%;
 }
 
 /* ===== VITALS GRID ===== */
-.vitals-grid-simple {
+.vitals-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.form-section {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
   border: 2px solid rgba(226, 238, 248, 0.6);
 }
 
@@ -586,16 +567,11 @@ textarea::placeholder {
 
 /* ===== ALLERGIES SECTION ===== */
 .allergies-section {
-  background: white;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
   padding: 1.5rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.allergies-section:hover {
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  margin: 1rem 2rem;
 }
 
 .allergies-section h3 {
@@ -663,16 +639,11 @@ textarea::placeholder {
 
 /* ===== MEDICATIONS SECTION ===== */
 .medications-section {
-  background: white;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
   padding: 1.5rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.medications-section:hover {
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  margin: 1rem 2rem;
 }
 
 .medications-section h3 {
@@ -782,10 +753,7 @@ textarea::placeholder {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem 0.75rem 1.5rem;
-  margin-bottom: 0.5rem;
-  border-bottom: 1px solid #e5f4f7;
-  background: linear-gradient(135deg, #f8fdff 0%, #f0f9ff 100%);
+  margin-bottom: 1rem;
 }
 
 .btn-add-item {
@@ -1025,7 +993,6 @@ textarea::placeholder {
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
-    padding: 0.75rem 1rem;
   }
   
   .form-row {
