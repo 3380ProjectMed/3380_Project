@@ -295,7 +295,7 @@ try {
             'visit_id' => $visit['visit_id'],
             'appointment_id' => $visit['appointment_id'],
             'patient_id' => $visit['patient_id'],
-            'date' => $visit['date'],
+            'date' => $appt['Appointment_date'],
             'status' => $appointment_status,
             'reason' => $visit['reason_for_visit'] ?? $visit['appointment_reason'] ?? '',
             'department' => $visit['department'],

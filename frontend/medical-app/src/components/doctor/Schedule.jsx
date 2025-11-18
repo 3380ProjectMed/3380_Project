@@ -3,17 +3,15 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './Schedule.css';
 
 /**
- * Schedule Component
+ * Schedule Component - Complete Working Version
  * 
- * Displays a monthly calendar view with doctor's appointments
  * Features:
- * - Monthly navigation (previous/next)
- * - Location-based filtering (dynamic from work schedule)
- * - Real-time data from API
- * - Appointment display with time and patient name
- * - Weekend highlighting based on work schedule
- * - Today's date highlighted with a circle
- * - Click on day to see all appointments for that day
+ * - Monthly calendar view with day numbers
+ * - Location badges for each working day
+ * - Today's date highlighted with blue circle
+ * - Click on day or appointment to view details
+ * - Location filtering
+ * - Scrollable appointment lists
  */
 function Schedule({ onAppointmentClick }) {
   const [currentDate, setCurrentDate] = useState(new Date()); 
@@ -34,9 +32,6 @@ function Schedule({ onAppointmentClick }) {
     fetchAppointments();
   }, [currentDate]);
 
-  /**
-   * Fetch doctor's work schedule from API
-   */
   const fetchWorkSchedule = async () => {
     try {
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
@@ -53,20 +48,16 @@ function Schedule({ onAppointmentClick }) {
     }
   };
 
-  /**
-   * Fetch appointments for current month
-   */
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const month = currentDate.getMonth() + 1; // JS months are 0-indexed
+      const month = currentDate.getMonth() + 1;
       const year = currentDate.getFullYear();
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
       const response = await fetch(`${API_BASE}/doctor_api/appointments/get-by-month.php?month=${month}&year=${year}`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success) {
-        // The backend groups appointments by date. Flatten into a single array for easier filtering.
         const grouped = data.appointments || {};
         const flat = [];
         Object.keys(grouped).forEach(date => {
@@ -82,7 +73,6 @@ function Schedule({ onAppointmentClick }) {
             });
           });
         });
-
         setAppointments(flat);
       } else {
         setError(data.error || 'Failed to load appointments');
@@ -94,28 +84,21 @@ function Schedule({ onAppointmentClick }) {
     }
   };
 
-  /**
-   * Get the day of week name from a date
-   */
   const getDayOfWeekName = (date) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return days[date.getDay()];
   };
 
-  /**
-   * Get assigned location for a specific day based on work schedule
-   */
   const getDailyLocation = (year, month, day) => {
     const date = new Date(year, month, day);
     const dayOfWeekName = getDayOfWeekName(date);
     
-    // Find work schedule entry for this day of week
     const scheduleEntry = workSchedule.find(
       s => (s.day_of_week || s.Day_of_week) === dayOfWeekName
     );
     
     if (!scheduleEntry) {
-      return null; // Not working this day
+      return null;
     }
     
     return {
@@ -147,18 +130,13 @@ function Schedule({ onAppointmentClick }) {
     return Array.from(locations.values());
   };
 
-  /**
-   * Get appointments for a specific day
-   */
   const getAppointmentsForDay = (day) => {
     const month = currentDate.getMonth();
     const year = currentDate.getFullYear();
     const assignedLocation = getDailyLocation(year, month, day);
     
-    // No appointments if not working
     if (!assignedLocation) return [];
     
-    // Filter appointments by date
     let dayAppointments = appointments.filter(app => {
       const appDate = new Date(app.appointment_date);
       return appDate.getDate() === day &&
@@ -166,7 +144,6 @@ function Schedule({ onAppointmentClick }) {
              appDate.getFullYear() === year;
     });
 
-    // Apply location filter if not "all"
     if (selectedLocation !== 'all') {
       dayAppointments = dayAppointments.filter(app => {
         return app.office_id === parseInt(selectedLocation);
@@ -176,9 +153,6 @@ function Schedule({ onAppointmentClick }) {
     return dayAppointments;
   };
 
-  /**
-   * Check if day should be visible based on location filter
-   */
   const isDayVisible = (day) => {
     const assignedLocation = getDailyLocation(
       currentDate.getFullYear(), 
@@ -186,53 +160,43 @@ function Schedule({ onAppointmentClick }) {
       day
     );
     
-    // Always show non-working days (they're already grayed out)
     if (!assignedLocation) return true;
-    
-    // Show all locations
     if (selectedLocation === 'all') return true;
     
-    // Filter by selected location
     return assignedLocation.office_id === parseInt(selectedLocation);
   };
 
-  /**
-   * Get display name for location badge
-   */
   const getLocationBadge = (location) => {
-    // Extract name or use short name
-    if (location.name) {
-      return location.name;
+    if (location.office_name) {
+      const words = location.office_name.split(' ');
+      if (words.length > 1) {
+        return words.map(w => w[0]).join('').toUpperCase();
+      }
+      return location.office_name.substring(0, 3).toUpperCase();
     }
-    // Fallback to abbreviation of office name
-    return location.office_name.split(' ').map(w => w[0]).join('').toUpperCase();
+    return 'LOC';
   };
 
-  /**
-   * Handle day click - show all appointments for that day
-   */
-  const handleDayClick = (day) => {
+  const handleDayClick = (day, e) => {
+    // Check if the click was on an appointment item
+    if (e.target.closest('.appointment-item')) {
+      return; // Let the appointment click handler deal with it
+    }
+    
     const dayAppointments = getAppointmentsForDay(day);
     if (dayAppointments.length > 0 && onAppointmentClick) {
-      // If there's only one appointment, open it directly
-      if (dayAppointments.length === 1) {
-        onAppointmentClick(dayAppointments[0]);
-      } else {
-        // For multiple appointments, you can either:
-        // 1. Show a modal with all appointments
-        // 2. Open the first one
-        // For now, let's open the first appointment
-        onAppointmentClick(dayAppointments[0]);
-        
-        // TODO: Consider adding a day view modal that shows all appointments
-        console.log('Day has multiple appointments:', dayAppointments);
-      }
+      // Open the first appointment for the day
+      onAppointmentClick(dayAppointments[0]);
     }
   };
 
-  /**
-   * Navigation handlers
-   */
+  const handleAppointmentClick = (appointment, e) => {
+    e.stopPropagation();
+    if (onAppointmentClick) {
+      onAppointmentClick(appointment);
+    }
+  };
+
   const goToPreviousMonth = () => {
     setCurrentDate(new Date(
       currentDate.getFullYear(), 
@@ -249,21 +213,6 @@ function Schedule({ onAppointmentClick }) {
     ));
   };
 
-  /**
-   * Handle appointment click
-   */
-  const handleAppointmentClick = (appointment, e) => {
-    // Stop propagation so day click doesn't also trigger
-    if (e) {
-      e.stopPropagation();
-    }
-    
-    if (onAppointmentClick) {
-      onAppointmentClick(appointment);
-    }
-  };
-
-  // Calendar helper functions
   const getDaysInMonth = (date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
@@ -272,11 +221,9 @@ function Schedule({ onAppointmentClick }) {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
-  // Get month name and year for display
   const currentMonthName = currentDate.toLocaleString('default', { month: 'long' });
   const currentYear = currentDate.getFullYear();
   
-  // Generate array of days in month
   const days = Array.from(
     { length: getDaysInMonth(currentDate) },
     (_, i) => i + 1
@@ -302,7 +249,6 @@ function Schedule({ onAppointmentClick }) {
 
   return (
     <div className="schedule">
-      {/* ===== HEADER WITH MONTH NAVIGATION ===== */}
       <div className="schedule-header">
         <div className="month-navigation">
           <button 
@@ -327,7 +273,6 @@ function Schedule({ onAppointmentClick }) {
         </div>
       </div>
 
-      {/* ===== LOCATION FILTER ===== */}
       {uniqueLocations.length > 1 && (
         <div className="filter-section">
           <label htmlFor="location-filter">Filter Location:</label>
@@ -347,7 +292,6 @@ function Schedule({ onAppointmentClick }) {
         </div>
       )}
 
-      {/* ===== CALENDAR GRID ===== */}
       <div className="calendar-container">
         {loading && (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
@@ -356,19 +300,16 @@ function Schedule({ onAppointmentClick }) {
         )}
         
         <div className="calendar-grid">
-          {/* Weekday Headers */}
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div key={day} className="weekday-header">
               {day}
             </div>
           ))}
           
-          {/* Empty cells before first day of month */}
           {Array.from({ length: getStartingDay(currentDate) }).map((_, i) => (
             <div key={`empty-${i}`} className="calendar-day empty-day"></div>
           ))}
           
-          {/* Calendar Days */}
           {days.map(day => {
             const assignedLocation = getDailyLocation(
               currentDate.getFullYear(), 
@@ -379,24 +320,30 @@ function Schedule({ onAppointmentClick }) {
             const dayAppointments = getAppointmentsForDay(day);
             const isVisible = isDayVisible(day);
             
-            // Check if this is today's date
             const today = new Date();
             const isToday = day === today.getDate() && 
                            currentDate.getMonth() === today.getMonth() && 
                            currentDate.getFullYear() === today.getFullYear();
             
+            const dayClasses = [
+              'calendar-day',
+              isNotWorking ? 'weekend' : '',
+              !isVisible && !isNotWorking ? 'filtered' : '',
+              isToday ? 'today' : ''
+            ].filter(Boolean).join(' ');
+            
             return (
               <div 
                 key={day} 
-                className={`calendar-day ${isNotWorking ? 'weekend' : ''} ${!isVisible && !isNotWorking ? 'filtered' : ''} ${isToday ? 'today' : ''}`}
-                onClick={() => !isNotWorking && handleDayClick(day)}
-                style={{ cursor: !isNotWorking && dayAppointments.length > 0 ? 'pointer' : 'default' }}
+                className={dayClasses}
+                onClick={(e) => !isNotWorking && handleDayClick(day, e)}
+                style={{ 
+                  cursor: !isNotWorking && dayAppointments.length > 0 ? 'pointer' : 'default' 
+                }}
               >
-                {/* Day Header */}
                 <div className="day-header">
                   <span className="day-number">{day}</span>
                   
-                  {/* Location Badge */}
                   {assignedLocation && (
                     <span 
                       className="location-badge"
@@ -411,7 +358,6 @@ function Schedule({ onAppointmentClick }) {
                   )}
                 </div>
                 
-                {/* Day Content */}
                 <div className="day-content">
                   {isNotWorking ? (
                     <p className="no-appointments">Off</p>
@@ -425,7 +371,10 @@ function Schedule({ onAppointmentClick }) {
                           role="button"
                           tabIndex={0}
                           onKeyPress={(e) => {
-                            if (e.key === 'Enter') handleAppointmentClick(app, e);
+                            if (e.key === 'Enter') {
+                              e.stopPropagation();
+                              handleAppointmentClick(app, e);
+                            }
                           }}
                         >
                           <p className="appointment-time">
