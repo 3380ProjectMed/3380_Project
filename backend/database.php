@@ -71,7 +71,13 @@ function executeQuery($conn, $sql, $types = '', $params = []) {
 
     // Execute query
     if (!$stmt->execute()) {
-        throw new Exception('Query execution failed: ' . $stmt->error);
+        // Capture both error message and error number for trigger handling
+        $errorMsg = $stmt->error;
+        $errorNo = $stmt->errno;
+        $exception = new Exception('Query execution failed: ' . $errorMsg);
+        // Store error number as a property for later access
+        $exception->errorCode = $errorNo;
+        throw $exception;
     }
 
     $result = $stmt->get_result();
