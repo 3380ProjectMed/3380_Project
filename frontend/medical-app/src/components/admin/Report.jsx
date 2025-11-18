@@ -860,6 +860,41 @@ function Report() {
             </div>
           </section>
 
+          {financialData.doctor_performance && financialData.doctor_performance.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>Doctor Performance</h3>
+                <p className="section-subtitle">{financialData.doctor_performance.length} doctors</p>
+              </div>
+              <div className="table-container">
+                <table className="report-table">
+                  <thead>
+                    <tr>
+                      <th>Doctor Name</th>
+                      <th>Total Visits</th>
+                      <th>Total Revenue</th>
+                      <th>Collected</th>
+                      <th>Avg Per Visit</th>
+                      <th>Unique Patients</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {financialData.doctor_performance.map((doc, idx) => (
+                      <tr key={idx}>
+                        <td className="text-bold">Dr. {doc.doctor_name}</td>
+                        <td>{doc.total_visits}</td>
+                        <td className="text-success">${money(doc.total_revenue)}</td>
+                        <td className="text-primary">${money(doc.collected)}</td>
+                        <td>${money(doc.avg_per_visit)}</td>
+                        <td>{doc.unique_patients}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
           {financialData.insurance_breakdown && financialData.insurance_breakdown.length > 0 && (
             <section className="report-section">
               <div className="section-header">
@@ -901,41 +936,6 @@ function Report() {
                         </tr>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-
-          {financialData.doctor_performance && financialData.doctor_performance.length > 0 && (
-            <section className="report-section">
-              <div className="section-header">
-                <h3>Doctor Performance</h3>
-                <p className="section-subtitle">{financialData.doctor_performance.length} doctors</p>
-              </div>
-              <div className="table-container">
-                <table className="report-table">
-                  <thead>
-                    <tr>
-                      <th>Doctor Name</th>
-                      <th>Total Visits</th>
-                      <th>Total Revenue</th>
-                      <th>Collected</th>
-                      <th>Avg Per Visit</th>
-                      <th>Unique Patients</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {financialData.doctor_performance.map((doc, idx) => (
-                      <tr key={idx}>
-                        <td className="text-bold">Dr. {doc.doctor_name}</td>
-                        <td>{doc.total_visits}</td>
-                        <td className="text-success">${money(doc.total_revenue)}</td>
-                        <td className="text-primary">${money(doc.collected)}</td>
-                        <td>${money(doc.avg_per_visit)}</td>
-                        <td>{doc.unique_patients}</td>
-                      </tr>
-                    ))}
                   </tbody>
                 </table>
               </div>
