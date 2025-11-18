@@ -363,8 +363,6 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
   };
 
   const handleRemoveAllergy = async (allergyId, allergyCode) => {
-    if (!confirm('Are you sure you want to remove this allergy?')) return;
-
     setManagementLoading(true);
     try {
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
@@ -436,8 +434,6 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
   };
 
   const handleRemoveMedication = async (medicationId, type = 'prescription') => {
-    if (!confirm('Are you sure you want to remove this medication?')) return;
-
     setManagementLoading(true);
     try {
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
