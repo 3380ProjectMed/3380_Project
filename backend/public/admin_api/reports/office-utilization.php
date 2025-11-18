@@ -75,54 +75,69 @@ try {
 
     // Office statistics with detailed appointment breakdown
     $sql = "SELECT 
-                    o.office_id,
-                    o.name as office_name,
-                    CONCAT(o.address, ', ', o.city, ', ', o.state, ' ', o.zipcode) as address,
-                    o.city,
-                    o.state,
-                    o.phone,
-                    COUNT(a.Appointment_id) as total_appointments,
-                    COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) as completed,
-                    COUNT(CASE WHEN a.Status = 'Cancelled' THEN 1 END) as cancelled,
-                    COUNT(CASE WHEN a.Status = 'No-Show' THEN 1 END) as no_shows,
-                    COUNT(CASE WHEN a.Status = 'Scheduled' THEN 1 END) as scheduled,
-                    COUNT(CASE WHEN a.Status = 'Waiting' THEN 1 END) as waiting,
-                    ROUND(
-                        COUNT(CASE WHEN a.Status = 'No-Show' THEN 1 END) * 100.0 / 
-                        NULLIF(COUNT(a.Appointment_id), 0),
-                        1
-                    ) as no_show_rate,
-                    ROUND(
-                        COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) * 100.0 / 
-                        NULLIF(COUNT(a.Appointment_id), 0),
-                        1
-                    ) as completion_rate,
-                    ROUND(AVG(
-                        CASE 
-                            WHEN pv.Start_at IS NOT NULL 
-                                AND a.Appointment_date IS NOT NULL
-                                AND pv.Start_at >= a.Appointment_date
-                                AND TIMESTAMPDIFF(MINUTE, a.Appointment_date, pv.Start_at) BETWEEN 0 AND 240
-                            THEN TIMESTAMPDIFF(MINUTE, a.Appointment_date, pv.Start_at)
-                            ELSE NULL
-                        END
-                    ), 0) as avg_wait_minutes,
-                    ROUND(
-                        COUNT(a.Appointment_id) * 100.0 / 
-                        NULLIF(DATEDIFF(?, ?) + 1, 0),
-                        1
-                    ) as utilization_rate,
-                    COUNT(DISTINCT a.Doctor_id) as unique_doctors,
-                    COUNT(DISTINCT a.Patient_id) as unique_patients
-                FROM office o
-                LEFT JOIN Appointment a ON o.office_id = a.Office_id 
-                    AND DATE(a.Appointment_date) BETWEEN ? AND ?
-                    " . ($status_filter && $status_filter !== 'all' ? "AND a.Status = ?" : "") . "
-                LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
-                " . ($office_id && $office_id !== 'all' ? "WHERE o.office_id = ?" : "") . "
-                GROUP BY o.office_id, o.name, o.address, o.city, o.state, o.phone, o.zipcode
-                HAVING total_appointments > 0
-                ORDER BY total_appointments DESC";
+                o.office_id,
+                o.name as office_name,
+                CONCAT(o.address, ', ', o.city, ', ', o.state, ' ', o.zipcode) as address,
+                o.city,
+                o.state,
+                o.phone,
+
+                -- TOTAL
+                COUNT(a.Appointment_id) as total_appointments,
+
+                -- PER-STATUS COUNTS (covers full ENUM)
+                COUNT(CASE WHEN a.Status = 'Ready'       THEN 1 END) as ready,
+                COUNT(CASE WHEN a.Status = 'Scheduled'   THEN 1 END) as scheduled,
+                COUNT(CASE WHEN a.Status = 'Waiting'     THEN 1 END) as waiting,
+                COUNT(CASE WHEN a.Status = 'Checked-in'  THEN 1 END) as checked_in,
+                COUNT(CASE WHEN a.Status = 'In Progress' THEN 1 END) as in_progress,
+                COUNT(CASE WHEN a.Status = 'Completed'   THEN 1 END) as completed,
+                COUNT(CASE WHEN a.Status = 'Cancelled'   THEN 1 END) as cancelled,
+                COUNT(CASE WHEN a.Status = 'No-Show'     THEN 1 END) as no_shows,
+
+                -- RATES (still based on total_appointments)
+                ROUND(
+                    COUNT(CASE WHEN a.Status = 'No-Show' THEN 1 END) * 100.0 / 
+                    NULLIF(COUNT(a.Appointment_id), 0),
+                    1
+                ) as no_show_rate,
+                ROUND(
+                    COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) * 100.0 / 
+                    NULLIF(COUNT(a.Appointment_id), 0),
+                    1
+                ) as completion_rate,
+
+                -- AVG WAIT MINUTES (unchanged)
+                ROUND(AVG(
+                    CASE 
+                        WHEN pv.Start_at IS NOT NULL 
+                            AND a.Appointment_date IS NOT NULL
+                            AND pv.Start_at >= a.Appointment_date
+                            AND TIMESTAMPDIFF(MINUTE, a.Appointment_date, pv.Start_at) BETWEEN 0 AND 240
+                        THEN TIMESTAMPDIFF(MINUTE, a.Appointment_date, pv.Start_at)
+                        ELSE NULL
+                    END
+                ), 0) as avg_wait_minutes,
+
+                -- UTILIZATION (see section 2)
+                ROUND(
+                    COUNT(a.Appointment_id) * 100.0 / 
+                    NULLIF(DATEDIFF(?, ?) + 1, 0),
+                    1
+                ) as utilization_rate,
+
+                COUNT(DISTINCT a.Doctor_id) as unique_doctors,
+                COUNT(DISTINCT a.Patient_id) as unique_patients
+            FROM office o
+            LEFT JOIN Appointment a ON o.office_id = a.Office_id 
+                AND DATE(a.Appointment_date) BETWEEN ? AND ?
+                " . ($status_filter && $status_filter !== 'all' ? "AND a.Status = ?" : "") . "
+            LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
+            " . ($office_id && $office_id !== 'all' ? "WHERE o.office_id = ?" : "") . "
+            GROUP BY o.office_id, o.name, o.address, o.city, o.state, o.phone, o.zipcode
+            HAVING total_appointments > 0
+            ORDER BY total_appointments DESC";
+
 
     // Prepare parameters for the query
     $query_params = [$end_date, $start_date, $start_date, $end_date];
@@ -139,6 +154,26 @@ try {
     }
 
     $office_stats = executeQuery($conn, $sql, $query_types, $query_params);
+
+    $sqlDept = "SELECT 
+                    o.office_id,
+                    o.name AS office_name,
+                    s.specialty_name AS dept,
+                    COUNT(a.Appointment_id) AS total_appts,
+                    COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) AS completed,
+                    COUNT(CASE WHEN a.Status = 'Cancelled' THEN 1 END) AS cancelled,
+                    COUNT(CASE WHEN a.Status = 'No-Show' THEN 1 END) AS no_shows,
+                    COUNT(DISTINCT a.Doctor_id) AS unique_doctors,
+                    COUNT(DISTINCT a.Patient_id) AS unique_patients
+                FROM office o
+                JOIN Appointment a ON o.office_id = a.Office_id
+                JOIN doctor d      ON a.Doctor_id = d.doctor_id
+                JOIN specialty s   ON d.specialty_id = s.specialty_id
+                $where_clause       -- reuse the same one you built earlier
+                GROUP BY o.office_id, office_name, dept";
+
+    $department_stats = executeQuery($conn, $sqlDept, $param_types, $params);
+
 
     // Calculate summary statistics
     $total_offices = count($office_stats);
@@ -164,11 +199,14 @@ try {
     $sum_utilization = 0.0;
     foreach ($office_stats as &$office) {
         $office_appts = intval($office['total_appointments']);
-        $office['utilization_rate'] = $total_appointments > 0
+
+        // Keep SQL utilization_rate (time-normalized)
+        $sum_utilization += floatval($office['utilization_rate']);
+
+        // New metric: share of all appointments across offices
+        $office['volume_share'] = $total_appointments > 0
             ? round($office_appts * 100.0 / $total_appointments, 1)
             : 0.0;
-
-        $sum_utilization += $office['utilization_rate'];
     }
     unset($office);
 
@@ -234,7 +272,8 @@ try {
         'summary' => $summary,
         'office_stats' => $office_stats,
         'daily_trends' => $daily_trends,
-        'status_breakdown' => $status_breakdown
+        'status_breakdown' => $status_breakdown,
+        'department_stats' => $department_stats
     ], JSON_NUMERIC_CHECK);
 } catch (Exception $e) {
     http_response_code(500);
