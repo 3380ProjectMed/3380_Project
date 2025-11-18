@@ -186,7 +186,7 @@ try {
                 
                 executeQuery(
                     $conn,
-                    "INSERT INTO allergies_per_patient (patient_id, allergy_id, notes) VALUES (?, ?, ?)",
+                    "INSERT INTO allergies_per_patient (patient_id, allergies_code, notes) VALUES (?, ?, ?)",
                     'iis',
                     [$patientId, (int)$allergy['allergyId'], $notes]
                 );
