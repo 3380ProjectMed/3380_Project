@@ -73,7 +73,8 @@ try {
                 pv.created_at as checked_in_at  -- ✅ When patient checked in
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
-            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            LEFT JOIN allergies_per_patient app ON p.patient_id = app.patient_id
+LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
             LEFT JOIN office o ON a.Office_id = o.office_id
             LEFT JOIN patient_visit pv ON pv.appointment_id = a.Appointment_id  -- ✅ Join visit data
             WHERE a.Doctor_id = ?
