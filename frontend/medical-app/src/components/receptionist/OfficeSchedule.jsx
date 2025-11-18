@@ -553,13 +553,15 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       // If insurance validation fails, stop here
       if (!result.success) {
         if (result.error_type === 'INSURANCE_WARNING' || result.error_type === 'INSURANCE_EXPIRED') {
-          // Show alert modal with option to add insurance
+          // Show alert modal with option to add/edit insurance
+          const isExpired = result.error_type === 'INSURANCE_EXPIRED';
           setAlertModal({
             show: true,
             type: 'error',
             title: 'Cannot Check In - Insurance Issue',
             message: result.message || result.error,
             showAddInsurance: true,
+            insuranceButtonText: isExpired ? 'Edit Insurance' : 'Add Insurance',
             insurancePatientData: {
               Patient_id: selectedAppointment.patient_id,
               Patient_First: selectedAppointment.patient_first,
@@ -1163,7 +1165,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
                       setAlertModal({ ...alertModal, show: false });
                     }}
                   >
-                    Add Insurance
+                    {alertModal.insuranceButtonText || 'Add Insurance'}
                   </button>
                   <button 
                     className="btn btn-ghost"
