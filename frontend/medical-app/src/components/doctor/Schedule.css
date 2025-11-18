@@ -171,6 +171,7 @@
 .calendar-day:hover:not(.empty-day):not(.weekend) {
   border-color: #c7d2fe;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 .calendar-day.weekend {
