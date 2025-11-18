@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Users, Clock, Check, AlertCircle, DollarSign, Plus, Phone, ChevronLeft, ChevronRight, Filter, User, Edit, X } from 'lucide-react';
+import AddInsuranceModal from './AddInsuranceModal';
 import './ReceptionistDashboard.css';
 
 /**
@@ -30,6 +31,10 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [nurses, setNurses] = useState([]);
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [loadingNurses, setLoadingNurses] = useState(false);
+  
+  // Insurance modal state
+  const [showInsuranceModal, setShowInsuranceModal] = useState(false);
+  const [insurancePatient, setInsurancePatient] = useState(null);
   
   // Alert/notification state
   const [alertModal, setAlertModal] = useState({
@@ -189,11 +194,18 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       
       if (!data.success) {
         if (data.error_type === 'INSURANCE_WARNING' || data.error_type === 'INSURANCE_EXPIRED') {
+          // Show alert modal with option to add insurance
           setAlertModal({
             show: true,
             type: 'error',
             title: 'Cannot Check In - Insurance Issue',
-            message: data.message || data.error
+            message: data.message || data.error,
+            showAddInsurance: true,
+            insurancePatientData: {
+              Patient_id: selectedAppointment.Patient_id,
+              Patient_First: selectedAppointment.Patient_First,
+              Patient_Last: selectedAppointment.Patient_Last
+            }
           });
         } else {
           setAlertModal({
@@ -964,17 +976,38 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             </div>
 
             <div className="modal-footer">
-              <button 
-                className={`btn ${
-                  alertModal.type === 'success' ? 'btn-success' : 
-                  alertModal.type === 'error' ? 'btn-danger' :
-                  alertModal.type === 'warning' ? 'btn-warning' :
-                  'btn-primary'
-                }`}
-                onClick={() => setAlertModal({ ...alertModal, show: false })}
-              >
-                OK
-              </button>
+              {alertModal.showAddInsurance ? (
+                <>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setInsurancePatient(alertModal.insurancePatientData);
+                      setShowInsuranceModal(true);
+                      setAlertModal({ ...alertModal, show: false });
+                    }}
+                  >
+                    Add Insurance
+                  </button>
+                  <button 
+                    className="btn btn-ghost"
+                    onClick={() => setAlertModal({ ...alertModal, show: false })}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button 
+                  className={`btn ${
+                    alertModal.type === 'success' ? 'btn-success' : 
+                    alertModal.type === 'error' ? 'btn-danger' :
+                    alertModal.type === 'warning' ? 'btn-warning' :
+                    'btn-primary'
+                  }`}
+                  onClick={() => setAlertModal({ ...alertModal, show: false })}
+                >
+                  OK
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1051,6 +1084,22 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             </div>
           </div>
         </div>
+      )}
+
+      {/* ===== ADD INSURANCE MODAL ===== */}
+      {showInsuranceModal && insurancePatient && (
+        <AddInsuranceModal
+          patient={insurancePatient}
+          onClose={() => {
+            setShowInsuranceModal(false);
+            setInsurancePatient(null);
+          }}
+          onSuccess={() => {
+            setShowInsuranceModal(false);
+            setInsurancePatient(null);
+            loadDashboardData(); // Refresh data to reflect new insurance
+          }}
+        />
       )}
     </div>
   );
