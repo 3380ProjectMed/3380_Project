@@ -48,7 +48,7 @@
 
 /* Add button in header */
 .record-card h3 + .record-add-btn {
-  display: none; /* Hide the separate button */
+  display: block; /* Show the add button */
 }
 
 .record-card h3::after {
@@ -62,9 +62,12 @@
   flex-shrink: 0;
 }
 
-.record-add-btn .btn-primary {
+.record-add-btn .btn-primary,
+.record-add-btn .btn-primary.btn-sm {
   width: 100%;
+  display: flex;
   justify-content: center;
+  align-items: center;
   padding: 0.875rem 1.5rem;
   font-size: 1rem;
   font-weight: 600;
@@ -76,7 +79,8 @@
   transition: all 0.2s ease;
 }
 
-.record-add-btn .btn-primary:hover {
+.record-add-btn .btn-primary:hover,
+.record-add-btn .btn-primary.btn-sm:hover {
   background: linear-gradient(135deg, #005f8f, #0096b8);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
