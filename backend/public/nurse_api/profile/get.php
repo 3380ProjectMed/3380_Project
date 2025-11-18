@@ -16,10 +16,12 @@ try {
     $email = $_SESSION['email'] ?? '';
 
     // Use work_schedule to resolve office rather than a non-existent staff.work_location
-    $sql = "SELECT ua.username, ua.email, ua.role, s.first_name, s.last_name, s.license_number, n.nurse_id, n.staff_id, n.department,
+    $sql = "SELECT ua.username, ua.email, ua.role, s.first_name, s.last_name, s.license_number, s.gender, cg.gender_text AS gender_description,
+                    n.nurse_id, n.staff_id, n.department,
                     ws.office_id, o.name AS office_name, o.address, o.city, o.state, o.zipcode
             FROM user_account ua
             LEFT JOIN staff s ON s.staff_email = ua.email
+            LEFT JOIN codes_gender cg ON s.gender = cg.gender_code
             LEFT JOIN nurse n ON n.staff_id = s.staff_id
             LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
             LEFT JOIN office o ON o.office_id = ws.office_id
@@ -60,6 +62,7 @@ try {
             'email' => $r['email'] ?? '',
             'department' => $r['department'] ?? '',
             'licenseNumber' => $r['license_number'] ?? '',
+            'gender' => $r['gender_description'] ?? $r['gender'] ?? '',
             'workLocation' => $location
         ]
     ]);
