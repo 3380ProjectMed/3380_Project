@@ -1,6 +1,6 @@
 // src/components/nurse/NurseClinicalWorkspace.jsx - UPDATED WITH STATUS HANDLING
 import React, { useState, useEffect } from 'react';
-import { Activity, AlertCircle, Save, X, CheckCircle, User, Calendar, Plus, Edit2, Trash2, Pill } from 'lucide-react';
+import { Activity, AlertCircle, Save, X, CheckCircle, User, Calendar, Plus, Edit2, Trash2, Pill, Heart, Thermometer } from 'lucide-react';
 import './NurseClinicalWorkSpace.css';
 
 /**
@@ -559,15 +559,6 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
             <span>{formatChicagoDate(visit.date)}</span>
           </div>
         </div>
-        {patient.allergies && patient.allergies !== 'None' && (
-          <div className="info-item alert">
-            <AlertCircle size={18} />
-            <div>
-              <strong>ALLERGIES:</strong>
-              <span>{patient.allergies}</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Previously Saved Vitals/Notes */}
@@ -916,76 +907,116 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
 
       {/* Main Content */}
       <div className="workspace-content">
-        <div className="vitals-grid-simple">
-          {/* Blood Pressure */}
-          <div className="form-section">
-            <h3>📊 Blood Pressure</h3>
-            <div className="bp-inputs">
-              <div className="form-group">
-                <label>Systolic</label>
-                <div className="input-with-unit">
-                  <input
-                    type="number"
-                    value={vitals.blood_pressure_systolic}
-                    onChange={(e) => handleVitalChange('blood_pressure_systolic', e.target.value)}
-                    placeholder="120"
-                    min="70"
-                    max="200"
-                  />
-                  <span className="unit">mmHg</span>
-                </div>
-              </div>
-              <span className="bp-separator">/</span>
-              <div className="form-group">
-                <label>Diastolic</label>
-                <div className="input-with-unit">
-                  <input
-                    type="number"
-                    value={vitals.blood_pressure_diastolic}
-                    onChange={(e) => handleVitalChange('blood_pressure_diastolic', e.target.value)}
-                    placeholder="80"
-                    min="40"
-                    max="130"
-                  />
-                  <span className="unit">mmHg</span>
-                </div>
-              </div>
-            </div>
+        {/* Vital Signs Display - Doctor Style */}
+        <div className="info-card">
+          <div className="card-header">
+            <h3><Activity size={20} /> Vital Signs</h3>
           </div>
-
-          {/* Temperature */}
-          <div className="form-section">
-            <h3>🌡️ Temperature</h3>
-            <div className="form-group">
-              <div className="input-with-unit">
-                <input
-                  type="number"
-                  step="0.1"
-                  value={vitals.temperature}
-                  onChange={(e) => handleVitalChange('temperature', e.target.value)}
-                  placeholder="98.6"
-                  min="95"
-                  max="106"
-                />
-                <span className="unit">°F</span>
+          <div className="vitals-grid">
+            <div className="vital-item">
+              <Heart className="vital-icon bp" size={24} />
+              <div>
+                <span className="vital-label">Blood Pressure</span>
+                <span className="vital-value">
+                  {visit.blood_pressure || 'Not recorded'}
+                </span>
               </div>
             </div>
+            <div className="vital-item">
+              <Thermometer className="vital-icon temp" size={24} />
+              <div>
+                <span className="vital-label">Temperature</span>
+                <span className="vital-value">
+                  {visit.temperature ? `${visit.temperature}°F` : 'Not recorded'}
+                </span>
+              </div>
+            </div>
+            {visit.blood_pressure || visit.temperature ? (
+              <div className="vital-footer">
+                Recorded by: Tina Nguyen
+              </div>
+            ) : null}
           </div>
         </div>
 
-        {/* Present Illnesses */}
-        <div className="form-section full-width">
-          <h3>📋 Chief Complaints / Present Illnesses</h3>
-          <div className="form-group">
-            <textarea
-              value={vitals.present_illnesses}
-              onChange={(e) => handleVitalChange('present_illnesses', e.target.value)}
-              placeholder="Patient reports headache, dizziness, nausea..."
-              rows={4}
-            />
-            <small className="helper-text">
-              Document patient's current symptoms and complaints
-            </small>
+        {/* Vitals Input Form */}
+        <div className="info-card">
+          <div className="card-header">
+            <h3><Edit2 size={20} /> Record Vitals</h3>
+          </div>
+          <div className="vitals-input-content">
+            <div className="vitals-grid-simple">
+              {/* Blood Pressure */}
+              <div className="form-section">
+                <h3>📊 Blood Pressure</h3>
+                <div className="bp-inputs">
+                  <div className="form-group">
+                    <label>Systolic</label>
+                    <div className="input-with-unit">
+                      <input
+                        type="number"
+                        value={vitals.blood_pressure_systolic}
+                        onChange={(e) => handleVitalChange('blood_pressure_systolic', e.target.value)}
+                        placeholder="120"
+                        min="70"
+                        max="200"
+                      />
+                      <span className="unit">mmHg</span>
+                    </div>
+                  </div>
+                  <span className="bp-separator">/</span>
+                  <div className="form-group">
+                    <label>Diastolic</label>
+                    <div className="input-with-unit">
+                      <input
+                        type="number"
+                        value={vitals.blood_pressure_diastolic}
+                        onChange={(e) => handleVitalChange('blood_pressure_diastolic', e.target.value)}
+                        placeholder="80"
+                        min="40"
+                        max="130"
+                      />
+                      <span className="unit">mmHg</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Temperature */}
+              <div className="form-section">
+                <h3>🌡️ Temperature</h3>
+                <div className="form-group">
+                  <div className="input-with-unit">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={vitals.temperature}
+                      onChange={(e) => handleVitalChange('temperature', e.target.value)}
+                      placeholder="98.6"
+                      min="95"
+                      max="106"
+                    />
+                    <span className="unit">°F</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Present Illnesses */}
+              <div className="form-section full-width">
+                <h3>📋 Chief Complaints / Present Illnesses</h3>
+                <div className="form-group">
+                  <textarea
+                    value={vitals.present_illnesses}
+                    onChange={(e) => handleVitalChange('present_illnesses', e.target.value)}
+                    placeholder="Patient reports headache, dizziness, nausea..."
+                    rows={4}
+                  />
+                  <small className="helper-text">
+                    Document patient's current symptoms and complaints
+                  </small>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
