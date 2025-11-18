@@ -21,7 +21,7 @@ try {
                    ws.office_id, o.name AS office_name, o.address, o.city, o.state, o.zipcode, o.phone_number AS office_phone
             FROM user_account ua
             LEFT JOIN staff s ON s.staff_email = ua.email
-            LEFT JOIN code_gender cg ON s.gender = cg.code
+            LEFT JOIN codes_gender cg ON s.gender = cg.code
             LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
             LEFT JOIN office o ON o.office_id = ws.office_id
             WHERE ua.email = ?
