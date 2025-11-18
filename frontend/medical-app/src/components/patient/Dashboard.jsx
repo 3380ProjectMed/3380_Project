@@ -102,7 +102,8 @@ export default function Dashboard(props) {
                     <h3>{pcp.name || pcp.pcp_name}</h3>
                     <p>{pcp.specialty_name || pcp.pcp_specialty}</p>
                     <p><MapPin className="small-icon" /> {pcp.office_name || pcp.pcp_office}</p>
-                    <p><Phone className="small-icon" /> {pcp.Phone || pcp.pcp_phone}</p>
+                    <p><Phone className="small-icon" /> {pcp.phone || pcp.pcp_phone}</p>
+                    <p><Mail className="small-icon" /> {pcp.staff_email || pcp.pcp_email}</p>
                   </div>
                 </div>
               ) : (

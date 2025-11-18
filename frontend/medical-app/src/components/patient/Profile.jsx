@@ -264,8 +264,8 @@ export default function Profile(props) {
                     <h3>{pcp.pcp_name || pcp.name}</h3>
                     <p><strong>Specialty:</strong> {pcp.pcp_specialty || pcp.specialty_name}</p>
                     <p><MapPin className="small-icon" /> {pcp.pcp_office || pcp.office_name}</p>
-                    <p><Phone className="small-icon" /> {pcp.pcp_phone || pcp.Phone}</p>
-                    <p><Mail className="small-icon" /> {pcp.pcp_email || pcp.Email}</p>
+                    <p><Phone className="small-icon" /> {pcp.pcp_phone || pcp.phone}</p>
+                    <p><Mail className="small-icon" /> {pcp.pcp_email || pcp.staff_email}</p>
                   </div>
                 </div>
               )

@@ -1,8 +1,8 @@
 <?php
 /**
  * Save treatments for a patient visit
- * REPLACES all existing treatments with the new list
- * This allows proper handling of both additions and deletions
+ * Appends new treatments without deleting existing ones
+ * Prevents duplicate treatment entries
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -16,9 +16,9 @@ try {
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
-    
-    $user_id = (int)$_SESSION['uid'];
-    
+
+    $user_id = (int) $_SESSION['uid'];
+
     // Verify user is a doctor
     $conn = getDBConnection();
     $rows = executeQuery($conn, '
@@ -26,34 +26,34 @@ try {
         FROM staff s
         JOIN user_account ua ON ua.email = s.staff_email
         WHERE ua.user_id = ?', 'i', [$user_id]);
-    
+
     if (empty($rows)) {
         closeDBConnection($conn);
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Access denied - doctors only']);
         exit;
     }
-    
+
     // Get POST data
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     $visit_id = isset($input['visit_id']) ? intval($input['visit_id']) : 0;
     $treatments = isset($input['treatments']) ? $input['treatments'] : [];
-    
+
     if ($visit_id === 0) {
         closeDBConnection($conn);
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'visit_id required']);
         exit;
     }
-    
-    if (!is_array($treatments)) {
+
+    if (!is_array($treatments) || empty($treatments)) {
         closeDBConnection($conn);
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'treatments must be an array']);
+        echo json_encode(['success' => false, 'error' => 'At least one treatment required']);
         exit;
     }
-    
+
     // Verify visit exists
     $visitCheck = executeQuery(
         $conn,
@@ -61,73 +61,72 @@ try {
         'i',
         [$visit_id]
     );
-    
+
     if (empty($visitCheck)) {
         closeDBConnection($conn);
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'Visit not found']);
         exit;
     }
-    
+
     // Begin transaction
     $conn->begin_transaction();
-    
+
     try {
-        // Step 1: Delete all existing treatments for this visit
-        $deleteSql = "DELETE FROM treatment_per_visit WHERE visit_id = ?";
-        executeQuery($conn, $deleteSql, 'i', [$visit_id]);
-        
-        // Step 2: Insert new treatments (if any)
-        $inserted_count = 0;
-        
-        if (!empty($treatments)) {
-            $insertSql = "INSERT INTO treatment_per_visit 
-                          (visit_id, treatment_id, quantity, cost_each, notes) 
-                          VALUES (?, ?, ?, ?, ?)";
-            
-            foreach ($treatments as $treatment) {
-                $treatment_id = intval($treatment['treatment_id'] ?? 0);
-                $quantity = intval($treatment['quantity'] ?? 1);
-                $cost_each = floatval($treatment['cost_each'] ?? 0);
-                $notes = trim($treatment['notes'] ?? '');
-                
-                if ($treatment_id > 0) {
-                    executeQuery($conn, $insertSql, 'iiids', [
-                        $visit_id,
-                        $treatment_id,
-                        $quantity,
-                        $cost_each,
-                        $notes
-                    ]);
-                    $inserted_count++;
-                }
+        // Delete treatments for the visit. Input `treatments` should be an array
+        // of objects with `treatment_id` (or integers). We'll check existence first
+        // and only delete if present to provide useful counts.
+        $deleted_count = 0;
+        $skipped_count = 0;
+
+        foreach ($treatments as $treatment) {
+            $treatment_id = intval(is_array($treatment) ? ($treatment['treatment_id'] ?? 0) : $treatment);
+
+            if ($treatment_id <= 0) {
+                $skipped_count++;
+                continue;
             }
+
+            // Check if this treatment exists for this visit
+            $checkSql = "SELECT visit_treatment_id FROM treatment_per_visit 
+                        WHERE visit_id = ? AND treatment_id = ? 
+                        LIMIT 1";
+            $existing = executeQuery($conn, $checkSql, 'ii', [$visit_id, $treatment_id]);
+
+            if (empty($existing)) {
+                $skipped_count++;
+                continue;
+            }
+
+            // Delete the treatment row(s)
+            $deleteSql = "DELETE FROM treatment_per_visit WHERE visit_id = ? AND treatment_id = ?";
+            executeQuery($conn, $deleteSql, 'ii', [$visit_id, $treatment_id]);
+            $deleted_count++;
         }
-        
+
         $conn->commit();
         closeDBConnection($conn);
-        
-        $message = "Treatments saved successfully";
-        if ($inserted_count === 0) {
-            $message = "All treatments removed";
-        } elseif ($inserted_count === 1) {
-            $message = "1 treatment saved";
-        } else {
-            $message = "$inserted_count treatments saved";
+
+        $message = 'Treatments deleted successfully';
+        if ($deleted_count === 0 && $skipped_count > 0) {
+            $message = 'No matching treatments found to delete';
+        } elseif ($deleted_count > 0 && $skipped_count > 0) {
+            $message = "$deleted_count deleted, $skipped_count skipped";
         }
-        
+
         echo json_encode([
             'success' => true,
             'message' => $message,
-            'count' => $inserted_count
+            'deleted_count' => $deleted_count,
+            'skipped_count' => $skipped_count
         ]);
-        
+
     } catch (Exception $e) {
         $conn->rollback();
         closeDBConnection($conn);
         throw $e;
     }
-    
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

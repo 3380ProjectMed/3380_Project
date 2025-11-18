@@ -1001,9 +1001,24 @@
   color: #1e40af;
 }
 
+.status-ready {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.status-waiting {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .status-checked-in {
   background: #d1fae5;
   color: #065f46;
+}
+
+.status-in-progress {
+  background: #ddd6fe;
+  color: #6b21a8;
 }
 
 .status-completed {
@@ -1014,6 +1029,11 @@
 .status-cancelled {
   background: #fee2e2;
   color: #dc2626;
+}
+
+.status-noshow {
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .btn {

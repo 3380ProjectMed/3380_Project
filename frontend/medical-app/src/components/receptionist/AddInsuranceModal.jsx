@@ -1,0 +1,322 @@
+import React, { useState, useEffect } from 'react';
+import { X, AlertCircle, Check, Shield, Calendar, CreditCard, Users } from 'lucide-react';
+import './AddInsuranceModal.css';
+
+/**
+ * AddInsuranceModal Component
+ * 
+ * Modal for adding or updating patient insurance information
+ * Used by receptionists when a patient has no insurance or expired insurance
+ */
+function AddInsuranceModal({ patient, onClose, onSuccess }) {
+  const [loading, setLoading] = useState(false);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [insurancePlans, setInsurancePlans] = useState([]);
+  const [selectedPayer, setSelectedPayer] = useState('');
+  const [formData, setFormData] = useState({
+    plan_id: '',
+    member_id: '',
+    group_id: '',
+    effective_date: new Date().toISOString().split('T')[0],
+    expiration_date: '',
+    is_primary: 1
+  });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    loadInsurancePlans();
+  }, []);
+
+  const loadInsurancePlans = async () => {
+    try {
+      setLoadingPlans(true);
+      const response = await fetch('/receptionist_api/patients/get-insurance-plans.php', {
+        credentials: 'include'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setInsurancePlans(data.plans);
+      } else {
+        setError(data.error || 'Failed to load insurance plans');
+      }
+    } catch (err) {
+      console.error('Failed to load insurance plans:', err);
+      setError('Failed to load insurance plans');
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setError('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.plan_id) {
+      setError('Please select an insurance plan');
+      return;
+    }
+    
+    if (!formData.member_id) {
+      setError('Please enter member ID');
+      return;
+    }
+    
+    if (!formData.effective_date) {
+      setError('Please enter effective date');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+      
+      const response = await fetch('/receptionist_api/patients/add-insurance.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          patient_id: patient.patient_id || patient.Patient_id,
+          ...formData
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuccess(`Insurance added successfully: ${data.plan_name}`);
+        setTimeout(() => {
+          if (onSuccess) onSuccess(data);
+          onClose();
+        }, 1500);
+      } else {
+        setError(data.error || 'Failed to add insurance');
+      }
+    } catch (err) {
+      console.error('Failed to add insurance:', err);
+      setError('Failed to add insurance. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAvailablePlans = () => {
+    if (!selectedPayer) return [];
+    const payer = insurancePlans.find(p => p.payer_id.toString() === selectedPayer);
+    return payer ? payer.plans : [];
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal insurance-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div>
+            <h2 className="modal-title">
+              <Shield size={24} />
+              Add Insurance Information
+            </h2>
+            <p className="modal-subtitle">
+              Patient: {patient.first_name || patient.Patient_First} {patient.last_name || patient.Patient_Last}
+            </p>
+          </div>
+          <button className="modal-close" onClick={onClose}>
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {error && (
+            <div className="alert alert-error">
+              <AlertCircle size={20} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div className="alert alert-success">
+              <Check size={20} />
+              <span>{success}</span>
+            </div>
+          )}
+
+          {loadingPlans ? (
+            <div className="loading-state">
+              <p>Loading insurance plans...</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="insurance-form">
+              <div className="form-section">
+                <h3 className="section-title">Insurance Plan Details</h3>
+                
+                <div className="form-group">
+                  <label className="form-label">
+                    <Shield size={16} />
+                    Insurance Company *
+                  </label>
+                  <select
+                    className="form-input"
+                    value={selectedPayer}
+                    onChange={(e) => {
+                      setSelectedPayer(e.target.value);
+                      setFormData(prev => ({ ...prev, plan_id: '' }));
+                    }}
+                    required
+                  >
+                    <option value="">Select insurance company...</option>
+                    {insurancePlans.map(payer => (
+                      <option key={payer.payer_id} value={payer.payer_id}>
+                        {payer.payer_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedPayer && (
+                  <div className="form-group">
+                    <label className="form-label">
+                      <Shield size={16} />
+                      Insurance Plan *
+                    </label>
+                    <select
+                      className="form-input"
+                      name="plan_id"
+                      value={formData.plan_id}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Select plan...</option>
+                      {getAvailablePlans().map(plan => (
+                        <option key={plan.plan_id} value={plan.plan_id}>
+                          {plan.plan_name} ({plan.plan_type}) - Copay: ${plan.copay}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-section">
+                <h3 className="section-title">Member Information</h3>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">
+                      <CreditCard size={16} />
+                      Member ID *
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      name="member_id"
+                      value={formData.member_id}
+                      onChange={handleInputChange}
+                      placeholder="e.g., M123456789"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      <Users size={16} />
+                      Group ID
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      name="group_id"
+                      value={formData.group_id}
+                      onChange={handleInputChange}
+                      placeholder="e.g., G987654"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h3 className="section-title">Coverage Period</h3>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">
+                      <Calendar size={16} />
+                      Effective Date *
+                    </label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      name="effective_date"
+                      value={formData.effective_date}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      <Calendar size={16} />
+                      Expiration Date
+                    </label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      name="expiration_date"
+                      value={formData.expiration_date}
+                      onChange={handleInputChange}
+                      min={formData.effective_date}
+                    />
+                    <p className="form-help">Leave blank if no expiration</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_primary === 1}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      is_primary: e.target.checked ? 1 : 0 
+                    }))}
+                  />
+                  <span>Set as primary insurance</span>
+                </label>
+              </div>
+            </form>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          <button 
+            className="btn btn-ghost" 
+            onClick={onClose}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button 
+            className="btn btn-primary" 
+            onClick={handleSubmit}
+            disabled={loading || loadingPlans || !formData.plan_id}
+          >
+            {loading ? 'Adding Insurance...' : 'Add Insurance'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default AddInsuranceModal;

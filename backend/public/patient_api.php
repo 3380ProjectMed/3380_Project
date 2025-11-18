@@ -958,11 +958,12 @@ elseif ($endpoint === 'medical-records') {
                 case 'allergies':
                     $stmt = $mysqli->prepare("
                         SELECT 
-                            ca.allergies_code as id,
+                            app.app_id as id,
                             ca.allergies_text as allergy
-                        FROM patient p
-                        LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
-                        WHERE p.patient_id = ? AND ca.allergies_text IS NOT NULL
+                        FROM allergies_per_patient app
+                        LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
+                        WHERE app.patient_id = ? AND ca.allergies_text IS NOT NULL
+                        ORDER BY app.created_at DESC
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
@@ -1090,14 +1091,29 @@ elseif ($endpoint === 'medical-records') {
                         $allergy_code = $mysqli->insert_id;
                     }
 
-                    // Update patient's allergies field
-                    $stmt3 = $mysqli->prepare("
-                        UPDATE patient SET allergies = ? WHERE patient_id = ?
+                    // Check if patient already has this specific allergy
+                    $stmt_check = $mysqli->prepare("
+                        SELECT app_id FROM allergies_per_patient WHERE patient_id = ? AND allergy_id = ?
                     ");
-                    $stmt3->bind_param('ii', $allergy_code, $patient_id);
+                    $stmt_check->bind_param('ii', $patient_id, $allergy_code);
+                    $stmt_check->execute();
+                    $result_check = $stmt_check->get_result();
+
+                    if ($result_check->fetch_assoc()) {
+                        sendResponse(false, [], 'Patient already has this allergy', 400);
+                        break;
+                    }
+
+                    // Add new allergy to patient's allergy list
+                    $notes = $input['notes'] ?? '';
+                    $stmt3 = $mysqli->prepare("
+                        INSERT INTO allergies_per_patient (patient_id, allergy_id, notes) 
+                        VALUES (?, ?, ?)
+                    ");
+                    $stmt3->bind_param('iis', $patient_id, $allergy_code, $notes);
                     $stmt3->execute();
 
-                    sendResponse(true, ['allergy_code' => $allergy_code], 'Allergy updated successfully');
+                    sendResponse(true, ['allergy_code' => $allergy_code], 'Allergy added successfully');
                     break;
 
                 default:
@@ -1135,23 +1151,15 @@ elseif ($endpoint === 'medical-records') {
                     break;
 
                 case 'allergies':
-                    // For allergies, we need to clear the patient's allergy field if it matches
-                    // First check if this allergy is assigned to this patient
+                    // Delete specific allergy by app_id
                     $stmt = $mysqli->prepare("
-                        SELECT allergies FROM patient WHERE patient_id = ?
+                        DELETE FROM allergies_per_patient 
+                        WHERE app_id = ? AND patient_id = ?
                     ");
-                    $stmt->bind_param('i', $patient_id);
+                    $stmt->bind_param('ii', $item_id, $patient_id);
                     $stmt->execute();
-                    $result = $stmt->get_result();
-                    $patient_data = $result->fetch_assoc();
 
-                    if ($patient_data && $patient_data['allergies'] == $item_id) {
-                        // Clear the patient's allergy
-                        $stmt2 = $mysqli->prepare("
-                            UPDATE patient SET allergies = NULL WHERE patient_id = ?
-                        ");
-                        $stmt2->bind_param('i', $patient_id);
-                        $stmt2->execute();
+                    if ($stmt->affected_rows > 0) {
                         sendResponse(true, [], 'Allergy removed successfully');
                     } else {
                         sendResponse(false, [], 'Allergy not found for this patient', 404);
@@ -1555,7 +1563,7 @@ elseif ($endpoint === 'billing') {
                             LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id
                             LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
                             LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
-                            WHERE v.patient_id = ? AND v.status = 'Complete'
+                            WHERE v.patient_id = ? AND v.status = 'Completed'
                             GROUP BY v.visit_id, ipl.copay, ipl.coinsurance_rate, v.payment
                             HAVING ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) > 0
                         ) as visit_balances
@@ -1622,7 +1630,7 @@ elseif ($endpoint === 'billing') {
                         LEFT JOIN insurance_payer ip ON ipl.payer_id = ip.payer_id
                         LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
                         LEFT JOIN treatment_catalog tc ON tpv.treatment_id = tc.treatment_id
-                        WHERE v.patient_id = ? AND v.status = 'Complete'
+                        WHERE v.patient_id = ? AND v.status = 'Completed'
                         GROUP BY v.visit_id, v.date, doc_staff.first_name, doc_staff.last_name, ipl.copay, ipl.coinsurance_rate, v.payment, ip.name, ipl.plan_name
                         HAVING (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) >= 0
                         ORDER BY v.date DESC

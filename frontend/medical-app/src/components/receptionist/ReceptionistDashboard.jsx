@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Users, Clock, Check, AlertCircle, DollarSign, Plus, Phone, ChevronLeft, ChevronRight, Filter, User, Edit, X } from 'lucide-react';
+import AddInsuranceModal from './AddInsuranceModal';
 import './ReceptionistDashboard.css';
 
 /**
@@ -31,6 +32,10 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [loadingNurses, setLoadingNurses] = useState(false);
   
+  // Insurance modal state
+  const [showInsuranceModal, setShowInsuranceModal] = useState(false);
+  const [insurancePatient, setInsurancePatient] = useState(null);
+  
   // Alert/notification state
   const [alertModal, setAlertModal] = useState({
     show: false,
@@ -57,18 +62,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   }, [officeId]);
 
   /**
-   * Automatic status updates - runs instantly on load and every 30 seconds
-   * Updates Scheduled → Waiting → No-Show based on appointment time
-   */
-  useEffect(() => {
-    checkForNoShows();
-    const noShowInterval = setInterval(() => {
-      checkForNoShows();
-    }, 30000); // Check every 30 seconds for near-instant updates
-    return () => clearInterval(noShowInterval);
-  }, []);
-
-  /**
    * Load calendar when month changes
    */
   useEffect(() => {
@@ -76,27 +69,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       loadCalendarData();
     }
   }, [currentDate, officeId, doctors]);
-
-  /**
-   * Check for appointments that should be marked as No-Show
-   */
-  const checkForNoShows = async () => {
-    try {
-      const response = await fetch('/receptionist_api/appointments/update-no-shows.php', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      const data = await response.json();
-      
-      if (data.success && data.updated_count > 0) {
-        console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
-        loadDashboardData();
-        loadCalendarData();
-      }
-    } catch (err) {
-      console.error('Failed to check for no-shows:', err);
-    }
-  };
 
   /**
    * Fetch doctors from the database
@@ -131,9 +103,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // Update appointment statuses first (non-blocking)
-      checkForNoShows().catch(err => console.error('Status update failed:', err));
       
       const response = await fetch('/receptionist_api/dashboard/today.php', { credentials: 'include' });
       const data = await response.json();
@@ -225,11 +194,18 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       
       if (!data.success) {
         if (data.error_type === 'INSURANCE_WARNING' || data.error_type === 'INSURANCE_EXPIRED') {
+          // Show alert modal with option to add insurance
           setAlertModal({
             show: true,
             type: 'error',
             title: 'Cannot Check In - Insurance Issue',
-            message: data.message || data.error
+            message: data.message || data.error,
+            showAddInsurance: true,
+            insurancePatientData: {
+              Patient_id: selectedAppointment.Patient_id,
+              Patient_First: selectedAppointment.Patient_First,
+              Patient_Last: selectedAppointment.Patient_Last
+            }
           });
         } else {
           setAlertModal({
@@ -427,8 +403,10 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     
     const statusMap = {
       'scheduled': 'Scheduled',
+      'waiting': 'Waiting',
       'completed': 'Completed',
-      'canceled': 'Cancelled'
+      'canceled': 'Cancelled',
+      'no-show': 'No-Show'
     };
     
     return todayAppointments.filter(apt => {
@@ -587,8 +565,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
               <button className={`filter-btn ${selectedFilter === 'scheduled' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('scheduled')}>
                 Scheduled
               </button>
+              <button className={`filter-btn ${selectedFilter === 'waiting' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('waiting')}>
+                Waiting
+              </button>
               <button className={`filter-btn ${selectedFilter === 'completed' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('completed')}>
                 Completed
+              </button>
+              <button className={`filter-btn ${selectedFilter === 'no-show' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('no-show')}>
+                No-Show
               </button>
             </div>
           </div>
@@ -623,7 +607,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     </h3>
                     <div className="patient-meta">
                       <span className="patient-id">
-                        ID: {appointment.patientIdFormatted || appointment.Patient_id || appointment.patientId}
+                        Patient ID: {appointment.patientIdFormatted || appointment.Patient_id || appointment.patientId}
                       </span>
                       {appointment.emergencyContact && (
                         <span className="patient-phone">
@@ -650,6 +634,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     {appointment.waitingMinutes > 0 && (
                       <span className="waiting-time">{appointment.waitingMinutes} min</span>
                     )}
+                    <div className="appointment-id-badge">
+                      Appt #{appointment.Appointment_id || appointment.id}
+                    </div>
                   </div>
 
                   <div className="appointment-actions">
@@ -851,7 +838,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
               <button 
                 className="btn btn-success" 
                 onClick={handleCheckInAppointment}
-                disabled={checkingIn || selectedAppointment.Status === 'Checked-in' || selectedAppointment.Status === 'Cancelled' || selectedAppointment.Status === 'Completed'}
+                disabled={checkingIn || selectedAppointment.Status === 'Checked-in' || selectedAppointment.Status === 'Cancelled' || selectedAppointment.Status === 'Completed' || selectedAppointment.Status === 'No-Show'}
               >
                 <Check size={18} />
                 {checkingIn ? 'Checking In...' : 'Check In'}
@@ -989,17 +976,38 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             </div>
 
             <div className="modal-footer">
-              <button 
-                className={`btn ${
-                  alertModal.type === 'success' ? 'btn-success' : 
-                  alertModal.type === 'error' ? 'btn-danger' :
-                  alertModal.type === 'warning' ? 'btn-warning' :
-                  'btn-primary'
-                }`}
-                onClick={() => setAlertModal({ ...alertModal, show: false })}
-              >
-                OK
-              </button>
+              {alertModal.showAddInsurance ? (
+                <>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setInsurancePatient(alertModal.insurancePatientData);
+                      setShowInsuranceModal(true);
+                      setAlertModal({ ...alertModal, show: false });
+                    }}
+                  >
+                    Add Insurance
+                  </button>
+                  <button 
+                    className="btn btn-ghost"
+                    onClick={() => setAlertModal({ ...alertModal, show: false })}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button 
+                  className={`btn ${
+                    alertModal.type === 'success' ? 'btn-success' : 
+                    alertModal.type === 'error' ? 'btn-danger' :
+                    alertModal.type === 'warning' ? 'btn-warning' :
+                    'btn-primary'
+                  }`}
+                  onClick={() => setAlertModal({ ...alertModal, show: false })}
+                >
+                  OK
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1042,7 +1050,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                       </h3>
                       <div className="patient-meta">
                         <span className="patient-id">
-                          ID: {appointment.patient_id || appointment.Patient_id}
+                          Patient ID: {appointment.patient_id || appointment.Patient_id}
                         </span>
                       </div>
                     </div>
@@ -1060,6 +1068,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                       <span className={`status-badge ${getStatusClass(appointment.Status)}`}>
                         {appointment.Status || 'Scheduled'}
                       </span>
+                      <div className="appointment-id-badge">
+                        Appt #{appointment.Appointment_id}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1073,6 +1084,22 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             </div>
           </div>
         </div>
+      )}
+
+      {/* ===== ADD INSURANCE MODAL ===== */}
+      {showInsuranceModal && insurancePatient && (
+        <AddInsuranceModal
+          patient={insurancePatient}
+          onClose={() => {
+            setShowInsuranceModal(false);
+            setInsurancePatient(null);
+          }}
+          onSuccess={() => {
+            setShowInsuranceModal(false);
+            setInsurancePatient(null);
+            loadDashboardData(); // Refresh data to reflect new insurance
+          }}
+        />
       )}
     </div>
   );

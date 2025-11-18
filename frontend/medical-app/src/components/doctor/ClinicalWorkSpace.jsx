@@ -144,8 +144,11 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
           setPresentIllnesses(data.visit.present_illnesses);
         }
         
-        if (data.treatments && Array.isArray(data.treatments)) {
+        // Load existing treatments from current visit into UI
+        if (data.treatments && Array.isArray(data.treatments) && data.treatments.length > 0) {
           setSelectedTreatments(data.treatments);
+        } else {
+          setSelectedTreatments([]);
         }
       } else if (data.has_visit === false) {
         await fetchBasicPatientInfo();
@@ -190,8 +193,11 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
           setPresentIllnesses(data.visit.present_illnesses);
         }
         
-        if (data.treatments && Array.isArray(data.treatments)) {
+        // Load existing treatments from current visit into UI
+        if (data.treatments && Array.isArray(data.treatments) && data.treatments.length > 0) {
           setSelectedTreatments(data.treatments);
+        } else {
+          setSelectedTreatments([]);
         }
       } else {
         throw new Error(data.error || 'Failed to load patient data');
@@ -430,12 +436,16 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
 
   const handleSaveTreatments = async () => {
     if (!patientData?.visit?.visit_id) {
-      showAlert('Patient must check in before adding treatments', 'error');
+      showAlert('Patient must check in before managing treatments', 'error');
       return;
     }
 
-    if (selectedTreatments.length === 0) {
-      showAlert('Please add at least one treatment', 'error');
+    // Allow saving even with 0 treatments (to delete all)
+    const confirmMessage = selectedTreatments.length === 0
+      ? 'This will remove all treatments from this visit. Continue?'
+      : null;
+    
+    if (confirmMessage && !confirm(confirmMessage)) {
       return;
     }
 
@@ -461,18 +471,9 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        // Clear the selected treatments after successful save
-        setSelectedTreatments([]);
-        
-        // Show success message with details if available
-        const message = data.message || 'Treatments saved successfully!';
+        // Show success message
+        const message = data.message || 'Treatments updated successfully!';
         showAlert(message, 'success');
-        
-        // Clear the selected treatments immediately
-        setSelectedTreatments([]);
-        
-        // Close the treatment selector if it's open
-        setShowTreatmentSelector(false);
         
         // Refresh patient data to show treatments in previous notes
         if (appointmentId) {
@@ -490,6 +491,50 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       showAlert('Error saving treatments: ' + err.message, 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteTreatment = async (tpv_id, treatmentName) => {
+    if (!confirm(`Are you sure you want to remove "${treatmentName}" from this visit?`)) {
+      return;
+    }
+
+    try {
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+      
+      const response = await fetch(
+        `${API_BASE}/doctor_api/clinical/delete-treatment.php`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tpv_id: tpv_id })
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.success) {
+        showAlert(data.message || 'Treatment removed successfully', 'success');
+        
+        // Refresh notes to reflect deletion
+        if (appointmentId) {
+          fetchNotes();
+          fetchPatientDetails();
+        } else if (patientId) {
+          fetchNotesByPatientId(patientId);
+          fetchPatientDetailsByPatientId();
+        } else if (patient) {
+          fetchNotesByPatientId(patient.patient_id || patient.id);
+        }
+      } else {
+        throw new Error(data.error || 'Failed to delete treatment');
+      }
+    } catch (err) {
+      console.error('Error deleting treatment:', err);
+      showAlert('Error deleting treatment: ' + err.message, 'error');
     }
   };
 
@@ -946,18 +991,17 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                 )}
               </div>
               
-              {selectedTreatments.length > 0 && (
-                <div className="notes-actions">
-                  <button 
-                    onClick={handleSaveTreatments} 
-                    className="btn-save"
-                    disabled={saving}
-                  >
-                    <Save size={18} />
-                    {saving ? 'Saving...' : 'Save Treatments'}
-                  </button>
-                </div>
-              )}
+              {/* Always show Save button */}
+              <div className="notes-actions">
+                <button 
+                  onClick={handleSaveTreatments} 
+                  className="btn-save"
+                  disabled={saving}
+                >
+                  <Save size={18} />
+                  {saving ? 'Saving...' : 'Save Treatments'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -1105,13 +1149,22 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                           <ul className="treatment-list">
                             {note.treatments.map((treatment, tIdx) => (
                               <li key={tIdx} className="treatment-list-item">
-                                <span className="treatment-name">{treatment.treatment_name}</span>
-                                {treatment.quantity > 1 && (
-                                  <span className="treatment-quantity">×{treatment.quantity}</span>
-                                )}
-                                {treatment.notes && (
-                                  <span className="treatment-notes"> - {treatment.notes}</span>
-                                )}
+                                <div className="treatment-info">
+                                  <span className="treatment-name">{treatment.treatment_name}</span>
+                                  {treatment.quantity > 1 && (
+                                    <span className="treatment-quantity">×{treatment.quantity}</span>
+                                  )}
+                                  {treatment.notes && (
+                                    <span className="treatment-notes"> - {treatment.notes}</span>
+                                  )}
+                                </div>
+                                <button 
+                                  onClick={() => handleDeleteTreatment(treatment.tpv_id, treatment.treatment_name)}
+                                  className="btn-icon-danger-small"
+                                  title="Remove treatment"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
                               </li>
                             ))}
                           </ul>
