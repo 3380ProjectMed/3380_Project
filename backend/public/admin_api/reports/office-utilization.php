@@ -168,7 +168,7 @@ try {
                 FROM office o
                 JOIN Appointment a ON o.office_id = a.Office_id
                 JOIN doctor d      ON a.Doctor_id = d.doctor_id
-                JOIN specialty s   ON d.specialty_id = s.specialty_id
+                JOIN specialty s   ON d.specialty = s.specialty_id
                 $where_clause       -- reuse the same one you built earlier
                 GROUP BY o.office_id, office_name, dept";
 
