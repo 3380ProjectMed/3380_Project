@@ -837,6 +837,76 @@ textarea::placeholder {
   margin-bottom: 0.25rem;
 }
 
+/* ===== ALLERGY MANAGEMENT SPECIFIC STYLES ===== */
+.form-section {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.allergies-checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.checkbox-item:hover {
+  background: #f3f4f6;
+}
+
+.checkbox-item input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.checkbox-label {
+  font-size: 0.85rem;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+}
+
+.selection-summary {
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  color: #1e40af;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.selection-summary strong {
+  font-weight: 600;
+}
+
+/* Custom allergy input styling */
+.form-section .form-input {
+  margin-bottom: 0;
+}
+
 /* Responsive adjustments for management UI */
 @media (max-width: 768px) {
   .section-header {
@@ -856,5 +926,10 @@ textarea::placeholder {
   
   .form-actions {
     flex-direction: column;
+  }
+
+  .allergies-checklist {
+    grid-template-columns: 1fr;
+    max-height: 150px;
   }
 }
