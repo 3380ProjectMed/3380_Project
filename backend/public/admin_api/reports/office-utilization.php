@@ -282,7 +282,7 @@ try {
         'completed'          => $total_completed,
         'cancelled'          => $total_cancelled,
         'no_shows'           => $total_no_shows,
-        'avg_utilization'    => $avg_utilization,
+        'avg_utilization'    => $overall_utilization,
         'overall_utilization'=> $overall_utilization,
         'no_show_rate'       => $avg_no_show_rate,
         'avg_wait_minutes'   => $avg_wait_time,
