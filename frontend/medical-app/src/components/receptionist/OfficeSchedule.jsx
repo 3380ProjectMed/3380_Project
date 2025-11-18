@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Clock, User, Check, X, Edit, AlertCircle } from 'lucide-react';
 // Removed API import as we'll use fetch directly
 import './OfficeSchedule.css';
+import AddInsuranceModal from './AddInsuranceModal';
 
 /**
  * Helper function to format date as YYYY-MM-DD in local timezone
@@ -37,6 +38,10 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   const [nurses, setNurses] = useState([]);
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [loadingNurses, setLoadingNurses] = useState(false);
+  
+  // Insurance modal state
+  const [showInsuranceModal, setShowInsuranceModal] = useState(false);
+  const [insurancePatient, setInsurancePatient] = useState(null);
   
   // Alert/notification state
   const [alertModal, setAlertModal] = useState({
@@ -548,11 +553,18 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       // If insurance validation fails, stop here
       if (!result.success) {
         if (result.error_type === 'INSURANCE_WARNING' || result.error_type === 'INSURANCE_EXPIRED') {
+          // Show alert modal with option to add insurance
           setAlertModal({
             show: true,
             type: 'error',
             title: 'Cannot Check In - Insurance Issue',
-            message: result.message || result.error
+            message: result.message || result.error,
+            showAddInsurance: true,
+            insurancePatientData: {
+              Patient_id: selectedAppointment.patient_id,
+              Patient_First: selectedAppointment.patient_first,
+              Patient_Last: selectedAppointment.patient_last
+            }
           });
         } else {
           setAlertModal({
@@ -1141,7 +1153,26 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             </div>
 
             <div className="modal-footer">
-              {alertModal.confirmAction ? (
+              {alertModal.showAddInsurance ? (
+                <>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setInsurancePatient(alertModal.insurancePatientData);
+                      setShowInsuranceModal(true);
+                      setAlertModal({ ...alertModal, show: false });
+                    }}
+                  >
+                    Add Insurance
+                  </button>
+                  <button 
+                    className="btn btn-ghost"
+                    onClick={() => setAlertModal({ ...alertModal, show: false })}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : alertModal.confirmAction ? (
                 <>
                   <button 
                     className="btn btn-ghost" 
@@ -1174,6 +1205,22 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             </div>
           </div>
         </div>
+      )}
+
+      {/* ===== ADD INSURANCE MODAL ===== */}
+      {showInsuranceModal && insurancePatient && (
+        <AddInsuranceModal
+          patient={insurancePatient}
+          onClose={() => {
+            setShowInsuranceModal(false);
+            setInsurancePatient(null);
+          }}
+          onSuccess={() => {
+            setShowInsuranceModal(false);
+            setInsurancePatient(null);
+            loadSchedule(); // Refresh schedule to reflect updated insurance
+          }}
+        />
       )}
     </div>
   );
