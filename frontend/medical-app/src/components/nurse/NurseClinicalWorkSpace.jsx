@@ -33,9 +33,12 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
   const [showAllergyForm, setShowAllergyForm] = useState(false);
   const [allergyForm, setAllergyForm] = useState({
     allergy_text: '',
-    notes: ''
+    custom_allergy: '',
+    notes: '',
+    use_custom: false
   });
   const [availableAllergies, setAvailableAllergies] = useState([]);
+  const [selectedAllergies, setSelectedAllergies] = useState([]); // For multiple selection
 
   // Medication management states
   const [showMedicationForm, setShowMedicationForm] = useState(false);
@@ -236,9 +239,8 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
     }
   };
 
-  const handleAddAllergy = async (e) => {
-    e.preventDefault();
-    if (!allergyForm.allergy_text.trim()) return;
+  const handleAddAllergy = async (allergyText, notes = '') => {
+    if (!allergyText.trim()) return;
 
     setManagementLoading(true);
     try {
@@ -248,24 +250,80 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patient_id: patientData.patient.patient_id,
-          allergy_text: allergyForm.allergy_text,
-          notes: allergyForm.notes
+          allergy_text: allergyText,
+          notes: notes
         })
       });
 
       const data = await response.json();
-      if (data.success) {
-        setAllergyForm({ allergy_text: '', notes: '' });
-        setShowAllergyForm(false);
-        // Refresh patient data
-        await fetchPatientDetails();
-        alert('Allergy added successfully!');
-      } else {
-        alert('Error adding allergy: ' + data.error);
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to add allergy');
       }
+      
+      return data;
     } catch (error) {
       console.error('Error adding allergy:', error);
-      alert('Error adding allergy');
+      throw error;
+    } finally {
+      setManagementLoading(false);
+    }
+  };
+
+  const handleAddMultipleAllergies = async (e) => {
+    e.preventDefault();
+    
+    const allergiesToAdd = [];
+    
+    // Add selected allergies
+    selectedAllergies.forEach(allergyText => {
+      allergiesToAdd.push({ text: allergyText, notes: allergyForm.notes });
+    });
+    
+    // Add custom allergy if specified
+    if (allergyForm.use_custom && allergyForm.custom_allergy.trim()) {
+      allergiesToAdd.push({ text: allergyForm.custom_allergy.trim(), notes: allergyForm.notes });
+    }
+    
+    if (allergiesToAdd.length === 0) {
+      alert('Please select at least one allergy or enter a custom allergy');
+      return;
+    }
+
+    setManagementLoading(true);
+    let successCount = 0;
+    let errors = [];
+
+    try {
+      // Add allergies one by one
+      for (const allergy of allergiesToAdd) {
+        try {
+          await handleAddAllergy(allergy.text, allergy.notes);
+          successCount++;
+        } catch (error) {
+          errors.push(`${allergy.text}: ${error.message}`);
+        }
+      }
+
+      // Reset form and refresh data
+      setAllergyForm({ allergy_text: '', custom_allergy: '', notes: '', use_custom: false });
+      setSelectedAllergies([]);
+      setShowAllergyForm(false);
+      await fetchPatientDetails();
+
+      // Show results
+      if (successCount > 0) {
+        const message = successCount === 1 ? '1 allergy added successfully!' : `${successCount} allergies added successfully!`;
+        if (errors.length > 0) {
+          alert(`${message}\n\nErrors:\n${errors.join('\n')}`);
+        } else {
+          alert(message);
+        }
+      } else {
+        alert('Failed to add allergies:\n' + errors.join('\n'));
+      }
+    } catch (error) {
+      console.error('Error in batch allergy addition:', error);
+      alert('Error adding allergies');
     } finally {
       setManagementLoading(false);
     }
@@ -375,6 +433,23 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
     } finally {
       setManagementLoading(false);
     }
+  };
+
+  // Helper functions for multiple allergy selection
+  const toggleAllergySelection = (allergyText) => {
+    setSelectedAllergies(prev => {
+      if (prev.includes(allergyText)) {
+        return prev.filter(a => a !== allergyText);
+      } else {
+        return [...prev, allergyText];
+      }
+    });
+  };
+
+  const resetAllergyForm = () => {
+    setAllergyForm({ allergy_text: '', custom_allergy: '', notes: '', use_custom: false });
+    setSelectedAllergies([]);
+    setShowAllergyForm(false);
   };
 
   // Load available allergies on component mount
@@ -556,48 +631,85 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         {/* Add Allergy Form */}
         {showAllergyForm && (
           <div className="add-item-form">
-            <h4>Add New Allergy</h4>
-            <form onSubmit={handleAddAllergy}>
-              <div className="form-row">
-                <select
-                  value={allergyForm.allergy_text}
-                  onChange={(e) => setAllergyForm(prev => ({ ...prev, allergy_text: e.target.value }))}
-                  className="form-select"
-                >
-                  <option value="">Select existing allergy...</option>
+            <h4>Add Allergies</h4>
+            <form onSubmit={handleAddMultipleAllergies}>
+              
+              {/* Available Allergies Selection */}
+              <div className="form-section">
+                <label className="form-label">Select Known Allergies:</label>
+                <div className="allergies-checklist">
                   {availableAllergies.map(allergy => (
-                    <option key={allergy.allergies_code} value={allergy.allergies_text}>
-                      {allergy.allergies_text}
-                    </option>
+                    <label key={allergy.allergies_code} className="checkbox-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedAllergies.includes(allergy.allergies_text)}
+                        onChange={() => toggleAllergySelection(allergy.allergies_text)}
+                        disabled={managementLoading}
+                      />
+                      <span className="checkbox-label">{allergy.allergies_text}</span>
+                    </label>
                   ))}
-                </select>
-                <span className="form-or">OR</span>
+                  
+                  {/* Other/Custom option */}
+                  <label className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={allergyForm.use_custom}
+                      onChange={(e) => setAllergyForm(prev => ({ ...prev, use_custom: e.target.checked }))}
+                      disabled={managementLoading}
+                    />
+                    <span className="checkbox-label">Other (specify below)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Custom Allergy Input */}
+              {allergyForm.use_custom && (
+                <div className="form-section">
+                  <label className="form-label">Custom Allergy:</label>
+                  <input
+                    type="text"
+                    placeholder="Enter specific allergy"
+                    value={allergyForm.custom_allergy}
+                    onChange={(e) => setAllergyForm(prev => ({ ...prev, custom_allergy: e.target.value }))}
+                    className="form-input"
+                    disabled={managementLoading}
+                  />
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="form-section">
+                <label className="form-label">Notes (optional):</label>
                 <input
                   type="text"
-                  placeholder="Enter new allergy"
-                  value={allergyForm.allergy_text}
-                  onChange={(e) => setAllergyForm(prev => ({ ...prev, allergy_text: e.target.value }))}
+                  placeholder="Additional notes for selected allergies"
+                  value={allergyForm.notes}
+                  onChange={(e) => setAllergyForm(prev => ({ ...prev, notes: e.target.value }))}
                   className="form-input"
+                  disabled={managementLoading}
                 />
               </div>
-              <input
-                type="text"
-                placeholder="Notes (optional)"
-                value={allergyForm.notes}
-                onChange={(e) => setAllergyForm(prev => ({ ...prev, notes: e.target.value }))}
-                className="form-input"
-              />
+
+              {/* Selected Count */}
+              {(selectedAllergies.length > 0 || (allergyForm.use_custom && allergyForm.custom_allergy.trim())) && (
+                <div className="selection-summary">
+                  <strong>Selected: </strong>
+                  {selectedAllergies.length > 0 && <span>{selectedAllergies.length} known allergies</span>}
+                  {selectedAllergies.length > 0 && allergyForm.use_custom && allergyForm.custom_allergy.trim() && <span>, </span>}
+                  {allergyForm.use_custom && allergyForm.custom_allergy.trim() && <span>1 custom allergy</span>}
+                </div>
+              )}
+
               <div className="form-actions">
                 <button type="submit" className="btn-primary" disabled={managementLoading}>
-                  {managementLoading ? 'Adding...' : 'Add Allergy'}
+                  {managementLoading ? 'Adding...' : 'Add Selected Allergies'}
                 </button>
                 <button 
                   type="button" 
                   className="btn-secondary"
-                  onClick={() => {
-                    setShowAllergyForm(false);
-                    setAllergyForm({ allergy_text: '', notes: '' });
-                  }}
+                  onClick={resetAllergyForm}
+                  disabled={managementLoading}
                 >
                   Cancel
                 </button>
