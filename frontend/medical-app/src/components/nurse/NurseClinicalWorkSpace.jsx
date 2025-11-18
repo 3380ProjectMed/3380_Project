@@ -318,7 +318,13 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
             successCount++;
           }
         } catch (error) {
-          errors.push(`${allergy.text}: ${error.message}`);
+          // Check if it's a duplicate error
+          const errorMessage = error.message;
+          if (errorMessage.includes('already recorded')) {
+            errors.push(`${allergy.text}: Already exists for this patient`);
+          } else {
+            errors.push(`${allergy.text}: ${errorMessage}`);
+          }
         }
       }
 
@@ -616,7 +622,10 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
                 )}
               </div>
               <div className="item-actions">
-                <span className="allergy-date">Added: {formatChicagoDate(allergy.created_at)}</span>
+                <span className="allergy-date">
+                  Added: {formatChicagoDate(allergy.date_recorded)} 
+                  {allergy.recorded_by && ` by ${allergy.recorded_by}`}
+                </span>
                 <button 
                   className="btn-remove"
                   onClick={() => handleRemoveAllergy(allergy.app_id, null)}
