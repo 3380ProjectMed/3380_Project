@@ -1,6 +1,6 @@
 // src/components/nurse/NurseClinicalWorkspace.jsx - UPDATED WITH STATUS HANDLING
 import React, { useState, useEffect } from 'react';
-import { Activity, AlertCircle, Save, X, CheckCircle, User, Calendar } from 'lucide-react';
+import { Activity, AlertCircle, Save, X, CheckCircle, User, Calendar, Plus, Edit2, Trash2, Pill } from 'lucide-react';
 import './NurseClinicalWorkSpace.css';
 
 /**
@@ -28,6 +28,28 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
     temperature: '',
     present_illnesses: ''
   });
+
+  // Allergy management states
+  const [showAllergyForm, setShowAllergyForm] = useState(false);
+  const [allergyForm, setAllergyForm] = useState({
+    allergy_text: '',
+    notes: ''
+  });
+  const [availableAllergies, setAvailableAllergies] = useState([]);
+
+  // Medication management states
+  const [showMedicationForm, setShowMedicationForm] = useState(false);
+  const [medicationForm, setMedicationForm] = useState({
+    medication_name: '',
+    dosage: '',
+    frequency: '',
+    route: 'Oral',
+    notes: '',
+    type: 'history'
+  });
+
+  // General management states
+  const [managementLoading, setManagementLoading] = useState(false);
 
   useEffect(() => {
     if (selectedPatient?.visit_id || selectedPatient?.appointment_id) {
@@ -200,6 +222,166 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
     }
   };
 
+  // Allergy management functions
+  const loadAvailableAllergies = async () => {
+    try {
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      const response = await fetch(`${API_BASE}/nurse_api/clinical/manage-allergies.php`);
+      const data = await response.json();
+      if (data.success) {
+        setAvailableAllergies(data.allergy_codes || []);
+      }
+    } catch (error) {
+      console.error('Error loading allergies:', error);
+    }
+  };
+
+  const handleAddAllergy = async (e) => {
+    e.preventDefault();
+    if (!allergyForm.allergy_text.trim()) return;
+
+    setManagementLoading(true);
+    try {
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      const response = await fetch(`${API_BASE}/nurse_api/clinical/manage-allergies.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id: patientData.patient.patient_id,
+          allergy_text: allergyForm.allergy_text,
+          notes: allergyForm.notes
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAllergyForm({ allergy_text: '', notes: '' });
+        setShowAllergyForm(false);
+        // Refresh patient data
+        await fetchPatientDetails();
+        alert('Allergy added successfully!');
+      } else {
+        alert('Error adding allergy: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error adding allergy:', error);
+      alert('Error adding allergy');
+    } finally {
+      setManagementLoading(false);
+    }
+  };
+
+  const handleRemoveAllergy = async (allergyId, allergyCode) => {
+    if (!confirm('Are you sure you want to remove this allergy?')) return;
+
+    setManagementLoading(true);
+    try {
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      const params = new URLSearchParams({
+        patient_id: patientData.patient.patient_id
+      });
+      
+      if (allergyId) params.append('allergy_id', allergyId);
+      if (allergyCode) params.append('allergy_code', allergyCode);
+
+      const response = await fetch(`${API_BASE}/nurse_api/clinical/manage-allergies.php?${params}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchPatientDetails();
+        alert('Allergy removed successfully!');
+      } else {
+        alert('Error removing allergy: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error removing allergy:', error);
+      alert('Error removing allergy');
+    } finally {
+      setManagementLoading(false);
+    }
+  };
+
+  // Medication management functions
+  const handleAddMedication = async (e) => {
+    e.preventDefault();
+    if (!medicationForm.medication_name.trim()) return;
+
+    setManagementLoading(true);
+    try {
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      const response = await fetch(`${API_BASE}/nurse_api/clinical/manage-medications.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id: patientData.patient.patient_id,
+          ...medicationForm
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setMedicationForm({
+          medication_name: '',
+          dosage: '',
+          frequency: '',
+          route: 'Oral',
+          notes: '',
+          type: 'history'
+        });
+        setShowMedicationForm(false);
+        await fetchPatientDetails();
+        alert('Medication added successfully!');
+      } else {
+        alert('Error adding medication: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error adding medication:', error);
+      alert('Error adding medication');
+    } finally {
+      setManagementLoading(false);
+    }
+  };
+
+  const handleRemoveMedication = async (medicationId, type = 'prescription') => {
+    if (!confirm('Are you sure you want to remove this medication?')) return;
+
+    setManagementLoading(true);
+    try {
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      const params = new URLSearchParams({ type });
+      
+      if (type === 'prescription') {
+        params.append('prescription_id', medicationId);
+      } else {
+        params.append('drug_id', medicationId);
+      }
+
+      const response = await fetch(`${API_BASE}/nurse_api/clinical/manage-medications.php?${params}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchPatientDetails();
+        alert('Medication removed successfully!');
+      } else {
+        alert('Error removing medication: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error removing medication:', error);
+      alert('Error removing medication');
+    } finally {
+      setManagementLoading(false);
+    }
+  };
+
+  // Load available allergies on component mount
+  useEffect(() => {
+    loadAvailableAllergies();
+  }, []);
+
   if (loading) {
     return (
       <div className="clinical-workspace loading">
@@ -308,83 +490,286 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       )}
 
       {/* Patient Allergies */}
-      {(patientData?.allergies?.specific_allergies?.length > 0 || patientData?.allergies?.general_allergy?.length > 0) && (
-        <div className="allergies-section">
+      <div className="allergies-section">
+        <div className="section-header">
           <h3>🚨 Allergies</h3>
-          <div className="allergies-grid">
-            {/* Specific Allergies */}
-            {patientData.allergies.specific_allergies?.map((allergy, index) => (
-              <div key={index} className="allergy-item">
-                <div className="allergy-main">
-                  <span className="allergy-name">{allergy.allergies_text}</span>
-                  {allergy.notes && (
-                    <span className="allergy-notes">({allergy.notes})</span>
-                  )}
-                </div>
-                <span className="allergy-date">Added: {formatChicagoDate(allergy.created_at)}</span>
-              </div>
-            ))}
-            
-            {/* General Allergy (fallback) */}
-            {patientData.allergies.general_allergy?.map((allergy, index) => (
-              <div key={index} className="allergy-item general">
-                <div className="allergy-main">
-                  <span className="allergy-name">{allergy.allergies_text}</span>
-                  <span className="allergy-type">(General Record)</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <button 
+            className="btn-add-item" 
+            onClick={() => setShowAllergyForm(true)}
+            disabled={managementLoading}
+          >
+            <Plus size={16} />
+            Add Allergy
+          </button>
         </div>
-      )}
+        
+        <div className="allergies-grid">
+          {/* Specific Allergies */}
+          {patientData?.allergies?.specific_allergies?.map((allergy, index) => (
+            <div key={index} className="allergy-item">
+              <div className="allergy-main">
+                <span className="allergy-name">{allergy.allergies_text}</span>
+                {allergy.notes && (
+                  <span className="allergy-notes">({allergy.notes})</span>
+                )}
+              </div>
+              <div className="item-actions">
+                <span className="allergy-date">Added: {formatChicagoDate(allergy.created_at)}</span>
+                <button 
+                  className="btn-remove"
+                  onClick={() => handleRemoveAllergy(allergy.app_id, null)}
+                  disabled={managementLoading}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+          
+          {/* General Allergy (fallback) */}
+          {patientData?.allergies?.general_allergy?.map((allergy, index) => (
+            <div key={index} className="allergy-item general">
+              <div className="allergy-main">
+                <span className="allergy-name">{allergy.allergies_text}</span>
+                <span className="allergy-type">(General Record)</span>
+              </div>
+              <div className="item-actions">
+                <button 
+                  className="btn-remove"
+                  onClick={() => handleRemoveAllergy(null, allergy.allergies_code)}
+                  disabled={managementLoading}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+          
+          {/* No allergies message */}
+          {(!patientData?.allergies?.specific_allergies?.length && !patientData?.allergies?.general_allergy?.length) && (
+            <div className="no-items-message">
+              No known allergies recorded
+            </div>
+          )}
+        </div>
+
+        {/* Add Allergy Form */}
+        {showAllergyForm && (
+          <div className="add-item-form">
+            <h4>Add New Allergy</h4>
+            <form onSubmit={handleAddAllergy}>
+              <div className="form-row">
+                <select
+                  value={allergyForm.allergy_text}
+                  onChange={(e) => setAllergyForm(prev => ({ ...prev, allergy_text: e.target.value }))}
+                  className="form-select"
+                >
+                  <option value="">Select existing allergy...</option>
+                  {availableAllergies.map(allergy => (
+                    <option key={allergy.allergies_code} value={allergy.allergies_text}>
+                      {allergy.allergies_text}
+                    </option>
+                  ))}
+                </select>
+                <span className="form-or">OR</span>
+                <input
+                  type="text"
+                  placeholder="Enter new allergy"
+                  value={allergyForm.allergy_text}
+                  onChange={(e) => setAllergyForm(prev => ({ ...prev, allergy_text: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="Notes (optional)"
+                value={allergyForm.notes}
+                onChange={(e) => setAllergyForm(prev => ({ ...prev, notes: e.target.value }))}
+                className="form-input"
+              />
+              <div className="form-actions">
+                <button type="submit" className="btn-primary" disabled={managementLoading}>
+                  {managementLoading ? 'Adding...' : 'Add Allergy'}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowAllergyForm(false);
+                    setAllergyForm({ allergy_text: '', notes: '' });
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
 
       {/* Current Medications */}
-      {(patientData?.medications?.current_prescriptions?.length > 0 || patientData?.medications?.medication_history?.length > 0) && (
-        <div className="medications-section">
+      <div className="medications-section">
+        <div className="section-header">
           <h3>💊 Current Medications</h3>
-          
-          {/* Active Prescriptions */}
-          {patientData.medications.current_prescriptions?.length > 0 && (
-            <div className="medications-subsection">
-              <h4>Active Prescriptions</h4>
-              <div className="medications-grid">
-                {patientData.medications.current_prescriptions.map((med, index) => (
-                  <div key={index} className="medication-item">
-                    <div className="med-name">{med.medication_name}</div>
-                    <div className="med-details">
-                      {med.dosage && <span className="med-dosage">{med.dosage}</span>}
-                      {med.frequency && <span className="med-frequency">{med.frequency}</span>}
-                      {med.route && <span className="med-route">{med.route}</span>}
-                    </div>
-                    {med.prescribed_by && (
-                      <div className="med-prescriber">Prescribed by: {med.prescribed_by}</div>
-                    )}
-                    <div className="med-dates">
-                      Start: {formatChicagoDate(med.start_date)}
-                      {med.end_date && ` | End: ${formatChicagoDate(med.end_date)}`}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Medication History */}
-          {patientData.medications.medication_history?.length > 0 && (
-            <div className="medications-subsection">
-              <h4>Medication History</h4>
-              <div className="medications-grid">
-                {patientData.medications.medication_history.map((med, index) => (
-                  <div key={index} className="medication-item history">
-                    <div className="med-name">{med.drug_name}</div>
-                    <div className="med-frequency">{med.frequency}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <button 
+            className="btn-add-item" 
+            onClick={() => setShowMedicationForm(true)}
+            disabled={managementLoading}
+          >
+            <Pill size={16} />
+            Add Medication
+          </button>
         </div>
-      )}
+        
+        {/* Active Prescriptions */}
+        {patientData?.medications?.current_prescriptions?.length > 0 && (
+          <div className="medications-subsection">
+            <h4>Active Prescriptions</h4>
+            <div className="medications-grid">
+              {patientData.medications.current_prescriptions.map((med, index) => (
+                <div key={index} className="medication-item">
+                  <div className="med-header">
+                    <div className="med-name">{med.medication_name}</div>
+                    <button 
+                      className="btn-remove"
+                      onClick={() => handleRemoveMedication(med.prescription_id, 'prescription')}
+                      disabled={managementLoading}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div className="med-details">
+                    {med.dosage && <span className="med-dosage">{med.dosage}</span>}
+                    {med.frequency && <span className="med-frequency">{med.frequency}</span>}
+                    {med.route && <span className="med-route">{med.route}</span>}
+                  </div>
+                  {med.prescribed_by && (
+                    <div className="med-prescriber">Prescribed by: {med.prescribed_by}</div>
+                  )}
+                  <div className="med-dates">
+                    Start: {formatChicagoDate(med.start_date)}
+                    {med.end_date && ` | End: ${formatChicagoDate(med.end_date)}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Medication History */}
+        {patientData?.medications?.medication_history?.length > 0 && (
+          <div className="medications-subsection">
+            <h4>Medication History</h4>
+            <div className="medications-grid">
+              {patientData.medications.medication_history.map((med, index) => (
+                <div key={index} className="medication-item history">
+                  <div className="med-header">
+                    <div className="med-name">{med.drug_name}</div>
+                    <button 
+                      className="btn-remove"
+                      onClick={() => handleRemoveMedication(med.drug_id, 'history')}
+                      disabled={managementLoading}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div className="med-frequency">{med.frequency}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* No medications message */}
+        {(!patientData?.medications?.current_prescriptions?.length && !patientData?.medications?.medication_history?.length) && (
+          <div className="no-items-message">
+            No medications recorded
+          </div>
+        )}
+
+        {/* Add Medication Form */}
+        {showMedicationForm && (
+          <div className="add-item-form">
+            <h4>Add New Medication</h4>
+            <form onSubmit={handleAddMedication}>
+              <input
+                type="text"
+                placeholder="Medication name *"
+                value={medicationForm.medication_name}
+                onChange={(e) => setMedicationForm(prev => ({ ...prev, medication_name: e.target.value }))}
+                className="form-input"
+                required
+              />
+              <div className="form-row">
+                <input
+                  type="text"
+                  placeholder="Dosage (e.g., 500mg)"
+                  value={medicationForm.dosage}
+                  onChange={(e) => setMedicationForm(prev => ({ ...prev, dosage: e.target.value }))}
+                  className="form-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Frequency (e.g., Twice daily)"
+                  value={medicationForm.frequency}
+                  onChange={(e) => setMedicationForm(prev => ({ ...prev, frequency: e.target.value }))}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-row">
+                <select
+                  value={medicationForm.route}
+                  onChange={(e) => setMedicationForm(prev => ({ ...prev, route: e.target.value }))}
+                  className="form-select"
+                >
+                  <option value="Oral">Oral</option>
+                  <option value="Injection">Injection</option>
+                  <option value="Topical">Topical</option>
+                  <option value="Inhaled">Inhaled</option>
+                  <option value="Other">Other</option>
+                </select>
+                <select
+                  value={medicationForm.type}
+                  onChange={(e) => setMedicationForm(prev => ({ ...prev, type: e.target.value }))}
+                  className="form-select"
+                >
+                  <option value="history">Add to History</option>
+                  <option value="prescription">Add as Prescription</option>
+                </select>
+              </div>
+              <input
+                type="text"
+                placeholder="Notes (optional)"
+                value={medicationForm.notes}
+                onChange={(e) => setMedicationForm(prev => ({ ...prev, notes: e.target.value }))}
+                className="form-input"
+              />
+              <div className="form-actions">
+                <button type="submit" className="btn-primary" disabled={managementLoading}>
+                  {managementLoading ? 'Adding...' : 'Add Medication'}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowMedicationForm(false);
+                    setMedicationForm({
+                      medication_name: '',
+                      dosage: '',
+                      frequency: '',
+                      route: 'Oral',
+                      notes: '',
+                      type: 'history'
+                    });
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
 
       {/* Main Content */}
       <div className="workspace-content">
