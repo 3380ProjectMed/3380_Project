@@ -267,8 +267,6 @@ try {
                             ORDER BY app.created_at DESC";
         
         $specific_allergies = executeQuery($conn, $specific_allergy_sql, 'i', [$patient_id]);
-        error_log("Specific allergies found: " . count($specific_allergies) . " for patient " . $patient_id);
-        error_log("Specific allergies data: " . json_encode($specific_allergies));
     } catch (Exception $e) {
         error_log("allergies_per_patient table query failed: " . $e->getMessage());
         $specific_allergies = [];
@@ -283,8 +281,6 @@ try {
                         WHERE p.patient_id = ? AND p.allergies IS NOT NULL";
     
     $patient_allergy = executeQuery($conn, $patient_allergy_sql, 'i', [$patient_id]);
-    error_log("General allergies found: " . count($patient_allergy) . " for patient " . $patient_id);
-    error_log("General allergies data: " . json_encode($patient_allergy));
 
     // Get current medications from prescription table (if exists)
     $medications = [];
@@ -334,8 +330,6 @@ try {
         'specific_allergies' => $specific_allergies ?: [],
         'general_allergy' => $patient_allergy ?: []
     ];
-    
-    error_log("Final allergies result: " . json_encode($result['allergies']));
     
     $result['medications'] = [
         'current_prescriptions' => $medications ?: [],
