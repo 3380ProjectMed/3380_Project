@@ -1,67 +1,103 @@
-/* Medical Records styles - Modern, polished design */
+/* Medical Records styles - Better layout design */
 
-/* Records Grid */
+/* Main layout - Stacked cards with better flow */
 .records-grid { 
-  display: grid; 
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-  gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
   margin-top: 2rem;
+  max-width: 1400px;
+}
+
+/* Two column layout for sections with actions */
+.records-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 2rem;
 }
 
 .record-card { 
   background: white;
   border-radius: 1rem; 
-  padding: 2rem; 
+  padding: 0;
   box-shadow: 0 2px 8px rgba(0, 119, 182, 0.08);
   border: 2px solid #e5e7eb;
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
-  min-height: 300px;
 }
 
 .record-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 180, 216, 0.15);
+  box-shadow: 0 6px 16px rgba(0, 180, 216, 0.12);
   border-color: #00b4d8;
 }
 
+/* Card header */
 .record-card h3 { 
-  margin: 0 0 1.5rem 0; 
+  margin: 0;
   color: #03045e;
   font-weight: 700; 
-  font-size: 1.4rem;
-  padding-bottom: 1rem;
+  font-size: 1.5rem;
+  padding: 1.75rem 2rem;
   border-bottom: 2px solid #f3f4f6;
+  background: linear-gradient(135deg, #f8fafc, white);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-/* Add button in card */
+/* Add button in header */
+.record-card h3 + .record-add-btn {
+  display: none; /* Hide the separate button */
+}
+
+.record-card h3::after {
+  content: '';
+  /* We'll add button via JSX instead */
+}
+
 .record-add-btn {
-  margin-bottom: 1.5rem;
+  margin: 0;
+  padding: 0 2rem 1.5rem 2rem;
+  flex-shrink: 0;
 }
 
 .record-add-btn .btn-primary {
   width: 100%;
   justify-content: center;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.95rem;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
   font-weight: 600;
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  border: none;
+  color: white;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-/* Record content area */
+.record-add-btn .btn-primary:hover {
+  background: linear-gradient(135deg, #005f8f, #0096b8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
+}
+
+/* Content area - compact and clean */
 .record-card > ul,
-.record-card > div:not(.record-add-btn) {
-  flex: 1;
+.record-card > p.text-gray {
+  padding: 1.5rem 2rem 2rem 2rem;
+  margin: 0;
 }
 
 .text-gray { 
   color: #9ca3af;
   font-style: italic;
   text-align: center;
-  padding: 2rem 0;
+  padding: 2.5rem 2rem !important;
+  font-size: 1rem;
 }
 
-/* Medical Record Lists with Delete Buttons */
+/* List styling - more compact */
 .medication-list,
 .allergy-list {
   list-style: none;
@@ -83,30 +119,38 @@
 }
 
 .record-card ul:not(.medication-list):not(.allergy-list) li {
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   background: #f8fafc;
-  border-radius: 0.5rem;
-  border-left: 3px solid #0077b6;
+  border-radius: 0.75rem;
+  border-left: 4px solid #0077b6;
   font-size: 0.95rem;
   line-height: 1.6;
   color: #374151;
+  transition: all 0.2s ease;
+}
+
+.record-card ul:not(.medication-list):not(.allergy-list) li:hover {
+  background: #e0f2fe;
+  transform: translateX(4px);
 }
 
 .record-card ul:not(.medication-list):not(.allergy-list) li strong {
   color: #03045e;
-  font-weight: 600;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.25rem;
 }
 
-/* Medication and Allergy Items */
+/* Medication and Allergy Items - cleaner design */
 .medication-item,
 .allergy-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   background: #f8fafc;
-  border-radius: 0.5rem;
-  border-left: 3px solid #0077b6;
+  border-radius: 0.75rem;
+  border-left: 4px solid #0077b6;
   transition: all 0.2s ease;
 }
 
@@ -122,18 +166,19 @@
   margin-right: 1rem;
   color: #374151;
   font-size: 0.95rem;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-weight: 500;
 }
 
 .btn-delete {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: #ef4444;
   color: white;
   border: none;
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -143,7 +188,7 @@
 }
 
 .btn-delete:hover {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background: #dc2626;
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
@@ -209,7 +254,7 @@
   background: linear-gradient(135deg, #10b981, #059669);
   color: white;
   border: none;
-  padding: 0.7rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   cursor: pointer;
   font-weight: 600;
@@ -260,7 +305,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
+  padding: 1.75rem 2rem;
   border-bottom: 2px solid #f3f4f6;
   background: linear-gradient(135deg, #f8fafc, white);
 }
@@ -334,11 +379,37 @@
   margin-top: 2rem;
 }
 
+.btn-primary {
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #005f8f, #0096b8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
+}
+
+.btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .btn-secondary {
   background: white;
   border: 2px solid #e5e7eb;
   color: #6b7280;
-  padding: 0.7rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   cursor: pointer;
   font-weight: 600;
@@ -351,20 +422,37 @@
   color: #0077b6;
 }
 
+/* Responsive design */
+@media (max-width: 1024px) {
+  .records-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .records-grid {
-    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .record-card h3 {
+    font-size: 1.25rem;
+    padding: 1.5rem;
+  }
+
+  .record-card > ul,
+  .record-card > p.text-gray,
+  .record-add-btn {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 
   .form-row,
   .form-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
   }
   
   .modal-content {
     width: 95%;
-    margin: 1rem;
   }
   
   .modal-header,
@@ -372,18 +460,8 @@
     padding: 1.5rem;
   }
 
-  .record-card {
-    padding: 1.5rem;
-    min-height: auto;
-  }
-
   .medication-item,
   .allergy-item {
     padding: 0.875rem;
-  }
-
-  .btn-delete {
-    width: 2rem;
-    height: 2rem;
   }
 }
