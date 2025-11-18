@@ -74,15 +74,13 @@ try {
 
     $baseFrom = " FROM patient_visit pv
                 LEFT JOIN patient p ON pv.patient_id = p.patient_id
-                LEFT JOIN allergies_per_patient app ON p.patient_id = app.patient_id
-LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
+                LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
                 LEFT JOIN staff d ON pv.doctor_id = d.staff_id
                 LEFT JOIN nurse n ON pv.nurse_id = n.nurse_id
                 LEFT JOIN staff s ON n.staff_id = s.staff_id
                 LEFT JOIN office o ON pv.office_id = o.office_id";
-
-    $rows = [];
+$rows = [];
 
     // MAIN LOGIC: If appointment_id provided, match by BOTH appointment_id AND date
     if ($appointment_id > 0) {
@@ -99,18 +97,19 @@ LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
                     p.dob,
                     p.blood_type,
                     ca.allergies_text as allergies,
-                    cg.gender_text as gender,
+                                   cg.gender_text as gender,
                     CONCAT(s.first_name, ' ', s.last_name) as doctor_name,
                     o.name as office_name
                 FROM appointment a
+                LEFT JOIN allergies_per_patient app ON a.Patient_id = app.patient_id
                 LEFT JOIN patient p ON a.Patient_id = p.patient_id
-                LEFT JOIN allergies_per_patient app ON p.patient_id = app.patient_id
-LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
+                LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+                LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
                 LEFT JOIN staff s ON a.Doctor_id = s.staff_id
                 LEFT JOIN office o ON a.Office_id = o.office_id
                 WHERE a.Appointment_id = ?";
-        $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
+                 $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
 
         if (empty($apptRows)) {
             http_response_code(404);
@@ -238,7 +237,7 @@ LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
         }
     } elseif ($visit_id > 0) {
         // Direct visit_id lookup
-        $sql = $baseSelect . $baseFrom . " WHERE pv.visit_id = ? GROUP BY pv.visit_id";
+        $sql = $baseSelect . $baseFrom . " WHERE pv.visit_id = ?";
         $rows = executeQuery($conn, $sql, 'i', [$visit_id]);
     } else {
         // Patient_id only - get most recent visit
@@ -248,7 +247,7 @@ LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
                 LIMIT 1";
         $rows = executeQuery($conn, $sql, 'i', [$patient_id]);
     }
-
+    
     // No visit found
     if (empty($rows)) {
         http_response_code(404);

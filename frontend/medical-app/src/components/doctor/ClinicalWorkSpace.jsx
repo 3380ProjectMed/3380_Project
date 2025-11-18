@@ -92,9 +92,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       fetchNotesByPatientId(patientId);
       fetchTreatmentCatalog();
     }
-    else{
-      setError('No appointmentId or patientId provided.');
-    }
+   
   }, [appointmentId, patientId, patient]);
 
   // Alert helper: { message, type }
