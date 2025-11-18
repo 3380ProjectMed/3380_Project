@@ -35,6 +35,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   // Insurance modal state
   const [showInsuranceModal, setShowInsuranceModal] = useState(false);
   const [insurancePatient, setInsurancePatient] = useState(null);
+  const [validationToken, setValidationToken] = useState(null);
   
   // Alert/notification state
   const [alertModal, setAlertModal] = useState({
@@ -214,6 +215,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
               Patient_Last: patientLastVal
             }
           });
+          // store validation token if provided so we can acknowledge it when confirming check-in
+          if (data.validation_token) setValidationToken(data.validation_token);
         } else {
           setAlertModal({
             show: true,
@@ -233,6 +236,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
           title: 'Insurance Warning',
           message: data.insurance_warning
         });
+        if (data.validation_token) setValidationToken(data.validation_token);
       }
       
       setCheckingIn(false);
@@ -287,7 +291,8 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         credentials: 'include',
         body: JSON.stringify({ 
           Appointment_id: selectedAppointment.Appointment_id,
-          nurse_id: selectedNurse
+          nurse_id: selectedNurse,
+          validation_token: validationToken
         })
       });
       
@@ -312,6 +317,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         setShowNurseModal(false);
         setSelectedAppointment(null);
         setSelectedNurse(null);
+        setValidationToken(null);
         loadDashboardData();
         loadCalendarData();
       } else {

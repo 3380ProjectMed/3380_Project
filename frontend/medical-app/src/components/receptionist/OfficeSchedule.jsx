@@ -42,6 +42,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   // Insurance modal state
   const [showInsuranceModal, setShowInsuranceModal] = useState(false);
   const [insurancePatient, setInsurancePatient] = useState(null);
+  const [validationToken, setValidationToken] = useState(null);
   
   // Alert/notification state
   const [alertModal, setAlertModal] = useState({
@@ -573,6 +574,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
               Patient_Last: patientLastVal
             }
           });
+          if (result.validation_token) setValidationToken(result.validation_token);
         } else {
           setAlertModal({
             show: true,
@@ -593,6 +595,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
           title: 'Insurance Warning',
           message: result.insurance_warning
         });
+        if (result.validation_token) setValidationToken(result.validation_token);
       }
       
       // Insurance validation passed, now load nurses and show selection modal
@@ -650,7 +653,8 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         credentials: 'include',
         body: JSON.stringify({
           Appointment_id: selectedAppointment.appointment_id,
-          nurse_id: selectedNurse
+          nurse_id: selectedNurse,
+          validation_token: validationToken
         })
       });
       
@@ -676,6 +680,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         setShowNurseModal(false);
         setSelectedAppointment(null);
         setSelectedNurse(null);
+        setValidationToken(null);
         loadScheduleData();
       } else {
         setAlertModal({
