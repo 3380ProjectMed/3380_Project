@@ -81,10 +81,8 @@ try {
                 o.city,
                 o.state,
                 o.phone,
-
                 -- TOTAL
                 COUNT(a.Appointment_id) as total_appointments,
-
                 -- PER-STATUS COUNTS (covers full ENUM)
                 COUNT(CASE WHEN a.Status = 'Ready'       THEN 1 END) as ready,
                 COUNT(CASE WHEN a.Status = 'Scheduled'   THEN 1 END) as scheduled,
@@ -118,8 +116,6 @@ try {
                         ELSE NULL
                     END
                 ), 0) as avg_wait_minutes,
-
-                -- UTILIZATION (see section 2)
                 ROUND(
                     COUNT(a.Appointment_id) * 100.0 / 
                     NULLIF(DATEDIFF(?, ?) + 1, 0),
@@ -197,6 +193,7 @@ try {
         }
     }
     $sum_utilization = 0.0;
+
     foreach ($office_stats as &$office) {
         $office_appts = intval($office['total_appointments']);
 
@@ -213,9 +210,30 @@ try {
     $avg_utilization = $total_offices > 0
         ? round($sum_utilization / $total_offices, 1)
         : 0.0;
-    $avg_no_show_rate = $total_appointments > 0 ? round(($total_no_shows / $total_appointments) * 100, 1) : 0;
-    $avg_wait_time = $wait_time_count > 0 ? round($sum_wait_time / $wait_time_count, 0) : null;
-    $completion_rate = $total_appointments > 0 ? round(($total_completed / $total_appointments) * 100, 1) : 0;
+
+    // Combined utilization based on total volume share (should never exceed 100%)
+    $overall_utilization = 0.0;
+    if (!empty($office_stats)) {
+        $overall_utilization = array_reduce(
+            $office_stats,
+            function ($carry, $o) {
+                return $carry + (float)($o['volume_share'] ?? 0.0);
+            },
+            0.0
+        );
+        // Clamp and round so we never show > 100%
+        $overall_utilization = min(100.0, round($overall_utilization, 1));
+    }
+
+    $avg_no_show_rate = $total_appointments > 0
+        ? round(($total_no_shows / $total_appointments) * 100, 1)
+        : 0;
+    $avg_wait_time = $wait_time_count > 0
+        ? round($sum_wait_time / $wait_time_count, 0)
+        : null;
+    $completion_rate = $total_appointments > 0
+        ? round(($total_completed / $total_appointments) * 100, 1)
+        : 0;
 
     // Get daily appointment trends
     $sql = "SELECT 
@@ -233,18 +251,29 @@ try {
 
     // Get status breakdown
     $sql = "SELECT 
-                    a.Status,
-                    COUNT(*) AS count,
-                    ROUND(
-                        COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (),
-                        1
-                    ) AS percentage
-                FROM Appointment a
-                $where_clause
-                GROUP BY a.Status
-                ORDER BY count DESC";
+                CASE
+                    WHEN a.Status IN ('Completed', 'Ready', 'Waiting', 'Checked-in', 'In Progress')
+                        THEN 'Active/Completed'
+                    WHEN a.Status = 'Scheduled'
+                        THEN 'Scheduled'
+                    WHEN a.Status = 'No-Show'
+                        THEN 'No-Show'
+                    WHEN a.Status = 'Cancelled'
+                        THEN 'Cancelled'
+                    ELSE 'Other'
+                END AS status_group,
+                COUNT(*) AS count,
+                ROUND(
+                    COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (),
+                    1
+                ) AS percentage
+            FROM Appointment a
+            $where_clause
+            GROUP BY status_group
+            ORDER BY count DESC";
 
     $status_breakdown = executeQuery($conn, $sql, $param_types, $params);
+
 
     $summary = [
         'total_offices'      => $total_offices,
@@ -254,6 +283,7 @@ try {
         'cancelled'          => $total_cancelled,
         'no_shows'           => $total_no_shows,
         'avg_utilization'    => $avg_utilization,
+        'overall_utilization'=> $overall_utilization,
         'no_show_rate'       => $avg_no_show_rate,
         'avg_wait_minutes'   => $avg_wait_time,
         'completion_rate'    => $completion_rate
