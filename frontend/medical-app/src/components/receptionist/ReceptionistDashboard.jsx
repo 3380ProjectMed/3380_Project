@@ -196,6 +196,11 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         if (data.error_type === 'INSURANCE_WARNING' || data.error_type === 'INSURANCE_EXPIRED') {
           // Show alert modal with option to add/edit insurance
           const isExpired = data.error_type === 'INSURANCE_EXPIRED';
+          // Build a patient object with fallback keys (different endpoints use different casing)
+          const patientIdVal = selectedAppointment.Patient_id || selectedAppointment.patient_id || selectedAppointment.patientId || selectedAppointment.id || null;
+          const patientFirstVal = selectedAppointment.Patient_First || selectedAppointment.patient_first || selectedAppointment.first_name || (selectedAppointment.patient_name ? selectedAppointment.patient_name.split(' ')[0] : '') || '';
+          const patientLastVal = selectedAppointment.Patient_Last || selectedAppointment.patient_last || selectedAppointment.last_name || (selectedAppointment.patient_name ? selectedAppointment.patient_name.split(' ').slice(1).join(' ') : '') || '';
+
           setAlertModal({
             show: true,
             type: 'error',
@@ -204,9 +209,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
             showAddInsurance: true,
             insuranceButtonText: isExpired ? 'Edit Insurance' : 'Add Insurance',
             insurancePatientData: {
-              Patient_id: selectedAppointment.Patient_id,
-              Patient_First: selectedAppointment.Patient_First,
-              Patient_Last: selectedAppointment.Patient_Last
+              Patient_id: patientIdVal,
+              Patient_First: patientFirstVal,
+              Patient_Last: patientLastVal
             }
           });
         } else {
