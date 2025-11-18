@@ -66,16 +66,34 @@ try {
 
         // Try to insert into allergies_per_patient table (if it exists)
         try {
-            $insert_allergy_sql = "INSERT INTO allergies_per_patient (patient_id, allergies_code, notes) 
-                                 VALUES (?, ?, ?) 
-                                 ON DUPLICATE KEY UPDATE notes = VALUES(notes), updated_at = CURRENT_TIMESTAMP";
-            executeQuery($conn, $insert_allergy_sql, 'iis', [$patient_id, $allergy_code, $notes]);
+            // First check if this allergy already exists for this patient
+            $check_existing_sql = "SELECT app_id FROM allergies_per_patient WHERE patient_id = ? AND allergies_code = ?";
+            $existing = executeQuery($conn, $check_existing_sql, 'ii', [$patient_id, $allergy_code]);
             
-            echo json_encode([
-                'success' => true, 
-                'message' => 'Allergy added/updated successfully',
-                'allergy_code' => $allergy_code
-            ]);
+            if (!empty($existing)) {
+                // Allergy already exists, just update the notes
+                $update_sql = "UPDATE allergies_per_patient SET notes = ?, updated_at = CURRENT_TIMESTAMP WHERE patient_id = ? AND allergies_code = ?";
+                executeQuery($conn, $update_sql, 'sii', [$notes, $patient_id, $allergy_code]);
+                
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Allergy notes updated successfully',
+                    'allergy_code' => $allergy_code,
+                    'updated' => true
+                ]);
+            } else {
+                // New allergy, insert it
+                $insert_allergy_sql = "INSERT INTO allergies_per_patient (patient_id, allergies_code, notes) 
+                                     VALUES (?, ?, ?)";
+                executeQuery($conn, $insert_allergy_sql, 'iis', [$patient_id, $allergy_code, $notes]);
+                
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Allergy added successfully',
+                    'allergy_code' => $allergy_code,
+                    'created' => true
+                ]);
+            }
         } catch (Exception $e) {
             // If allergies_per_patient doesn't exist, fall back to updating patient table
             $update_patient_sql = "UPDATE patient SET allergies = ? WHERE patient_id = ?";
