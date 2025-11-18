@@ -584,14 +584,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                   onClick={() => setSelectedAppointment(appointment)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div className="appointment-header-row">
-                    <div className="appointment-time">
-                      <Clock size={20} />
-                      <span>{appointment.time || formatTime(appointment.Appointment_date || appointment.appointmentDateTime)}</span>
-                    </div>
-                    <div className="appointment-id-badge">
-                      Appt #{appointment.Appointment_id || appointment.id}
-                    </div>
+                  <div className="appointment-time">
+                    <Clock size={20} />
+                    <span>{appointment.time || formatTime(appointment.Appointment_date || appointment.appointmentDateTime)}</span>
                   </div>
 
                   <div className="appointment-patient">
@@ -627,6 +622,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     {appointment.waitingMinutes > 0 && (
                       <span className="waiting-time">{appointment.waitingMinutes} min</span>
                     )}
+                    <div className="appointment-id-badge">
+                      Appt #{appointment.Appointment_id || appointment.id}
+                    </div>
                   </div>
 
                   <div className="appointment-actions">
@@ -1008,14 +1006,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     }}
                     style={{ cursor: 'pointer' }}
                   >
-                    <div className="appointment-header-row">
-                      <div className="appointment-time">
-                        <Clock size={20} />
-                        <span>{formatTime(appointment.Appointment_date)}</span>
-                      </div>
-                      <div className="appointment-id-badge">
-                        Appt #{appointment.Appointment_id}
-                      </div>
+                    <div className="appointment-time">
+                      <Clock size={20} />
+                      <span>{formatTime(appointment.Appointment_date)}</span>
                     </div>
 
                     <div className="appointment-patient">
@@ -1042,6 +1035,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                       <span className={`status-badge ${getStatusClass(appointment.Status)}`}>
                         {appointment.Status || 'Scheduled'}
                       </span>
+                      <div className="appointment-id-badge">
+                        Appt #{appointment.Appointment_id}
+                      </div>
                     </div>
                   </div>
                 ))}
