@@ -66,7 +66,7 @@ try {
                         SELECT COUNT(*)
                         FROM appointment a3
                         WHERE a3.Patient_id = a.Patient_id
-                          AND a3.Doctor_id  = a.Doctor_id
+                          AND a3.Doctor_id  = ? 
                           AND a3.Status NOT IN ('Cancelled', 'No-Show')
                     ) >= 2
                     THEN 1 ELSE 0
@@ -76,14 +76,15 @@ try {
             WHERE a.Appointment_date BETWEEN ? AND ?
               AND a.Doctor_id = ?";
 
-    // types: 4 strings (dates) + 1 int (doctor_id) => 'ssssi'
-    $types  = 'ssssi';
+
+    $types  = 'ssissi';
     $params = [
-        $start_date . ' 00:00:00', // for BETWEEN ? AND ? inside is_new_patient
-        $end_date   . ' 23:59:59',
-        $start_date . ' 00:00:00', // main WHERE range
-        $end_date   . ' 23:59:59',
-        $doctor_id
+        $start_date . ' 00:00:00', 
+        $end_date   . ' 23:59:59', 
+        $doctor_id,                
+        $start_date . ' 00:00:00', 
+        $end_date   . ' 23:59:59', 
+        $doctor_id                 
     ];
 
     if ($office_id !== null) {
