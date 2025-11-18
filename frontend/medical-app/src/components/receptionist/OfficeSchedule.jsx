@@ -555,6 +555,11 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         if (result.error_type === 'INSURANCE_WARNING' || result.error_type === 'INSURANCE_EXPIRED') {
           // Show alert modal with option to add/edit insurance
           const isExpired = result.error_type === 'INSURANCE_EXPIRED';
+          // Normalize patient fields from the appointment object (different endpoints use different casing)
+          const patientIdVal = selectedAppointment.Patient_id || selectedAppointment.patient_id || selectedAppointment.patientId || selectedAppointment.id || null;
+          const patientFirstVal = selectedAppointment.Patient_First || selectedAppointment.patient_first || selectedAppointment.first_name || (selectedAppointment.patient_name ? selectedAppointment.patient_name.split(' ')[0] : '') || '';
+          const patientLastVal = selectedAppointment.Patient_Last || selectedAppointment.patient_last || selectedAppointment.last_name || (selectedAppointment.patient_name ? selectedAppointment.patient_name.split(' ').slice(1).join(' ') : '') || '';
+
           setAlertModal({
             show: true,
             type: 'error',
@@ -563,9 +568,9 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             showAddInsurance: true,
             insuranceButtonText: isExpired ? 'Edit Insurance' : 'Add Insurance',
             insurancePatientData: {
-              Patient_id: selectedAppointment.patient_id,
-              Patient_First: selectedAppointment.patient_first,
-              Patient_Last: selectedAppointment.patient_last
+              Patient_id: patientIdVal,
+              Patient_First: patientFirstVal,
+              Patient_Last: patientLastVal
             }
           });
         } else {
