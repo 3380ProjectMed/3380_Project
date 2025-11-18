@@ -151,62 +151,68 @@ export default function MedicalRecords(props) {
             )}
           </div>
 
-          <div className="record-card">
-            <h3>Medications</h3>
-            <button 
-              className="btn btn-primary btn-sm record-add-btn"
-              onClick={() => setShowMedicationModal(true)}
-            >
-              Add Medication
-            </button>
-            
-            {medications.length === 0 ? <p className="text-gray">No medications recorded</p> : (
-              <ul className="medication-list">
-                {medications.map((m, i) => (
-                  <li key={i} className="medication-item">
-                    <span>{m.name} — {m.frequency}</span>
-                    {m.id && (
-                      <button 
-                        className="btn-delete"
-                        onClick={() => handleDeleteMedication(m.id)}
-                        title="Delete medication"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <div className="records-row">
+            <div className="record-card">
+              <h3>Medications</h3>
+              <div className="record-add-btn">
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowMedicationModal(true)}
+                >
+                  Add Medication
+                </button>
+              </div>
+              
+              {medications.length === 0 ? <p className="text-gray">No medications recorded</p> : (
+                <ul className="medication-list">
+                  {medications.map((m, i) => (
+                    <li key={i} className="medication-item">
+                      <span>{m.name} — {m.frequency}</span>
+                      {m.id && (
+                        <button 
+                          className="btn-delete"
+                          onClick={() => handleDeleteMedication(m.id)}
+                          title="Delete medication"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
-          <div className="record-card">
-            <h3>Allergies</h3>
-            <button 
-              className="btn btn-primary btn-sm record-add-btn"
-              onClick={() => setShowAllergyModal(true)}
-            >
-              Add Allergy
-            </button>
-            
-            {allergies.length === 0 ? <p className="text-gray">No allergies recorded</p> : (
-              <ul className="allergy-list">
-                {allergies.map((a, i) => (
-                  <li key={i} className="allergy-item">
-                    <span>{typeof a === 'string' ? a : (a.allergy || a.name)}</span>
-                    {a.id && (
-                      <button 
-                        className="btn-delete"
-                        onClick={() => handleDeleteAllergy(a.id)}
-                        title="Remove allergy"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="record-card">
+              <h3>Allergies</h3>
+              <div className="record-add-btn">
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowAllergyModal(true)}
+                >
+                  Add Allergy
+                </button>
+              </div>
+              
+              {allergies.length === 0 ? <p className="text-gray">No allergies recorded</p> : (
+                <ul className="allergy-list">
+                  {allergies.map((a, i) => (
+                    <li key={i} className="allergy-item">
+                      <span>{typeof a === 'string' ? a : (a.allergy || a.name)}</span>
+                      {a.id && (
+                        <button 
+                          className="btn-delete"
+                          onClick={() => handleDeleteAllergy(a.id)}
+                          title="Remove allergy"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           <div className="record-card">
