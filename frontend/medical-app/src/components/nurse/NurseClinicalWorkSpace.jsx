@@ -559,15 +559,6 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
             <span>{formatChicagoDate(visit.date)}</span>
           </div>
         </div>
-        {patient.allergies && patient.allergies !== 'None' && (
-          <div className="info-item alert">
-            <AlertCircle size={18} />
-            <div>
-              <strong>ALLERGIES:</strong>
-              <span>{patient.allergies}</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Previously Saved Vitals/Notes */}

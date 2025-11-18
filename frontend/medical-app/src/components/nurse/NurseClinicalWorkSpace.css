@@ -314,8 +314,10 @@
   background: #f8f9fa;
   border: 2px solid #e8ecf1;
   border-radius: 8px;
-  padding: 0.75rem 1rem;
+  padding: 1rem 1.25rem;
   transition: all 0.2s;
+  min-height: 50px;
+  min-width: 140px;
 }
 
 .input-with-unit:focus-within {
@@ -331,6 +333,9 @@
   font-weight: 600;
   color: #2c3e50;
   outline: none;
+  min-width: 80px;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
 }
 
 .input-with-unit input::placeholder {
@@ -349,7 +354,12 @@
 .bp-inputs {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1.25rem;
+}
+
+.bp-inputs .form-group {
+  flex: 1;
+  min-width: 140px;
 }
 
 .bp-separator {
