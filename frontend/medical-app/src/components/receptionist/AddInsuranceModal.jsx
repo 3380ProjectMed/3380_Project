@@ -27,6 +27,7 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
   const [existingInsurance, setExistingInsurance] = useState(null);
 
   useEffect(() => {
+    console.log('AddInsuranceModal mounted with patient:', patient);
     loadInsurancePlans();
     loadExistingInsurance();
   }, []);

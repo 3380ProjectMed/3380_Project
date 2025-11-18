@@ -205,7 +205,7 @@ try {
                             'error_type' => 'INSURANCE_EXPIRED',
                             'error_code' => 'EXPIRED_INSURANCE',
                             'error' => 'Patient insurance has expired',
-                            'message' => 'Patient insurance has expired. Please update insurance information before check-in.',
+                            'message' => $errorMsg, // Use the full trigger message
                             'patient_id' => $patient_id,
                             'requires_update' => true
                         ]);
