@@ -83,11 +83,10 @@ try {
                 closeDBConnection($conn);
                 exit;
             } else {
-                // New allergy, insert it with proper column names and current user
-                $nurse_email = $_SESSION['email'] ?? '';
-                $insert_allergy_sql = "INSERT INTO allergies_per_patient (patient_id, allergy_id, notes, date_recorded, recorded_by) 
-                                     VALUES (?, ?, ?, CURRENT_DATE, ?)";
-                executeQuery($conn, $insert_allergy_sql, 'iiss', [$patient_id, $allergy_code, $notes, $nurse_email]);
+                // New allergy, insert it (matching patient_api.php structure)
+                $insert_allergy_sql = "INSERT INTO allergies_per_patient (patient_id, allergy_id, notes) 
+                                     VALUES (?, ?, ?)";
+                executeQuery($conn, $insert_allergy_sql, 'iis', [$patient_id, $allergy_code, $notes]);
                 
                 echo json_encode([
                     'success' => true, 

@@ -259,12 +259,11 @@ try {
                                 app.allergy_id,
                                 ca.allergies_text,
                                 app.notes,
-                                app.date_recorded,
-                                app.recorded_by
+                                app.created_at
                             FROM allergies_per_patient app
                             LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
                             WHERE app.patient_id = ?
-                            ORDER BY app.date_recorded DESC";
+                            ORDER BY app.created_at DESC";
         
         $specific_allergies = executeQuery($conn, $specific_allergy_sql, 'i', [$patient_id]);
     } catch (Exception $e) {

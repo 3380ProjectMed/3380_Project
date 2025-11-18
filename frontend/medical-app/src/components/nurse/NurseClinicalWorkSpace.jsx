@@ -623,8 +623,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
               </div>
               <div className="item-actions">
                 <span className="allergy-date">
-                  Added: {formatChicagoDate(allergy.date_recorded)} 
-                  {allergy.recorded_by && ` by ${allergy.recorded_by}`}
+                  Added: {formatChicagoDate(allergy.created_at)}
                 </span>
                 <button 
                   className="btn-remove"
