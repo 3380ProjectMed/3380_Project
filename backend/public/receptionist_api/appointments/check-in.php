@@ -83,9 +83,11 @@ try {
             $conn->query("SET @insurance_warning = NULL");
             
             // Attempt to insert - trigger will validate
+            // Use NULL for nurse_id during validation-only to avoid foreign key errors (frontend may pass 0)
             $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, nurse_id, office_id, start_at, insurance_policy_id_used)
-                              VALUES (?, ?, ?, ?, ?, NOW(), NULL)";
-            executeQuery($conn, $insertVisitSql, 'iiiii', [$appointment_id, $patient_id, $doctor_id, $nurse_id, $office_id]);
+                              VALUES (?, ?, ?, NULL, ?, NOW(), NULL)";
+            // bind: appointment_id, patient_id, doctor_id, office_id
+            executeQuery($conn, $insertVisitSql, 'iiii', [$appointment_id, $patient_id, $doctor_id, $office_id]);
             
             // Check for warnings from trigger
             $warningResult = $conn->query("SELECT @insurance_warning AS warning");
@@ -186,8 +188,28 @@ try {
                               VALUES (?, ?, ?, ?, ?, NOW(), NULL)";
 
             try {
-                executeQuery($conn, $insertVisitSql, 'iiiii', [$appointment_id, $patient_id, $doctor_id, $nurse_id, $office_id]);
-                
+                // Ensure nurse_id is valid before attempting insert to avoid FK constraint failures
+                $nurseToUse = null;
+                if ($nurse_id > 0) {
+                    $nurseCheck = executeQuery($conn, 'SELECT nurse_id FROM nurse WHERE nurse_id = ? LIMIT 1', 'i', [$nurse_id]);
+                    if (empty($nurseCheck)) {
+                        // Invalid nurse_id provided
+                        $conn->rollback();
+                        closeDBConnection($conn);
+                        http_response_code(400);
+                        echo json_encode([
+                            'success' => false,
+                            'error' => 'Invalid nurse_id provided',
+                            'nurse_id' => $nurse_id
+                        ]);
+                        exit;
+                    }
+                    $nurseToUse = $nurse_id;
+                }
+
+                // executeQuery will bind the nurse value; passing null will set NULL in statement
+                executeQuery($conn, $insertVisitSql, 'iiiii', [$appointment_id, $patient_id, $doctor_id, $nurseToUse, $office_id]);
+
             } catch (Exception $insertEx) {
                 // Trigger threw an error - parse it and return appropriate response
                 $errorMsg = $insertEx->getMessage();
