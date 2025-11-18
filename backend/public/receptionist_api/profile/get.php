@@ -17,11 +17,11 @@ try {
 
     // Fetch receptionist profile from staff and work_schedule
     $sql = "SELECT ua.username, ua.email, ua.role, s.staff_id, s.first_name, s.last_name, 
-                   s.license_number, s.gender, cg.description AS gender_description,
-                   ws.office_id, o.name AS office_name, o.address, o.city, o.state, o.zipcode, o.phone_number AS office_phone
+                   s.license_number, s.gender, cg.gender_text AS gender_description,
+                   ws.office_id, o.name AS office_name, o.address, o.city, o.state, o.zipcode, o.phone AS office_phone
             FROM user_account ua
             LEFT JOIN staff s ON s.staff_email = ua.email
-            LEFT JOIN codes_gender cg ON s.gender = cg.code
+            LEFT JOIN codes_gender cg ON s.gender = cg.gender_code
             LEFT JOIN work_schedule ws ON s.staff_id = ws.staff_id
             LEFT JOIN office o ON o.office_id = ws.office_id
             WHERE ua.email = ?
