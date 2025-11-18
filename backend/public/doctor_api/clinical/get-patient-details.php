@@ -55,7 +55,6 @@ $baseSelect = "SELECT
             pv.nurse_id,
             pv.status,
             pv.diagnosis,
-            pv.treatment,
             pv.reason_for_visit,
             pv.department,
             pv.present_illnesses,
