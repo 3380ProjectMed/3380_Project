@@ -169,3 +169,16 @@ export async function saveNurseVitalsAndAllergies(data) {
     body: JSON.stringify(payload)
   });
 }
+
+// Debug function to test authentication
+export async function debugNurseAuth() {
+    const response = await fetch('/api/nurse_api/debug-auth.php', {
+        credentials: 'include'
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return await response.json();
+}

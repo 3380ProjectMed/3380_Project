@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import NurseClinicalWorkspace from './NurseClinicalWorkSpace';
 import NurseVitalsModal from './NurseVitalsModal';
+import { debugNurseAuth } from '../../api/nurse';
 import './NurseSchedule.css';
 
 function NurseSchedule() {
@@ -276,6 +277,20 @@ function NurseSchedule() {
               >
                 <Calendar size={18} />
                 Select Date
+              </button>
+              <button 
+                onClick={async () => {
+                  try {
+                    const result = await debugNurseAuth();
+                    alert('Auth Success: ' + JSON.stringify(result, null, 2));
+                  } catch (error) {
+                    alert('Auth Error: ' + error.message);
+                  }
+                }} 
+                className="today-button"
+                style={{backgroundColor: '#dc3545'}}
+              >
+                Debug Auth
               </button>
             </div>
             
