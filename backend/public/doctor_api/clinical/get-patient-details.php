@@ -169,7 +169,7 @@ try {
             }
 
             // Get appointment status from appointment table
-            $appointmentStatus = $appt['Status'] ?? 'Scheduled';
+            $appointmentStatus = $appt['Status'] ?? 'Unknown Status';
 
             // Return appointment data WITHOUT patient_visit
             $response = [
@@ -191,7 +191,7 @@ try {
                     'appointment_id' => $appt['Appointment_id'],
                     'patient_id' => $patient_id,
                     'date' => $appt['Appointment_date'],
-                    'status' => $appt['Status'] ?? 'Scheduled', // Change this from 'Scheduled' to use actual status
+                    'status' => $appointmentStatus, // Change this from 'Scheduled' to use actual status
                     'reason' => $appt['Reason_for_visit'] ?? '',
                     'department' => null,
                     'diagnosis' => null,
@@ -296,7 +296,7 @@ try {
             'appointment_id' => $visit['appointment_id'],
             'patient_id' => $visit['patient_id'],
             'date' => $visit['date'],
-            'status' => $computed_visit_status,
+            'status' => $appointmentStatus,
             'reason' => $visit['reason_for_visit'] ?? $visit['appointment_reason'] ?? '',
             'department' => $visit['department'],
             'diagnosis' => $visit['diagnosis'],
