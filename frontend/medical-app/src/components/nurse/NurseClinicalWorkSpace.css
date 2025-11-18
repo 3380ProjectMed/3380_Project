@@ -1,22 +1,37 @@
-/* NurseClinicalWorkspace.css */
+/* NurseClinicalWorkspace.css - Updated to match Doctor's Clinical Workspace */
+
+:root {
+  --primary-color: #0077b6;
+  --secondary-color: #00b4d8;
+  --third-color: #0096c7;
+  --fourth-color: #90e0ef;
+  --fifth-color: #caf0f8;
+  --gray: #64748b;
+  --dark: #0f172a;
+  --border: #e6eef8;
+  --success: #059669;
+  --error: #dc2626;
+  --warning: #f59e0b;
+}
 
 .clinical-workspace {
-  background: transparent;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  background: linear-gradient(180deg, var(--fifth-color), #ffffff);
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 /* ===== HEADER ===== */
 .workspace-header {
-  background: linear-gradient(135deg, #03045e, #0077b6);
-  color: white;
+  background: white;
+  border-bottom: 2px solid var(--border);
   padding: 1.5rem 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 12px rgba(3, 4, 94, 0.15);
 }
 
 .header-left {
@@ -29,23 +44,35 @@
   margin: 0;
   font-size: 1.75rem;
   font-weight: 700;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .header-title p {
   margin: 0.25rem 0 0 0;
   font-size: 0.95rem;
-  opacity: 0.9;
+  color: var(--gray);
 }
 
 .btn-close-header {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
+  background: white;
+  border: 2px solid var(--border);
+  color: var(--primary-color);
   padding: 0.5rem;
-  border-radius: 8px;
+  border-radius: 0.5rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-header:hover {
+  background: var(--fifth-color);
+  border-color: var(--secondary-color);
+  transform: scale(1.05);
 }
 
 .btn-close-header:hover {
@@ -175,29 +202,101 @@
   word-wrap: break-word;
 }
 
-/* ===== MAIN CONTENT ===== */
+/* ===== MAIN CONTENT LAYOUT ===== */
 .workspace-content {
-  flex: 1;
+  display: grid;
+  grid-template-columns: 450px 1fr;
+  gap: 1.5rem;
   padding: 2rem;
-  overflow-y: auto;
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
-  width: 100%;
+}
+
+/* ===== COLUMNS ===== */
+.workspace-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.left-column {
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.right-column {
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* Custom Scrollbar */
+.left-column::-webkit-scrollbar,
+.right-column::-webkit-scrollbar {
+  width: 8px;
+}
+
+.left-column::-webkit-scrollbar-track,
+.right-column::-webkit-scrollbar-track {
+  background: var(--fifth-color);
+  border-radius: 4px;
+}
+
+.left-column::-webkit-scrollbar-thumb,
+.right-column::-webkit-scrollbar-thumb {
+  background: var(--fourth-color);
+  border-radius: 4px;
+}
+
+.left-column::-webkit-scrollbar-thumb:hover,
+.right-column::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary-color);
+}
+
+/* ===== INFO CARDS ===== */
+.info-card {
+  background: white;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.info-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+}
+
+.info-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+/* Form sections (vitals, allergies, medications) */
+.form-section {
+  background: white;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.form-section:hover {
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
 }
 
 /* ===== VITALS GRID ===== */
-.vitals-grid {
+.vitals-grid-simple {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.form-section {
-  background: rgba(255, 255, 255, 0.95);
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
   border: 2px solid rgba(226, 238, 248, 0.6);
 }
 
@@ -487,11 +586,16 @@ textarea::placeholder {
 
 /* ===== ALLERGIES SECTION ===== */
 .allergies-section {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 12px;
+  background: white;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
   padding: 1.5rem;
-  margin: 1rem 2rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.allergies-section:hover {
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
 }
 
 .allergies-section h3 {
@@ -559,11 +663,16 @@ textarea::placeholder {
 
 /* ===== MEDICATIONS SECTION ===== */
 .medications-section {
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 12px;
+  background: white;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
   padding: 1.5rem;
-  margin: 1rem 2rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.medications-section:hover {
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
 }
 
 .medications-section h3 {
@@ -673,7 +782,10 @@ textarea::placeholder {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  padding: 1rem 1.5rem 0.75rem 1.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #e5f4f7;
+  background: linear-gradient(135deg, #f8fdff 0%, #f0f9ff 100%);
 }
 
 .btn-add-item {
@@ -913,6 +1025,7 @@ textarea::placeholder {
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
+    padding: 0.75rem 1rem;
   }
   
   .form-row {
