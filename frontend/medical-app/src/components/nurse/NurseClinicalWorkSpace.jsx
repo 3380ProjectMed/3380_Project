@@ -53,6 +53,13 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
 
   // General management states
   const [managementLoading, setManagementLoading] = useState(false);
+  const [notification, setNotification] = useState(null); // { type: 'success' | 'error', message: string }
+
+  // Helper function to show notifications
+  const showNotification = (type, message) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 5000); // Auto-hide after 5 seconds
+  };
 
   useEffect(() => {
     if (selectedPatient?.visit_id || selectedPatient?.appointment_id) {
@@ -274,31 +281,42 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
     
     const allergiesToAdd = [];
     
-    // Add selected allergies
+    // Add selected allergies with individual notes if provided, or general notes
     selectedAllergies.forEach(allergyText => {
-      allergiesToAdd.push({ text: allergyText, notes: allergyForm.notes });
+      allergiesToAdd.push({ 
+        text: allergyText, 
+        notes: allergyForm.notes || '' // Use shared notes for selected allergies
+      });
     });
     
     // Add custom allergy if specified
     if (allergyForm.use_custom && allergyForm.custom_allergy.trim()) {
-      allergiesToAdd.push({ text: allergyForm.custom_allergy.trim(), notes: allergyForm.notes });
+      allergiesToAdd.push({ 
+        text: allergyForm.custom_allergy.trim(), 
+        notes: allergyForm.notes || ''
+      });
     }
     
     if (allergiesToAdd.length === 0) {
-      alert('Please select at least one allergy or enter a custom allergy');
+      showNotification('error', 'Please select at least one allergy or enter a custom allergy');
       return;
     }
 
     setManagementLoading(true);
     let successCount = 0;
+    let updatedCount = 0;
     let errors = [];
 
     try {
       // Add allergies one by one
       for (const allergy of allergiesToAdd) {
         try {
-          await handleAddAllergy(allergy.text, allergy.notes);
-          successCount++;
+          const result = await handleAddAllergy(allergy.text, allergy.notes);
+          if (result.updated) {
+            updatedCount++;
+          } else {
+            successCount++;
+          }
         } catch (error) {
           errors.push(`${allergy.text}: ${error.message}`);
         }
@@ -310,20 +328,29 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       setShowAllergyForm(false);
       await fetchPatientDetails();
 
-      // Show results
-      if (successCount > 0) {
-        const message = successCount === 1 ? '1 allergy added successfully!' : `${successCount} allergies added successfully!`;
+      // Show results with notifications instead of alerts
+      if (successCount > 0 || updatedCount > 0) {
+        let message = '';
+        if (successCount > 0) {
+          message += `${successCount} ${successCount === 1 ? 'allergy' : 'allergies'} added`;
+        }
+        if (updatedCount > 0) {
+          if (message) message += ', ';
+          message += `${updatedCount} ${updatedCount === 1 ? 'allergy' : 'allergies'} updated`;
+        }
+        message += ' successfully!';
+        
         if (errors.length > 0) {
-          alert(`${message}\n\nErrors:\n${errors.join('\n')}`);
+          showNotification('error', `Some allergies had errors: ${errors.join(', ')}`);
         } else {
-          alert(message);
+          showNotification('success', message);
         }
       } else {
-        alert('Failed to add allergies:\n' + errors.join('\n'));
+        showNotification('error', 'Failed to add allergies: ' + errors.join(', '));
       }
     } catch (error) {
       console.error('Error in batch allergy addition:', error);
-      alert('Error adding allergies');
+      showNotification('error', 'Error adding allergies');
     } finally {
       setManagementLoading(false);
     }
@@ -349,13 +376,13 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       const data = await response.json();
       if (data.success) {
         await fetchPatientDetails();
-        alert('Allergy removed successfully!');
+        showNotification('success', 'Allergy removed successfully!');
       } else {
-        alert('Error removing allergy: ' + data.error);
+        showNotification('error', 'Error removing allergy: ' + data.error);
       }
     } catch (error) {
       console.error('Error removing allergy:', error);
-      alert('Error removing allergy');
+      showNotification('error', 'Error removing allergy');
     } finally {
       setManagementLoading(false);
     }
@@ -390,13 +417,13 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         });
         setShowMedicationForm(false);
         await fetchPatientDetails();
-        alert('Medication added successfully!');
+        showNotification('success', 'Medication added successfully!');
       } else {
-        alert('Error adding medication: ' + data.error);
+        showNotification('error', 'Error adding medication: ' + data.error);
       }
     } catch (error) {
       console.error('Error adding medication:', error);
-      alert('Error adding medication');
+      showNotification('error', 'Error adding medication');
     } finally {
       setManagementLoading(false);
     }
@@ -423,13 +450,13 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       const data = await response.json();
       if (data.success) {
         await fetchPatientDetails();
-        alert('Medication removed successfully!');
+        showNotification('success', 'Medication removed successfully!');
       } else {
-        alert('Error removing medication: ' + data.error);
+        showNotification('error', 'Error removing medication: ' + data.error);
       }
     } catch (error) {
       console.error('Error removing medication:', error);
-      alert('Error removing medication');
+      showNotification('error', 'Error removing medication');
     } finally {
       setManagementLoading(false);
     }
@@ -972,6 +999,20 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
           <div className="alert alert-success">
             <CheckCircle size={18} />
             <span>✅ Vitals saved! Patient ready for doctor.</span>
+          </div>
+        )}
+
+        {notification && (
+          <div className={`alert alert-${notification.type}`}>
+            {notification.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+            <span>{notification.message}</span>
+            <button 
+              className="notification-close" 
+              onClick={() => setNotification(null)}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}
+            >
+              ×
+            </button>
           </div>
         )}
 
