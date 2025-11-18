@@ -152,31 +152,31 @@ try {
         $users = array_merge($users, $staff_users);
     }
 
-    if ($role === 'all' || $role === 'patient') {
-        $query = "SELECT 
-                    ua.user_id,
-                    'PATIENT' as user_type,
-                    'Patient Account' as name,
-                    ua.email,
-                    '***-**-****' as ssn,
-                    NULL as specialization_dept,
-                    NULL as work_location,
-                    NULL as work_location_id,
-                    ua.created_at,
-                    ua.is_active
-                FROM user_account ua
-                WHERE ua.role = 'PATIENT'";
+    // if ($role === 'all' || $role === 'patient') {
+    //     $query = "SELECT 
+    //                 ua.user_id,
+    //                 'PATIENT' as user_type,
+    //                 'Patient Account' as name,
+    //                 ua.email,
+    //                 '***-**-****' as ssn,
+    //                 NULL as specialization_dept,
+    //                 NULL as work_location,
+    //                 NULL as work_location_id,
+    //                 ua.created_at,
+    //                 ua.is_active
+    //             FROM user_account ua
+    //             WHERE ua.role = 'PATIENT'";
 
-        if ($active_status !== 'all') {
-            $is_active = ($active_status === 'active') ? 1 : 0;
-            $query .= " AND ua.is_active = $is_active";
-        }
+    //     if ($active_status !== 'all') {
+    //         $is_active = ($active_status === 'active') ? 1 : 0;
+    //         $query .= " AND ua.is_active = $is_active";
+    //     }
 
-        $query .= " ORDER BY ua.email";
+    //     $query .= " ORDER BY ua.email";
 
-        $patient_users = executeQuery($conn, $query);
-        $users = array_merge($users, $patient_users);
-    }
+    //     $patient_users = executeQuery($conn, $query);
+    //     $users = array_merge($users, $patient_users);
+    // }
 
     $locations_query = "SELECT DISTINCT office_id, name 
                         FROM office 

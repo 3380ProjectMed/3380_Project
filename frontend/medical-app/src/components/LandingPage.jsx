@@ -368,7 +368,7 @@ export default function LandingPage() {
                 </div>
                 <div className="hours-row">
                   <span className="day">Saturday</span>
-                  <span className="time">9:00 AM - 3:00 PM</span>
+                  <span className="time">Closed</span>
                 </div>
                 <div className="hours-row">
                   <span className="day">Sunday</span>

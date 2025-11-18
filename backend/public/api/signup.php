@@ -97,13 +97,13 @@ try {
     $username = substr($input['email'], 0, strpos($input['email'], '@'));
     $base_username = $username;
     $counter = 1;
-    
+
     // Check if username exists and make it unique
     $stmt = $mysqli->prepare("SELECT user_id FROM user_account WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $stmt->store_result();
-    
+
     while ($stmt->num_rows > 0) {
         $username = $base_username . $counter;
         $stmt->bind_param("s", $username);
@@ -112,35 +112,35 @@ try {
         $counter++;
     }
     $stmt->close();
-    
+
     // Check if email already exists
     $stmt = $mysqli->prepare("SELECT user_id FROM user_account WHERE email = ?");
     $stmt->bind_param("s", $input['email']);
     $stmt->execute();
     $stmt->store_result();
-    
+
     if ($stmt->num_rows > 0) {
         throw new Exception('Email already registered');
     }
     $stmt->close();
-    
+
     // Hash password
     $password_hash = password_hash($input['password'], PASSWORD_DEFAULT);
-    
+
     // Insert into user_account table
     $stmt = $mysqli->prepare(
         "INSERT INTO user_account (username, email, password_hash, role, is_active) 
          VALUES (?, ?, ?, 'PATIENT', 1)"
     );
     $stmt->bind_param("sss", $username, $input['email'], $password_hash);
-    
+
     if (!$stmt->execute()) {
         throw new Exception('Failed to create user account');
     }
-    
+
     $user_id = $mysqli->insert_id;
     $stmt->close();
-    
+
     // Map gender value to code (matching your SMALLINT field)
     // Assuming: 1 = Male, 2 = Female, 3 = Other, 4 = Prefer not to say
     $gender_map = [
@@ -150,23 +150,23 @@ try {
         'prefer-not-to-say' => 4
     ];
     $assigned_gender = $gender_map[strtolower($input['gender'])] ?? 3;
-    
+
     // Generate SSN placeholder (you should implement proper SSN handling)
     // For now, using a temporary placeholder
     $ssn = 'TEMP' . str_pad($user_id, 7, '0', STR_PAD_LEFT);
-    
+
     // Format phone number (remove non-numeric characters)
     $phone = preg_replace('/[^0-9]/', '', $input['phone']);
-    
+
     // Format emergency contact
     $emergency_contact = null;
     if (!empty($input['emergencyContact']) && !empty($input['emergencyPhone'])) {
         $emergency_phone = preg_replace('/[^0-9]/', '', $input['emergencyPhone']);
         $emergency_contact = $input['emergencyContact'] . ':' . $emergency_phone;
     }
-    
+
     // Insert into Patient table - Using PascalCase column names to match schema
-// ----- Derived fields for Patient -----
+    // ----- Derived fields for Patient -----
     $first_name = trim($input['firstName']);
     $last_name  = trim($input['lastName']);
 
@@ -185,7 +185,7 @@ try {
     $ec_ph  = isset($input['emergencyPhone'])     && trim($input['emergencyPhone'])     !== '' ? substr(preg_replace('/\D+/', '', $input['emergencyPhone']), 0, 15) : null;
 
     // Gender map (SMALLINT)
-    $gender_map = ['male'=>1,'female'=>2,'other'=>3,'prefer-not-to-say'=>4];
+    $gender_map = ['male' => 1, 'female' => 2, 'other' => 3, 'prefer-not-to-say' => 4];
     $assigned_at_birth_gender = $gender_map[strtolower($input['gender'])] ?? 3;
     $gender = $assigned_at_birth_gender;
 
@@ -204,95 +204,97 @@ try {
     $blood_type         = (isset($input['bloodType'])         && $input['bloodType']         !== '') ? $input['bloodType']              : null;
 
     $stmt = $mysqli->prepare(
-    "INSERT INTO patient (
-            first_name,
-            last_name,
-            dob,
-            ssn,
-            assigned_at_birth_gender,
-            gender,
-            ethnicity,
-            race,
-            email,
-            primary_doctor,
-            specialty_doctor,
-            insurance_id,
-            insurance_provider,
-            prescription,
-            allergies,
-            blood_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-);
+        "INSERT INTO patient (
+                patient_id,
+                first_name,
+                last_name,
+                dob,
+                ssn,
+                assigned_at_birth_gender,
+                gender,
+                ethnicity,
+                race,
+                email,
+                primary_doctor,
+                specialty_doctor,
+                insurance_id,
+                insurance_provider,
+                prescription,
+                allergies,
+                blood_type
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    );
 
-// types: 'ssss' + 'iiii' + 's' + 'iiiiii' + 's'  => 16 params
-$stmt->bind_param(
-    'ssssiiiisiiiiiis',
-    $first_name,
-    $last_name,
-    $dob,
-    $ssn,
-    $assigned_at_birth_gender,
-    $gender,
-    $ethnicity,
-    $race,
-    $email,
-    $primary_doctor,
-    $specialty_doctor,
-    $insurance_id,
-    $insurance_provider,
-    $prescription,
-    $allergies,
-    $blood_type
-);
+    $stmt->bind_param(
+        'issssiiiisiiiiiis',
+        $user_id,          // patient_id == user_id
+        $first_name,
+        $last_name,
+        $dob,
+        $ssn,
+        $assigned_at_birth_gender,
+        $gender,
+        $ethnicity,
+        $race,
+        $email,
+        $primary_doctor,
+        $specialty_doctor,
+        $insurance_id,
+        $insurance_provider,
+        $prescription,
+        $allergies,
+        $blood_type
+    );
 
-if (!$stmt->execute()) {
-    throw new Exception('Failed to create patient record: ' . $stmt->error);
-}
-$patient_id = $mysqli->insert_id;
-$stmt->close();
+    if (!$stmt->execute()) {
+        throw new Exception('Failed to create patient record: ' . $stmt->error);
+    }
+    $stmt->close();
 
-if ($ec_fn || $ec_ln || $ec_rel || $ec_ph) {
-    $stmt = $mysqli->prepare(
-        "INSERT INTO emergency_contact (
+    // From here on, use $patient_id = $user_id
+    $patient_id = $user_id;
+
+
+    if ($ec_fn || $ec_ln || $ec_rel || $ec_ph) {
+        $stmt = $mysqli->prepare(
+            "INSERT INTO emergency_contact (
             patient_id,
             ec_first_name,
             ec_last_name,
             ec_phone,
             relationship
         ) VALUES (?, ?, ?, ?, ?)"
-    );
+        );
 
-    // NOTE: order matches the column list above (phone before relationship)
-    $stmt->bind_param("issss", $patient_id, $ec_fn, $ec_ln, $ec_ph, $ec_rel);
+        // NOTE: order matches the column list above (phone before relationship)
+        $stmt->bind_param("issss", $patient_id, $ec_fn, $ec_ln, $ec_ph, $ec_rel);
 
-    if (!$stmt->execute()) {
-        throw new Exception('Failed to create emergency contact: ' . $stmt->error);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to create emergency contact: ' . $stmt->error);
+        }
+        $stmt->close();
+        $ec_id = $mysqli->insert_id;
+
+        $stmt = $mysqli->prepare(
+            "UPDATE patient SET emergency_contact_id = ? WHERE patient_id = ?"
+        );
+
+        if (!$stmt) {
+            throw new Exception("Prepare failed (update patient): " . $mysqli->error);
+        }
+
+        $stmt->bind_param("ii", $ec_id, $patient_id);
+
+        if (!$stmt->execute()) {
+            throw new Exception("Execute failed (update patient): " . $stmt->error);
+        }
     }
-    $stmt->close();
-    $ec_id = $mysqli->insert_id;
 
-    $stmt = $mysqli->prepare(
-        "UPDATE patient SET emergency_contact_id = ? WHERE patient_id = ?"
-    );
-
-    if (!$stmt) {
-        throw new Exception("Prepare failed (update patient): " . $mysqli->error);
-    }
-
-    $stmt->bind_param("ii", $ec_id, $patient_id);
-
-    if (!$stmt->execute()) {
-        throw new Exception("Execute failed (update patient): " . $stmt->error);
-    }
-}
-    
     // Commit transaction
     $mysqli->commit();
-    
+
     $response['success'] = true;
     $response['message'] = 'Account created successfully';
-
-    
 } catch (Exception $e) {
     // Rollback transaction on error
     $mysqli->rollback();
@@ -304,4 +306,3 @@ if ($ec_fn || $ec_ln || $ec_rel || $ec_ph) {
 
 // Return response
 echo json_encode($response);
-?>

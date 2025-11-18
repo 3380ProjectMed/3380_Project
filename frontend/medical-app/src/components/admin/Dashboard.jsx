@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Calendar, Activity, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
-import '../doctor/Dashboard.css';
+import './Dashboard.css';
 import { WelcomeHeader, StatCard, StatsGrid } from '../shared';
 
 function AdminDashboard() {

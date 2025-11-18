@@ -173,14 +173,15 @@ try {
                             ua.username,
                             s.ssn,
                             s.gender,
-                            s.work_location as workLocation,
+                            o.office_id,
                             o.name as workLocationName,
                             s.staff_role as role,
                             ua.is_active as isActive,
                             ua.created_at as createdAt
                          FROM user_account ua
-                         LEFT JOIN staff s ON ua.email = s.staff_email
-                         LEFT JOIN office o ON s.work_location = o.office_id
+                         JOIN staff s ON ua.user_id = s.staff_id
+                         JOIN work_schedule ws ON ws.staff_id = s.staff_id
+                         JOIN office o on o.office_id = ws.office_id
                          WHERE ua.user_id = ?";
         $stmt = $conn->prepare($profile_query);
         $stmt->bind_param("i", $user_id);

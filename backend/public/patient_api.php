@@ -390,58 +390,108 @@ elseif ($endpoint === 'profile') {
                 return $row && isset($row[$idCol]) ? (string) $row[$idCol] : '';
             };
 
-            $stmt = $mysqli->prepare(
-                "UPDATE patient
-                SET first_name = ?,
-                    last_name = ?,
-                    email = NULLIF(?, ''),
-                    dob = NULLIF(?, ''),
-                    gender = NULLIF(?, ''),
-                    assigned_at_birth_gender = NULLIF(?, ''),
-                    ethnicity = NULLIF(?, ''),
-                    race = NULLIF(?, ''),
-                    primary_doctor = NULLIF(?, '')
-                WHERE patient_id = ?"
-            );
+            // Build dynamic UPDATE query based on provided fields
+            $updateFields = [];
+            $updateValues = [];
+            $bindTypes = '';
+
+            // Only update fields that are actually provided in the request
+            if (isset($input['first_name'])) {
+                $updateFields[] = "first_name = ?";
+                $updateValues[] = $input['first_name'];
+                $bindTypes .= 's';
+            }
+
+            if (isset($input['last_name'])) {
+                $updateFields[] = "last_name = ?";
+                $updateValues[] = $input['last_name'];
+                $bindTypes .= 's';
+            }
+
+            if (isset($input['email'])) {
+                $updateFields[] = "email = NULLIF(?, '')";
+                $updateValues[] = $input['email'];
+                $bindTypes .= 's';
+            }
+
+            if (isset($input['dob']) && $input['dob'] !== '') {
+                $updateFields[] = "dob = ?";
+                $updateValues[] = $input['dob'];
+                $bindTypes .= 's';
+            }
+
+            if (isset($input['gender'])) {
+                $gender = $mapTextToCode('codes_gender', 'gender_code', 'gender_text', $input['gender']);
+                if ($gender !== '') {
+                    $updateFields[] = "gender = ?";
+                    $updateValues[] = $gender;
+                    $bindTypes .= 's';
+                }
+            }
+
+            if (isset($input['genderAtBirth'])) {
+                $genderAtBirth = $mapTextToCode('codes_assigned_at_birth_gender', 'gender_code', 'gender_text', $input['genderAtBirth']);
+                if ($genderAtBirth !== '') {
+                    $updateFields[] = "assigned_at_birth_gender = ?";
+                    $updateValues[] = $genderAtBirth;
+                    $bindTypes .= 's';
+                }
+            }
+
+            if (isset($input['ethnicity'])) {
+                $ethnicity = $mapTextToCode('codes_ethnicity', 'ethnicity_code', 'ethnicity_text', $input['ethnicity']);
+                if ($ethnicity !== '') {
+                    $updateFields[] = "ethnicity = ?";
+                    $updateValues[] = $ethnicity;
+                    $bindTypes .= 's';
+                }
+            }
+
+            if (isset($input['race'])) {
+                $race = $mapTextToCode('codes_race', 'race_code', 'race_text', $input['race']);
+                if ($race !== '') {
+                    $updateFields[] = "race = ?";
+                    $updateValues[] = $race;
+                    $bindTypes .= 's';
+                }
+            }
+
+            if (isset($input['primary_doctor'])) {
+                $primaryDoctor = trim((string) $input['primary_doctor']);
+                $updateFields[] = "primary_doctor = NULLIF(?, '')";
+                $updateValues[] = $primaryDoctor;
+                $bindTypes .= 's';
+            }
+
+            if (empty($updateFields)) {
+                sendResponse(false, [], 'No valid fields provided for update', 400);
+            }
+
+            // Add patient_id to the end
+            $updateValues[] = $patient_id;
+            $bindTypes .= 'i';
+
+            $sql = "UPDATE patient SET " . implode(', ', $updateFields) . " WHERE patient_id = ?";
+            $stmt = $mysqli->prepare($sql);
 
             if (!$stmt) {
                 sendResponse(false, [], 'Database prepare failed: ' . $mysqli->error, 500);
             }
 
-            $first = $input['first_name'] ?? '';
-            $last = $input['last_name'] ?? '';
-            $email = $input['email'] ?? '';
-            $dob = $input['dob'] ?? '';
-            $emergencyContact = $input['emergency_contact'] ?? '';
-            $emergencyContactFirstName = $input['emergency_contact_first_name'] ?? '';
-            $emergencyContactLastName = $input['emergency_contact_last_name'] ?? '';
-            $emergencyContactRelationship = $input['emergency_contact_relationship'] ?? '';
-            $gender = $mapTextToCode('codes_gender', 'gender_code', 'gender_text', $input['gender'] ?? '');
-            $genderAtBirth = $mapTextToCode('codes_assigned_at_birth_gender', 'gender_code', 'gender_text', $input['genderAtBirth'] ?? '');
-            $ethnicity = $mapTextToCode('codes_ethnicity', 'ethnicity_code', 'ethnicity_text', $input['ethnicity'] ?? '');
-            $race = $mapTextToCode('codes_race', 'race_code', 'race_text', $input['race'] ?? '');
-            $primaryDoctor = isset($input['primary_doctor']) ? trim((string) $input['primary_doctor']) : '';
-
-            $stmt->bind_param(
-                'sssssssssi',
-                $first,
-                $last,
-                $email,
-                $dob,
-                $gender,
-                $genderAtBirth,
-                $ethnicity,
-                $race,
-                $primaryDoctor,
-                $patient_id
-            );
+            $stmt->bind_param($bindTypes, ...$updateValues);
 
             if ($stmt->execute() === false) {
                 sendResponse(false, [], 'Database execute failed: ' . $stmt->error, 500);
             }
 
-            // Handle emergency contact
-            if (!empty($emergencyContact) || !empty($emergencyContactFirstName) || !empty($emergencyContactLastName) || !empty($emergencyContactRelationship)) {
+            // Handle emergency contact only if emergency contact fields are provided
+            $emergencyContact = $input['emergency_contact'] ?? '';
+            $emergencyContactFirstName = $input['emergency_contact_first_name'] ?? '';
+            $emergencyContactLastName = $input['emergency_contact_last_name'] ?? '';
+            $emergencyContactRelationship = $input['emergency_contact_relationship'] ?? '';
+            
+            if (isset($input['emergency_contact']) || isset($input['emergency_contact_first_name']) || 
+                isset($input['emergency_contact_last_name']) || isset($input['emergency_contact_relationship'])) {
                 $checkStmt = $mysqli->prepare("SELECT emergency_contact_id FROM patient WHERE patient_id = ?");
                 $checkStmt->bind_param('i', $patient_id);
                 $checkStmt->execute();
@@ -561,25 +611,36 @@ elseif ($endpoint === 'appointments') {
             $mysqli->begin_transaction();
 
             // Generate appointment ID
-            $result = $mysqli->query("SELECT COALESCE(MAX(Appointment_id), 0) + 1 as next_id FROM Appointment");
+            $result = $mysqli->query("SELECT COALESCE(MAX(`Appointment_id`), 0) + 1 as next_id FROM `appointment`");
+            if (!$result) {
+                $mysqli->rollback();
+                error_log("Failed to generate appointment ID: " . $mysqli->error);
+                sendResponse(false, [], 'Failed to generate appointment ID', 500);
+                return;
+            }
             $row = $result->fetch_assoc();
             $next_id = $row['next_id'];
+            error_log("Generated appointment ID: " . $next_id);
 
             // Parse appointment date
             $appointmentdateTime = $input['appointment_date'];
+            error_log("Original appointment date from frontend: " . $appointmentdateTime);
+            
             if (strpos($appointmentdateTime, 'AM') !== false || strpos($appointmentdateTime, 'PM') !== false) {
                 // Try multiple format patterns to handle different time formats
                 $formats = [
-                    'Y-m-d g:i A',    // 2026-11-12 2:00 PM
-                    'Y-m-d h:i A',    // 2026-11-12 02:00 PM
-                    'Y-m-d G:i',      // 2026-11-12 14:00
-                    'Y-m-d H:i'       // 2026-11-12 14:00
+                    'Y-m-d g:i A',    // 2026-12-03 9:00 AM (single digit hour)
+                    'Y-m-d h:i A',    // 2026-12-03 09:00 AM (double digit hour)
+                    'Y-m-d G:i',      // 2026-12-03 9:00 (24 hour single digit)
+                    'Y-m-d H:i'       // 2026-12-03 09:00 (24 hour double digit)
                 ];
 
                 $dt = null;
                 foreach ($formats as $format) {
                     $dt = DateTime::createFromFormat($format, $appointmentdateTime);
-                    if ($dt && $dt->format($format) === $appointmentdateTime) {
+                    if ($dt && $dt !== false) {
+                        // Don't check exact format match, just ensure valid parsing
+                        error_log("Successfully parsed date with format: " . $format);
                         break;
                     }
                     $dt = null;
@@ -587,6 +648,7 @@ elseif ($endpoint === 'appointments') {
 
                 if ($dt) {
                     $appointmentdateTime = $dt->format('Y-m-d H:i:s');
+                    error_log("Converted to MySQL format: " . $appointmentdateTime);
                 } else {
                     // Log the parsing error
                     error_log("Date parsing failed for: " . $appointmentdateTime);
@@ -596,21 +658,35 @@ elseif ($endpoint === 'appointments') {
             }
 
             // Insert appointment - trigger will validate date/time constraints and PCP/referral requirements
-            $stmt = $mysqli->prepare("
-                INSERT INTO appointment (
-                    Appointment_id, Patient_id, Doctor_id, Office_id, 
-                    Appointment_date, Date_created, Reason_for_visit
-                ) VALUES (?, ?, ?, ?, ?, NOW(), ?)
-            ");
+            $stmt = $mysqli->prepare("INSERT INTO appointment (
+                    `Appointment_id`, `Patient_id`, `Doctor_id`, `Office_id`, 
+                    `Appointment_date`, `Date_created`, `Reason_for_visit`, `Status`, `method`
+                ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?)");
+            // Store literal values in variables for bind_param (requires references)
+            $status = 'Scheduled';
+            $method = 'Online';
+            
             $stmt->bind_param(
-                'iiiiss',
+                'iiiissss',
                 $next_id,
                 $patient_id,
                 $input['doctor_id'],
                 $input['office_id'],
                 $appointmentdateTime,
-                $input['reason']
+                $input['reason'],
+                $status,
+                $method
             );
+
+            // Enhanced error logging for debugging
+            error_log("Attempting to insert appointment with parameters: " . json_encode([
+                'next_id' => $next_id,
+                'patient_id' => $patient_id,
+                'doctor_id' => $input['doctor_id'],
+                'office_id' => $input['office_id'],
+                'appointment_date' => $appointmentdateTime,
+                'reason' => $input['reason']
+            ]));
 
             $exec_result = $stmt->execute();
 
@@ -618,7 +694,8 @@ elseif ($endpoint === 'appointments') {
                 $error_msg = $stmt->error;
                 $mysqli->rollback();
                 error_log("SQL execution failed: " . $error_msg);
-                sendResponse(false, [], 'Database error occurred', 500);
+                error_log("MySQL error number: " . $stmt->errno);
+                sendResponse(false, [], 'Database error occurred: ' . $error_msg, 500);
                 return;
             }
 
@@ -1468,12 +1545,20 @@ elseif ($endpoint === 'billing') {
                     error_log("Billing balance query for patient_id: " . $patient_id);
                     $stmt = $mysqli->prepare("
                         SELECT 
-                            COALESCE(SUM(COALESCE(copay_amount_due, 0) - COALESCE(payment, 0)), 0) as outstanding_balance,
+                            COALESCE(SUM(visit_balance), 0) as outstanding_balance,
                             COUNT(*) as visit_count
-                        FROM patient_visit
-                        WHERE patient_id = ?
-                        AND COALESCE(copay_amount_due, 0) > 0
-                        AND (COALESCE(copay_amount_due, 0) - COALESCE(payment, 0)) > 0
+                        FROM (
+                            SELECT 
+                                ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) as visit_balance
+                            FROM patient_visit v
+                            LEFT JOIN patient p ON v.patient_id = p.patient_id
+                            LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id
+                            LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
+                            LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
+                            WHERE v.patient_id = ? AND v.status = 'Complete'
+                            GROUP BY v.visit_id, ipl.copay, ipl.coinsurance_rate, v.payment
+                            HAVING ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) > 0
+                        ) as visit_balances
                     ");
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
@@ -1490,19 +1575,56 @@ elseif ($endpoint === 'billing') {
                             v.visit_id as id,
                             DATE(v.date) as date,
                             CONCAT('Appointment with Dr. ', doc_staff.last_name, ' on ', DATE_FORMAT(v.date, '%M %d, %Y')) as service,
-                            COALESCE(v.copay_amount_due, 0) as amount,
-                            (COALESCE(v.copay_amount_due, 0) - COALESCE(v.payment, 0)) as balance,
+                            
+                            -- Cost breakdown components
+                            COALESCE(ipl.copay, 0) as copay_amount,
+                            SUM(COALESCE(tpv.total_cost, 0)) as treatment_cost,
+                            COALESCE(ipl.coinsurance_rate, 0) as coinsurance_rate,
+                            SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100) as coinsurance_amount,
+                            
+                            -- Treatment details breakdown (JSON format) - handle NULL case for visits without treatments
                             CASE 
-                                WHEN (COALESCE(v.copay_amount_due, 0) - COALESCE(v.payment, 0)) <= 0 THEN 'Paid'
+                                WHEN COUNT(tpv.visit_id) > 0 THEN JSON_ARRAYAGG(
+                                    JSON_OBJECT(
+                                        'treatment_name', tc.name,
+                                        'cpt_code', tc.cpt_code,
+                                        'quantity', tpv.quantity,
+                                        'cost_each', tpv.cost_each,
+                                        'total_cost', tpv.total_cost,
+                                        'notes', tpv.notes
+                                    )
+                                )
+                                ELSE JSON_ARRAY()
+                            END as treatment_details,
+                            
+                            -- Total amount due and balance calculation
+                            (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) as amount,
+                            ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) as balance,
+                            
+                            -- Payment status
+                            CASE 
+                                WHEN ((COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) - COALESCE(v.payment, 0)) <= 0 THEN 'Paid'
                                 WHEN v.payment > 0 THEN 'Partial payment'
                                 ELSE 'Unpaid'
                             END as status,
-                            v.payment
+                            COALESCE(v.payment, 0) as payment_made,
+                            
+                            -- Insurance info for reference
+                            ip.name as insurance_name,
+                            ipl.plan_name as insurance_plan
+                            
                         FROM patient_visit v
                         LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
                         LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
-                        WHERE v.patient_id = ?
-                        AND COALESCE(v.copay_amount_due, 0) > 0
+                        LEFT JOIN patient p ON v.patient_id = p.patient_id
+                        LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id
+                        LEFT JOIN insurance_plan ipl ON pi.plan_id = ipl.plan_id
+                        LEFT JOIN insurance_payer ip ON ipl.payer_id = ip.payer_id
+                        LEFT JOIN treatment_per_visit tpv ON v.visit_id = tpv.visit_id
+                        LEFT JOIN treatment_catalog tc ON tpv.treatment_id = tc.treatment_id
+                        WHERE v.patient_id = ? AND v.status = 'Complete'
+                        GROUP BY v.visit_id, v.date, doc_staff.first_name, doc_staff.last_name, ipl.copay, ipl.coinsurance_rate, v.payment, ip.name, ipl.plan_name
+                        HAVING (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) >= 0
                         ORDER BY v.date DESC
                         LIMIT 50
                     ");
@@ -1510,6 +1632,16 @@ elseif ($endpoint === 'billing') {
                     $stmt->execute();
                     $result = $stmt->get_result();
                     $statements = $result->fetch_all(MYSQLI_ASSOC);
+                    
+                    // Parse treatment_details JSON for each statement
+                    foreach ($statements as &$statement) {
+                        if (isset($statement['treatment_details']) && $statement['treatment_details']) {
+                            $statement['treatment_details'] = json_decode($statement['treatment_details'], true);
+                        } else {
+                            $statement['treatment_details'] = [];
+                        }
+                    }
+                    
                     error_log("Billing statements result count: " . count($statements));
                     sendResponse(true, $statements);
                     break;

@@ -1,24 +1,27 @@
-// src/components/nurse/NurseClinicalWorkspace.jsx - SIMPLIFIED VERSION
+// src/components/nurse/NurseClinicalWorkspace.jsx - UPDATED WITH STATUS HANDLING
 import React, { useState, useEffect } from 'react';
 import { Activity, AlertCircle, Save, X, CheckCircle, User, Calendar } from 'lucide-react';
 import './NurseClinicalWorkSpace.css';
 
 /**
- * NurseClinicalWorkspace - SIMPLIFIED Vitals Recording
+ * NurseClinicalWorkspace - Vitals Recording with Status Updates
  * 
- * Only uses existing database columns:
- * - blood_pressure
- * - temperature  
- * - present_illnesses
+ * When vitals are saved, appointment status automatically changes to "Ready"
  */
 function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
+  const formatChicagoDate = (date, options = {}) => {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      ...options
+    }).format(new Date(date));
+  };
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [patientData, setPatientData] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  // Simplified vitals - only what exists in DB
   const [vitals, setVitals] = useState({
     blood_pressure_systolic: '',
     blood_pressure_diastolic: '',
@@ -94,7 +97,6 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
   const validateVitals = () => {
     const errors = [];
 
-    // Blood pressure validation
     const systolic = parseInt(vitals.blood_pressure_systolic);
     const diastolic = parseInt(vitals.blood_pressure_diastolic);
     
@@ -105,7 +107,6 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       errors.push('Diastolic BP should be between 40-130 mmHg');
     }
 
-    // Temperature validation
     const temp = parseFloat(vitals.temperature);
     if (vitals.temperature && (temp < 95 || temp > 106)) {
       errors.push('Temperature should be between 95-106°F');
@@ -116,14 +117,12 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
 
   const handleSave = async () => {
     try {
-      // Validate vitals
       const validationErrors = validateVitals();
       if (validationErrors.length > 0) {
         setError(validationErrors.join('. '));
         return;
       }
 
-      // At least BP or temp is required
       const hasVitals = vitals.blood_pressure_systolic || vitals.temperature;
       
       if (!hasVitals) {
@@ -138,7 +137,6 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         ? import.meta.env.VITE_API_BASE 
         : '';
 
-      // Format blood pressure
       const blood_pressure = (vitals.blood_pressure_systolic && vitals.blood_pressure_diastolic)
         ? `${vitals.blood_pressure_systolic}/${vitals.blood_pressure_diastolic}`
         : null;
@@ -166,26 +164,31 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       if (data.success) {
         setSuccess(true);
         
-        // Update patient data with saved vitals to show them in the UI
+        // Update patient data with saved vitals AND new status
         setPatientData(prevData => ({
           ...prevData,
           visit: {
             ...prevData.visit,
             blood_pressure: blood_pressure,
             temperature: vitals.temperature,
-            present_illnesses: vitals.present_illnesses
+            present_illnesses: vitals.present_illnesses,
+            status: data.new_status || 'Ready'
           }
         }));
         
-        // Notify parent
+        // Notify parent with full update info
         if (onSave) {
-          onSave(patientData.visit?.visit_id);
+          onSave({
+            visit_id: patientData.visit?.visit_id,
+            appointment_id: patientData.visit?.appointment_id,
+            new_status: data.new_status || 'Ready'
+          });
         }
 
-        // Clear success message after 3 seconds but keep modal open to show saved data
+        // Keep success message for 5 seconds
         setTimeout(() => {
           setSuccess(false);
-        }, 3000);
+        }, 5000);
       } else {
         setError(data.error || 'Failed to save vitals');
       }
@@ -263,7 +266,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
           <Calendar size={18} />
           <div>
             <strong>{visit.reason_for_visit || visit.reason || 'Not specified'}</strong>
-            <span>{new Date(visit.date).toLocaleDateString()}</span>
+            <span>{formatChicagoDate(visit.date)}</span>
           </div>
         </div>
         {patient.allergies && patient.allergies !== 'None' && (
@@ -277,7 +280,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         )}
       </div>
 
-      {/* Previously Saved Vitals/Notes - Show if any exist */}
+      {/* Previously Saved Vitals/Notes */}
       {(visit.blood_pressure || visit.temperature || visit.present_illnesses) && (
         <div className="saved-vitals-section">
           <h3>📋 Previously Recorded</h3>
@@ -304,7 +307,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         </div>
       )}
 
-      {/* Main Content - SIMPLIFIED */}
+      {/* Main Content */}
       <div className="workspace-content">
         <div className="vitals-grid-simple">
           {/* Blood Pressure */}
@@ -392,7 +395,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         {success && (
           <div className="alert alert-success">
             <CheckCircle size={18} />
-            <span>Vitals saved successfully! Patient ready for doctor.</span>
+            <span>✅ Vitals saved! Patient ready for doctor.</span>
           </div>
         )}
 
@@ -406,7 +409,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
             ) : (
               <>
                 <Save size={18} />
-                Save Vitals
+                Save Vitals & Mark Ready
               </>
             )}
           </button>

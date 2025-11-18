@@ -6,7 +6,6 @@ ini_set('display_errors', 1);
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
-
 try {
     //session_start();
     if (empty($_SESSION['uid'])) {

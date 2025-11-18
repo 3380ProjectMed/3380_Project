@@ -55,7 +55,7 @@ try {
                 pv.patient_id,
                 pv.doctor_id,
                 pv.date,
-                pv.status,
+                a.Status,
                 pv.diagnosis,
                 pv.reason_for_visit,
                 pv.blood_pressure,
@@ -68,6 +68,7 @@ try {
                 s.last_name AS doctor_last
             FROM patient_visit pv
             LEFT JOIN staff s ON s.staff_id = pv.doctor_id
+            LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
             WHERE pv.patient_id = ?
             ORDER BY pv.date DESC
             LIMIT 50";

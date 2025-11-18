@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Calendar, User, FileText, CreditCard, Activity, Clock, MapPin, Phone, Mail,
   Heart, Pill, AlertCircle, ChevronRight, Plus, X, Check, Shield, Stethoscope,
-  LogOut, Home
+  LogOut, Home, Info
 } from 'lucide-react';
 import './PatientPortal.css';
 import Sidebar from './Sidebar.jsx';
@@ -76,7 +76,9 @@ export default function PatientPortal({ onLogout }) {
         switch (currentPage) {
           case 'dashboard': 
             await loadDashboard(); 
-            await loadReferrals(); 
+            await loadReferrals();
+            // Load profile data to get display name
+            await loadProfile();
             break;
           case 'profile': 
             await loadProfile(); 
@@ -192,7 +194,6 @@ export default function PatientPortal({ onLogout }) {
     console.log('Profile API response:', r);
     if (r.success) {
       setProfile(r.data);
-      setPcp(r.data);
       // populate editable form fields with current profile values
       setFormData(fd => ({
         ...fd,
@@ -376,7 +377,7 @@ export default function PatientPortal({ onLogout }) {
 
   async function handleSavePcp() {
     if (!pcpFormData.primary_doctor) {
-      alert('Please select a Primary Care Physician');
+      setToast({ message: 'Please select a Primary Care Physician', type: 'error' });
       return;
     }
 
@@ -388,17 +389,18 @@ export default function PatientPortal({ onLogout }) {
 
       const res = await api.profile.updateProfile(payload);
       if (res.success) {
-        // Refresh profile data
+        // Refresh both profile and dashboard data to ensure PCP updates everywhere
         await loadProfile();
+        await loadDashboard();
         hidePcpSelection();
-        alert('Primary Care Physician updated successfully!');
+        setToast({ message: 'Primary Care Physician updated successfully!', type: 'success' });
       } else {
         console.error('Failed to update PCP:', res);
-        alert('Failed to update Primary Care Physician. Please try again.');
+        setToast({ message: res?.message || 'Failed to update Primary Care Physician. Please try again.', type: 'error' });
       }
     } catch (err) {
       console.error('Error updating PCP:', err);
-      alert('An error occurred while updating Primary Care Physician. Please try again.');
+      setToast({ message: err?.message || 'An error occurred while updating Primary Care Physician. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }

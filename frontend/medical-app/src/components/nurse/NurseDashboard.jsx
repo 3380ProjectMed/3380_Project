@@ -12,13 +12,42 @@ export default function NurseDashboard({ setCurrentPage }) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [nurseName, setNurseName] = useState('');
 
+  const formatChicagoDate = (date, options = {}) => {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      ...options
+    }).format(new Date(date));
+  };
+
+  const getCurrentChicagoDateString = () => {
+    return formatChicagoDate(new Date(), {
+      weekday: 'long',
+      year: 'numeric', 
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const formatTimeStringChicago = (timeString) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  };
+
   useEffect(() => {
     let mounted = true;
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getCurrentChicagoDateString();
         const [s, appts, profile] = await Promise.all([
           getNurseDashboardStats(today),
           getNurseScheduleToday(),
@@ -78,7 +107,7 @@ export default function NurseDashboard({ setCurrentPage }) {
   };
 
   const getCurrentDate = () => {
-    return new Date().toLocaleDateString('en-US', {
+    return formatChicagoDate(new Date(), {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
@@ -230,8 +259,8 @@ export default function NurseDashboard({ setCurrentPage }) {
                       if (e.key === 'Enter') handleAppointmentRowClick(appointment);
                     }}
                   >
-                    <div className="col-time">{appointment.time}</div>
-                    <div className="col-apptid">{appointment.id}</div>
+                    <div className="col-time">{formatTimeStringChicago(appointment.time)}</div>
+                    <div className="col-apptid">{appointment.appointmentId}</div>
                     <div className="col-patient">
                       <span className="patient-link">{appointment.patientName}</span>
                     </div>

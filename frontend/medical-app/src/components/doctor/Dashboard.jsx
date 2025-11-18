@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
-import { Calendar, Users, Clock, FileText, Search, Filter, CheckCircle, XCircle, PlayCircle } from 'lucide-react';
+import { Calendar, Users, Clock, FileText, Search, Filter, CheckCircle, XCircle, PlayCircle, RefreshCw } from 'lucide-react';
 import './Dashboard.css';
 import { WelcomeHeader } from '../shared';
 
@@ -13,11 +13,29 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const refreshIntervalRef = useRef(null);
 
-  // Auto-refresh appointments every 30 seconds
+  // Auto-refresh appointments every 15 seconds for real-time updates
   useEffect(() => {
     if (auth.user?.role === 'DOCTOR' && !loading) {
-      fetchAppointments(false); // Silent refresh
+      // Clear any existing interval
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+
+      // Set up new interval for silent refresh
+      refreshIntervalRef.current = setInterval(() => {
+        fetchAppointments(false); // Silent refresh
+      }, 15000); // Every 15 seconds
+
+      return () => {
+        if (refreshIntervalRef.current) {
+          clearInterval(refreshIntervalRef.current);
+        }
+      };
     }
   }, [auth.user, loading]);
 
@@ -53,14 +71,18 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
   };
 
   /**
-   * Fetch appointments from API
+   * Fetch appointments from API - now gets REAL-TIME status
    */
   const fetchAppointments = async (showLoader = true) => {
     try {
-      if (showLoader) setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       setError(null);
 
-      // Backend derives doctor_id from session
+      // Backend now returns actual Status from database
       const response = await fetch(
         `/doctor_api/appointments/get-today.php`, 
         { credentials: 'include' }
@@ -71,15 +93,28 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       if (data.success) {
         setAppointments(data.appointments);
         setStats(data.stats);
+        setLastUpdate(new Date());
       } else {
         throw new Error(data.error || 'Failed to fetch appointments');
       }
     } catch (err) {
       console.error('Error fetching appointments:', err);
-      setError(err.message);
+      if (showLoader) {
+        setError(err.message);
+      }
     } finally {
-      if (showLoader) setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
+      setIsRefreshing(false);
     }
+  };
+
+  /**
+   * Manual refresh button
+   */
+  const handleManualRefresh = () => {
+    fetchAppointments(false);
   };
 
   /**
@@ -100,7 +135,8 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       const data = await response.json();
       
       if (data.success) {
-        await fetchAppointments(false); // Refresh appointments
+        // Immediately refresh to show updated status
+        await fetchAppointments(false);
       } else {
         throw new Error(data.error || 'Failed to update status');
       }
@@ -119,6 +155,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       'upcoming': 'status-upcoming',
       'ready': 'status-ready',
       'waiting': 'status-waiting',
+      'checked-in': 'status-checked-in',
       'in progress': 'status-in-progress',
       'completed': 'status-completed',
       'cancelled': 'status-cancelled',
@@ -135,6 +172,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       onAppointmentClick(appointment);
     }
   };
+
   const getCurrentDate = () => {
     return new Date().toLocaleDateString('en-US', { 
       month: 'short', 
@@ -142,6 +180,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       year: 'numeric' 
     });
   };
+
   /**
    * Render status actions for each appointment
    */
@@ -220,18 +259,16 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
       {/* Loading State */}
       {loading && (
         <div className="loading-state">
-          <div className="spinner">
-          </div>
+          <div className="spinner"></div>
           <p>Loading appointments...</p>
         </div>
-        
       )}
 
       {/* Error State */}
       {error && (
         <div className="alert alert-error">
           <strong>Error:</strong> {error}
-          <button onClick={() => fetchAppointments(auth.user?.doctor_id)} style={{marginLeft: '1rem'}}>
+          <button onClick={() => fetchAppointments(true)} style={{marginLeft: '1rem'}}>
             Retry
           </button>
         </div>
@@ -311,8 +348,25 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
           {/* ===== TODAY'S SCHEDULE ===== */}
           <div className="schedule-section">
             <div className="section-header">
-              <h2>Today's Schedule</h2>
+              <div className="section-header-left">
+                <h2>Today's Schedule</h2>
+                {lastUpdate && (
+                  <span className="last-update">
+                    Last updated: {lastUpdate.toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
               <div className="section-controls">
+                {/* Refresh Button */}
+                <button 
+                  className={`refresh-btn ${isRefreshing ? 'refreshing' : ''}`}
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  title="Refresh appointments"
+                >
+                  <RefreshCw size={18} />
+                </button>
+
                 {/* Search Box */}
                 <div className="search-box">
                   <Search size={18} />
@@ -334,7 +388,8 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
                     aria-label="Filter by status"
                   >
                     <option value="all">All Status</option>
-                    <option value="upcoming">Upcoming</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="checked-in">Checked-in</option>
                     <option value="ready">Ready</option>
                     <option value="waiting">Waiting</option>
                     <option value="in progress">In Progress</option>

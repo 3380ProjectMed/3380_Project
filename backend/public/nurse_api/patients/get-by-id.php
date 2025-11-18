@@ -3,7 +3,6 @@ header('Content-Type: application/json');
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
-
 //session_start();
 if (empty($_SESSION['uid'])) {
     http_response_code(401);
