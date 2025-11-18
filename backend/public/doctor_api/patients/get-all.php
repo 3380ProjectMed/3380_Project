@@ -55,7 +55,7 @@ try {
                 p.email,
                 p.emergency_contact_id,
                 p.blood_type,
-                GROUP_CONCAT(DISTINCT ca.allergies_text SEPARATOR ', ') as allergies,
+                ca.allergies_text as allergies,
                 cg.gender_text as gender,
                 MAX(a.Appointment_date) as last_visit,
                 MIN(CASE WHEN a.Appointment_date > NOW() THEN a.Appointment_date END) as next_appointment
