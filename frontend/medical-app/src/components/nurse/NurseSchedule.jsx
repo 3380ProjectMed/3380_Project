@@ -1,19 +1,48 @@
-// src/components/nurse/NurseSchedule.jsx - WITH PROFESSIONAL OVERLAY
 import React, { useState, useEffect, useMemo } from 'react';
-import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, Users, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import NurseClinicalWorkspace from './NurseClinicalWorkSpace';
+import NurseVitalsModal from './NurseVitalsModal';
 import './NurseSchedule.css';
 
 function NurseSchedule() {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const getCurrentChicagoTime = () => {
+    const now = new Date();
+    return new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}));
+  };
+
+  const formatChicagoDate = (date, options = {}) => {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      ...options
+    }).format(new Date(date));
+  };
+
+  const formatTimeStringChicago = (timeString) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  };
+
+  const [currentDate, setCurrentDate] = useState(getCurrentChicagoTime());
   const [scheduleData, setScheduleData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedView, setSelectedView] = useState('all');
+  const [showCalendar, setShowCalendar] = useState(false);
   
   // Clinical workspace state
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showClinicalWorkspace, setShowClinicalWorkspace] = useState(false);
+  
+  // Enhanced vitals modal state
+  const [showEnhancedVitalsModal, setShowEnhancedVitalsModal] = useState(false);
 
   const currentDateStr = useMemo(
     () => currentDate.toISOString().split('T')[0],
@@ -62,9 +91,17 @@ function NurseSchedule() {
       visit_id: appointment.visit_id,
       appointment_id: appointment.appointment_id,
       patient_id: appointment.patient_id,
-      patient_name: appointment.patient_name
+      patient_name: appointment.patient_name,
+      // Add more appointment data for the enhanced modal
+      patient_first_name: appointment.patient_name?.split(' ')[0] || '',
+      patient_last_name: appointment.patient_name?.split(' ')[1] || '',
+      appointment_date: appointment.appointment_date,
+      office_name: appointment.office_name
     });
-    setShowClinicalWorkspace(true);
+    
+    // Use the enhanced vitals modal by default
+    // You can add a toggle or preference here to switch between interfaces
+    setShowEnhancedVitalsModal(true);
   };
 
   const handleCloseClinicalWorkspace = () => {
@@ -72,10 +109,20 @@ function NurseSchedule() {
     setSelectedPatient(null);
   };
 
+  const handleCloseEnhancedVitalsModal = () => {
+    setShowEnhancedVitalsModal(false);
+    setSelectedPatient(null);
+  };
+
   const handleVitalsSaved = (visitId) => {
-    // Refresh schedule after saving
     fetchDailySchedule();
     console.log('Vitals saved for visit:', visitId);
+  };
+
+  const handleEnhancedVitalsSaved = (data) => {
+    fetchDailySchedule();
+    console.log('Enhanced vitals saved:', data);
+    handleCloseEnhancedVitalsModal();
   };
 
   const goToPreviousDay = () => {
@@ -91,7 +138,13 @@ function NurseSchedule() {
   };
 
   const goToToday = () => {
-    setCurrentDate(new Date());
+    setCurrentDate(getCurrentChicagoTime());
+  };
+
+  const handleDateSelect = (e) => {
+    const selectedDate = new Date(e.target.value + 'T00:00:00');
+    setCurrentDate(selectedDate);
+    setShowCalendar(false);
   };
 
   const getAppointmentsToDisplay = () => {
@@ -107,7 +160,7 @@ function NurseSchedule() {
   };
 
   const formatDate = (date) =>
-    date.toLocaleDateString('en-US', {
+    formatChicagoDate(date, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -115,8 +168,9 @@ function NurseSchedule() {
     });
 
   const isToday = () => {
-    const today = new Date();
-    return currentDate.toDateString() === today.toDateString();
+    const today = getCurrentChicagoTime();
+    return formatChicagoDate(currentDate, {year: 'numeric', month: '2-digit', day: '2-digit'}) === 
+           formatChicagoDate(today, {year: 'numeric', month: '2-digit', day: '2-digit'});
   };
 
   // Show clinical workspace as full-screen overlay
@@ -127,6 +181,38 @@ function NurseSchedule() {
         onClose={handleCloseClinicalWorkspace}
         onSave={handleVitalsSaved}
       />
+    );
+  }
+
+  // Show enhanced vitals modal (new workflow)
+  if (showEnhancedVitalsModal && selectedPatient) {
+    return (
+      <div className="nurse-schedule">
+        {/* Background content */}
+        <div className="schedule-content" style={{ filter: 'blur(2px)', pointerEvents: 'none' }}>
+          <div className="schedule-header">
+            <h1>Schedule - Enhanced Vitals Modal Active</h1>
+          </div>
+        </div>
+        
+        {/* Enhanced Vitals Modal */}
+        <NurseVitalsModal
+          patient={{
+            first_name: selectedPatient.patient_first_name,
+            last_name: selectedPatient.patient_last_name,
+            name: selectedPatient.patient_name
+          }}
+          appointment={{
+            Appointment_date: selectedPatient.appointment_date,
+            office_name: selectedPatient.office_name
+          }}
+          appointmentId={selectedPatient.appointment_id}
+          visitId={selectedPatient.visit_id}
+          patientId={selectedPatient.patient_id}
+          onClose={handleCloseEnhancedVitalsModal}
+          onSaved={handleEnhancedVitalsSaved}
+        />
+      </div>
     );
   }
 
@@ -177,10 +263,32 @@ function NurseSchedule() {
           
           <div className="date-display">
             <h1>{formatDate(currentDate)}</h1>
-            {!isToday() && (
-              <button onClick={goToToday} className="today-button">
-                Today
+            <div className="date-actions">
+              {!isToday() && (
+                <button onClick={goToToday} className="today-button">
+                  Today
+                </button>
+              )}
+              <button 
+                onClick={() => setShowCalendar(!showCalendar)} 
+                className="calendar-button"
+                aria-label="Select date"
+              >
+                <Calendar size={18} />
+                Select Date
               </button>
+            </div>
+            
+            {/* Calendar Picker Dropdown */}
+            {showCalendar && (
+              <div className="calendar-dropdown">
+                <input
+                  type="date"
+                  value={currentDateStr}
+                  onChange={handleDateSelect}
+                  className="date-picker"
+                />
+              </div>
             )}
           </div>
           
@@ -192,10 +300,6 @@ function NurseSchedule() {
         {/* Work Schedule Info */}
         {working && work_schedule && (
           <div className="work-info">
-            <div className="work-time">
-              <Clock size={20} />
-              <span>{work_schedule.start_time} - {work_schedule.end_time}</span>
-            </div>
             <div className="work-location">
               <span className="office-badge">{work_schedule.office_name}</span>
               <span className="office-address">{work_schedule.city}, {work_schedule.state}</span>
@@ -313,7 +417,7 @@ function NurseSchedule() {
                     {/* Time */}
                     <div className="appointment-time">
                       <Clock size={18} />
-                      <span>{appointment.appointment_time}</span>
+                      <span>{formatTimeStringChicago(appointment.appointment_time)}</span>
                     </div>
 
                     {/* Patient Info */}

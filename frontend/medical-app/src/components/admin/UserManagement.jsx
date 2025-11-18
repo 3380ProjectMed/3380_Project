@@ -107,7 +107,7 @@ function UserManagement() {
     const searchLower = searchTerm.toLowerCase();
     const name = (user.name || '').toLowerCase();
     const email = (user.email || '').toLowerCase();
-    const specialtyDept = (user.specialty_dept || '').toLowerCase();
+    const specialtyDept = (user.specialization_dept || '').toLowerCase();
     const workLocation = (user.work_location || '').toLowerCase();
     
     return name.includes(searchLower) || 
@@ -338,7 +338,7 @@ function UserManagement() {
                       
                       {/* Specialization/Department column */}
                       {(filters.role === 'all' || filters.role === 'doctor' || filters.role === 'nurse') && (
-                        <td>{user.specialty_dept || 'N/A'}</td>
+                        <td>{user.specialization_dept || 'N/A'}</td>
                       )}
                       
                       {/* Work Location - not shown for patients */}

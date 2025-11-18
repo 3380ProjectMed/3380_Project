@@ -25,7 +25,6 @@ try {
         echo json_encode(['success' => false, 'error' => 'MISSING_EMAIL']);
         exit;
     }
-
     // nurse ↔ staff ↔ staff_email
     $rows = executeQuery(
         $conn,

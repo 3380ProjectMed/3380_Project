@@ -113,14 +113,19 @@ function Report() {
       end_date: endDate,
       group_by: groupBy
     });
-    
-    if (selectedOffice !== 'all') params.append('office_id', selectedOffice);
+
+    // Only apply office filter for Financial & New Patients reports
+    if (activeReport !== 'office' && selectedOffice !== 'all') {
+      params.append('office_id', selectedOffice);
+    }
+
     if (selectedDoctor !== 'all') params.append('doctor_id', selectedDoctor);
     if (selectedInsurance !== 'all') params.append('insurance_id', selectedInsurance);
     if (statusFilter !== 'all') params.append('status', statusFilter);
-    
+
     return params.toString();
   };
+
 
   const fetchFinancialReport = async () => {
     try {
@@ -186,6 +191,7 @@ function Report() {
   };
 
   const handleSelectReport = (reportType) => {
+    resetFilters();
     setActiveReport(reportType);
     setShowFilters(false);
     setSortConfig({ key: null, direction: 'desc' });
@@ -238,18 +244,33 @@ function Report() {
         const rate = gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
         csvContent += `${row.period_label},${row.total_visits},${row.gross_revenue},${row.collected_payments},${row.outstanding_balance},${row.unique_patients},${rate}\n`;
       });
+
     } else if (activeReport === 'office' && officeData) {
       filename = `office_utilization_${startDate}_to_${endDate}.csv`;
       csvContent = 'Office Name,Address,Total Appointments,Completed,Cancelled,No-Shows,Scheduled,No-Show Rate,Avg Wait Time (min),Utilization Rate\n';
       (officeData.office_stats || []).forEach(row => {
         csvContent += `"${row.office_name}","${row.address}",${row.total_appointments},${row.completed},${row.cancelled},${row.no_shows},${row.scheduled},${row.no_show_rate},${row.avg_wait_minutes || 'N/A'},${row.utilization_rate}\n`;
       });
+
     } else if (activeReport === 'newPatients' && newPatientsData) {
       filename = `new_patients_${startDate}_to_${endDate}.csv`;
+
+      // Doctor performance section
       csvContent = 'Doctor,New Patients,Retained,Retention Rate,Total Patients,Avg Visits,Completed\n';
       (newPatientsData.doctor_performance || []).forEach(doc => {
         csvContent += `"Dr. ${doc.doctor_name}",${doc.new_patients_acquired},${doc.retained_patients},${doc.retention_rate}%,${doc.total_patients_seen},${doc.avg_visits_per_patient},${doc.total_completed}\n`;
       });
+
+      // Booking method breakdown section
+// Booking method breakdown section
+      csvContent += '\nBooking Method,New Patients,Total Appointments,Completed,Unique Patients,Completion Rate\n';
+      (newPatientsData.booking_breakdown || []).forEach(row => {
+        const total = Number(row.total_appointments || 0);
+        const completed = Number(row.completed_appointments || 0);
+        const rate = total > 0 ? ((completed / total) * 100).toFixed(1) : '0.0';
+        csvContent += `${row.method},${row.new_patients},${row.total_appointments},${row.completed_appointments},${row.unique_patients},${rate}\n`;
+      });
+
     }
     
     if (!filename) return;
@@ -425,17 +446,22 @@ function Report() {
               </select>
             </div>
 
-            <div className="filter-group">
-              <label>Office</label>
-              <select value={selectedOffice} onChange={(e) => setSelectedOffice(e.target.value)}>
-                <option value="all">All Offices</option>
-                {offices.map(office => (
-                  <option key={office.office_id} value={office.office_id}>
-                    {office.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {activeReport !== 'office' && (
+              <div className="filter-group">
+                <label>Office</label>
+                <select
+                  value={selectedOffice}
+                  onChange={(e) => setSelectedOffice(e.target.value)}
+                >
+                  <option value="all">All Offices</option>
+                  {offices.map(office => (
+                    <option key={office.office_id} value={office.office_id}>
+                      {office.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {(activeReport === 'financial' || activeReport === 'newPatients') && (
               <div className="filter-group">
@@ -919,6 +945,17 @@ function Report() {
               value={newPatientsData.summary?.top_doctor_count || 0}
               subtitle={`Dr. ${newPatientsData.summary?.top_doctor || 'N/A'}`}
             />
+            <StatCard 
+              type="info"
+              icon={<Calendar size={20} />}
+              label="Top Channel"
+              value={newPatientsData.summary?.top_booking_method || 'N/A'}
+              subtitle={
+                newPatientsData.summary?.top_booking_method_count
+                  ? `${newPatientsData.summary.top_booking_method_count} new patients`
+                  : 'No channel data'
+              }
+            />
           </div>
 
           {newPatientsData.trend_data && newPatientsData.trend_data.length > 0 && (
@@ -1046,6 +1083,62 @@ function Report() {
               </div>
             </section>
           )}
+          {newPatientsData.booking_breakdown && newPatientsData.booking_breakdown.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>New Patients by Booking Method</h3>
+                <p className="section-subtitle">
+                  How patients are entering the system during this period
+                </p>
+              </div>
+
+              <div className="table-container">
+                <table className="report-table sortable-table">
+                  <thead>
+                    <tr>
+                      <th>Booking Method</th>
+                      <th className="text-right">New Patients</th>
+                      <th className="text-right">Total Appointments</th>
+                      <th className="text-right">Completed</th>
+                      <th className="text-right">Unique Patients</th>
+                      <th className="text-right">Completion Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {newPatientsData.booking_breakdown.map((row, idx) => {
+                      const total = Number(row.total_appointments || 0);
+                      const completed = Number(row.completed_appointments || 0);
+                      const completionRate = total > 0 
+                        ? ((completed / total) * 100).toFixed(1)
+                        : '0.0';
+
+                      return (
+                        <tr key={idx}>
+                          <td className="text-bold">{row.method}</td> {/* ← here */}
+                          <td className="text-right text-primary">{row.new_patients}</td>
+                          <td className="text-right">{row.total_appointments}</td>
+                          <td className="text-right text-success">{row.completed_appointments}</td>
+                          <td className="text-right">{row.unique_patients}</td>
+                          <td className="text-right">
+                            <span className={`badge ${
+                              Number(completionRate) >= 80
+                                ? 'badge-success'
+                                : Number(completionRate) >= 60
+                                ? 'badge-warning'
+                                : 'badge-danger'
+                            }`}>
+                              {completionRate}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
         </>
       )}
 
@@ -1375,17 +1468,27 @@ const OfficeUtilizationPie = ({ offices }) => {
 const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
   const [hoveredBar, setHoveredBar] = React.useState(null);
   const [clickedBar, setClickedBar] = React.useState(null);
-  
+
   if (!data || data.length === 0) return null;
 
-  const revenues = data.map((d) => {
+  // Colors used everywhere (bars, legend, tooltip dots)
+  const COLORS = {
+    gross: '#1d4ed8',       // blue
+    collected: '#10b981',   // green
+    outstanding: '#f97316', // orange
+  };
+
+  // Reverse so earliest period is on the LEFT
+  const sortedData = [...data].reverse();
+
+  const revenues = sortedData.map((d) => {
     const parsed = parseFloat(d.gross_revenue);
     return isNaN(parsed) ? 0 : parsed;
   });
-  
-  const maxRevenue = Math.max(...revenues);
+
+  const maxRevenue = Math.max(...revenues, 0);
   const yAxisMax = Math.max(Math.ceil(maxRevenue * 1.1), 100);
-  
+
   const yAxisSteps = 5;
   const yAxisLabels = [];
   for (let i = yAxisSteps; i >= 0; i--) {
@@ -1411,7 +1514,7 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
   const handleOutsideClick = () => {
     setClickedBar(null);
     if (onBarSelect) {
-      onBarSelect(null);  
+      onBarSelect(null);
     }
   };
 
@@ -1427,7 +1530,7 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
       setClickedBar(null);
     }
   }, [selectedPeriod]);
-  
+
   return (
     <div className="simple-chart">
       <div className="chart-wrapper">
@@ -1438,27 +1541,39 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
             </div>
           ))}
         </div>
-        
+
         <div className="chart-area">
           <div className="chart-gridlines">
             {yAxisLabels.map((_, idx) => (
               <div key={idx} className="gridline" />
             ))}
           </div>
-          
+
           <div className="chart-bars">
-            {data.map((item, idx) => {
+            {sortedData.map((item, idx) => {
               const grossRevenue = parseFloat(item.gross_revenue) || 0;
               const collected = parseFloat(item.collected_payments) || 0;
               const outstanding = parseFloat(item.outstanding_balance) || 0;
-              
-              const height = yAxisMax > 0 ? (grossRevenue / yAxisMax) * 100 : 0;
-              const collectedHeight = yAxisMax > 0 ? (collected / yAxisMax) * 100 : 0;
-              
-              const safeHeight = isNaN(height) || height < 0 ? 0 : Math.min(height, 100);
-              const safeCollectedPct = (grossRevenue > 0 && collectedHeight > 0) 
-                ? Math.min((collectedHeight / height) * 100, 100) 
-                : 0;  
+
+              const barHeight = yAxisMax > 0 ? (grossRevenue / yAxisMax) * 100 : 0;
+              const safeHeight =
+                isNaN(barHeight) || barHeight < 0 ? 0 : Math.min(barHeight, 100);
+
+              // Percent of *gross* that is collected / outstanding
+              let collectedPct = 0;
+              let outstandingPct = 0;
+              if (grossRevenue > 0) {
+                collectedPct = (collected / grossRevenue) * 100;
+                outstandingPct = (outstanding / grossRevenue) * 100;
+
+                // Clamp so segments never exceed 100% due to rounding
+                const sum = collectedPct + outstandingPct;
+                if (sum > 100) {
+                  const scale = 100 / sum;
+                  collectedPct *= scale;
+                  outstandingPct *= scale;
+                }
+              }
 
               const isActive =
                 hoveredBar === idx ||
@@ -1481,53 +1596,117 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
                       className={`chart-bar chart-bar-gross ${
                         isActive ? 'hovered' : ''
                       }`}
-                      style={{ height: `${safeHeight}%` }}
+                      style={{
+                        height: `${safeHeight}%`,
+                        backgroundColor: COLORS.gross,
+                        display: 'flex',
+                        flexDirection: 'column-reverse',
+                      }}
                     >
                       {safeHeight > 0 && (
-                        <div
-                          className="chart-bar-collected"
-                          style={{ height: `${safeCollectedPct}%` }}
-                        />
+                        <>
+                          {/* Collected segment (bottom) */}
+                          <div
+                            className="chart-bar-segment chart-bar-collected"
+                            style={{
+                              height: `${collectedPct}%`,
+                              backgroundColor: COLORS.collected,
+                            }}
+                          />
+                          {/* Outstanding segment (stacked above) */}
+                          <div
+                            className="chart-bar-segment chart-bar-outstanding"
+                            style={{
+                              height: `${outstandingPct}%`,
+                              backgroundColor: COLORS.outstanding,
+                            }}
+                          />
+                        </>
                       )}
                     </div>
-                  
+
                     {(hoveredBar === idx || clickedBar === idx) && (
-                      <div className={`chart-tooltip ${clickedBar === idx ? 'clicked' : ''}`}>
+                      <div
+                        className={`chart-tooltip ${
+                          clickedBar === idx ? 'clicked' : ''
+                        }`}
+                      >
                         <div className="tooltip-header">{item.period_label}</div>
+
                         <div className="tooltip-row">
                           <span className="tooltip-label">
-                            <span className="tooltip-dot gross" />
+                            <span
+                              className="tooltip-dot"
+                              style={{ backgroundColor: COLORS.gross }}
+                            />
                             Gross Revenue:
                           </span>
-                          <span className="tooltip-value">${grossRevenue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                          <span className="tooltip-value">
+                            $
+                            {grossRevenue.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
                         </div>
+
                         <div className="tooltip-row">
                           <span className="tooltip-label">
-                            <span className="tooltip-dot collected" />
+                            <span
+                              className="tooltip-dot"
+                              style={{ backgroundColor: COLORS.collected }}
+                            />
                             Collected:
                           </span>
-                          <span className="tooltip-value">${collected.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                          <span className="tooltip-value">
+                            $
+                            {collected.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
                         </div>
+
                         <div className="tooltip-row">
                           <span className="tooltip-label">
-                            <span className="tooltip-dot outstanding" />
+                            <span
+                              className="tooltip-dot"
+                              style={{ backgroundColor: COLORS.outstanding }}
+                            />
                             Outstanding:
                           </span>
-                          <span className="tooltip-value">${outstanding.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                          <span className="tooltip-value">
+                            $
+                            {outstanding.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
                         </div>
+
                         <div className="tooltip-divider" />
+
                         <div className="tooltip-row small">
                           <span className="tooltip-label">Visits:</span>
-                          <span className="tooltip-value">{item.total_visits}</span>
+                          <span className="tooltip-value">
+                            {item.total_visits}
+                          </span>
                         </div>
                         <div className="tooltip-row small">
                           <span className="tooltip-label">Patients:</span>
-                          <span className="tooltip-value">{item.unique_patients}</span>
+                          <span className="tooltip-value">
+                            {item.unique_patients}
+                          </span>
                         </div>
                         <div className="tooltip-row small">
-                          <span className="tooltip-label">Collection Rate:</span>
+                          <span className="tooltip-label">
+                            Collection Rate:
+                          </span>
                           <span className="tooltip-value">
-                            {grossRevenue > 0 ? ((collected / grossRevenue) * 100).toFixed(1) : '0.0'}%
+                            {grossRevenue > 0
+                              ? ((collected / grossRevenue) * 100).toFixed(1)
+                              : '0.0'}
+                            %
                           </span>
                         </div>
                       </div>
@@ -1540,15 +1719,28 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
           </div>
         </div>
       </div>
-      
+
       <div className="chart-legend">
         <div className="legend-item">
-          <span className="legend-color legend-gross" />
+          <span
+            className="legend-color legend-gross"
+            style={{ backgroundColor: COLORS.gross }}
+          />
           <span>Gross Revenue</span>
         </div>
         <div className="legend-item">
-          <span className="legend-color legend-collected" />
+          <span
+            className="legend-color legend-collected"
+            style={{ backgroundColor: COLORS.collected }}
+          />
           <span>Collected</span>
+        </div>
+        <div className="legend-item">
+          <span
+            className="legend-color legend-outstanding"
+            style={{ backgroundColor: COLORS.outstanding }}
+          />
+          <span>Outstanding</span>
         </div>
         <div className="legend-hint">
           <AlertCircle size={14} />
@@ -1560,25 +1752,54 @@ const SimpleChart = ({ data, onBarSelect, selectedPeriod }) => {
 };
 
 const NewPatientTrendChart = ({ data, groupBy }) => {
-  const doctorMap = {};
-  const periods = [];
-  
+  const [hoverIndex, setHoverIndex] = React.useState(null);
+  const [selectedPeriod, setSelectedPeriod] = React.useState(null);
+
+  if (!data || data.length === 0) {
+    return <p className="chart-empty">No trend data.</p>;
+  }
+
+  // Build per-period meta: total new patients + doctor breakdown
+  const periodMap = new Map();
+
   data.forEach(row => {
-    if (!periods.includes(row.period_label)) {
-      periods.push(row.period_label);
+    const period = row.period_label;
+    const doctor = row.doctor_name;
+    const v = parseInt(row.new_patients, 10) || 0;
+
+    if (!periodMap.has(period)) {
+      periodMap.set(period, {
+        period,
+        total: 0,
+        doctors: {} // doctor_name -> count
+      });
     }
-    
-    if (!doctorMap[row.doctor_name]) {
-      doctorMap[row.doctor_name] = {};
-    }
-    doctorMap[row.doctor_name][row.period_label] = parseInt(row.new_patients);
+
+    const meta = periodMap.get(period);
+    meta.total += v;
+    if (!meta.doctors[doctor]) meta.doctors[doctor] = 0;
+    meta.doctors[doctor] += v;
   });
 
-  const doctors = Object.keys(doctorMap);
-  const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9'];
-
-  const maxValue = Math.max(...data.map(d => parseInt(d.new_patients)), 1);
+  const periods = Array.from(periodMap.values());
+  const maxValue = Math.max(...periods.map(p => p.total), 1);
   const yAxisMax = Math.ceil(maxValue * 1.2);
+
+  const hasMultiplePeriods = periods.length > 1;
+  const denom = hasMultiplePeriods ? periods.length - 1 : 1;
+
+  // Build points for the total new-patients line
+  const pointsArr = periods.map((p, idx) => {
+    const x = hasMultiplePeriods ? (idx / denom) * 800 : 400;
+    const y = 300 - ((p.total / yAxisMax) * 300);
+    return { ...p, x, y };
+  });
+
+  const polylinePoints = pointsArr.map(p => `${p.x},${p.y}`).join(' ');
+
+  const selectedMeta = selectedPeriod
+    ? periods.find(p => p.period === selectedPeriod)
+    : null;
 
   return (
     <div className="trend-chart-container">
@@ -1586,7 +1807,7 @@ const NewPatientTrendChart = ({ data, groupBy }) => {
         <div className="trend-y-axis">
           {[4, 3, 2, 1, 0].map(i => (
             <div key={i} className="y-label">
-              {Math.round(yAxisMax * i / 4)}
+              {Math.round((yAxisMax * i) / 4)}
             </div>
           ))}
         </div>
@@ -1599,72 +1820,142 @@ const NewPatientTrendChart = ({ data, groupBy }) => {
           </div>
 
           <svg className="trend-svg" viewBox="0 0 800 300" preserveAspectRatio="none">
-            {doctors.map((doctor, doctorIdx) => {
-              const points = periods.map((period, idx) => {
-                const value = doctorMap[doctor][period] || 0;
-                const x = (idx / (periods.length - 1)) * 800;
-                const y = 300 - ((value / yAxisMax) * 300);
-                return `${x},${y}`;
-              }).join(' ');
+            {/* Single "all patients" line */}
+            {pointsArr.length > 1 && (
+              <polyline
+                points={polylinePoints}
+                fill="none"
+                stroke="#6366f1"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
+
+            {/* Points with hover + click */}
+            {pointsArr.map((p, idx) => {
+              const doctorsSorted = Object.entries(p.doctors)
+                .sort((a, b) => b[1] - a[1]);
+              const topDoctors = doctorsSorted.slice(0, 3);
+              const othersCount = doctorsSorted
+                .slice(3)
+                .reduce((s, [, c]) => s + c, 0);
+
+              const titleLines = [
+                `${p.period}: ${p.total} new patients`,
+                '',
+                ...topDoctors.map(
+                  ([name, count]) => `• Dr. ${name}: ${count}`
+                ),
+                othersCount > 0 ? `• Others: ${othersCount}` : ''
+              ].filter(Boolean);
+
+              const isSelected = selectedPeriod === p.period;
 
               return (
-                <g key={doctor}>
-                  <polyline
-                    points={points}
-                    fill="none"
-                    stroke={colors[doctorIdx % colors.length]}
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  {periods.map((period, idx) => {
-                    const value = doctorMap[doctor][period] || 0;
-                    if (value === 0) return null;
-                    
-                    const x = (idx / (periods.length - 1)) * 800;
-                    const y = 300 - ((value / yAxisMax) * 300);
-                    
-                    return (
-                      <circle
-                        key={idx}
-                        cx={x}
-                        cy={y}
-                        r="5"
-                        fill={colors[doctorIdx % colors.length]}
-                        className="trend-point"
-                      >
-                        <title>Dr. {doctor} - {period}: {value} patients</title>
-                      </circle>
+                <circle
+                  key={p.period}
+                  cx={p.x}
+                  cy={p.y}
+                  r={isSelected ? 6 : 5}
+                  fill={isSelected ? '#4f46e5' : '#6366f1'}
+                  stroke="white"
+                  strokeWidth={isSelected ? 3 : 2}
+                  className="trend-point"
+                  onMouseEnter={() => setHoverIndex(idx)}
+                  onMouseLeave={() => setHoverIndex(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPeriod(prev =>
+                      prev === p.period ? null : p.period
                     );
-                  })}
-                </g>
+                  }}
+                >
+                  <title>{titleLines.join('\n')}</title>
+                </circle>
               );
             })}
           </svg>
 
           <div className="trend-x-labels">
-            {periods.map((period, idx) => (
-              <div key={idx} className="x-label">
-                {period}
+            {periods.map((p, idx) => (
+              <div key={p.period} className="x-label">
+                {p.period}
               </div>
             ))}
           </div>
         </div>
       </div>
 
+      {/* Small hint under the chart */}
       <div className="trend-legend">
-        {doctors.map((doctor, idx) => (
-          <div key={doctor} className="legend-item">
-            <span 
-              className="legend-dot" 
-              style={{ backgroundColor: colors[idx % colors.length] }}
-            />
-            <span>Dr. {doctor}</span>
-          </div>
-        ))}
+        <div className="legend-item">
+          <span className="legend-dot" style={{ backgroundColor: '#6366f1' }} />
+          <span>All new patients</span>
+        </div>
+        <div className="legend-hint">
+          <AlertCircle size={14} />
+          <span>Hover points for doctor mix · Click a point to see details below</span>
+        </div>
       </div>
+
+      {/* Details panel for the selected period */}
+      {selectedMeta && (
+        <div className="trend-detail-card">
+          <div className="trend-detail-header">
+            <h4>New patients on {selectedMeta.period}</h4>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={() => setSelectedPeriod(null)}
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="table-container">
+            <table className="report-table">
+              <thead>
+                <tr>
+                  <th>Doctor</th>
+                  <th className="text-right">New Patients</th>
+                  <th className="text-right">Share of Day</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(selectedMeta.doctors)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([name, count]) => {
+                    const share =
+                      selectedMeta.total > 0
+                        ? ((count / selectedMeta.total) * 100).toFixed(1)
+                        : '0.0';
+                    return (
+                      <tr key={name}>
+                        <td className="text-bold">Dr. {name}</td>
+                        <td className="text-right text-primary">{count}</td>
+                        <td className="text-right">
+                          <span className="badge badge-info">
+                            {share}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* NOTE: if you later add an API that returns individual
+              appointments for this period, you can replace this
+              per-doctor table with true appointment rows
+              (patient, doctor, date/time, office). */}
+        </div>
+      )}
     </div>
   );
 };
+
+
 
 export default Report;

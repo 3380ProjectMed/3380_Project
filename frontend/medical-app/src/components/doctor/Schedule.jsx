@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import './Schedule.css';
 
 /**
@@ -13,6 +13,7 @@ import './Schedule.css';
  * - Appointment display with time and patient name
  * - Weekend highlighting based on work schedule
  * - Today's date highlighted with a circle
+ * - Day click to view all appointments in modal
  */
 function Schedule({ onAppointmentClick }) {
   const [currentDate, setCurrentDate] = useState(new Date()); 
@@ -21,6 +22,8 @@ function Schedule({ onAppointmentClick }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [showDayModal, setShowDayModal] = useState(false);
 
   // Fetch work schedule on component mount
   useEffect(() => {
@@ -227,6 +230,30 @@ const getUniqueLocations = () => {
   };
 
   /**
+   * Handle day click to show modal
+   */
+  const handleDayClick = (day) => {
+    const assignedLocation = getDailyLocation(
+      currentDate.getFullYear(), 
+      currentDate.getMonth(), 
+      day
+    );
+    
+    // Only open modal for working days
+    if (!assignedLocation) return;
+    
+    const dayAppointments = getAppointmentsForDay(day);
+    
+    setSelectedDay({
+      day,
+      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), day),
+      location: assignedLocation,
+      appointments: dayAppointments
+    });
+    setShowDayModal(true);
+  };
+
+  /**
    * Handle appointment click
    */
   const handleAppointmentClick = (appointment) => {
@@ -348,7 +375,7 @@ const getUniqueLocations = () => {
               day
             );
             const isNotWorking = !assignedLocation;
-            const appointments = getAppointmentsForDay(day);
+            const dayAppointments = getAppointmentsForDay(day);
             const isVisible = isDayVisible(day);
             
             // Check if this is today's date
@@ -361,10 +388,12 @@ const getUniqueLocations = () => {
               <div 
                 key={day} 
                 className={`calendar-day ${isNotWorking ? 'weekend' : ''} ${!isVisible && !isNotWorking ? 'filtered' : ''} ${isToday ? 'today' : ''}`}
+                onClick={() => !isNotWorking && handleDayClick(day)}
+                style={{ cursor: isNotWorking ? 'default' : 'pointer' }}
               >
                 {/* Day Header */}
                 <div className="day-header">
-                  <span className="day-number">{day}</span>
+                  <span className={`day-number ${isToday ? '' : 'regular-day'}`}>{day}</span>
                   
                   {/* Location Badge */}
                   {assignedLocation && (
@@ -385,18 +414,12 @@ const getUniqueLocations = () => {
                 <div className="day-content">
                   {isNotWorking ? (
                     <p className="no-appointments">Off</p>
-                  ) : appointments.length > 0 ? (
+                  ) : dayAppointments.length > 0 ? (
                     <div className="appointments">
-                      {appointments.map(app => (
+                      {dayAppointments.slice(0, 3).map(app => (
                         <div 
                           key={app.appointment_id} 
                           className="appointment-item"
-                          onClick={() => handleAppointmentClick(app)}
-                          role="button"
-                          tabIndex={0}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') handleAppointmentClick(app);
-                          }}
                         >
                           <p className="appointment-time">
                             {app.appointment_time ? app.appointment_time.substring(0, 5) : 'TBD'}
@@ -406,6 +429,11 @@ const getUniqueLocations = () => {
                           </p>
                         </div>
                       ))}
+                      {dayAppointments.length > 3 && (
+                        <p className="more-appointments">
+                          +{dayAppointments.length - 3} more
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <p className="no-appointments">
@@ -418,6 +446,81 @@ const getUniqueLocations = () => {
           })}
         </div>
       </div>
+
+      {/* ===== DAY APPOINTMENTS MODAL ===== */}
+      {showDayModal && selectedDay && (
+        <div className="modal-overlay" onClick={() => setShowDayModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="modal-header">
+              <div>
+                <h2>
+                  {selectedDay.date.toLocaleDateString('default', { 
+                    weekday: 'long', 
+                    month: 'long', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </h2>
+                <p className="modal-location">
+                  📍 {selectedDay.location.office_name} - {selectedDay.location.city}, {selectedDay.location.state}
+                </p>
+                <p className="modal-hours">
+                  🕐 {selectedDay.location.start_time} - {selectedDay.location.end_time}
+                </p>
+              </div>
+              <button 
+                className="modal-close"
+                onClick={() => setShowDayModal(false)}
+                aria-label="Close modal"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="modal-body">
+              {selectedDay.appointments.length > 0 ? (
+                <div className="appointments-list">
+                  <h3>{selectedDay.appointments.length} Appointment{selectedDay.appointments.length !== 1 ? 's' : ''}</h3>
+                  {selectedDay.appointments.map((app) => (
+                    <div 
+                      key={app.appointment_id} 
+                      className="appointment-card"
+                      onClick={() => handleAppointmentClick(app)}
+                    >
+                      <div className="appointment-card-header">
+                        <span className="appointment-card-time">
+                          🕐 {app.appointment_time ? app.appointment_time.substring(0, 5) : 'TBD'}
+                        </span>
+                        {app.office_name && (
+                          <span className="appointment-card-location">
+                            📍 {app.office_name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="appointment-card-body">
+                        <p className="appointment-card-patient">
+                          <strong>{app.patient_name || 'Patient'}</strong>
+                        </p>
+                        {app.reason && (
+                          <p className="appointment-card-reason">
+                            {app.reason}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-appointments-message">
+                  <p>No appointments scheduled for this day.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

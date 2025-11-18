@@ -1,5 +1,6 @@
-/* ========== SIDEBAR COMPONENT ========== */
-.sidebar {
+
+/* ========== NURSE SIDEBAR COMPONENT - DOCTOR STYLE ========== */
+.nurse-sidebar {
   /* Make sidebar translucent so the page background shows through slightly */
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(6px);
@@ -8,7 +9,7 @@
   left: 0;
   top: 0;
   bottom: 0;
-  border-right: 1px solid rgba(230,238,248,0.6);
+  border-right: 1px solid rgba(230, 238, 248, 0.6);
   box-shadow: 4px 0 12px rgba(0, 119, 182, 0.08);
   display: flex;
   flex-direction: column;
@@ -17,65 +18,86 @@
   visibility: visible !important;
   opacity: 1 !important;
   /* ensure sidebar uses the same font as the app */
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-.sidebar-content {
-  flex: 1;
-  padding: 1.75rem 0.5rem;
-  overflow-y: auto;
-}
-
-.sidebar-brand {
+.nurse-sidebar__brand {
   font-size: 1.5rem;
   font-weight: 800;
-  padding: 0 1rem;
-  margin-bottom: 2rem;
+  padding: 1.75rem 1rem 2rem 1rem;
   color: #0077b6;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.sidebar nav {
+.brand-icon {
+  font-size: 1.75rem;
+}
+
+.brand-text {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.nurse-sidebar__nav {
+  flex: 1;
+  padding: 0 0.5rem;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 
-.sidebar nav a {
+.nurse-sidebar__link {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   color: #03045e;
-  text-decoration: none;
+  background: transparent;
+  border: none;
   border-radius: 0.5rem;
   margin: 0.25rem 0;
   transition: all 0.2s ease;
   font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: left;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-.sidebar nav a:hover {
+.nurse-sidebar__link:hover {
   background: linear-gradient(135deg, #caf0f8, white);
   color: #0077b6;
   transform: translateX(4px);
 }
 
-.sidebar nav a.active {
-  background: linear-gradient(135deg, #0077b6, #00b4d8);
+.nurse-sidebar__link.active {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #0ea5e9 100%);
   color: white;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.15);
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+}
+
+.link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.link-label {
+  flex: 1;
 }
 
 /* Sidebar Footer with Log Out */
-.sidebar-footer {
+.nurse-sidebar__footer {
   padding: 1rem 0.5rem;
   border-top: 1px solid #e6eef8;
   background: rgba(250, 250, 250, 0.5);
+  margin-top: auto;
 }
 
-.logout-btn {
+.nurse-sidebar__logout {
   width: 100%;
   display: flex;
   align-items: center;
@@ -89,35 +111,35 @@
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: inherit;
-  text-align: center;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  text-align: left;
 }
 
-.logout-btn:hover {
+.nurse-sidebar__logout:hover {
   background: #fee2e2;
   border-color: #dc2626;
   transform: translateX(4px);
 }
 
-.logout-btn:active {
+.nurse-sidebar__logout:active {
   transform: translateX(2px);
 }
 
 /* Mobile Responsive - only hide on very small screens */
 @media (max-width: 767px) {
-  .sidebar {
+  .nurse-sidebar {
     transform: translateX(-100%);
     transition: transform 0.3s ease;
   }
   
-  .sidebar.mobile-open {
+  .nurse-sidebar.mobile-open {
     transform: translateX(0);
   }
 }
 
 /* Ensure sidebar is visible on tablet and desktop */
 @media (min-width: 768px) {
-  .sidebar {
+  .nurse-sidebar {
     transform: translateX(0) !important;
     display: flex !important;
   }

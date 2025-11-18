@@ -93,6 +93,7 @@ try {
                     a.Doctor_id,
                     a.Reason_for_visit,
                     a.Office_id,
+                    a.Status,
                     CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                     p.dob,
                     p.blood_type,
@@ -125,64 +126,86 @@ try {
         $appointment_date = $appt['Appointment_date'];
 
         // Step 2: Look for patient_visit that matches appointment_id
-        // Note: We search by appointment_id only, not date, because the nurse may have
-        // created the visit record and we want to find it regardless of exact date/time match
-        $visitSql = $baseSelect . ", a.Appointment_date, a.Reason_for_visit as appointment_reason"
-            . $baseFrom
-            . " LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
-                    WHERE pv.appointment_id = ?
-                    ORDER BY pv.date DESC
-                    LIMIT 1";
-        $rows = executeQuery($conn, $visitSql, 'i', [$appointment_id]);
+// Search by appointment_id only (nurse_id doesn't matter for viewing)
+$visitSql = $baseSelect . ", a.Appointment_date, a.Reason_for_visit as appointment_reason"
+    . $baseFrom
+    . " LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
+            WHERE pv.appointment_id = ?
+            ORDER BY pv.visit_id DESC
+            LIMIT 1";
+$rows = executeQuery($conn, $visitSql, 'i', [$appointment_id]);
 
-        // Step 3: If no patient_visit found for this appointment date
-        if (empty($rows)) {
-            // Calculate age
-            $age = null;
-            if (!empty($appt['dob'])) {
-                try {
-                    $dob = new DateTime($appt['dob']);
-                    $now = new DateTime();
-                    $age = $now->diff($dob)->y;
-                } catch (Exception $e) {
-                    // Keep age as null
-                }
-            }
+// DEBUG: Log what we found
+if (!empty($rows)) {
+    error_log('[get-patient-details] Found visit: visit_id=' . $rows[0]['visit_id'] . 
+              ', patient_id=' . $rows[0]['patient_id'] . 
+              ', nurse_id=' . $rows[0]['nurse_id'] .
+              ', bp=' . ($rows[0]['blood_pressure'] ?? 'null'));
+} else {
+    error_log('[get-patient-details] No visit found for appointment_id=' . $appointment_id);
+    
+    // DEBUG: Check if ANY visit exists for this appointment
+    $debugSql = "SELECT visit_id, appointment_id, patient_id, nurse_id, blood_pressure 
+                 FROM patient_visit 
+                 WHERE appointment_id = ?";
+    $debugRows = executeQuery($conn, $debugSql, 'i', [$appointment_id]);
+    error_log('[get-patient-details] Direct query found ' . count($debugRows) . ' visits');
+    if (!empty($debugRows)) {
+        error_log('[get-patient-details] First visit: ' . json_encode($debugRows[0]));
+    }
+}
+// Step 3: If no patient_visit found for this appointment date
+if (empty($rows)) {
+    // Calculate age
+    $age = null;
+    if (!empty($appt['dob'])) {
+        try {
+            $dob = new DateTime($appt['dob']);
+            $now = new DateTime();
+            $age = $now->diff($dob)->y;
+        } catch (Exception $e) {
+            // Keep age as null
+        }
+    }
 
-            // Return appointment data WITHOUT patient_visit
-            $response = [
-                'success' => true,
-                'has_visit' => false,
-                'message' => 'Patient has not checked in for this appointment yet',
-                'appointment' => [
-                    'appointment_id' => $appt['Appointment_id'],
-                    'patient_id' => $patient_id,
-                    'doctor_id' => $appt['Doctor_id'],
-                    'date' => $appt['Appointment_date'],
-                    'reason' => $appt['Reason_for_visit'] ?? '',
-                    'office_name' => $appt['office_name'],
-                    'doctor_name' => $appt['doctor_name']
-                ],
-                'visit' => [
-                    'visit_id' => null,
-                    'appointment_id' => $appt['Appointment_id'],
-                    'patient_id' => $patient_id,
-                    'date' => $appt['Appointment_date'],
-                    'status' => 'Scheduled',
-                    'reason' => $appt['Reason_for_visit'] ?? '',
-                    'department' => null,
-                    'diagnosis' => null,
-                    'present_illnesses' => null,
-                    'start_time' => null,
-                    'end_time' => null,
-                    'created_at' => null,
-                    'created_by' => null,
-                    'last_updated' => null,
-                    'updated_by' => null,
-                    'doctor_name' => $appt['doctor_name'],
-                    'nurse_name' => null,
-                    'office_name' => $appt['office_name']
-                ],
+    // Get appointment status from appointment table
+    $appointmentStatus = $appt['Status'] ?? 'Scheduled';
+
+    // Return appointment data WITHOUT patient_visit
+    $response = [
+        'success' => true,
+        'has_visit' => false,
+        'message' => 'Patient has not checked in for this appointment yet',
+        'appointment' => [
+            'appointment_id' => $appt['Appointment_id'],
+            'patient_id' => $patient_id,
+            'doctor_id' => $appt['Doctor_id'],
+            'date' => $appt['Appointment_date'],
+            'reason' => $appt['Reason_for_visit'] ?? '',
+            'office_name' => $appt['office_name'],
+            'doctor_name' => $appt['doctor_name'],
+            'status' => $appointmentStatus  // Add this line
+        ],
+        'visit' => [
+            'visit_id' => null,
+            'appointment_id' => $appt['Appointment_id'],
+            'patient_id' => $patient_id,
+            'date' => $appt['Appointment_date'],
+            'status' => $appt['Status'] ?? 'Scheduled', // Change this from 'Scheduled' to use actual status
+            'reason' => $appt['Reason_for_visit'] ?? '',
+            'department' => null,
+            'diagnosis' => null,
+            'present_illnesses' => null,
+            'start_time' => null,
+            'end_time' => null,
+            'created_at' => null,
+            'created_by' => null,
+            'last_updated' => null,
+            'updated_by' => null,
+            'doctor_name' => $appt['doctor_name'],
+            'nurse_name' => null,
+            'office_name' => $appt['office_name']
+        ],
                 'vitals' => [
                     'blood_pressure' => null,
                     'temperature' => null,

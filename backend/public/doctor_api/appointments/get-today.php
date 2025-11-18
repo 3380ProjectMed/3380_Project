@@ -1,21 +1,20 @@
 <?php
-
 /**
- * Get today's appointments for a doctor with intelligent status calculation
+ * Get today's appointments for a doctor with REAL-TIME status from database
+ * Updated to work with your authentication system (staff_id based)
  */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
-try {
-    //session_start();
 
+try {
     $conn = getDBConnection();
 
     // Get doctor_id from query param or derive from session
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
     } else {
-        // Verify authentication and role
+        // Verify authentication and role (YOUR AUTH SYSTEM)
         if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
             http_response_code(401);
             echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -28,7 +27,7 @@ try {
             exit;
         }
 
-        // user_id = staff_id for doctors, get doctor_id
+        // user_id = staff_id for doctors, get doctor_id (YOUR AUTH SYSTEM)
         $staff_id = (int)$_SESSION['uid'];
 
         $rows = executeQuery(
@@ -54,22 +53,29 @@ try {
     $today = $dt->format('Y-m-d');
     $currentDateTime = new DateTime('now', $tz);
 
-    // appointment has mixed case, patient/office/codes are lowercase
+    // ========================================
+    // 🆕 KEY CHANGE: Get appointments with patient_visit data
+    // ========================================
     $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
                 a.Reason_for_visit,
                 a.Office_id,
-                a.Status,
+                a.Status,                -- ✅ Get REAL status from database
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.patient_id,
                 p.allergies as allergy_code,
                 ca.allergies_text as allergies,
-                o.name as office_name
+                o.name as office_name,
+                pv.visit_id,             -- ✅ Check if patient has checked in
+                pv.blood_pressure,       -- ✅ Check if vitals recorded
+                pv.temperature,
+                pv.created_at as checked_in_at  -- ✅ When patient checked in
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             LEFT JOIN office o ON a.Office_id = o.office_id
+            LEFT JOIN patient_visit pv ON pv.appointment_id = a.Appointment_id  -- ✅ Join visit data
             WHERE a.Doctor_id = ?
             AND DATE(a.Appointment_date) = ?
             ORDER BY a.Appointment_date";
@@ -81,40 +87,29 @@ try {
         'total' => 0,
         'upcoming' => 0,
         'waiting' => 0,
-        'completed' => 0
+        'completed' => 0,
+        'pending' => 0
     ];
 
     foreach ($appointments as $apt) {
         $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
-        $dbStatus = $apt['Status'] ?? 'Scheduled';
-
-        // Determine display status
-        $displayStatus = $dbStatus;
+        
+        // ========================================
+        // 🆕 KEY CHANGE: Use REAL status from database
+        // No more time-based calculation!
+        // ========================================
+        $status = $apt['Status'] ?? 'Scheduled';
+        
+        // Calculate waiting time if patient has checked in
         $waitingTime = 0;
-
-        if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
-            $displayStatus = $dbStatus;
-        } else {
-            $timeDiff = ($currentDateTime->getTimestamp() - $appointmentDateTime->getTimestamp()) / 60;
-
-            if ($timeDiff < -15) {
-                $displayStatus = 'Upcoming';
-                $stats['upcoming']++;
-            } elseif ($timeDiff >= -15 && $timeDiff <= 15) {
-                $displayStatus = ($dbStatus === 'In Progress') ? 'In Progress' : 'Ready';
-            } elseif ($timeDiff > 15) {
-                if ($dbStatus === 'Scheduled') {
-                    $displayStatus = 'Waiting';
-                    $waitingTime = round($timeDiff);
-                    $stats['waiting']++;
-                } elseif ($dbStatus === 'In Progress') {
-                    $displayStatus = 'In Progress';
-                }
+        if (!empty($apt['checked_in_at'])) {
+            try {
+                $checkedIn = new DateTime($apt['checked_in_at'], $tz);
+                $diff = $currentDateTime->diff($checkedIn);
+                $waitingTime = ($diff->h * 60) + $diff->i;
+            } catch (Exception $e) {
+                // Keep waitingTime as 0
             }
-        }
-
-        if ($displayStatus === 'Completed') {
-            $stats['completed']++;
         }
 
         $formatted_appointments[] = [
@@ -126,12 +121,25 @@ try {
             'time' => date('g:i A', strtotime($apt['Appointment_date'])),
             'appointmentDateTime' => $apt['Appointment_date'],
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
-            'status' => $displayStatus,
-            'dbStatus' => $dbStatus,
+            'status' => $status,  // ✅ REAL status from database
+            'dbStatus' => $status,  // Keep for compatibility
             'location' => $apt['office_name'],
             'allergies' => $apt['allergies'] ?: 'No Known Allergies',
-            'waitingMinutes' => $waitingTime
+            'waitingMinutes' => $waitingTime,
+            'visitId' => $apt['visit_id'],
+            'hasVitals' => !empty($apt['blood_pressure']) || !empty($apt['temperature']),
+            'checkedInAt' => $apt['checked_in_at']
         ];
+
+        // Update stats based on REAL status
+        $statusLower = strtolower($status);
+        if (in_array($statusLower, ['waiting', 'ready', 'checked-in'])) {
+            $stats['waiting']++;
+        } elseif (in_array($statusLower, ['scheduled', 'upcoming'])) {
+            $stats['upcoming']++;
+        } elseif ($statusLower === 'completed') {
+            $stats['completed']++;
+        }
     }
 
     $stats['total'] = count($formatted_appointments);
