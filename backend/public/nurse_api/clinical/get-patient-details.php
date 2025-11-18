@@ -256,15 +256,15 @@ try {
         $specific_allergy_sql = "SELECT 
                                 app.app_id,
                                 app.patient_id,
-                                app.allergies_code,
+                                app.allergy_id,
                                 ca.allergies_text,
                                 app.notes,
-                                app.created_at,
-                                app.updated_at
+                                app.date_recorded,
+                                app.recorded_by
                             FROM allergies_per_patient app
-                            LEFT JOIN codes_allergies ca ON app.allergies_code = ca.allergies_code
+                            LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
                             WHERE app.patient_id = ?
-                            ORDER BY app.created_at DESC";
+                            ORDER BY app.date_recorded DESC";
         
         $specific_allergies = executeQuery($conn, $specific_allergy_sql, 'i', [$patient_id]);
     } catch (Exception $e) {
