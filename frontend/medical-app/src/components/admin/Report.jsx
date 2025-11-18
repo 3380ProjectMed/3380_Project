@@ -382,10 +382,21 @@ function Report() {
     setStatusFilter('all');
   };
 
-  const setDateRange = (days) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - days);
+  const setDateRange = (range) => {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    if (range === 'today') {
+      start = today;
+      end = today;
+      setGroupBy('day');
+    } else {
+      end = today;
+      start = new Date();
+      start.setDate(end.getDate() - range);
+    }
+
     setStartDate(start.toISOString().split('T')[0]);
     setEndDate(end.toISOString().split('T')[0]);
   };
@@ -517,6 +528,7 @@ function Report() {
                 />
               </div>
               <div className="date-presets">
+                <button onClick={() => setDateRange('today')} className="btn-preset">Today Only</button>
                 <button onClick={() => setDateRange(7)} className="btn-preset">Last 7 days</button>
                 <button onClick={() => setDateRange(30)} className="btn-preset">Last 30 days</button>
                 <button onClick={() => setDateRange(90)} className="btn-preset">Last 90 days</button>
