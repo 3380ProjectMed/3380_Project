@@ -193,32 +193,46 @@ function Report() {
     </div>
   );
 
-  const buildQueryParams = () => {
+  const buildQueryParams = (overrides = {}) => {
+    const start = overrides.startDate || startDate;
+    const end = overrides.endDate || endDate;
+    const group = overrides.groupBy || groupBy;
+
+    const office = overrides.selectedOffice ?? selectedOffice;
+    const doctor = overrides.selectedDoctor ?? selectedDoctor;
+    const insurance = overrides.selectedInsurance ?? selectedInsurance;
+    const status = overrides.statusFilter ?? statusFilter;
+
     const params = new URLSearchParams({
-      start_date: startDate,
-      end_date: endDate,
-      group_by: groupBy
+      start_date: start,
+      end_date: end,
+      group_by: group
     });
 
     // Only apply office filter for Financial & New Patients reports
-    if (activeReport !== 'office' && selectedOffice !== 'all') {
-      params.append('office_id', selectedOffice);
+    if (activeReport !== 'office' && office !== 'all') {
+      params.append('office_id', office);
     }
 
-    if (selectedDoctor !== 'all') params.append('doctor_id', selectedDoctor);
-    if (selectedInsurance !== 'all') params.append('insurance_id', selectedInsurance);
-    if (statusFilter !== 'all') params.append('status', statusFilter);
+    if (doctor !== 'all') params.append('doctor_id', doctor);
+    if (insurance !== 'all') params.append('insurance_id', insurance);
+    if (status !== 'all') params.append('status', status);
 
     return params.toString();
   };
 
+  const groupByLabel =
+    groupBy === 'week' ? 'Weekly' :
+    groupBy === 'month' ? 'Monthly' :
+    'Daily';
 
-  const fetchFinancialReport = async () => {
+
+  const fetchFinancialReport = async (overrides = {}) => {
     try {
       setLoading(true);
       setError(null);
       const res = await fetch(
-        `/admin_api/reports/financial-summary.php?${buildQueryParams()}`,
+        `/admin_api/reports/financial-summary.php?${buildQueryParams(overrides)}`,
         { credentials: 'include' }
       );
       const data = await res.json();
@@ -233,6 +247,7 @@ function Report() {
       setLoading(false);
     }
   };
+
 
   const fetchOfficeUtilization = async () => {
     try {
@@ -316,6 +331,74 @@ function Report() {
       return sortConfig.direction === 'asc' ? comparison : -comparison;
     });
   };
+
+    const getDrilldownRangeForPeriod = (row) => {
+    const key = String(row.period_group);
+
+    // Already daily: drilldown = just that day
+    if (groupBy === 'day') {
+      return { start: key.slice(0, 10), end: key.slice(0, 10) };
+    }
+
+    // Weekly: period_group is YEARWEEK, e.g. 202547
+    if (groupBy === 'week') {
+      const year = parseInt(key.slice(0, 4), 10);
+      const week = parseInt(key.slice(4), 10);
+      if (!year || !week) return null;
+
+      // Approximate ISO week Monday
+      const simple = new Date(year, 0, 1 + (week - 1) * 7);
+      const dayOfWeek = simple.getDay(); // 0 Sun..6 Sat
+      const monday = new Date(simple);
+      const diff = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek); // move to Monday
+      monday.setDate(simple.getDate() + diff);
+
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      return {
+        start: monday.toISOString().split('T')[0],
+        end: sunday.toISOString().split('T')[0]
+      };
+    }
+
+    // Monthly: period_group is "YYYY-MM"
+    if (groupBy === 'month') {
+      const [yearStr, monthStr] = key.split('-');
+      const year = parseInt(yearStr, 10);
+      const monthIndex = parseInt(monthStr, 10) - 1;
+      if (isNaN(year) || isNaN(monthIndex)) return null;
+
+      const first = new Date(year, monthIndex, 1);
+      const last = new Date(year, monthIndex + 1, 0);
+
+      return {
+        start: first.toISOString().split('T')[0],
+        end: last.toISOString().split('T')[0]
+      };
+    }
+
+    return null;
+  };
+
+  const handlePeriodDrilldown = (row) => {
+    const range = getDrilldownRangeForPeriod(row);
+    if (!range) return;
+
+    // Update UI filters to match the drill-down period
+    setStartDate(range.start);
+    setEndDate(range.end);
+    setGroupBy('day');       // drill down always shows day-level
+    setSelectedPeriod(null); // clear any previous highlight
+
+    // Fetch new financial data for this narrower range
+    fetchFinancialReport({
+      startDate: range.start,
+      endDate: range.end,
+      groupBy: 'day'
+    });
+  };
+
 
   const exportToCSV = () => {
     let csvContent = '';
@@ -683,17 +766,17 @@ function Report() {
           <section className="report-section">
             <div className="section-header">
               <div>
-                <h3>Daily Revenue Breakdown</h3>
-                <p className="section-subtitle">
-                  {(
-                    selectedPeriod
-                      ? (financialData.daily_revenue || []).filter(
-                          (r) => r.period_label === selectedPeriod
-                        )
-                      : (financialData.daily_revenue || [])
-                  ).length}{' '}
-                  {selectedPeriod ? 'rows for selected period' : 'periods'}
-                </p>
+                <h3>{groupByLabel} Revenue Breakdown</h3>
+                  <p className="section-subtitle">
+                    {(
+                      selectedPeriod
+                        ? (financialData.daily_revenue || []).filter(
+                            (r) => r.period_label === selectedPeriod
+                          )
+                        : (financialData.daily_revenue || [])
+                    ).length}{' '}
+                    {selectedPeriod ? 'rows for selected period' : 'periods'} · Click a row to drill down
+                  </p>
               </div>
 
               {selectedPeriod && (
@@ -745,7 +828,11 @@ function Report() {
                       gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
 
                     return (
-                      <tr key={idx}>
+                        <tr 
+                            key={idx}
+                            className="clickable-row"
+                            onClick={() => handlePeriodDrilldown(row)}
+                          >
                         <td className="text-bold">{row.period_label}</td>
                         <td>{row.total_visits}</td>
                         <td className="text-success">${money(row.gross_revenue)}</td>
@@ -955,7 +1042,7 @@ function Report() {
                           {office.no_show_rate}%
                         </span>
                       </td>
-                      <td>{office.avg_wait_minutes ? `${office.avg_wait_minutes} min` : 'N/A'}</td>
+                      {/* <td>{office.avg_wait_minutes ? `${office.avg_wait_minutes} min` : 'N/A'}</td> */}
                       <td>
                         <span className={`badge ${Number(office.utilization_rate) >= 80 ? 'badge-success' : Number(office.utilization_rate) >= 60 ? 'badge-warning' : 'badge-danger'}`}>
                           {office.utilization_rate}%
