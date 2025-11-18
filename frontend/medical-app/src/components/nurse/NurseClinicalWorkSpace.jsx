@@ -622,9 +622,6 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
                 )}
               </div>
               <div className="item-actions">
-                <span className="allergy-date">
-                  Added: {formatChicagoDate(allergy.created_at)}
-                </span>
                 <button 
                   className="btn-remove"
                   onClick={() => handleRemoveAllergy(allergy.app_id, null)}
@@ -638,10 +635,9 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
           
           {/* General Allergy (fallback) */}
           {patientData?.allergies?.general_allergy?.map((allergy, index) => (
-            <div key={index} className="allergy-item general">
+            <div key={index} className="allergy-item">
               <div className="allergy-main">
                 <span className="allergy-name">{allergy.allergies_text}</span>
-                <span className="allergy-type">(General Record)</span>
               </div>
               <div className="item-actions">
                 <button 
