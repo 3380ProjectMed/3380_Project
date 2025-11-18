@@ -88,6 +88,10 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       const data = await response.json();
 
       if (data.success) {
+        console.log('Patient data received:', data);
+        console.log('Allergies data:', data.allergies);
+        console.log('Specific allergies:', data.allergies?.specific_allergies);
+        console.log('General allergies:', data.allergies?.general_allergy);
         setPatientData(data);
 
         // Pre-fill existing vitals from visit data
