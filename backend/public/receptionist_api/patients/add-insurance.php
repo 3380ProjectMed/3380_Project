@@ -102,33 +102,107 @@ try {
         exit;
     }
 
-    // If this is set as primary, unset any existing primary insurance
-    if ($is_primary) {
-        $unsetPrimary = "UPDATE patient_insurance SET is_primary = 0 WHERE patient_id = ? AND is_primary = 1";
-        executeQuery($conn, $unsetPrimary, 'i', [$patient_id]);
+    // Check if patient has existing expired or no-longer-valid primary insurance
+    $existingInsuranceCheck = "SELECT id, expiration_date 
+                               FROM patient_insurance 
+                               WHERE patient_id = ? 
+                               AND is_primary = 1 
+                               AND (expiration_date IS NULL OR expiration_date < CURDATE() OR expiration_date IS NOT NULL)
+                               ORDER BY effective_date DESC 
+                               LIMIT 1";
+    $existingInsurance = executeQuery($conn, $existingInsuranceCheck, 'i', [$patient_id]);
+
+    $insurance_id = null;
+    $action = 'added';
+
+    // If there's existing primary insurance (expired or active), update it
+    if (!empty($existingInsurance)) {
+        $existing_id = $existingInsurance[0]['id'];
+        $existing_expiration = $existingInsurance[0]['expiration_date'];
+        
+        // Only update if the existing insurance is expired or if we're replacing it
+        $should_update = false;
+        if ($existing_expiration === null) {
+            // Has primary insurance with no expiration - ask if replacing
+            $should_update = true; // We'll replace it
+        } else {
+            $exp_date = date_create($existing_expiration);
+            $today = new DateTime();
+            if ($exp_date < $today) {
+                // Insurance is expired - update it
+                $should_update = true;
+            }
+        }
+
+        if ($should_update) {
+            // Update the existing expired insurance record
+            $updateSql = "UPDATE patient_insurance 
+                         SET plan_id = ?, 
+                             member_id = ?, 
+                             group_id = ?, 
+                             effective_date = ?, 
+                             expiration_date = ?, 
+                             is_primary = ?
+                         WHERE id = ?";
+            
+            $updateParams = [
+                $plan_id,
+                $member_id,
+                $group_id,
+                $effective_date,
+                $expiration_date,
+                $is_primary,
+                $existing_id
+            ];
+            
+            executeQuery($conn, $updateSql, 'issssii', $updateParams);
+            $insurance_id = $existing_id;
+            $action = 'updated';
+        } else {
+            // Insurance is still valid, but adding new one - unset old primary if needed
+            if ($is_primary) {
+                $unsetPrimary = "UPDATE patient_insurance SET is_primary = 0 WHERE patient_id = ? AND is_primary = 1";
+                executeQuery($conn, $unsetPrimary, 'i', [$patient_id]);
+            }
+            
+            // Insert new record
+            $insertSql = "INSERT INTO patient_insurance (patient_id, plan_id, member_id, group_id, effective_date, expiration_date, is_primary)
+                         VALUES (?, ?, ?, ?, ?, ?, ?)";
+            
+            $insertParams = [
+                $patient_id,
+                $plan_id,
+                $member_id,
+                $group_id,
+                $effective_date,
+                $expiration_date,
+                $is_primary
+            ];
+            
+            executeQuery($conn, $insertSql, 'iissssi', $insertParams);
+            $insurance_id = $conn->insert_id;
+        }
+    } else {
+        // No existing primary insurance - insert new record
+        $insertSql = "INSERT INTO patient_insurance (patient_id, plan_id, member_id, group_id, effective_date, expiration_date, is_primary)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)";
+        
+        $insertParams = [
+            $patient_id,
+            $plan_id,
+            $member_id,
+            $group_id,
+            $effective_date,
+            $expiration_date,
+            $is_primary
+        ];
+        
+        executeQuery($conn, $insertSql, 'iissssi', $insertParams);
+        $insurance_id = $conn->insert_id;
     }
 
-    // Insert new insurance record
-    $insertSql = "INSERT INTO patient_insurance (patient_id, plan_id, member_id, group_id, effective_date, expiration_date, is_primary)
-                  VALUES (?, ?, ?, ?, ?, ?, ?)";
-    
-    $params = [
-        $patient_id,
-        $plan_id,
-        $member_id,
-        $group_id,
-        $effective_date,
-        $expiration_date,
-        $is_primary
-    ];
-    
-    $types = 'iissssi';
-    
-    executeQuery($conn, $insertSql, $types, $params);
-    $insurance_id = $conn->insert_id;
-
     // Update patient.insurance_id if this is primary
-    if ($is_primary) {
+    if ($is_primary && $insurance_id) {
         $updatePatient = "UPDATE patient SET insurance_id = ? WHERE patient_id = ?";
         executeQuery($conn, $updatePatient, 'ii', [$insurance_id, $patient_id]);
     }
@@ -137,9 +211,10 @@ try {
 
     echo json_encode([
         'success' => true,
-        'message' => 'Insurance added successfully',
+        'message' => 'Insurance ' . $action . ' successfully',
         'insurance_id' => $insurance_id,
-        'plan_name' => $planResult[0]['plan_name']
+        'plan_name' => $planResult[0]['plan_name'],
+        'action' => $action
     ]);
 
 } catch (Exception $e) {

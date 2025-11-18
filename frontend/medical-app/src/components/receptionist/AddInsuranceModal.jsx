@@ -11,6 +11,7 @@ import './AddInsuranceModal.css';
 function AddInsuranceModal({ patient, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [loadingExisting, setLoadingExisting] = useState(true);
   const [insurancePlans, setInsurancePlans] = useState([]);
   const [selectedPayer, setSelectedPayer] = useState('');
   const [formData, setFormData] = useState({
@@ -26,7 +27,42 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
 
   useEffect(() => {
     loadInsurancePlans();
+    loadExistingInsurance();
   }, []);
+
+  const loadExistingInsurance = async () => {
+    try {
+      setLoadingExisting(true);
+      const patientId = patient.patient_id || patient.Patient_id;
+      const response = await fetch(`/receptionist_api/patients/get-patient-insurance.php?patient_id=${patientId}`, {
+        credentials: 'include'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.has_insurance) {
+        const ins = data.insurance;
+        // Pre-populate form with existing insurance data
+        setFormData({
+          plan_id: ins.plan_id || '',
+          member_id: ins.member_id || '',
+          group_id: ins.group_id || '',
+          effective_date: ins.effective_date || new Date().toISOString().split('T')[0],
+          expiration_date: ins.expiration_date || '',
+          is_primary: ins.is_primary || 1
+        });
+        // Set the payer dropdown
+        if (ins.payer_id) {
+          setSelectedPayer(ins.payer_id.toString());
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load existing insurance:', err);
+      // Don't show error, just continue with empty form
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
 
   const loadInsurancePlans = async () => {
     try {
@@ -151,9 +187,9 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
             </div>
           )}
 
-          {loadingPlans ? (
+          {(loadingPlans || loadingExisting) ? (
             <div className="loading-state">
-              <p>Loading insurance plans...</p>
+              <p>Loading insurance information...</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="insurance-form">
@@ -276,7 +312,6 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
                       onChange={handleInputChange}
                       min={formData.effective_date}
                     />
-                    <p className="form-help">Leave blank if no expiration</p>
                   </div>
                 </div>
               </div>
@@ -309,9 +344,9 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
           <button 
             className="btn btn-primary" 
             onClick={handleSubmit}
-            disabled={loading || loadingPlans || !formData.plan_id}
+            disabled={loading || loadingPlans || loadingExisting || !formData.plan_id}
           >
-            {loading ? 'Adding Insurance...' : 'Add Insurance'}
+            {loading ? 'Saving Insurance...' : 'Save Insurance'}
           </button>
         </div>
       </div>
