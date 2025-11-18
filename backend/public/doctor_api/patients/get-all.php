@@ -60,7 +60,8 @@ try {
                 MAX(a.Appointment_date) as last_visit,
                 MIN(CASE WHEN a.Appointment_date > NOW() THEN a.Appointment_date END) as next_appointment
             FROM patient p
-            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            LEFT JOIN allergies_per_patient app ON p.patient_id = app.patient_id
+            LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
             LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
             LEFT JOIN appointment a ON p.patient_id = a.Patient_id
             WHERE p.primary_doctor = ?

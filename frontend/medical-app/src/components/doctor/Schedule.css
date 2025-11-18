@@ -1,4 +1,6 @@
-/* ========== SCHEDULE COMPONENT ========== */
+/* ========== SCHEDULE COMPONENT - FIXED VERSION ========== */
+/* This version has all visibility issues fixed */
+
 .schedule {
   padding: 1.5rem;
   max-width: 100%;
@@ -28,11 +30,11 @@
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.15s ease;
-  flex-shrink: 0; /* Prevent arrows from shrinking */
+  flex-shrink: 0;
 }
 
 .nav-arrow:hover {
-  background-color: var(--third-color);
+  background-color: #d1d5db;
 }
 
 .nav-arrow svg {
@@ -44,12 +46,6 @@
   font-weight: 700;
   color: #111827;
   margin: 0;
-}
-
-.office-assignment {
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin: 0.5rem 0 0 0;
 }
 
 /* Filter Section */
@@ -64,7 +60,7 @@
   gap: 1rem;
   border: 2px solid #e5e7eb;
   transition: all 0.2s ease;
-  flex-wrap: wrap; /* allow items to wrap on small screens */
+  flex-wrap: wrap;
   width: 100%;
   box-sizing: border-box;
 }
@@ -91,13 +87,11 @@
   cursor: pointer;
   transition: all 0.2s ease;
   appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  /* allow select to shrink on small screens but keep a sensible basis */
   min-width: 120px;
   flex: 0 1 220px;
   max-width: 100%;
 }
+
 .location-select:hover {
   border-color: #00b4d8;
   background-color: #f8f9fa;
@@ -109,20 +103,10 @@
   box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.15);
   background-color: white;
 }
+
 .filter-section:has(.location-select:not([value="all"])) {
   background: linear-gradient(135deg, #e0f2fe, #ffffff);
   border-color: #0077b6;
-}
-/* Calendar Container */
-/* Calendar Grid - 7 columns for 7 days of the week */
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 7 flexible columns */
-  gap: 0.5rem;
-  width: 100%;
-  box-sizing: border-box;
-  grid-auto-rows: minmax(9rem, auto); /* Use minmax for consistent minimum height */
-  align-items: stretch;
 }
 
 /* Calendar Container */
@@ -131,16 +115,20 @@
   padding: 1rem;
   border-radius: 0.75rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  overflow-x: auto; /* keep this so users can scroll on very small screens */
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
+/* Calendar Grid */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 1rem;
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  grid-auto-rows: minmax(9rem, auto);
+  align-items: stretch;
 }
-
 
 /* Weekday Headers */
 .weekday-header {
@@ -153,10 +141,10 @@
   border-radius: 0.5rem;
 }
 
-/* Each Calendar Day Cell */
+/* Calendar Day Cell */
 .calendar-day {
-  min-height: 7rem; /* Reduced from 9rem for more compact display */
-  max-height: 12rem; /* Allow growth up to 12rem for days with many appointments */
+  min-height: 7rem;
+  max-height: 12rem;
   padding: 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 0.75rem;
@@ -165,7 +153,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden; /* Keep hidden for the main container to prevent full day overflow */
+  overflow: hidden;
 }
 
 .calendar-day:hover:not(.empty-day):not(.weekend) {
@@ -203,6 +191,7 @@
   pointer-events: none;
   border-radius: 0.75rem;
 }
+
 .calendar-day.today {
   border-color: #0077b6;
   border-width: 2px;
@@ -210,72 +199,83 @@
   position: relative;
 }
 
-/* Day Header (number and location badge) */
+.calendar-day.empty-day {
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+/* ========== DAY HEADER - CRITICAL SECTION ========== */
+/* This is where day numbers and location badges appear */
+
 .day-header {
-  display: flex;
+  display: flex !important; /* Force display */
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 0.5rem;
-  flex-shrink: 0; /* Prevent header from shrinking */
+  flex-shrink: 0;
+  visibility: visible !important; /* Force visibility */
+  opacity: 1 !important;
+  position: relative;
+  z-index: 1;
+  min-height: 2rem; /* Ensure it has height */
 }
 
+/* ========== DAY NUMBER - CRITICAL ========== */
 .day-number {
-  font-weight: 700;
-  color: #1f2937;
-  font-size: 1rem;
-  width: 2rem;
-  height: 2rem;
-  display: flex;
+  display: flex !important; /* Force display */
   align-items: center;
   justify-content: center;
+  font-weight: 700;
+  color: #1f2937 !important; /* Force color */
+  font-size: 1rem !important; /* Force size */
+  width: 2rem;
+  height: 2rem;
   border-radius: 50%;
   transition: all 0.2s ease;
+  visibility: visible !important; /* Force visibility */
+  opacity: 1 !important;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
-/* Today's date gets a highlighted circle */
+/* Today's date highlight */
 .calendar-day.today .day-number {
-  background: linear-gradient(135deg, #0077b6, #00b4d8);
-  color: white;
-  font-weight: 800;
+  background: linear-gradient(135deg, #0077b6, #00b4d8) !important;
+  color: white !important;
+  font-weight: 800 !important;
   box-shadow: 0 2px 8px rgba(0, 119, 182, 0.4);
 }
 
-/* Location Badges */
+/* ========== LOCATION BADGE - CRITICAL ========== */
 .location-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 0.25rem 0.5rem;
+  display: inline-block !important; /* Force display */
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+  padding: 0.25rem 0.5rem !important;
   border-radius: 999px;
   white-space: nowrap;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  visibility: visible !important; /* Force visibility */
+  opacity: 1 !important;
+  flex-shrink: 0;
+  line-height: 1.2;
 }
 
-
-.location-badge.main-clinic {
-  background-color: #dbeafe;
-  color: #1e40af;
-}
-
-.location-badge.satellite-office {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-
-/* Day Content (appointments area) - SCROLLABLE */
+/* Day Content - Scrollable appointments area */
 .day-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  overflow-y: auto; /* Enable vertical scrolling */
-  overflow-x: hidden; /* Prevent horizontal scrolling */
-  padding-right: 0.25rem; /* Space for scrollbar */
-  min-height: 0; /* Important for Firefox flex scrolling */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.25rem;
+  min-height: 0;
 }
 
-/* Scrollbar styling for day content */
+/* Scrollbar styling */
 .day-content::-webkit-scrollbar {
   width: 6px;
 }
@@ -294,12 +294,12 @@
   background: #94a3b8;
 }
 
-/* For Firefox */
 .day-content {
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 #f1f1f1;
 }
 
+/* Appointments */
 .appointments {
   display: flex;
   flex-direction: column;
@@ -318,7 +318,7 @@
   border-radius: 999px;
   min-width: 1.5rem;
   text-align: center;
-  z-index: 2; /* Ensure it's above other elements */
+  z-index: 2;
 }
 
 .appointment-item {
@@ -328,7 +328,7 @@
   border-left: 3px solid #4f46e5;
   cursor: pointer;
   transition: all 0.15s ease;
-  flex-shrink: 0; /* Prevent appointments from compressing */
+  flex-shrink: 0;
 }
 
 .appointment-item:hover {
@@ -362,8 +362,6 @@
 
 /* Responsive Design */
 @media (max-width: 1400px) {
-  /* avoid forcing a large min-width which pushes other elements out of view
-     allow calendar container to scroll horizontally while filter stays in place */
   .calendar-grid {
     min-width: auto;
   }
@@ -371,7 +369,7 @@
 
 @media (max-width: 1024px) {
   .main-content {
-    margin-left: 0; /* Remove sidebar margin on mobile */
+    margin-left: 0;
   }
   
   .calendar-grid {
@@ -381,4 +379,31 @@
   .calendar-day {
     min-height: 7rem;
   }
+}
+
+/* ========== OVERRIDE ANY CONFLICTING STYLES ========== */
+/* Add these at the end to ensure they take priority */
+
+.schedule .day-number,
+.schedule .day-header,
+.schedule .location-badge {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure nothing is accidentally hidden */
+.schedule * {
+  box-sizing: border-box;
+}
+
+/* Make sure flexbox is working */
+.schedule .calendar-day {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.schedule .day-header {
+  display: flex !important;
+  flex-direction: row !important;
 }
