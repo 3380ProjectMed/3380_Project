@@ -52,6 +52,10 @@ function Report() {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
   const [showChart, setShowChart] = useState(true);
 
+  const [selectedOfficeRow, setSelectedOfficeRow] = useState(null);
+  const [officeAppointments, setOfficeAppointments] = useState([]);
+  const [officeAppointmentsLoading, setOfficeAppointmentsLoading] = useState(false);
+
   // Fetch filter options on mount
   useEffect(() => {
     fetchFilterOptions();
@@ -87,6 +91,40 @@ function Report() {
       if (insurancesData.success) setInsurances(insurancesData.data || []);
     } catch (err) {
       console.error('Failed to fetch filter options:', err);
+    }
+  };
+
+  const fetchOfficeAppointments = async (office) => {
+    try {
+      setOfficeAppointmentsLoading(true);
+      setSelectedOfficeRow(office);
+      setError(null);
+
+      const params = new URLSearchParams({
+        office_id: office.office_id,
+        start_date: startDate,
+        end_date: endDate,
+      });
+
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+
+      const res = await fetch(
+        `/admin_api/reports/office-appointments.php?${params.toString()}`,
+        { credentials: 'include' }
+      );
+      const data = await res.json();
+
+      if (data.success) {
+        setOfficeAppointments(data.appointments || []);
+      } else {
+        setError(data.error || 'Failed to load appointment details');
+        setOfficeAppointments([]);
+      }
+    } catch (err) {
+      setError(err.message);
+      setOfficeAppointments([]);
+    } finally {
+      setOfficeAppointmentsLoading(false);
     }
   };
 
@@ -784,13 +822,13 @@ function Report() {
               value={officeData.summary?.no_shows || 0}
               subtitle={`${officeData.summary?.no_show_rate || 0}% no-show rate`}
             />
-            <StatCard 
+            {/* <StatCard 
               type="info"
               icon={<Clock size={20} />}
               label="Avg Wait Time"
               value={officeData.summary?.avg_wait_minutes ? `${officeData.summary.avg_wait_minutes} min` : 'N/A'}
               subtitle="Across all offices"
-            />
+            /> */}
           </div>
 
           {officeData.office_stats && officeData.office_stats.length > 0 && (
@@ -834,13 +872,17 @@ function Report() {
                       Scheduled {sortConfig.key === 'scheduled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th>No-Show Rate</th>
-                    <th>Avg Wait</th>
+                    {/* <th>Avg Wait</th> */}
                     <th>Utilization</th>
                   </tr>
                 </thead>
                 <tbody>
                   {getSortedData(officeData.office_stats || [], sortConfig.key).map((office, idx) => (
-                    <tr key={idx}>
+                        <tr 
+                          key={idx}
+                          className="clickable-row"
+                          onClick={() => fetchOfficeAppointments(office)}
+                        >
                       <td className="text-bold">{office.office_name}</td>
                       <td className="text-muted">{office.address}</td>
                       <td>{office.total_appointments}</td>
@@ -902,6 +944,66 @@ function Report() {
                   </tbody>
                 </table>
               </div>
+            </section>
+          )}
+          {selectedOfficeRow && (
+            <section className="report-section">
+              <div className="section-header">
+                <div>
+                  <h3>
+                    Appointments for {selectedOfficeRow.office_name}
+                  </h3>
+                  <p className="section-subtitle">
+                    {startDate} – {endDate} · Status: {statusFilter === 'all' ? 'All' : statusFilter}
+                  </p>
+                </div>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => {
+                    setSelectedOfficeRow(null);
+                    setOfficeAppointments([]);
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+
+              {officeAppointmentsLoading ? (
+                <div className="loading-container">
+                  <div className="loading-spinner" />
+                  <p>Loading appointments...</p>
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table className="report-table">
+                    <thead>
+                      <tr>
+                        <th>Date & Time</th>
+                        <th>Doctor</th>
+                        <th>Patient</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {officeAppointments.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="text-center text-muted">
+                            No appointments in this period for this office.
+                          </td>
+                        </tr>
+                      )}
+                      {officeAppointments.map((appt) => (
+                        <tr key={appt.Appointment_id}>
+                          <td>{new Date(appt.Appointment_date).toLocaleString()}</td>
+                          <td>Dr. {appt.doctor_name}</td>
+                          <td>{appt.patient_name}</td>
+                          <td>{appt.Status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
           )}
         </>
@@ -1083,6 +1185,7 @@ function Report() {
               </div>
             </section>
           )}
+
           {newPatientsData.booking_breakdown && newPatientsData.booking_breakdown.length > 0 && (
             <section className="report-section">
               <div className="section-header">
@@ -1424,12 +1527,12 @@ const OfficeUtilizationPie = ({ offices }) => {
             </div>
 
             <div className="detail-stat">
-              <span className="detail-label">Avg Wait Time</span>
+              {/* <span className="detail-label">Avg Wait Time</span>
               <span className="detail-value">
                 {selectedOffice.avg_wait_minutes 
                   ? `${selectedOffice.avg_wait_minutes} min` 
                   : 'N/A'}
-              </span>
+              </span> */}
             </div>
 
             <div className="detail-stat">
