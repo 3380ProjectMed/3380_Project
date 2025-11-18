@@ -999,7 +999,19 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
 
               {/* Present Illnesses */}
               <div className="form-section full-width">
-                <h3>📋 Chief Complaints / Present Illnesses</h3>
+                <div className="section-header">
+                  <h3>📋 Chief Complaints / Present Illnesses</h3>
+                  {vitals.present_illnesses && (
+                    <button
+                      type="button"
+                      onClick={() => setVitals(prev => ({ ...prev, present_illnesses: '' }))}
+                      className="delete-btn"
+                      title="Clear chief complaints"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
                 <div className="form-group">
                   <textarea
                     value={vitals.present_illnesses}
