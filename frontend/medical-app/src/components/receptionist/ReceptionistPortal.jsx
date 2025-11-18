@@ -7,6 +7,7 @@ import OfficeSchedule from './OfficeSchedule';
 import PatientSearch from './PatientSearch';
 import AppointmentBooking from './AppointmentBooking';
 import PaymentProcessing from './PaymentProcessing';
+import ReceptionistProfile from './ReceptionistProfile';
 import './ReceptionistPortal.css';
 
 /**
@@ -185,6 +186,10 @@ function ReceptionistPortal() {
             officeId={officeInfo.id}
             officeName={officeInfo.name}
           />
+        )}
+
+        {currentPage === 'profile' && (
+          <ReceptionistProfile />
         )}
       </main>
     </div>

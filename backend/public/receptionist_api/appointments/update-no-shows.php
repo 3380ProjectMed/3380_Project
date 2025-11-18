@@ -30,6 +30,42 @@ try {
     // Set timezone to match appointment times (US Central Time)
     $conn->query("SET time_zone = '-06:00'");
     
+    // DEBUG: Get current time info
+    $debugTimeSql = "SELECT NOW() as server_time, CURDATE() as server_date, @@session.time_zone as timezone";
+    $debugTimeResult = executeQuery($conn, $debugTimeSql, '', []);
+    $timeDebug = $debugTimeResult[0] ?? null;
+    
+    // DEBUG: Get all today's appointments with time calculations
+    $debugAppointmentsSql = "SELECT 
+                                a.Appointment_id,
+                                a.Patient_id,
+                                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                                a.Appointment_date,
+                                a.Status,
+                                NOW() as current_time,
+                                TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past,
+                                DATE(a.Appointment_date) as appt_date,
+                                CURDATE() as today,
+                                CASE 
+                                    WHEN DATE(a.Appointment_date) = CURDATE() THEN 'YES'
+                                    ELSE 'NO'
+                                END as is_today,
+                                CASE 
+                                    WHEN a.Appointment_date < NOW() THEN 'YES'
+                                    ELSE 'NO'
+                                END as is_past,
+                                EXISTS (
+                                    SELECT 1 FROM patient_visit pv 
+                                    WHERE pv.appointment_id = a.Appointment_id 
+                                    AND pv.start_at IS NOT NULL
+                                ) as is_checked_in
+                            FROM appointment a
+                            JOIN patient p ON a.Patient_id = p.Patient_ID
+                            WHERE DATE(a.Appointment_date) = CURDATE()
+                            ORDER BY a.Appointment_date";
+    
+    $debugAppointments = executeQuery($conn, $debugAppointmentsSql, '', []);
+    
     $conn->begin_transaction();
 
     try {
@@ -122,7 +158,13 @@ try {
             'no_show_count' => count($updatedToNoShow),
             'updated_count' => $waitingCount + count($updatedToNoShow),
             'waiting_appointments' => $waitingCount,
-            'no_show_appointments' => $updatedToNoShow
+            'no_show_appointments' => $updatedToNoShow,
+            'debug' => [
+                'server_time' => $timeDebug['server_time'] ?? null,
+                'server_date' => $timeDebug['server_date'] ?? null,
+                'timezone' => $timeDebug['timezone'] ?? null,
+                'all_todays_appointments' => $debugAppointments
+            ]
         ]);
         
     } catch (Exception $ex) {
