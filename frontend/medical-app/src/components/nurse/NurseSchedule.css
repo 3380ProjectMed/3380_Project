@@ -53,10 +53,7 @@
 .date-display h1 {
   font-size: 1.875rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: white;
   margin: 0;
   letter-spacing: -0.02em;
 }

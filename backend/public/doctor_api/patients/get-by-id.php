@@ -29,10 +29,11 @@ try {
                 p.email,
                 p.emergency_contact_id,
                 p.blood_type,
-                ca.allergies_text as allergies,
+                GROUP_CONCAT(DISTINCT ca.allergies_text SEPARATOR ', ') as allergies,
                 cg.gender_text as gender
             FROM patient p
-            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            LEFT JOIN allergies_per_patient app ON p.patient_id = app.patient_id
+            LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
             LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
             WHERE p.patient_id = ?
             LIMIT 1";

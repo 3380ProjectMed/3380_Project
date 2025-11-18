@@ -42,45 +42,47 @@ try {
     $conn = getDBConnection();
 
     // BASE QUERY for patient_visit data
-    $baseSelect = "SELECT 
-                pv.visit_id,
-                pv.appointment_id,
-                pv.patient_id,
-                pv.office_id,
-                pv.date,
-                pv.blood_pressure,
-                pv.temperature,
-                pv.doctor_id,
-                pv.nurse_id,
-                pv.status,
-                pv.diagnosis,
-                pv.reason_for_visit,
-                pv.department,
-                pv.present_illnesses,
-                pv.start_at,
-                pv.end_at,
-                pv.created_at,
-                pv.created_by,
-                pv.last_updated,
-                pv.updated_by,
-                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
-                p.dob,
-                p.blood_type,
-                ca.allergies_text as allergies,
-                cg.gender_text as gender,
-                CONCAT(s.first_name, ' ', s.last_name) as doctor_name,
-                CONCAT(s.first_name, ' ', s.last_name) as nurse_name,
-                o.name as office_name";
+    // Around line 36-50, change the baseSelect to include allergy aggregation:
+$baseSelect = "SELECT 
+            pv.visit_id,
+            pv.appointment_id,
+            pv.patient_id,
+            pv.office_id,
+            pv.date,
+            pv.blood_pressure,
+            pv.temperature,
+            pv.doctor_id,
+            pv.nurse_id,
+            pv.status,
+            pv.diagnosis,
+            pv.treatment,
+            pv.reason_for_visit,
+            pv.department,
+            pv.present_illnesses,
+            pv.start_at,
+            pv.end_at,
+            pv.created_at,
+            pv.created_by,
+            pv.last_updated,
+            pv.updated_by,
+            CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+            p.dob,
+            p.blood_type,
+            GROUP_CONCAT(DISTINCT ca.allergies_text SEPARATOR ', ') as allergies,
+            cg.gender_text as gender,
+            CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+            CONCAT(s.first_name, ' ', s.last_name) as nurse_name,
+            o.name as office_name";
 
-    $baseFrom = " FROM patient_visit pv
-                LEFT JOIN patient p ON pv.patient_id = p.patient_id
-                LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
-                LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
-                LEFT JOIN staff d ON pv.doctor_id = d.staff_id
-                LEFT JOIN nurse n ON pv.nurse_id = n.nurse_id
-                LEFT JOIN staff s ON n.staff_id = s.staff_id
-                LEFT JOIN office o ON pv.office_id = o.office_id";
-
+$baseFrom = " FROM patient_visit pv
+            LEFT JOIN patient p ON pv.patient_id = p.patient_id
+            LEFT JOIN allergies_per_patient app ON p.patient_id = app.patient_id
+            LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
+            LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
+            LEFT JOIN doctor d ON pv.doctor_id = d.doctor_id
+            LEFT JOIN nurse n ON pv.nurse_id = n.nurse_id
+            LEFT JOIN staff s ON n.staff_id = s.staff_id
+            LEFT JOIN office o ON pv.office_id = o.office_id";
     $rows = [];
 
     // MAIN LOGIC: If appointment_id provided, match by BOTH appointment_id AND date
@@ -97,17 +99,19 @@ try {
                     CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                     p.dob,
                     p.blood_type,
-                    ca.allergies_text as allergies,
+                    GROUP_CONCAT(DISTINCT ca.allergies_text SEPARATOR ', ') as allergies,
                     cg.gender_text as gender,
                     CONCAT(s.first_name, ' ', s.last_name) as doctor_name,
                     o.name as office_name
                 FROM appointment a
+                LEFT JOIN allergies_per_patient app ON a.Patient_id = app.patient_id
                 LEFT JOIN patient p ON a.Patient_id = p.patient_id
-                LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+                LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
                 LEFT JOIN staff s ON a.Doctor_id = s.staff_id
                 LEFT JOIN office o ON a.Office_id = o.office_id
-                WHERE a.Appointment_id = ?";
+                WHERE a.Appointment_id = ?
+                GROUP BY a.Appointment_id";
         $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
 
         if (empty($apptRows)) {
@@ -235,17 +239,14 @@ try {
             exit;
         }
     } elseif ($visit_id > 0) {
-        // Direct visit_id lookup
-        $sql = $baseSelect . $baseFrom . " WHERE pv.visit_id = ?";
-        $rows = executeQuery($conn, $sql, 'i', [$visit_id]);
-    } else {
-        // Patient_id only - get most recent visit
-        $sql = $baseSelect . $baseFrom
-            . " WHERE pv.patient_id = ?
-                ORDER BY pv.date DESC
-                LIMIT 1";
-        $rows = executeQuery($conn, $sql, 'i', [$patient_id]);
-    }
+    $sql = $baseSelect . $baseFrom . " WHERE pv.visit_id = ? GROUP BY pv.visit_id";
+} else {
+    $sql = $baseSelect . $baseFrom 
+         . " WHERE pv.patient_id = ?
+            GROUP BY pv.visit_id
+            ORDER BY pv.date DESC
+            LIMIT 1";
+}
 
     // No visit found
     if (empty($rows)) {

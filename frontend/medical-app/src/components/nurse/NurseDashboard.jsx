@@ -259,7 +259,7 @@ export default function NurseDashboard({ setCurrentPage }) {
                       if (e.key === 'Enter') handleAppointmentRowClick(appointment);
                     }}
                   >
-                    <div className="col-time">{formatTimeStringChicago(appointment.time)}</div>
+                    <div className="col-time">{appointment.time}</div>
                     <div className="col-apptid">{appointment.appointmentId}</div>
                     <div className="col-patient">
                       <span className="patient-link">{appointment.patientName}</span>
