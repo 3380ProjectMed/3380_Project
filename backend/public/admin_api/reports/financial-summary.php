@@ -37,7 +37,7 @@ try {
     }
 
     // Build WHERE clause for filters
-    $where_conditions = ["pv.date BETWEEN ? AND ?"];
+    $where_conditions = ["pv.start_at BETWEEN ? AND ?"];
     $params = [$start_date, $end_date];
     $param_types = 'ss';
 
@@ -71,17 +71,17 @@ try {
 
     switch ($group_by) {
         case 'week':
-            $date_group_sql = "YEARWEEK(pv.date, 1)";
-            $date_label_sql = "CONCAT('Week ', WEEK(pv.date, 1), ' - ', YEAR(pv.date))";
+            $date_group_sql = "YEARWEEK(pv.start_at, 1)";
+            $date_label_sql = "CONCAT('Week ', WEEK(pv.start_at, 1), ' - ', YEAR(pv.start_at))";
             break;
         case 'month':
-            $date_group_sql = "DATE_FORMAT(pv.date, '%Y-%m')";
-            $date_label_sql = "DATE_FORMAT(pv.date, '%b %Y')";
+            $date_group_sql = "DATE_FORMAT(pv.start_at, '%Y-%m')";
+            $date_label_sql = "DATE_FORMAT(pv.start_at, '%b %Y')";
             break;
         case 'day':
         default:
-            $date_group_sql = "DATE(pv.date)";
-            $date_label_sql = "DATE_FORMAT(pv.date, '%M %d, %Y')";
+            $date_group_sql = "DATE(pv.start_at)";
+            $date_label_sql = "DATE_FORMAT(pv.start_at, '%M %d, %Y')";
             break;
     }
 
