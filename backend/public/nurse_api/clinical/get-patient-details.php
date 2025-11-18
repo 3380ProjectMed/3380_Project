@@ -247,7 +247,32 @@ try {
     // Get detailed allergies and medications for the patient
     $patient_id = $result['patient']['patient_id'];
 
-    // Get patient allergies from patient table (using existing structure for now)
+    // Get patient allergies from allergies_per_patient table (primary) and patient table (fallback)
+    $specific_allergies = [];
+    $patient_allergy = [];
+    
+    // First try to get allergies from allergies_per_patient table
+    try {
+        $specific_allergy_sql = "SELECT 
+                                app.app_id,
+                                app.patient_id,
+                                app.allergies_code,
+                                ca.allergies_text,
+                                app.notes,
+                                app.created_at,
+                                app.updated_at
+                            FROM allergies_per_patient app
+                            LEFT JOIN codes_allergies ca ON app.allergies_code = ca.allergies_code
+                            WHERE app.patient_id = ?
+                            ORDER BY app.created_at DESC";
+        
+        $specific_allergies = executeQuery($conn, $specific_allergy_sql, 'i', [$patient_id]);
+    } catch (Exception $e) {
+        error_log("allergies_per_patient table query failed: " . $e->getMessage());
+        $specific_allergies = [];
+    }
+
+    // Also get patient allergies from patient table (fallback for legacy data)
     $patient_allergy_sql = "SELECT 
                             p.allergies as allergies_code,
                             ca.allergies_text
@@ -302,7 +327,7 @@ try {
 
     // Add allergies and medications to the result
     $result['allergies'] = [
-        'specific_allergies' => [], // Empty for now until allergies_per_patient table is created
+        'specific_allergies' => $specific_allergies ?: [],
         'general_allergy' => $patient_allergy ?: []
     ];
     
