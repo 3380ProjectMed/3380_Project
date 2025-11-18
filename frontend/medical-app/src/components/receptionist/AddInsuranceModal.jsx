@@ -24,11 +24,53 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [existingInsurance, setExistingInsurance] = useState(null);
 
   useEffect(() => {
     loadInsurancePlans();
     loadExistingInsurance();
   }, []);
+
+  // Populate form after both plans and existing insurance are loaded
+  useEffect(() => {
+    if (!loadingPlans && !loadingExisting && existingInsurance && insurancePlans.length > 0) {
+      populateFormWithExistingInsurance();
+    }
+  }, [loadingPlans, loadingExisting, existingInsurance, insurancePlans]);
+
+  const populateFormWithExistingInsurance = () => {
+    if (!existingInsurance) return;
+
+    const ins = existingInsurance;
+    
+    console.log('Populating form with insurance:', ins);
+    console.log('Available insurance plans:', insurancePlans);
+    
+    // Pre-populate form with existing insurance data
+    setFormData({
+      plan_id: ins.plan_id || '',
+      member_id: ins.member_id || '',
+      group_id: ins.group_id || '',
+      effective_date: ins.effective_date || new Date().toISOString().split('T')[0],
+      expiration_date: ins.expiration_date || '',
+      is_primary: ins.is_primary || 1
+    });
+    
+    console.log('Form data set to:', {
+      plan_id: ins.plan_id,
+      member_id: ins.member_id,
+      group_id: ins.group_id,
+      effective_date: ins.effective_date,
+      expiration_date: ins.expiration_date,
+      is_primary: ins.is_primary
+    });
+    
+    // Set the payer dropdown
+    if (ins.payer_id) {
+      console.log('Setting payer to:', ins.payer_id);
+      setSelectedPayer(ins.payer_id.toString());
+    }
+  };
 
   const loadExistingInsurance = async () => {
     try {
@@ -42,27 +84,22 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
         return;
       }
       
+      console.log('Loading insurance for patient ID:', patientId);
+      
       const response = await fetch(`/receptionist_api/patients/get-patient-insurance.php?patient_id=${patientId}`, {
         credentials: 'include'
       });
       
       const data = await response.json();
       
+      console.log('Insurance data received:', data);
+      
       if (data.success && data.has_insurance) {
-        const ins = data.insurance;
-        // Pre-populate form with existing insurance data
-        setFormData({
-          plan_id: ins.plan_id || '',
-          member_id: ins.member_id || '',
-          group_id: ins.group_id || '',
-          effective_date: ins.effective_date || new Date().toISOString().split('T')[0],
-          expiration_date: ins.expiration_date || '',
-          is_primary: ins.is_primary || 1
-        });
-        // Set the payer dropdown
-        if (ins.payer_id) {
-          setSelectedPayer(ins.payer_id.toString());
-        }
+        // Store the insurance data to populate later
+        console.log('Setting existing insurance:', data.insurance);
+        setExistingInsurance(data.insurance);
+      } else {
+        console.log('No existing insurance found');
       }
     } catch (err) {
       console.error('Failed to load existing insurance:', err);
