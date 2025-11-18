@@ -28,13 +28,20 @@ try {
     $conn = getDBConnection();
     
     // Set timezone to match appointment times (US Central Time)
+    // Note: Central Standard Time is UTC-6, Central Daylight Time is UTC-5
+    // November is CST (Standard Time)
     $conn->query("SET time_zone = '-06:00'");
     
     $conn->begin_transaction();
 
     try {
-        // DEBUG: Get current time info
-        $debugTimeSql = "SELECT NOW() as server_time, CURDATE() as server_date, @@session.time_zone as timezone";
+        // DEBUG: Get current time info and system timezone
+        $debugTimeSql = "SELECT 
+                            NOW() as server_time, 
+                            CURDATE() as server_date, 
+                            @@session.time_zone as session_timezone,
+                            @@global.time_zone as global_timezone,
+                            UNIX_TIMESTAMP(NOW()) as unix_timestamp";
         $debugTimeResult = executeQuery($conn, $debugTimeSql, '', []);
         $timeDebug = $debugTimeResult[0] ?? null;
         
@@ -49,6 +56,7 @@ try {
                                     TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past,
                                     DATE(a.Appointment_date) as appt_date,
                                     CURDATE() as today,
+                                    TIME(a.Appointment_date) as appt_time,
                                     CASE 
                                         WHEN DATE(a.Appointment_date) = CURDATE() THEN 'YES'
                                         ELSE 'NO'
@@ -57,6 +65,10 @@ try {
                                         WHEN a.Appointment_date < NOW() THEN 'YES'
                                         ELSE 'NO'
                                     END as is_past,
+                                    CASE 
+                                        WHEN TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) >= 15 THEN 'YES'
+                                        ELSE 'NO'
+                                    END as is_past_15min,
                                     (SELECT COUNT(*) FROM patient_visit pv 
                                         WHERE pv.appointment_id = a.Appointment_id 
                                         AND pv.start_at IS NOT NULL) as is_checked_in
@@ -160,7 +172,9 @@ try {
             'debug' => [
                 'server_time' => $timeDebug['server_time'] ?? null,
                 'server_date' => $timeDebug['server_date'] ?? null,
-                'timezone' => $timeDebug['timezone'] ?? null,
+                'session_timezone' => $timeDebug['session_timezone'] ?? null,
+                'global_timezone' => $timeDebug['global_timezone'] ?? null,
+                'unix_timestamp' => $timeDebug['unix_timestamp'] ?? null,
                 'all_todays_appointments' => $debugAppointments
             ]
         ]);
