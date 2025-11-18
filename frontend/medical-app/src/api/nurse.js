@@ -170,8 +170,3 @@ export async function saveNurseVitalsAndAllergies(data) {
   });
 }
 
-// Debug function to test authentication
-export async function debugNurseAuth() {
-    const url = `${BASE_URL}/debug-auth.php`;
-    return fetchJson(url);
-}
