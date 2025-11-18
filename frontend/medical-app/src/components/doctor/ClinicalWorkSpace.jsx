@@ -56,32 +56,32 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
 
   useEffect(() => {
     // If patient object is provided directly (from PatientList), use it
-    if (patient) {
-      setPatientData({
-        success: true,
-        has_visit: false,
-        patient: patient,
-        visit: {
-          patient_id: patient.patient_id || patient.id,
-          reason: '',
-          status: null,
-          diagnosis: null
-        },
-        vitals: {
-          blood_pressure: null,
-          temperature: null,
-          recorded_by: null
-        },
-        treatments: []
-      });
-      setLoading(false);
-      fetchTreatmentCatalog();
-      if (patient.patient_id || patient.id) {
-        fetchNotesByPatientId(patient.patient_id || patient.id);
-      }
-    } 
-    // If appointmentId is provided, fetch by appointment
-    else if (appointmentId) {
+    // if (patient) {
+    //   setPatientData({
+    //     success: true,
+    //     has_visit: false,
+    //     patient: patient,
+    //     visit: {
+    //       patient_id: patient.patient_id || patient.id,
+    //       reason: '',
+    //       status: null,
+    //       diagnosis: null
+    //     },
+    //     vitals: {
+    //       blood_pressure: null,
+    //       temperature: null,
+    //       recorded_by: null
+    //     },
+    //     treatments: []
+    //   });
+    //   setLoading(false);
+    //   fetchTreatmentCatalog();
+    //   if (patient.patient_id || patient.id) {
+    //     fetchNotesByPatientId(patient.patient_id || patient.id);
+    //   }
+    // } 
+    // // If appointmentId is provided, fetch by appointment
+     if (appointmentId) {
       fetchPatientDetails();
       fetchNotes();
       fetchTreatmentCatalog();
