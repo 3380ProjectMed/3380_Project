@@ -194,13 +194,15 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       
       if (!data.success) {
         if (data.error_type === 'INSURANCE_WARNING' || data.error_type === 'INSURANCE_EXPIRED') {
-          // Show alert modal with option to add insurance
+          // Show alert modal with option to add/edit insurance
+          const isExpired = data.error_type === 'INSURANCE_EXPIRED';
           setAlertModal({
             show: true,
             type: 'error',
             title: 'Cannot Check In - Insurance Issue',
             message: data.message || data.error,
             showAddInsurance: true,
+            insuranceButtonText: isExpired ? 'Edit Insurance' : 'Add Insurance',
             insurancePatientData: {
               Patient_id: selectedAppointment.Patient_id,
               Patient_First: selectedAppointment.Patient_First,
@@ -986,7 +988,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                       setAlertModal({ ...alertModal, show: false });
                     }}
                   >
-                    Add Insurance
+                    {alertModal.insuranceButtonText || 'Add Insurance'}
                   </button>
                   <button 
                     className="btn btn-ghost"
