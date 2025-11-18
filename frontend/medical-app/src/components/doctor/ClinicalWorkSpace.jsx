@@ -82,12 +82,14 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
     // } 
     // // If appointmentId is provided, fetch by appointment
      if (appointmentId) {
+      console.log("app");
       fetchPatientDetails();
       fetchNotes();
       fetchTreatmentCatalog();
     }
     // If only patientId is provided, fetch by patient
     else if (patientId) {
+      console.log("patientid");
       fetchPatientDetailsByPatientId();
       fetchNotesByPatientId(patientId);
       fetchTreatmentCatalog();
@@ -214,13 +216,14 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
         `${API_BASE}/doctor_api/appointments/get.php?appointment_id=${appointmentId}`,
         { credentials: 'include' }
       );
+      console.log('Appointment details response:', aptResponse);
 
       if (!aptResponse.ok) {
         throw new Error('Could not fetch appointment details');
       }
 
       const aptData = await aptResponse.json();
-      
+      console.log('Appointment details data:', aptData);
       if (aptData.success && aptData.appointment) {
         const patientId = aptData.appointment.patient_id || aptData.appointment.Patient_id;
         
