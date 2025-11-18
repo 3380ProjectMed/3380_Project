@@ -1627,6 +1627,7 @@ const OfficeUtilizationPie = ({ offices, overallUtilization }) => {
             );
           })}
 
+          {/* center white circle stays */}
           <circle
             cx="200"
             cy="200"
@@ -1634,23 +1635,23 @@ const OfficeUtilizationPie = ({ offices, overallUtilization }) => {
             fill="white"
             filter="drop-shadow(0 2px 8px rgba(0,0,0,0.1))"
           />
-
-          <text
-            x="200"
-            y="200"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            style={{
-              fontSize: '48px',
-              fontWeight: 'bold',
-              fill: '#0077b6',
-              pointerEvents: 'none'
-            }}
-          >
-            {hoveredIndex !== null
-              ? `${offices[hoveredIndex].volume_share ?? 0}%`
-              : `${combinedPercent}%`}
-          </text>
+          
+          {hoveredIndex !== null && (
+            <text
+              x="200"
+              y="200"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              style={{
+                fontSize: '48px',
+                fontWeight: 'bold',
+                fill: '#0077b6',
+                pointerEvents: 'none'
+              }}
+            >
+              {`${offices[hoveredIndex].volume_share ?? 0}%`}
+            </text>
+          )}
         </svg>
       </div>
 
