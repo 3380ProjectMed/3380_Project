@@ -42,7 +42,7 @@ try {
                                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                                 a.Appointment_date,
                                 a.Status,
-                                NOW() as current_time,
+                                NOW() as `current_time_debug`,
                                 TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past,
                                 DATE(a.Appointment_date) as appt_date,
                                 CURDATE() as today,
@@ -98,7 +98,7 @@ try {
                             a.Doctor_id,
                             a.Appointment_date,
                             a.Status,
-                            NOW() as `current_time`,
+                            NOW() as current_timestamp,
                             TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past
                         FROM appointment a
                         WHERE a.Status IN ('Scheduled', 'Waiting')
@@ -143,7 +143,7 @@ try {
                 'appointment_id' => $appointmentId,
                 'patient_id' => $appointment['Patient_id'],
                 'appointment_date' => $appointment['Appointment_date'],
-                'current_time' => $appointment['current_time'],
+                'current_time' => $appointment['current_timestamp'],
                 'minutes_past' => $appointment['minutes_past']
             ];
         }
