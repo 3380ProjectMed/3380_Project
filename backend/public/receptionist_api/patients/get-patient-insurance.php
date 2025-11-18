@@ -62,7 +62,11 @@ try {
         echo json_encode([
             'success' => true,
             'has_insurance' => false,
-            'insurance' => null
+            'insurance' => null,
+            'debug' => [
+                'patient_id' => $patient_id,
+                'query_returned_rows' => 0
+            ]
         ]);
         exit;
     }
@@ -70,7 +74,11 @@ try {
     echo json_encode([
         'success' => true,
         'has_insurance' => true,
-        'insurance' => $result[0]
+        'insurance' => $result[0],
+        'debug' => [
+            'patient_id' => $patient_id,
+            'query_returned_rows' => count($result)
+        ]
     ]);
 
 } catch (Exception $e) {
