@@ -27,7 +27,12 @@ export default function NurseProfile() {
       try {
         const data = await getNurseProfile();
         if (mounted && data) {
-          setProfile(prev => ({ ...prev, ...data }));
+          // Map workLocation to location for consistency
+          const profileData = {
+            ...data,
+            location: data.workLocation || data.location
+          };
+          setProfile(prev => ({ ...prev, ...profileData }));
         }
       } catch (e) {
         if (mounted) setError(e.message || 'Failed to load profile');
