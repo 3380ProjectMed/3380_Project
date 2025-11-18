@@ -78,6 +78,7 @@ try {
                 SELECT 
                     pi.id,
                     pi.expiration_date,
+                    pi.is_primary,
                     CASE
                         WHEN pi.expiration_date IS NULL THEN 'ACTIVE'
                         WHEN pi.expiration_date < CURDATE() THEN 'EXPIRED'
@@ -91,9 +92,8 @@ try {
                 LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
                 LEFT JOIN insurance_payer ipy ON ip.payer_id = ipy.payer_id
                 WHERE pi.patient_id = ?
-                  AND pi.is_primary = 1
                   AND pi.effective_date <= CURDATE()
-                ORDER BY pi.effective_date DESC
+                ORDER BY pi.is_primary DESC, pi.effective_date DESC
                 LIMIT 1
             ";
             
