@@ -56,6 +56,17 @@ function Report() {
   const [officeAppointments, setOfficeAppointments] = useState([]);
   const [officeAppointmentsLoading, setOfficeAppointmentsLoading] = useState(false);
 
+  const [selectedDoctorRow, setSelectedDoctorRow] = useState(null);
+  const [doctorPatients, setDoctorPatients] = useState([]);
+  const [doctorPatientsLoading, setDoctorPatientsLoading] = useState(false);
+
+  const PRIMARY_SPECIALTIES = [1, 2, 3, 4];
+  const primaryCareRows = newPatientsData?.doctor_performance
+    ? newPatientsData.doctor_performance.filter(doc =>
+        PRIMARY_SPECIALTIES.includes(Number(doc.specialty))
+      )
+    : [];
+
   // Fetch filter options on mount
   useEffect(() => {
     fetchFilterOptions();
@@ -93,6 +104,43 @@ function Report() {
       console.error('Failed to fetch filter options:', err);
     }
   };
+
+  const fetchDoctorPatients = async (doc) => {
+    try {
+      setDoctorPatientsLoading(true);
+      setSelectedDoctorRow(doc);
+      setError(null);
+
+      const params = new URLSearchParams({
+        doctor_id: doc.doctor_id,
+        start_date: startDate,
+        end_date: endDate,
+      });
+
+      // optional: filter by office / status
+      if (selectedOffice !== 'all') params.append('office_id', selectedOffice);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+
+      const res = await fetch(
+        `/admin_api/reports/doctor-patients.php?${params.toString()}`,
+        { credentials: 'include' }
+      );
+      const data = await res.json();
+
+      if (data.success) {
+        setDoctorPatients(data.patients || []);
+      } else {
+        setError(data.error || 'Failed to load patient details');
+        setDoctorPatients([]);
+      }
+    } catch (err) {
+      setError(err.message);
+      setDoctorPatients([]);
+    } finally {
+      setDoctorPatientsLoading(false);
+    }
+  };
+
 
   const fetchOfficeAppointments = async (office) => {
     try {
@@ -300,7 +348,7 @@ function Report() {
       });
 
       // Booking method breakdown section
-// Booking method breakdown section
+
       csvContent += '\nBooking Method,New Patients,Total Appointments,Completed,Unique Patients,Completion Rate\n';
       (newPatientsData.booking_breakdown || []).forEach(row => {
         const total = Number(row.total_appointments || 0);
@@ -1107,9 +1155,20 @@ function Report() {
                   </thead>
                   <tbody>
                     {getSortedData(newPatientsData.doctor_performance, sortConfig.key).map((doc, idx) => (
-                      <tr key={idx}>
+                       <tr
+                        key={idx}
+                        className="clickable-row"
+                        onClick={() => fetchDoctorPatients(doc)}
+                      >
                         <td className="text-bold">Dr. {doc.doctor_name}</td>
-                        <td className="text-right text-primary">{doc.new_patients_acquired}</td>
+                        <td className="text-right text-primary">
+                          {doc.new_patients_acquired}
+                          { ![1,2,3,4].includes(Number(doc.specialty)) &&
+                            <span className="pill-muted">
+                              ({doc.new_patients_for_doctor} new to this doctor)
+                            </span>
+                          }
+                        </td>
                         <td className="text-right text-success">{doc.retained_patients}</td>
                         <td>
                           <div className="retention-cell">
@@ -1145,6 +1204,84 @@ function Report() {
                   </tbody>
                 </table>
               </div>
+            </section>
+          )}
+
+          {selectedDoctorRow && (
+            <section className="report-section">
+              <div className="section-header">
+                <div>
+                  <h3>Patients seen by Dr. {selectedDoctorRow.doctor_name}</h3>
+                  <p className="section-subtitle">
+                    {startDate} – {endDate}
+                    {selectedOffice !== 'all' && ` · Office: ${selectedOffice}`}
+                  </p>
+                </div>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => {
+                    setSelectedDoctorRow(null);
+                    setDoctorPatients([]);
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+
+              {doctorPatientsLoading ? (
+                <div className="loading-container">
+                  <div className="loading-spinner" />
+                  <p>Loading patients...</p>
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table className="report-table">
+                    <thead>
+                      <tr>
+                        <th>Patient</th>
+                        <th>First Visit</th>
+                        <th>Last Visit</th>
+                        <th className="text-right">Total Appts</th>
+                        <th className="text-right">Completed</th>
+                        <th className="text-right">No-Shows</th>
+                        <th className="text-right">Cancelled</th>
+                        <th>New?</th>
+                        <th>Retained?</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {doctorPatients.length === 0 && (
+                        <tr>
+                          <td colSpan={9} className="text-center text-muted">
+                            No patients for this doctor in the selected period.
+                          </td>
+                        </tr>
+                      )}
+                      {doctorPatients.map((p) => (
+                        <tr key={p.patient_id}>
+                          <td className="text-bold">{p.patient_name}</td>
+                          <td>{p.first_visit_date ? new Date(p.first_visit_date).toLocaleString() : '—'}</td>
+                          <td>{p.last_visit_date ? new Date(p.last_visit_date).toLocaleString() : '—'}</td>
+                          <td className="text-right">{p.total_appointments}</td>
+                          <td className="text-right text-success">{p.completed_appointments}</td>
+                          <td className="text-right text-danger">{p.no_shows}</td>
+                          <td className="text-right text-warning">{p.cancelled_appointments}</td>
+                          <td>
+                            {p.is_new_patient
+                              ? <span className="badge badge-success">New</span>
+                              : <span className="badge badge-muted">Existing</span>}
+                          </td>
+                          <td>
+                            {p.is_retained
+                              ? <span className="badge badge-info">Retained</span>
+                              : <span className="badge badge-muted">Single visit</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
           )}
 

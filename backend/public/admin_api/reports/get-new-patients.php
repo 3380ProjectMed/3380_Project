@@ -72,54 +72,99 @@ try {
     // 1. DOCTOR PERFORMANCE SUMMARY
     // =========================================================================
     $doctorSql = "SELECT
-                        d.doctor_id,
-                        CONCAT(s.first_name, ' ', s.last_name) AS doctor_name,
-                        COUNT(DISTINCT CASE 
-                            WHEN a.Appointment_date = (
-                                SELECT MIN(a2.Appointment_date)
-                                FROM appointment a2
-                                WHERE a2.Patient_id = a.Patient_id
-                                AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                            )
-                            AND a.Status NOT IN ('Cancelled', 'No-Show')
-                            THEN a.Patient_id 
-                        END) AS new_patients_acquired,
+            d.doctor_id,
+            CONCAT(s.first_name, ' ', s.last_name) AS doctor_name,
+            d.specialty,
 
-                        COUNT(DISTINCT a.Patient_id) AS total_patients_seen,
-                        
-                        SUM(CASE 
-                            WHEN a.Appointment_date = (
-                                SELECT MIN(a2.Appointment_date)
-                                FROM appointment a2
-                                WHERE a2.Patient_id = a.Patient_id
-                                AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                            )
-                            AND a.Status NOT IN ('Cancelled', 'No-Show')
-                            THEN 1 ELSE 0 
-                        END) AS new_patient_appointments,
-                        
-                        COUNT(DISTINCT CASE
-                            WHEN a.Appointment_date = (
-                                SELECT MIN(a2.Appointment_date)
-                                FROM appointment a2
-                                WHERE a2.Patient_id = a.Patient_id
-                                AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                            )
-                            AND (
-                                SELECT COUNT(*)
-                                FROM appointment a3
-                                WHERE a3.Patient_id = a.Patient_id
-                                AND a3.Status NOT IN ('Cancelled', 'No-Show')
-                            ) >= 2
-                            THEN a.Patient_id
-                        END) AS retained_patients,
-                        
-                        SUM(CASE WHEN a.Status = 'Completed' THEN 1 ELSE 0 END) AS total_completed
-                        
-                    FROM appointment a
-                    JOIN doctor d ON d.doctor_id = a.Doctor_id
-                    JOIN staff s ON s.staff_id = d.staff_id
-                    WHERE a.Appointment_date BETWEEN ? AND ?";
+            -- 1) NEW TO PRACTICE (credit ONLY primary care docs)
+            COUNT(
+            DISTINCT CASE 
+                WHEN d.specialty IN (1,2,3,4) -- family, GP, internal, peds
+                AND a.Appointment_date = (
+                    SELECT MIN(a2.Appointment_date)
+                    FROM appointment a2
+                    WHERE a2.Patient_id = a.Patient_id
+                    AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                )
+                AND a.Status NOT IN ('Cancelled', 'No-Show')
+                THEN a.Patient_id 
+            END
+            ) AS new_patients_acquired,
+
+            -- total unique patients this doctor actually saw in this period
+            COUNT(DISTINCT CASE  
+                WHEN a.Status NOT IN ('Cancelled', 'No-Show') 
+                THEN a.Patient_id 
+            END) AS total_patients_seen,
+
+            -- (you can keep this if you care about number of 1st-visit appts)
+            SUM(CASE 
+                WHEN a.Appointment_date = (
+                    SELECT MIN(a2.Appointment_date)
+                    FROM appointment a2
+                    WHERE a2.Patient_id = a.Patient_id
+                    AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                )
+                AND a.Status NOT IN ('Cancelled', 'No-Show')
+                THEN 1 ELSE 0 
+            END) AS new_patient_appointments,
+            
+            -- 2) RETAINED FOR PRACTICE (primary care only)
+            COUNT(
+            DISTINCT CASE
+                WHEN d.specialty IN (1,2,3,4)
+                AND a.Appointment_date = (
+                    SELECT MIN(a2.Appointment_date)
+                    FROM appointment a2
+                    WHERE a2.Patient_id = a.Patient_id
+                    AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                )
+                AND (
+                    SELECT COUNT(*)
+                    FROM appointment a3
+                    WHERE a3.Patient_id = a.Patient_id
+                    AND a3.Status NOT IN ('Cancelled', 'No-Show')
+                ) >= 2
+                THEN a.Patient_id
+            END
+            ) AS retained_patients,
+
+        SUM(CASE WHEN a.Status = 'Completed' THEN 1 ELSE 0 END) AS total_completed,
+
+        -- 3) NEW TO THIS DOCTOR (works for ALL docs, including specialties)
+        COUNT(
+        DISTINCT CASE 
+            WHEN a.Appointment_date = (
+                SELECT MIN(a2.Appointment_date)
+                FROM appointment a2
+                WHERE a2.Patient_id = a.Patient_id
+                  AND a2.Doctor_id  = a.Doctor_id  
+                  AND a2.Status NOT IN ('Cancelled', 'No-Show')
+            )
+            AND a.Status NOT IN ('Cancelled', 'No-Show')
+            THEN a.Patient_id
+        END
+        ) AS new_patients_for_doctor,
+
+        -- 4) RETAINED WITH THIS DOCTOR (≥2 visits with this doc)
+        COUNT(
+        DISTINCT CASE 
+            WHEN (
+                SELECT COUNT(*)
+                FROM appointment a3
+                WHERE a3.Patient_id = a.Patient_id
+                  AND a3.Doctor_id  = a.Doctor_id
+                  AND a3.Status NOT IN ('Cancelled', 'No-Show')
+            ) >= 2
+            THEN a.Patient_id
+        END
+        ) AS retained_patients_for_doctor
+
+        FROM appointment a
+        JOIN doctor d ON d.doctor_id = a.Doctor_id
+        JOIN staff  s ON s.staff_id   = d.staff_id
+        WHERE a.Appointment_date BETWEEN ? AND ?";
+
 
     if ($office_id !== null) {
         $doctorSql .= " AND a.Office_id = ?";
@@ -128,7 +173,7 @@ try {
         $doctorSql .= " AND a.Doctor_id = ?";
     }
 
-    $doctorSql .= " GROUP BY d.doctor_id, doctor_name
+    $doctorSql .= " GROUP BY d.doctor_id, doctor_name, d.specialty
                     ORDER BY new_patients_acquired DESC";
 
     $stmt = $conn->prepare($doctorSql);
