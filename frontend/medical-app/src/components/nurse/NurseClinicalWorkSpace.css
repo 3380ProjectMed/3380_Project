@@ -484,3 +484,186 @@ textarea::placeholder {
     justify-content: center;
   }
 }
+
+/* ===== ALLERGIES SECTION ===== */
+.allergies-section {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1rem 2rem;
+}
+
+.allergies-section h3 {
+  margin: 0 0 1rem 0;
+  color: #dc2626;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.allergies-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.allergy-item {
+  background: white;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.allergy-item.general {
+  background: #fef9c3;
+  border-color: #fde047;
+}
+
+.allergy-main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.allergy-name {
+  font-weight: 600;
+  color: #dc2626;
+  font-size: 0.95rem;
+}
+
+.allergy-notes {
+  font-style: italic;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.allergy-type {
+  background: #fbbf24;
+  color: #92400e;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.allergy-date {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* ===== MEDICATIONS SECTION ===== */
+.medications-section {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1rem 2rem;
+}
+
+.medications-section h3 {
+  margin: 0 0 1rem 0;
+  color: #0369a1;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.medications-subsection {
+  margin-bottom: 1.5rem;
+}
+
+.medications-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.medications-subsection h4 {
+  margin: 0 0 0.75rem 0;
+  color: #0369a1;
+  font-size: 1rem;
+  font-weight: 500;
+  border-bottom: 1px solid #bae6fd;
+  padding-bottom: 0.25rem;
+}
+
+.medications-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.medication-item {
+  background: white;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.medication-item.history {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.med-name {
+  font-weight: 600;
+  color: #0369a1;
+  font-size: 0.95rem;
+}
+
+.med-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.med-dosage,
+.med-frequency,
+.med-route {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.med-prescriber {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.med-dates {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .allergies-section,
+  .medications-section {
+    margin: 1rem;
+    padding: 1rem;
+  }
+  
+  .allergies-grid,
+  .medications-grid {
+    gap: 0.5rem;
+  }
+  
+  .allergy-item,
+  .medication-item {
+    padding: 0.5rem;
+  }
+}

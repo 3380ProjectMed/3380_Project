@@ -307,6 +307,85 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         </div>
       )}
 
+      {/* Patient Allergies */}
+      {(patientData?.allergies?.specific_allergies?.length > 0 || patientData?.allergies?.general_allergy?.length > 0) && (
+        <div className="allergies-section">
+          <h3>🚨 Allergies</h3>
+          <div className="allergies-grid">
+            {/* Specific Allergies */}
+            {patientData.allergies.specific_allergies?.map((allergy, index) => (
+              <div key={index} className="allergy-item">
+                <div className="allergy-main">
+                  <span className="allergy-name">{allergy.allergies_text}</span>
+                  {allergy.notes && (
+                    <span className="allergy-notes">({allergy.notes})</span>
+                  )}
+                </div>
+                <span className="allergy-date">Added: {formatChicagoDate(allergy.created_at)}</span>
+              </div>
+            ))}
+            
+            {/* General Allergy (fallback) */}
+            {patientData.allergies.general_allergy?.map((allergy, index) => (
+              <div key={index} className="allergy-item general">
+                <div className="allergy-main">
+                  <span className="allergy-name">{allergy.allergies_text}</span>
+                  <span className="allergy-type">(General Record)</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Current Medications */}
+      {(patientData?.medications?.current_prescriptions?.length > 0 || patientData?.medications?.medication_history?.length > 0) && (
+        <div className="medications-section">
+          <h3>💊 Current Medications</h3>
+          
+          {/* Active Prescriptions */}
+          {patientData.medications.current_prescriptions?.length > 0 && (
+            <div className="medications-subsection">
+              <h4>Active Prescriptions</h4>
+              <div className="medications-grid">
+                {patientData.medications.current_prescriptions.map((med, index) => (
+                  <div key={index} className="medication-item">
+                    <div className="med-name">{med.medication_name}</div>
+                    <div className="med-details">
+                      {med.dosage && <span className="med-dosage">{med.dosage}</span>}
+                      {med.frequency && <span className="med-frequency">{med.frequency}</span>}
+                      {med.route && <span className="med-route">{med.route}</span>}
+                    </div>
+                    {med.prescribed_by && (
+                      <div className="med-prescriber">Prescribed by: {med.prescribed_by}</div>
+                    )}
+                    <div className="med-dates">
+                      Start: {formatChicagoDate(med.start_date)}
+                      {med.end_date && ` | End: ${formatChicagoDate(med.end_date)}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Medication History */}
+          {patientData.medications.medication_history?.length > 0 && (
+            <div className="medications-subsection">
+              <h4>Medication History</h4>
+              <div className="medications-grid">
+                {patientData.medications.medication_history.map((med, index) => (
+                  <div key={index} className="medication-item history">
+                    <div className="med-name">{med.drug_name}</div>
+                    <div className="med-frequency">{med.frequency}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="workspace-content">
         <div className="vitals-grid-simple">
