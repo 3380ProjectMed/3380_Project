@@ -47,6 +47,10 @@ try {
     // Optional: allow forcing check-in despite warnings (not errors)
     $force_checkin = isset($input['force']) && $input['force'] === true;
 
+    // Optional validation token (generated during validate_only to acknowledge warnings)
+    $validation_token = isset($input['validation_token']) ? $input['validation_token'] : null;
+    $acknowledged_validation = false;
+
     $conn = getDBConnection();
 
     // Verify receptionist has access to this appointment (same office) and get patient details
@@ -81,6 +85,17 @@ try {
         try {
             // Clear any previous insurance warning
             $conn->query("SET @insurance_warning = NULL");
+
+            // If frontend supplied a validation token, check session to see if validation was acknowledged
+            if (!empty($validation_token) && isset($_SESSION['checkin_validation'][$appointment_id])) {
+                $stored = $_SESSION['checkin_validation'][$appointment_id];
+                // token match and not older than 10 minutes
+                if ($stored['token'] === $validation_token && (time() - ($stored['time'] ?? 0) <= 600)) {
+                    $acknowledged_validation = true;
+                    // once acknowledged, remove the stored token to prevent reuse
+                    unset($_SESSION['checkin_validation'][$appointment_id]);
+                }
+            }
             
             // Attempt to insert - trigger will validate
             // Use NULL for nurse_id during validation-only to avoid foreign key errors (frontend may pass 0)
@@ -106,8 +121,26 @@ try {
             ];
             
             if (!empty($insuranceWarning)) {
+                // Generate a validation token so frontend can acknowledge this warning and suppress it
+                // during the real check-in request.
+                try {
+                    $token = bin2hex(random_bytes(16));
+                } catch (Exception $e) {
+                    $token = uniqid('val_', true);
+                }
+
+                if (!isset($_SESSION['checkin_validation'])) {
+                    $_SESSION['checkin_validation'] = [];
+                }
+                $_SESSION['checkin_validation'][$appointment_id] = [
+                    'token' => $token,
+                    'warning' => $insuranceWarning,
+                    'time' => time()
+                ];
+
                 $response['insurance_warning'] = $insuranceWarning;
                 $response['warning_type'] = 'INSURANCE_EXPIRING_SOON';
+                $response['validation_token'] = $token;
             }
             
             echo json_encode($response);
@@ -176,6 +209,17 @@ try {
     try {
         // Clear any previous insurance warning
         $conn->query("SET @insurance_warning = NULL");
+
+        // If frontend supplied a validation token, check session to see if validation was acknowledged
+        if (!empty($validation_token) && isset($_SESSION['checkin_validation'][$appointment_id])) {
+            $stored = $_SESSION['checkin_validation'][$appointment_id];
+            // token match and not older than 10 minutes
+            if ($stored['token'] === $validation_token && (time() - ($stored['time'] ?? 0) <= 600)) {
+                $acknowledged_validation = true;
+                // once acknowledged, remove the stored token to prevent reuse
+                unset($_SESSION['checkin_validation'][$appointment_id]);
+            }
+        }
 
         // Check if patient_visit record exists
         $checkVisitSql = "SELECT visit_id FROM patient_visit WHERE appointment_id = ?";
@@ -289,8 +333,8 @@ try {
             'check_in_time' => date('Y-m-d H:i:s')
         ];
 
-        // Add insurance warning if present
-        if (!empty($insuranceWarning)) {
+        // Add insurance warning if present and not already acknowledged via validation token or force flag
+        if (!empty($insuranceWarning) && !$acknowledged_validation && !$force_checkin) {
             $response['insurance_warning'] = $insuranceWarning;
             $response['warning_type'] = 'INSURANCE_EXPIRING_SOON';
 
