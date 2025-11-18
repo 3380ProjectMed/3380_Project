@@ -234,6 +234,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
         }
 
         const patData = await patResponse.json();
+        console.log('Basic patient info:', patData);
         
         if (patData.success && patData.patient) {
           setPatientData({
