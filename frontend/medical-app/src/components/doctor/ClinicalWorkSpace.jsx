@@ -665,6 +665,21 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
   const vitals = patientData?.vitals;
   const hasVisit = patientData?.has_visit !== false;
 
+  // Display status: prefer appointment-level status, then visit.status.
+  const computeDisplayStatus = () => {
+    // Prefer appointment status when available
+    if (patientData?.appointment && patientData.appointment.status) {
+      return patientData.appointment.status;
+    }
+
+    // Otherwise use visit.status if present
+    if (visit && visit.status) return visit.status;
+
+    return null;
+  };
+
+  const displayStatus = computeDisplayStatus();
+
   return (
     <div className="clinical-workspace">
       {alert && (
@@ -705,10 +720,10 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                 <span className="label">Reason for Visit:</span>
                 <span className="value">{visit?.reason || 'Chart Review'}</span>
               </div>
-              {hasVisit && visit?.status && (
+              {hasVisit && displayStatus && (
                 <div className="info-item">
                   <span className="label">Status:</span>
-                  <span className="value status-badge">{visit.status}</span>
+                  <span className={`value status-badge ${displayStatus.toLowerCase().replace(/\s+/g,'-')}`}>{displayStatus}</span>
                 </div>
               )}
               {!hasVisit && appointmentId && (
