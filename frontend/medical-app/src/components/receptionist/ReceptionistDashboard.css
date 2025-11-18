@@ -787,6 +787,27 @@
   box-shadow: 0 4px 12px rgba(0, 180, 216, 0.15);
 }
 
+/* Appointment Header Row - for ID badge */
+.appointment-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.appointment-id-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  font-size: 0.813rem;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  letter-spacing: 0.025em;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  white-space: nowrap;
+}
+
 /* Appointment Time */
 .appointment-time {
   display: flex;

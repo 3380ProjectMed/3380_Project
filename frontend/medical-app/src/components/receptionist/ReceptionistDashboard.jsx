@@ -57,18 +57,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   }, [officeId]);
 
   /**
-   * Automatic status updates - runs instantly on load and every 30 seconds
-   * Updates Scheduled → Waiting → No-Show based on appointment time
-   */
-  useEffect(() => {
-    checkForNoShows();
-    const noShowInterval = setInterval(() => {
-      checkForNoShows();
-    }, 30000); // Check every 30 seconds for near-instant updates
-    return () => clearInterval(noShowInterval);
-  }, []);
-
-  /**
    * Load calendar when month changes
    */
   useEffect(() => {
@@ -76,27 +64,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       loadCalendarData();
     }
   }, [currentDate, officeId, doctors]);
-
-  /**
-   * Check for appointments that should be marked as No-Show
-   */
-  const checkForNoShows = async () => {
-    try {
-      const response = await fetch('/receptionist_api/appointments/update-no-shows.php', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      const data = await response.json();
-      
-      if (data.success && data.updated_count > 0) {
-        console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
-        loadDashboardData();
-        loadCalendarData();
-      }
-    } catch (err) {
-      console.error('Failed to check for no-shows:', err);
-    }
-  };
 
   /**
    * Fetch doctors from the database
@@ -131,9 +98,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // Update appointment statuses first (non-blocking)
-      checkForNoShows().catch(err => console.error('Status update failed:', err));
       
       const response = await fetch('/receptionist_api/dashboard/today.php', { credentials: 'include' });
       const data = await response.json();
@@ -427,8 +391,10 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     
     const statusMap = {
       'scheduled': 'Scheduled',
+      'waiting': 'Waiting',
       'completed': 'Completed',
-      'canceled': 'Cancelled'
+      'canceled': 'Cancelled',
+      'no-show': 'No-Show'
     };
     
     return todayAppointments.filter(apt => {
@@ -587,8 +553,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
               <button className={`filter-btn ${selectedFilter === 'scheduled' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('scheduled')}>
                 Scheduled
               </button>
+              <button className={`filter-btn ${selectedFilter === 'waiting' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('waiting')}>
+                Waiting
+              </button>
               <button className={`filter-btn ${selectedFilter === 'completed' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('completed')}>
                 Completed
+              </button>
+              <button className={`filter-btn ${selectedFilter === 'no-show' ? 'filter-active' : ''}`} onClick={() => setSelectedFilter('no-show')}>
+                No-Show
               </button>
             </div>
           </div>
@@ -612,9 +584,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                   onClick={() => setSelectedAppointment(appointment)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <div className="appointment-time">
-                    <Clock size={20} />
-                    <span>{appointment.time || formatTime(appointment.Appointment_date || appointment.appointmentDateTime)}</span>
+                  <div className="appointment-header-row">
+                    <div className="appointment-time">
+                      <Clock size={20} />
+                      <span>{appointment.time || formatTime(appointment.Appointment_date || appointment.appointmentDateTime)}</span>
+                    </div>
+                    <div className="appointment-id-badge">
+                      Appt #{appointment.Appointment_id || appointment.id}
+                    </div>
                   </div>
 
                   <div className="appointment-patient">
@@ -623,7 +600,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     </h3>
                     <div className="patient-meta">
                       <span className="patient-id">
-                        ID: {appointment.patientIdFormatted || appointment.Patient_id || appointment.patientId}
+                        Patient ID: {appointment.patientIdFormatted || appointment.Patient_id || appointment.patientId}
                       </span>
                       {appointment.emergencyContact && (
                         <span className="patient-phone">
@@ -851,7 +828,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
               <button 
                 className="btn btn-success" 
                 onClick={handleCheckInAppointment}
-                disabled={checkingIn || selectedAppointment.Status === 'Checked-in' || selectedAppointment.Status === 'Cancelled' || selectedAppointment.Status === 'Completed'}
+                disabled={checkingIn || selectedAppointment.Status === 'Checked-in' || selectedAppointment.Status === 'Cancelled' || selectedAppointment.Status === 'Completed' || selectedAppointment.Status === 'No-Show'}
               >
                 <Check size={18} />
                 {checkingIn ? 'Checking In...' : 'Check In'}
@@ -1031,9 +1008,14 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                     }}
                     style={{ cursor: 'pointer' }}
                   >
-                    <div className="appointment-time">
-                      <Clock size={20} />
-                      <span>{formatTime(appointment.Appointment_date)}</span>
+                    <div className="appointment-header-row">
+                      <div className="appointment-time">
+                        <Clock size={20} />
+                        <span>{formatTime(appointment.Appointment_date)}</span>
+                      </div>
+                      <div className="appointment-id-badge">
+                        Appt #{appointment.Appointment_id}
+                      </div>
                     </div>
 
                     <div className="appointment-patient">
@@ -1042,7 +1024,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
                       </h3>
                       <div className="patient-meta">
                         <span className="patient-id">
-                          ID: {appointment.patient_id || appointment.Patient_id}
+                          Patient ID: {appointment.patient_id || appointment.Patient_id}
                         </span>
                       </div>
                     </div>

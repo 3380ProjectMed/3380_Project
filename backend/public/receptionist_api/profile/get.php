@@ -17,7 +17,7 @@ try {
 
     // Fetch receptionist profile from staff and work_schedule
     $sql = "SELECT ua.username, ua.email, ua.role, s.staff_id, s.first_name, s.last_name, 
-                   s.license_number, s.phone_number, s.gender, cg.description AS gender_description,
+                   s.license_number, s.gender, cg.description AS gender_description,
                    ws.office_id, o.name AS office_name, o.address, o.city, o.state, o.zipcode, o.phone_number AS office_phone
             FROM user_account ua
             LEFT JOIN staff s ON s.staff_email = ua.email
@@ -59,7 +59,7 @@ try {
             'firstName' => $r['first_name'] ?? $r['username'] ?? '',
             'lastName' => $r['last_name'] ?? '',
             'email' => $r['email'] ?? '',
-            'phoneNumber' => $r['phone_number'] ?? '',
+            'phoneNumber' => null, // Phone number not stored in staff table
             'gender' => $r['gender_description'] ?? null,
             'licenseNumber' => $r['license_number'] ?? '',
             'role' => $r['role'] ?? 'receptionist',
