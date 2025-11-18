@@ -37,7 +37,10 @@ try {
     }
 
     // Build WHERE clause for filters
-    $where_conditions = ["pv.start_at BETWEEN ? AND ?"];
+    $where_conditions = [
+        "pv.start_at >= ? AND pv.start_at < DATE_ADD(?, INTERVAL 1 DAY)"
+    ];
+
     $params = [$start_date, $end_date];
     $param_types = 'ss';
 
