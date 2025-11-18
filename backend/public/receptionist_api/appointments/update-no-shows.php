@@ -30,45 +30,43 @@ try {
     // Set timezone to match appointment times (US Central Time)
     $conn->query("SET time_zone = '-06:00'");
     
-    // DEBUG: Get current time info
-    $debugTimeSql = "SELECT NOW() as server_time, CURDATE() as server_date, @@session.time_zone as timezone";
-    $debugTimeResult = executeQuery($conn, $debugTimeSql, '', []);
-    $timeDebug = $debugTimeResult[0] ?? null;
-    
-    // DEBUG: Get all today's appointments with time calculations
-    $debugAppointmentsSql = "SELECT 
-                                a.Appointment_id,
-                                a.Patient_id,
-                                CONCAT(p.first_name, ' ', p.last_name) as patient_name,
-                                a.Appointment_date,
-                                a.Status,
-                                NOW() as `current_time_debug`,
-                                TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past,
-                                DATE(a.Appointment_date) as appt_date,
-                                CURDATE() as today,
-                                CASE 
-                                    WHEN DATE(a.Appointment_date) = CURDATE() THEN 'YES'
-                                    ELSE 'NO'
-                                END as is_today,
-                                CASE 
-                                    WHEN a.Appointment_date < NOW() THEN 'YES'
-                                    ELSE 'NO'
-                                END as is_past,
-                                EXISTS (
-                                    SELECT 1 FROM patient_visit pv 
-                                    WHERE pv.appointment_id = a.Appointment_id 
-                                    AND pv.start_at IS NOT NULL
-                                ) as is_checked_in
-                            FROM appointment a
-                            JOIN patient p ON a.Patient_id = p.Patient_ID
-                            WHERE DATE(a.Appointment_date) = CURDATE()
-                            ORDER BY a.Appointment_date";
-    
-    $debugAppointments = executeQuery($conn, $debugAppointmentsSql, '', []);
-    
     $conn->begin_transaction();
 
     try {
+        // DEBUG: Get current time info
+        $debugTimeSql = "SELECT NOW() as server_time, CURDATE() as server_date, @@session.time_zone as timezone";
+        $debugTimeResult = executeQuery($conn, $debugTimeSql, '', []);
+        $timeDebug = $debugTimeResult[0] ?? null;
+        
+        // DEBUG: Get all today's appointments with time calculations
+        $debugAppointmentsSql = "SELECT 
+                                    a.Appointment_id,
+                                    a.Patient_id,
+                                    CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                                    a.Appointment_date,
+                                    a.Status,
+                                    NOW() as server_now,
+                                    TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past,
+                                    DATE(a.Appointment_date) as appt_date,
+                                    CURDATE() as today,
+                                    CASE 
+                                        WHEN DATE(a.Appointment_date) = CURDATE() THEN 'YES'
+                                        ELSE 'NO'
+                                    END as is_today,
+                                    CASE 
+                                        WHEN a.Appointment_date < NOW() THEN 'YES'
+                                        ELSE 'NO'
+                                    END as is_past,
+                                    (SELECT COUNT(*) FROM patient_visit pv 
+                                        WHERE pv.appointment_id = a.Appointment_id 
+                                        AND pv.start_at IS NOT NULL) as is_checked_in
+                                FROM appointment a
+                                JOIN patient p ON a.Patient_id = p.Patient_ID
+                                WHERE DATE(a.Appointment_date) = CURDATE()
+                                ORDER BY a.Appointment_date";
+        
+        $debugAppointments = executeQuery($conn, $debugAppointmentsSql, '', []);
+    
         // STEP 1: Update Scheduled appointments to Waiting if appointment time has passed (but less than 15 min)
         // Only for appointments that haven't been checked in
         $updateToWaitingSql = "UPDATE appointment a
@@ -98,7 +96,7 @@ try {
                             a.Doctor_id,
                             a.Appointment_date,
                             a.Status,
-                            NOW() as current_timestamp,
+                            NOW() as server_now,
                             TIMESTAMPDIFF(MINUTE, a.Appointment_date, NOW()) as minutes_past
                         FROM appointment a
                         WHERE a.Status IN ('Scheduled', 'Waiting')
@@ -143,7 +141,7 @@ try {
                 'appointment_id' => $appointmentId,
                 'patient_id' => $appointment['Patient_id'],
                 'appointment_date' => $appointment['Appointment_date'],
-                'current_time' => $appointment['current_timestamp'],
+                'current_time' => $appointment['server_now'],
                 'minutes_past' => $appointment['minutes_past']
             ];
         }
