@@ -97,36 +97,32 @@ export default function MedicalRecords(props) {
   };
 
   const handleDeleteMedication = async (medicationId) => {
-    if (window.confirm('Are you sure you want to delete this medication?')) {
-      try {
-        const data = await medicalRecordsAPI.deleteMedication(medicationId);
-        if (data.success) {
-          onRefresh && onRefresh(); // Refresh the medical records
-          setToast && setToast({ message: 'Medication deleted successfully', type: 'success' });
-        } else {
-          setToast && setToast({ message: 'Error deleting medication: ' + data.message, type: 'error' });
-        }
-      } catch (error) {
-        console.error('Error deleting medication:', error);
-        setToast && setToast({ message: 'Error deleting medication', type: 'error' });
+    try {
+      const data = await medicalRecordsAPI.deleteMedication(medicationId);
+      if (data.success) {
+        onRefresh && onRefresh(); // Refresh the medical records
+        setToast && setToast({ message: 'Medication deleted successfully', type: 'success' });
+      } else {
+        setToast && setToast({ message: 'Error deleting medication: ' + data.message, type: 'error' });
       }
+    } catch (error) {
+      console.error('Error deleting medication:', error);
+      setToast && setToast({ message: 'Error deleting medication', type: 'error' });
     }
   };
 
   const handleDeleteAllergy = async (allergyId) => {
-    if (window.confirm('Are you sure you want to remove this allergy?')) {
-      try {
-        const data = await medicalRecordsAPI.deleteAllergy(allergyId);
-        if (data.success) {
-          onRefresh && onRefresh(); // Refresh the medical records
-          setToast && setToast({ message: 'Allergy removed successfully', type: 'success' });
-        } else {
-          setToast && setToast({ message: 'Error removing allergy: ' + data.message, type: 'error' });
-        }
-      } catch (error) {
-        console.error('Error removing allergy:', error);
-        setToast && setToast({ message: 'Error removing allergy', type: 'error' });
+    try {
+      const data = await medicalRecordsAPI.deleteAllergy(allergyId);
+      if (data.success) {
+        onRefresh && onRefresh(); // Refresh the medical records
+        setToast && setToast({ message: 'Allergy removed successfully', type: 'success' });
+      } else {
+        setToast && setToast({ message: 'Error removing allergy: ' + data.message, type: 'error' });
       }
+    } catch (error) {
+      console.error('Error removing allergy:', error);
+      setToast && setToast({ message: 'Error removing allergy', type: 'error' });
     }
   };
 
