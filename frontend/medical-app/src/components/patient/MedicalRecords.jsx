@@ -3,7 +3,7 @@ import './MedicalRecords.css';
 import { medicalRecordsAPI } from '../../patientapi.js';
 
 export default function MedicalRecords(props) {
-  const { loading, vitalsHistory = [], medications = [], allergies = [], conditions = [], onRefresh } = props;
+  const { loading, vitalsHistory = [], medications = [], allergies = [], conditions = [], onRefresh, setToast } = props;
   
   // Debug logging
   console.log('MedicalRecords props:', { 
@@ -64,12 +64,13 @@ export default function MedicalRecords(props) {
         });
         setShowMedicationModal(false);
         onRefresh && onRefresh(); // Refresh the medical records
+        setToast && setToast({ message: 'Medication added successfully', type: 'success' });
       } else {
-        alert('Error adding medication: ' + data.message);
+        setToast && setToast({ message: 'Error adding medication: ' + data.message, type: 'error' });
       }
     } catch (error) {
       console.error('Error adding medication:', error);
-      alert('Error adding medication');
+      setToast && setToast({ message: 'Error adding medication', type: 'error' });
     }
   };
 
@@ -85,12 +86,13 @@ export default function MedicalRecords(props) {
         });
         setShowAllergyModal(false);
         onRefresh && onRefresh(); // Refresh the medical records
+        setToast && setToast({ message: 'Allergy added successfully', type: 'success' });
       } else {
-        alert('Error updating allergy: ' + data.message);
+        setToast && setToast({ message: 'Error updating allergy: ' + data.message, type: 'error' });
       }
     } catch (error) {
       console.error('Error updating allergy:', error);
-      alert('Error updating allergy');
+      setToast && setToast({ message: 'Error updating allergy', type: 'error' });
     }
   };
 
@@ -100,12 +102,13 @@ export default function MedicalRecords(props) {
         const data = await medicalRecordsAPI.deleteMedication(medicationId);
         if (data.success) {
           onRefresh && onRefresh(); // Refresh the medical records
+          setToast && setToast({ message: 'Medication deleted successfully', type: 'success' });
         } else {
-          alert('Error deleting medication: ' + data.message);
+          setToast && setToast({ message: 'Error deleting medication: ' + data.message, type: 'error' });
         }
       } catch (error) {
         console.error('Error deleting medication:', error);
-        alert('Error deleting medication');
+        setToast && setToast({ message: 'Error deleting medication', type: 'error' });
       }
     }
   };
@@ -116,12 +119,13 @@ export default function MedicalRecords(props) {
         const data = await medicalRecordsAPI.deleteAllergy(allergyId);
         if (data.success) {
           onRefresh && onRefresh(); // Refresh the medical records
+          setToast && setToast({ message: 'Allergy removed successfully', type: 'success' });
         } else {
-          alert('Error removing allergy: ' + data.message);
+          setToast && setToast({ message: 'Error removing allergy: ' + data.message, type: 'error' });
         }
       } catch (error) {
         console.error('Error removing allergy:', error);
-        alert('Error removing allergy');
+        setToast && setToast({ message: 'Error removing allergy', type: 'error' });
       }
     }
   };

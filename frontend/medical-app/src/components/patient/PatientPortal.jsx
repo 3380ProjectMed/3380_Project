@@ -1023,6 +1023,7 @@ const renderBookingModal = () => (
     billingBalance,
     billingStatements,
     timeSlots,
+    setToast,
     setShowBookingModal,
     setBookingStep,
     handleBookingNext,

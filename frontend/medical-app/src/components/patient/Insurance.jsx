@@ -4,7 +4,7 @@ import './Insurance.css';
 import api from '../../patientapi.js';
 
 export default function Insurance(props) {
-  const { loading, insurancePolicies = [], onInsuranceUpdate } = props;
+  const { loading, insurancePolicies = [], onInsuranceUpdate, setToast } = props;
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState(null);
   const [availablePayers, setAvailablePayers] = useState([]);
@@ -91,12 +91,13 @@ export default function Insurance(props) {
         if (onInsuranceUpdate) {
           onInsuranceUpdate();
         }
+        setToast && setToast({ message: `Insurance ${isAddingNew ? 'added' : 'updated'} successfully`, type: 'success' });
       } else {
-        alert(`Failed to ${isAddingNew ? 'add' : 'update'} insurance: ` + response.message);
+        setToast && setToast({ message: `Failed to ${isAddingNew ? 'add' : 'update'} insurance: ` + response.message, type: 'error' });
       }
     } catch (error) {
       console.error(`Error ${isAddingNew ? 'adding' : 'updating'} insurance:`, error);
-      alert(`Error ${isAddingNew ? 'adding' : 'updating'} insurance`);
+      setToast && setToast({ message: `Error ${isAddingNew ? 'adding' : 'updating'} insurance`, type: 'error' });
     } finally {
       setEditLoading(false);
     }
