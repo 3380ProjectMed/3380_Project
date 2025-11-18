@@ -67,28 +67,27 @@ try {
         // Try to insert into allergies_per_patient table (if it exists)
         try {
             // First check if this allergy already exists for this patient
-            $check_existing_sql = "SELECT app_id FROM allergies_per_patient WHERE patient_id = ? AND allergies_code = ?";
+            // Check using the correct column name (allergy_id instead of allergies_code)
+            $check_existing_sql = "SELECT app_id FROM allergies_per_patient WHERE patient_id = ? AND allergy_id = ?";
             $existing = executeQuery($conn, $check_existing_sql, 'ii', [$patient_id, $allergy_code]);
             
-            error_log("Adding allergy - Patient ID: $patient_id, Allergy Code: $allergy_code, Allergy Text: '$allergy_text'");
-            error_log("Existing check result: " . json_encode($existing));
-            
             if (!empty($existing)) {
-                // Allergy already exists, just update the notes
-                $update_sql = "UPDATE allergies_per_patient SET notes = ?, updated_at = CURRENT_TIMESTAMP WHERE patient_id = ? AND allergies_code = ?";
-                executeQuery($conn, $update_sql, 'sii', [$notes, $patient_id, $allergy_code]);
-                
+                // Allergy already exists - return error instead of updating
+                http_response_code(400);
                 echo json_encode([
-                    'success' => true, 
-                    'message' => 'Allergy notes updated successfully',
-                    'allergy_code' => $allergy_code,
-                    'updated' => true
+                    'success' => false, 
+                    'error' => 'This allergy is already recorded for this patient',
+                    'duplicate' => true,
+                    'allergy_code' => $allergy_code
                 ]);
+                closeDBConnection($conn);
+                exit;
             } else {
-                // New allergy, insert it
-                $insert_allergy_sql = "INSERT INTO allergies_per_patient (patient_id, allergies_code, notes) 
-                                     VALUES (?, ?, ?)";
-                executeQuery($conn, $insert_allergy_sql, 'iis', [$patient_id, $allergy_code, $notes]);
+                // New allergy, insert it with proper column names and current user
+                $nurse_email = $_SESSION['email'] ?? '';
+                $insert_allergy_sql = "INSERT INTO allergies_per_patient (patient_id, allergy_id, notes, date_recorded, recorded_by) 
+                                     VALUES (?, ?, ?, CURRENT_DATE, ?)";
+                executeQuery($conn, $insert_allergy_sql, 'iiss', [$patient_id, $allergy_code, $notes, $nurse_email]);
                 
                 echo json_encode([
                     'success' => true, 
