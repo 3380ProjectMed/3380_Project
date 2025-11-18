@@ -27,7 +27,7 @@ try {
 
     $conn = getDBConnection();
 
-    // Get patient's primary insurance (including expired)
+    // Get patient's insurance (prefer primary, but include any active insurance)
     $sql = "SELECT 
                 pi.id,
                 pi.patient_id,
@@ -51,8 +51,7 @@ try {
             LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
             LEFT JOIN insurance_payer ipy ON ip.payer_id = ipy.payer_id
             WHERE pi.patient_id = ?
-              AND pi.is_primary = 1
-            ORDER BY pi.effective_date DESC
+            ORDER BY pi.is_primary DESC, pi.effective_date DESC
             LIMIT 1";
 
     $result = executeQuery($conn, $sql, 'i', [$patient_id]);

@@ -33,7 +33,15 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
   const loadExistingInsurance = async () => {
     try {
       setLoadingExisting(true);
-      const patientId = patient.patient_id || patient.Patient_id;
+      // Handle different property name formats
+      const patientId = patient.Patient_id || patient.patient_id;
+      
+      if (!patientId) {
+        console.error('No patient ID found in patient object:', patient);
+        setLoadingExisting(false);
+        return;
+      }
+      
       const response = await fetch(`/receptionist_api/patients/get-patient-insurance.php?patient_id=${patientId}`, {
         credentials: 'include'
       });
@@ -117,6 +125,15 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
       setLoading(true);
       setError('');
       
+      // Handle different property name formats
+      const patientId = patient.Patient_id || patient.patient_id;
+      
+      if (!patientId) {
+        setError('Patient ID not found');
+        setLoading(false);
+        return;
+      }
+      
       const response = await fetch('/receptionist_api/patients/add-insurance.php', {
         method: 'POST',
         headers: {
@@ -124,7 +141,7 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
         },
         credentials: 'include',
         body: JSON.stringify({
-          patient_id: patient.patient_id || patient.Patient_id,
+          patient_id: patientId,
           ...formData
         })
       });
