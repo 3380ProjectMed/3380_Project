@@ -17,7 +17,7 @@ try {
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
     } else {
-        $user_id = (int)$_SESSION['uid'];
+        $user_id = (int) $_SESSION['uid'];
         // Azure: lowercase tables, lowercase columns in doctor
         $rows = executeQuery($conn, 'SELECT d.doctor_id 
                         FROM user_account ua
@@ -31,7 +31,7 @@ try {
             echo json_encode(['success' => false, 'error' => 'No doctor associated with the logged-in user']);
             exit;
         }
-        $doctor_id = (int)$rows[0]['doctor_id'];
+        $doctor_id = (int) $rows[0]['doctor_id'];
     }
 
     $month = isset($_GET['month']) ? intval($_GET['month']) : intval(date('m'));
@@ -63,7 +63,8 @@ try {
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             LEFT JOIN office o ON a.Office_id = o.office_id
-            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            LEFT JOIN allergies_per_patient app ON p.patient_id = app.patient_id
+LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
             WHERE a.Doctor_id = ?
             AND MONTH(a.Appointment_date) = ?
             AND YEAR(a.Appointment_date) = ?
