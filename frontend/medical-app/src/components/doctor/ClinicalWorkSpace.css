@@ -1,4 +1,4 @@
-/* ========== CLINICAL WORKSPACE - IMPROVED VERSION ========== */
+/* ========== CLINICAL WORKSPACE - UPDATED DESIGN ========== */
 
 /* Root Variables */
 :root {
@@ -26,7 +26,7 @@
 .workspace-header {
   background: white;
   border-bottom: 2px solid var(--border);
-  padding: 1rem 2rem; /* compact header */
+  padding: 1.5rem 2rem;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -37,25 +37,26 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin: 0 0 0.75rem 0;
-  font-size: 2rem;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--primary-color);
 }
 
 .patient-meta {
   display: flex;
-  gap: 1.5rem;
-  font-size: 1rem;
+  gap: 1rem;
+  font-size: 0.95rem;
   color: var(--dark);
   font-weight: 600;
   flex-wrap: wrap;
+  text-align: center;
 }
 
 .patient-meta span {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
   color: var(--dark);
 }
 
@@ -72,7 +73,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 101;
 }
 
 .btn-close:hover {
@@ -84,29 +84,28 @@
 /* ===== MAIN CONTENT LAYOUT ===== */
 .workspace-content {
   display: grid;
-  grid-template-columns: 360px 1fr; /* slightly narrower left column for balance */
-  gap: 1rem; /* tighter gap between columns */
-  padding: 1.5rem 1.25rem; /* reduce outer padding for denser layout */
-  max-width: 1300px;
+  grid-template-columns: 500px 1fr;
+  gap: 1.5rem;
+  padding: 2rem;
+  max-width: 1600px;
   margin: 0 auto;
-  align-items: start;
 }
 
 /* ===== COLUMNS ===== */
 .workspace-column {
   display: flex;
   flex-direction: column;
-  gap: 1rem; /* smaller gap between stacked cards */
+  gap: 1.5rem;
 }
 
 .left-column {
-  max-height: calc(100vh - 140px);
+  max-height: calc(100vh - 180px);
   overflow-y: auto;
   padding-right: 0.5rem;
 }
 
 .right-column {
-  max-height: calc(100vh - 140px);
+  max-height: calc(100vh - 180px);
   overflow-y: auto;
   padding-right: 0.5rem;
 }
@@ -139,10 +138,9 @@
   background: white;
   border-radius: 0.75rem;
   border: 1px solid var(--border);
-  padding: 1rem; /* reduced card padding */
-  transition: all 0.14s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  min-height: 90px; /* compact cards */
+  padding: 2rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .info-card:hover {
@@ -152,9 +150,9 @@
 .info-card h3 {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin: 0 0 0.9rem 0;
-  font-size: 1.125rem;
+  gap: 0.5rem;
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--primary-color);
 }
@@ -171,7 +169,7 @@
   cursor: pointer;
   user-select: none;
   background: linear-gradient(135deg, var(--fifth-color), rgba(255, 255, 255, 0.5));
-  padding: 0.5rem 0;
+  padding: 0.25rem 0;
 }
 
 .card-header h3 {
@@ -182,12 +180,11 @@
   color: var(--secondary-color);
 }
 
-/* Alert Card (Allergies) - IMPROVED */
+/* Alert Card (Allergies) */
 .alert-card {
   background: linear-gradient(135deg, #fee2e2, #fef2f2);
   border: 2px solid #fca5a5;
-  min-height: 100px;
-  padding: 0.9rem; /* compact allergy card */
+  animation: subtle-pulse 3s ease-in-out infinite;
 }
 
 @keyframes subtle-pulse {
@@ -202,17 +199,15 @@
 .allergy-text {
   margin: 0;
   color: #991b1b;
-  font-weight: 700;
-  font-size: 1rem;
-  line-height: 1.4;
-  min-height: 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
 /* ===== INFO GRID ===== */
 .info-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.75rem;
 }
 
 .info-item {
@@ -230,14 +225,13 @@
 .info-item .label {
   font-weight: 600;
   color: var(--gray);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .info-item .value {
   font-weight: 500;
   color: var(--dark);
   text-align: right;
-  font-size: 0.95rem;
 }
 
 .info-item.warning {
@@ -252,9 +246,9 @@
 }
 
 .status-badge {
-  padding: 0.375rem 1rem;
+  padding: 0.25rem 0.75rem;
   border-radius: 999px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   background: var(--third-color);
   color: white;
@@ -264,14 +258,14 @@
 .vitals-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .vital-item {
   display: flex;
-  gap: 0.75rem;
+  gap: 1rem;
   align-items: center;
-  padding: 0.85rem;
+  padding: 1rem;
   background: linear-gradient(135deg, var(--fifth-color), white);
   border-radius: 0.5rem;
   border: 1px solid var(--forth-color);
@@ -291,7 +285,7 @@
 
 .vital-label {
   display: block;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--gray);
   font-weight: 600;
   margin-bottom: 0.25rem;
@@ -299,7 +293,7 @@
 
 .vital-value {
   display: block;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--primary-color);
 }
@@ -309,25 +303,24 @@
   text-align: center;
   font-size: 0.875rem;
   color: var(--gray);
-  padding-top: 0.75rem;
+  padding-top: 0.5rem;
   border-top: 1px solid var(--fifth-color);
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 /* ===== MEDICATIONS ===== */
 .medications-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  min-height: 100px;
+  gap: 0.75rem;
 }
 
 .medication-item {
   background: linear-gradient(180deg, #ffffff, #fbfdff);
   border: 1px solid var(--border);
-  border-radius: 0.6rem;
-  padding: 0.85rem;
-  transition: all 0.14s ease;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  transition: all 0.2s ease;
   position: relative;
 }
 
@@ -338,28 +331,28 @@
 }
 
 .med-name {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--primary-color);
-  margin-bottom: 0.375rem;
+  margin-bottom: 0.25rem;
 }
 
 .med-details {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--gray);
-  margin-bottom: 0.375rem;
+  margin-bottom: 0.25rem;
 }
 
 .med-prescriber {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: var(--gray);
 }
 
 .med-actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.875rem;
-  padding-top: 0.875rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--fifth-color);
 }
 
@@ -393,24 +386,6 @@
   border-color: var(--error);
 }
 
-.btn-icon-danger-small {
-  background: transparent;
-  border: 1px solid #fca5a5;
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 0.375rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  color: var(--error);
-}
-
-.btn-icon-danger-small:hover {
-  background: #fee2e2;
-  border-color: var(--error);
-}
-
 /* ===== CONDITIONS & HISTORY ===== */
 .conditions-list ul {
   list-style: none;
@@ -418,29 +393,26 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  min-height: 80px;
+  gap: 0.5rem;
 }
 
 .conditions-list li {
-  padding: 1rem;
+  padding: 0.75rem;
   background: linear-gradient(135deg, var(--fifth-color), white);
   border-radius: 0.5rem;
   border: 1px solid var(--forth-color);
   color: var(--primary-color);
   font-weight: 500;
-  font-size: 0.95rem;
 }
 
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  min-height: 100px;
+  gap: 0.75rem;
 }
 
 .history-item {
-  padding: 1rem;
+  padding: 0.75rem;
   background: linear-gradient(135deg, var(--fifth-color), white);
   border-radius: 0.5rem;
   border: 1px solid var(--forth-color);
@@ -449,38 +421,36 @@
 .history-condition {
   font-weight: 600;
   color: var(--primary-color);
-  margin-bottom: 0.375rem;
-  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
 }
 
 .history-date {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   color: var(--gray);
 }
 
 .med-history-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  min-height: 100px;
+  gap: 0.75rem;
 }
 
 .med-history-item {
-  padding: 1rem;
+  padding: 0.75rem;
   background: linear-gradient(135deg, var(--fifth-color), white);
   border-radius: 0.5rem;
   border: 1px solid var(--forth-color);
 }
 
 .med-history-item .med-name {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--primary-color);
-  margin-bottom: 0.375rem;
+  margin-bottom: 0.25rem;
 }
 
 .med-notes {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--gray);
 }
 
@@ -489,7 +459,7 @@
   background: white;
   border-radius: 0.75rem;
   border: 1px solid var(--border);
-  padding: 2rem;
+  padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
@@ -497,26 +467,26 @@
 .notes-card h4 {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin: 0 0 1.25rem 0;
-  font-size: 1.25rem;
+  gap: 0.5rem;
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--primary-color);
 }
 
 .notes-card h4 {
-  font-size: 1.05rem;
-  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Diagnosis & Present Illnesses */
 .diagnosis-input {
   width: 100%;
-  padding: 1rem;
+  padding: 0.75rem;
   border: 2px solid var(--border);
   border-radius: 0.5rem;
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 0.95rem;
   resize: vertical;
   transition: all 0.2s ease;
   box-sizing: border-box;
@@ -539,7 +509,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .card-header-with-action h3 {
@@ -549,13 +519,13 @@
 .btn-add-small {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
   background: var(--secondary-color);
   color: white;
   border: none;
   border-radius: 0.5rem;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -574,15 +544,15 @@
 
 /* Treatment Selector */
 .treatment-selector {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .treatment-selector select {
   width: 100%;
-  padding: 1rem;
+  padding: 0.75rem;
   border: 2px solid var(--border);
   border-radius: 0.5rem;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-family: inherit;
   transition: all 0.2s ease;
   background: white;
@@ -599,12 +569,12 @@
 .treatments-list {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .treatment-item {
   background: linear-gradient(135deg, var(--fifth-color), white);
-  padding: 1.25rem;
+  padding: 1rem;
   border-radius: 0.75rem;
   border: 1px solid var(--forth-color);
   transition: all 0.2s ease;
@@ -618,39 +588,39 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .treatment-header strong {
   color: var(--primary-color);
-  font-size: 1.05rem;
+  font-size: 1rem;
 }
 
 .treatment-controls {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 
 .input-group label {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--gray);
 }
 
 .input-group input,
 .input-group select {
-  padding: 0.75rem;
+  padding: 0.625rem;
   border: 2px solid var(--border);
   border-radius: 0.375rem;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-family: inherit;
   transition: all 0.2s ease;
 }
@@ -663,20 +633,20 @@
 }
 
 .treatment-total {
-  margin-top: 1rem;
-  padding-top: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--forth-color);
   text-align: right;
   font-weight: 700;
   color: var(--secondary-color);
-  font-size: 1.125rem;
+  font-size: 1.05rem;
 }
 
 /* ===== ACTIONS ===== */
 .notes-actions {
   display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
+  gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 .btn-save,
@@ -686,13 +656,13 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .btn-save {
@@ -735,42 +705,42 @@
 .previous-notes {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .note-item {
-  padding: 0.9rem;
+  padding: 1rem;
   background: linear-gradient(135deg, var(--fifth-color), white);
-  border-radius: 0.6rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--forth-color);
 }
 
 .note-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.4rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--forth-color);
 }
 
 .note-date {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--secondary-color);
 }
 
 .note-doctor {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: var(--gray);
 }
 
 .note-diagnosis {
-  margin-bottom: 0.75rem;
-  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
   background: #fff3cd;
   border-left: 3px solid #ffc107;
   border-radius: 0.25rem;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .note-diagnosis strong {
@@ -781,7 +751,7 @@
 .note-text {
   color: var(--dark);
   line-height: 1.6;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .note-text strong {
@@ -791,19 +761,19 @@
 
 .note-treatments {
   background: #eef2ff;
-  padding: 1rem;
+  padding: 12px;
   border-radius: 6px;
   border-left: 4px solid #667eea;
-  margin-top: 1rem;
+  margin-top: 12px;
 }
 
 .treatments-header {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 8px;
   color: #4c51bf;
-  margin-bottom: 0.875rem;
-  font-size: 0.95rem;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -818,21 +788,19 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 8px;
 }
 
 .treatment-list-item {
   background: white;
-  padding: 0.5rem 0.75rem;
+  padding: 10px 12px;
   border-radius: 6px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  gap: 8px;
   border: 1px solid #dce4ff;
-  transition: all 0.12s;
+  transition: all 0.2s;
 }
-
 .treatment-list-item:hover {
   background: #f7f9ff;
   border-color: #667eea;
@@ -842,38 +810,29 @@
 .treatment-list-item::before {
   content: "●";
   color: #667eea;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   flex-shrink: 0;
 }
-
-.treatment-info {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  flex: 1;
-  flex-wrap: wrap;
-}
-
 .treatment-name {
   font-weight: 600;
   color: #2d3748;
-  font-size: 0.95rem;
 }
 
 .treatment-quantity {
   background: #667eea;
   color: white;
-  padding: 0.25rem 0.625rem;
+  padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
 .treatment-notes {
   color: #718096;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-style: italic;
 }
+
 
 /* ===== MODAL ===== */
 .modal-overlay {
@@ -906,7 +865,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
+  padding: 1.5rem;
   border-bottom: 2px solid var(--fifth-color);
   background: linear-gradient(135deg, var(--fifth-color), white);
 }
@@ -914,26 +873,26 @@
 .modal-header h3 {
   margin: 0;
   color: var(--primary-color);
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
 }
 
 .modal-body {
-  padding: 2rem;
+  padding: 1.5rem;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  padding: 1.5rem 2rem;
+  gap: 0.75rem;
+  padding: 1.5rem;
   border-top: 2px solid var(--fifth-color);
   background: var(--fifth-color);
 }
 
 /* Form Groups */
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .form-group:last-child {
@@ -942,9 +901,9 @@
 
 .form-group label {
   display: block;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--primary-color);
 }
 
@@ -952,10 +911,10 @@
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 1rem;
+  padding: 0.75rem;
   border: 2px solid var(--border);
   border-radius: 0.5rem;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-family: inherit;
   transition: all 0.2s ease;
   box-sizing: border-box;
@@ -971,7 +930,7 @@
 
 .form-group textarea {
   resize: vertical;
-  min-height: 100px;
+  min-height: 80px;
 }
 
 .form-row {
@@ -981,13 +940,13 @@
 }
 
 .btn-secondary {
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   background: white;
   color: var(--gray);
   border: 2px solid var(--border);
   border-radius: 0.5rem;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   transition: all 0.2s;
   font-family: inherit;
@@ -1003,21 +962,20 @@
 .empty-state {
   text-align: center;
   color: var(--gray);
-  padding: 2.5rem 1rem;
+  padding: 2rem 1rem;
   font-style: italic;
-  font-size: 1rem;
 }
 
 .input-warning {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.875rem;
-  padding: 0.875rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
   background: #fff3cd;
   border: 1px solid #ffc107;
   border-radius: 0.5rem;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: #856404;
 }
 
@@ -1026,9 +984,9 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1rem;
   border-radius: 0.5rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
   box-shadow: 0 4px 10px rgba(0,0,0,0.04);
 }
 
@@ -1107,7 +1065,7 @@
 @media (max-width: 1200px) {
   .workspace-content {
     grid-template-columns: 400px 1fr;
-    gap: 1.25rem;
+    gap: 1rem;
   }
 }
 
@@ -1122,7 +1080,7 @@
   }
 
   .workspace-header {
-    padding: 1rem 4rem 1rem 1rem;
+    padding: 1rem;
   }
 
   .btn-close {
@@ -1138,7 +1096,7 @@
 
   .info-card,
   .notes-card {
-    padding: 1.25rem;
+    padding: 1rem;
   }
 
   .header-info h2 {
@@ -1147,7 +1105,7 @@
 
   .patient-meta {
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .vitals-grid {
@@ -1178,7 +1136,7 @@
 
 @media (max-width: 480px) {
   .workspace-header {
-    padding: 0.75rem 3.5rem 0.75rem 0.75rem;
+    padding: 0.75rem;
   }
 
   .header-info h2 {
@@ -1192,7 +1150,7 @@
   .modal-header,
   .modal-body,
   .modal-footer {
-    padding: 1.25rem;
+    padding: 1rem;
   }
 }
 
