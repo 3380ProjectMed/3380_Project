@@ -57,6 +57,19 @@ try {
                 $start_date = $input['start_date'] ?? date('Y-m-d');
                 $end_date = $input['end_date'] ?? null;
                 $refills_allowed = $input['refills_allowed'] ?? 0;
+                
+                // Get the doctor_id from the current appointment/visit if available
+                $doctor_id = null;
+                if ($patient_id) {
+                    $doctor_query = "SELECT doctor_id FROM patient_visit WHERE patient_id = ? AND (status = 'Scheduled' OR status = 'In Progress' OR status = 'Ready') ORDER BY date DESC LIMIT 1";
+                    $doctor_rows = executeQuery($conn, $doctor_query, 'i', [$patient_id]);
+                    if (!empty($doctor_rows)) {
+                        $doctor_id = $doctor_rows[0]['doctor_id'];
+                    }
+                }
+                
+                // If no doctor found from visit, use the nurse's staff_id (nurse acting as prescriber)
+                $prescriber_id = $doctor_id ?? $staff_id;
 
                 $insert_prescription_sql = "INSERT INTO prescription 
                     (patient_id, medication_name, dosage, frequency, route, start_date, end_date, notes, refills_allowed, doctor_id) 
@@ -64,7 +77,7 @@ try {
                 
                 executeQuery($conn, $insert_prescription_sql, 'isssssssii', [
                     $patient_id, $medication_name, $dosage, $frequency, $route, 
-                    $start_date, $end_date, $notes, $refills_allowed, $staff_id
+                    $start_date, $end_date, $notes, $refills_allowed, $prescriber_id
                 ]);
                 
                 echo json_encode([
@@ -73,6 +86,8 @@ try {
                     'prescription_id' => mysqli_insert_id($conn)
                 ]);
             } catch (Exception $e) {
+                error_log("Prescription insertion failed: " . $e->getMessage());
+                
                 // Fall back to medication history
                 $duration_frequency = $dosage && $frequency ? "$dosage - $frequency" : ($frequency ?: 'As directed');
                 
@@ -81,8 +96,9 @@ try {
                 
                 echo json_encode([
                     'success' => true,
-                    'message' => 'Medication added to history (prescription table not available)',
-                    'drug_id' => mysqli_insert_id($conn)
+                    'message' => 'Prescription failed, added to history instead. Error: ' . $e->getMessage(),
+                    'drug_id' => mysqli_insert_id($conn),
+                    'fallback' => true
                 ]);
             }
         } else {
