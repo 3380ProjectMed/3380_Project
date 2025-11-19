@@ -401,6 +401,17 @@
   box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
 }
 
+.doctor-card.unavailable {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: auto; /* allow click handler to show warning */
+}
+
+.doctor-card.unavailable:hover {
+  background: white;
+  border-color: #e5e7eb;
+}
+
 .doctor-avatar {
   width: 48px;
   height: 48px;
