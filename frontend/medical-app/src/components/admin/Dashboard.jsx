@@ -59,7 +59,7 @@ function AdminDashboard() {
         <StatCard icon={Activity} value={stats.active_users} label="Active Users" variant="stat-info" />
         <StatCard icon={Calendar} value={stats.pending_appointments} label="Pending Today" variant="stat-warning" />
         <StatCard icon={TrendingUp} value={stats.completed_today} label="Completed Today" variant="stat-success" />
-        <StatCard icon={DollarSign} value={`$${stats.revenue_today.toFixed(2)}`} label="Revenue Today" variant="stat-primary" />
+        {/* <StatCard icon={DollarSign} value={`$${stats.revenue_today.toFixed(2)}`} label="Revenue Today" variant="stat-primary" /> */}
       </StatsGrid>
 
       {/* Quick Actions */}
