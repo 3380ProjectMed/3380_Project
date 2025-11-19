@@ -9,13 +9,20 @@ function DayAppointmentsModal({ isOpen, onClose, date, appointments, onAppointme
   if (!isOpen) return null;
 
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+    // Handle YYYY-MM-DD specially to avoid JS Date parsing as UTC which can shift the day
+    const ymd = /^\s*(\d{4})-(\d{2})-(\d{2})\s*$/.exec(dateStr);
+    let dt;
+    if (ymd) {
+      const y = parseInt(ymd[1], 10);
+      const m = parseInt(ymd[2], 10) - 1;
+      const d = parseInt(ymd[3], 10);
+      // Use UTC noon to avoid timezone edge shifts, then format in Chicago timezone
+      dt = new Date(Date.UTC(y, m, d, 12, 0, 0));
+      return new Intl.DateTimeFormat('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Chicago' }).format(dt);
+    }
+
+    dt = new Date(dateStr);
+    return new Intl.DateTimeFormat('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Chicago' }).format(dt);
   };
 
   const handleAppointmentClick = (appointment) => {
