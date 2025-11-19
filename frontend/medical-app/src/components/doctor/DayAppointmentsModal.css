@@ -112,6 +112,7 @@
   padding: 1rem;
   transition: all 0.2s ease;
   cursor: pointer;
+  gap: 4.0rem; 
   background: white;
 }
 
