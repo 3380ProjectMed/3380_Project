@@ -26,16 +26,21 @@ function EditUserModal({ user, onClose, onSuccess }) {
     workLocation: '',
     isActive: 1,
     licenseNumber: '',
+    specialty: '',   // NEW: doctor specialty (FK id)
+    department: '',  // NEW: nurse department
   });
 
   const [workLocations, setWorkLocations] = useState([]);
+  const [specialties, setSpecialties] = useState([]);  // NEW
+  const [departments, setDepartments] = useState([]);  // NEW
+
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
   const isDoctor = user?.user_type === 'DOCTOR';
-  const isNurse = user?.user_type === 'NURSE';
+  const isNurse  = user?.user_type === 'NURSE';
 
   // Initialize form from user prop
   useEffect(() => {
@@ -57,17 +62,22 @@ function EditUserModal({ user, onClose, onSuccess }) {
       lastName,
       email: user.email || '',
       phoneNumber: user.phone_number || '',
-      // use work_location_id (numeric) if you have it from API
+      // use work_location_id (numeric) if you have it from API; hidden for doctors anyway
       workLocation:
         !isDoctor && user.work_location_id
           ? String(user.work_location_id)
           : '',
       isActive: user.is_active ? 1 : 0,
       licenseNumber: user.license_number || '',
+      // These depend on how your API returns them — adjust property names if needed.
+      specialty: user.specialty_id
+        ? String(user.specialty_id)
+        : '',                         // for DOCTOR
+      department: user.department || '' // for NURSE
     }));
   }, [user, isDoctor]);
 
-  // Load locations (reuse same options as AddUserModal)
+  // Load options (work locations, specialties, departments)
   useEffect(() => {
     const loadOptions = async () => {
       setLoadingOptions(true);
@@ -81,6 +91,8 @@ function EditUserModal({ user, onClose, onSuccess }) {
         const data = await response.json();
         if (data.success) {
           setWorkLocations(data.work_locations || []);
+          setSpecialties(data.specialties || []);   // expect [{specialty_id, name}, ...]
+          setDepartments(data.departments || []);   // expect [{id, name} or similar]
         } else {
           setError(data.error || 'Failed to load form options');
         }
@@ -135,6 +147,18 @@ function EditUserModal({ user, onClose, onSuccess }) {
       // Doctors & nurses can edit license number
       if (isDoctor || isNurse) {
         payload.license_number = formData.licenseNumber.trim();
+      }
+
+      // Doctor specialty (FK -> specialty.specialty_id)
+      if (isDoctor) {
+        payload.specialty = formData.specialty
+          ? parseInt(formData.specialty, 10)
+          : null; // null => backend leaves it unchanged
+      }
+
+      // Nurse department
+      if (isNurse) {
+        payload.department = formData.department.trim();
       }
 
       const response = await fetch('/admin_api/users/update-user.php', {
@@ -279,6 +303,63 @@ function EditUserModal({ user, onClose, onSuccess }) {
               )}
             </div>
 
+            {/* Doctor specialty */}
+            {isDoctor && (
+              <div className="form-group">
+                <label htmlFor="specialty">Specialty</label>
+                <select
+                  id="specialty"
+                  name="specialty"
+                  value={formData.specialty}
+                  onChange={handleChange}
+                >
+                  <option value="">(No change)</option>
+                  {specialties.map(spec => (
+                    <option
+                      key={spec.specialty_id ?? spec.id}
+                      value={spec.specialty_id ?? spec.id}
+                    >
+                      {spec.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Nurse department */}
+            {isNurse && (
+              <div className="form-group">
+                <label htmlFor="department">Department</label>
+                {departments.length > 0 ? (
+                  <select
+                    id="department"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                  >
+                    <option value="">(No change)</option>
+                    {departments.map(dep => (
+                      <option
+                        key={dep.id ?? dep.department_id ?? dep.name}
+                        value={dep.name ?? dep.department_name ?? dep.id}
+                      >
+                        {dep.name ?? dep.department_name ?? dep.id}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    id="department"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    placeholder="Enter department"
+                  />
+                )}
+              </div>
+            )}
+
             {/* License: editable for DOCTOR + NURSE */}
             {(isDoctor || isNurse) && (
               <div className="form-group">
@@ -289,11 +370,7 @@ function EditUserModal({ user, onClose, onSuccess }) {
                   name="licenseNumber"
                   value={formData.licenseNumber}
                   onChange={handleChange}
-                  placeholder={
-                    isDoctor
-                      ? 'TXMD123456'
-                      : 'RN123456'
-                  }
+                  placeholder={isDoctor ? 'TXMD123456' : 'RN123456'}
                 />
               </div>
             )}

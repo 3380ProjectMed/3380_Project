@@ -35,9 +35,9 @@ try {
     $isActive  = isset($input['is_active']) ? (int)$input['is_active'] : 1;
 
     // Optional, if you want to allow updating these:
-    $specialty   = isset($input['specialty']) ? (int)$input['specialty'] : null; // doctor.specialty
-    $department  = trim($input['department'] ?? '');                             // nurse.department
-    $licenseNo   = trim($input['license_number'] ?? '');                         // staff.license_number
+    $specialty   = isset($input['specialty']) ? (int)$input['specialty'] : null; // doctor.specialty (FK)
+    $department  = trim($input['department'] ?? '');                              // nurse.department
+    $licenseNo   = trim($input['license_number'] ?? '');                          // staff.license_number
 
     if ($firstName === '' || $lastName === '' || $email === '') {
         throw new RuntimeException('First name, last name, and email are required');
@@ -87,18 +87,33 @@ try {
 
     // 3) Role-specific data
     if ($userType === 'DOCTOR') {
-        // doctor: doctor_id, staff_id, specialty, phone
-        $sql = "
-            UPDATE doctor
-            SET phone = ?, specialty = ?
-            WHERE staff_id = ?
-        ";
-        $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            throw new RuntimeException('Failed to prepare doctor update');
+        // doctor: doctor_id, staff_id, specialty (FK), phone
+        if ($specialty !== null && $specialty > 0) {
+            // update phone + specialty, rely on FK to enforce validity
+            $sql = "
+                UPDATE doctor
+                SET phone = ?, specialty = ?
+                WHERE staff_id = ?
+            ";
+            $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                throw new RuntimeException('Failed to prepare doctor update');
+            }
+            $stmt->bind_param('sii', $phone, $specialty, $userId);
+        } else {
+            // Only update phone, leave specialty as-is
+            $sql = "
+                UPDATE doctor
+                SET phone = ?
+                WHERE staff_id = ?
+            ";
+            $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                throw new RuntimeException('Failed to prepare doctor update (phone only)');
+            }
+            $stmt->bind_param('si', $phone, $userId);
         }
-        $specVal = $specialty ?? 0;
-        $stmt->bind_param('sii', $phone, $specVal, $userId);
+
         if (!$stmt->execute()) {
             throw new RuntimeException('Failed to update doctor');
         }
@@ -120,6 +135,7 @@ try {
             }
         }
     }
+
     $conn->commit();
 
     echo json_encode(['success' => true]);
