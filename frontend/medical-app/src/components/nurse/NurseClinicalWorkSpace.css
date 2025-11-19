@@ -1061,3 +1061,91 @@ textarea::placeholder {
   transform: translateY(0);
   box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
 }
+
+/* ===== MEDICATION STATUS BADGES ===== */
+.med-status {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: auto;
+}
+
+.med-status.active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+}
+
+.med-status.history {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: white;
+  box-shadow: 0 1px 3px rgba(107, 114, 128, 0.3);
+}
+
+/* ===== ENHANCED MEDICATION ITEMS ===== */
+.medication-item.prescription {
+  border-left: 4px solid #10b981;
+  background: linear-gradient(135deg, #f0fdf4, white);
+}
+
+.medication-item.history {
+  border-left: 4px solid #6b7280;
+  background: linear-gradient(135deg, #f8fafc, white);
+}
+
+.med-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.med-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1f2937;
+}
+
+.med-notes {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+/* ===== SECONDARY BUTTON STYLE ===== */
+.btn-add-item.secondary {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: white;
+}
+
+.btn-add-item.secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4b5563, #374151);
+}
+
+/* ===== MEDICATIONS SECTION OVERRIDES ===== */
+.medications-section {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.08);
+}
+
+.medications-section h3 {
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
