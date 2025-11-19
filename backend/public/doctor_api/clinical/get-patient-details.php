@@ -97,9 +97,9 @@ try {
                         a.Appointment_id,
                         a.Patient_id,
                         a.Appointment_date,
-                        a.Doctor_Staff_ID,
+                        a.Doctor_id,
                         a.Reason_for_visit,
-                        a.Office_ID,
+                        a.Office_id,
                         CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                         p.dob,
                         p.blood_type,
@@ -109,8 +109,8 @@ try {
                     FROM appointment a
                     LEFT JOIN patient p ON a.Patient_id = p.patient_id
                     LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
-                    LEFT JOIN doctor d ON a.Doctor_Staff_ID = d.doctor_id
-                    LEFT JOIN office o ON a.Office_ID = o.office_id
+                    LEFT JOIN doctor d ON a.Doctor_id = d.doctor_id
+                    LEFT JOIN office o ON a.Office_id = o.office_id
                     WHERE a.Appointment_id = ?";
             $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
             

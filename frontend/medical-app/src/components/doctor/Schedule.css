@@ -144,7 +144,8 @@
 /* Calendar Day Cell */
 .calendar-day {
   min-height: 10rem; /* Increased from 7rem */
-  max-height: 16rem; /* Increased from 12rem */
+  max-height: 200px; /* Increased from 12rem */
+  height: 200px; 
   padding: 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 0.75rem;
