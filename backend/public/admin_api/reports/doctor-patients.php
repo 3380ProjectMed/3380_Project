@@ -109,9 +109,8 @@ try {
     }
 
     $sql .= "
-        GROUP BY p.patient_id, patient_name
-        ORDER BY patient_name
-    ";
+        GROUP BY a.Doctor_id, p.patient_id, patient_name
+        ORDER BY patient_name";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
