@@ -1258,10 +1258,10 @@ function Report() {
                       <th onClick={() => handleSort('doctor_name')}>
                         Doctor {sortConfig.key === 'doctor_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </th>
-                      <th onClick={() => handleSort('new_patients_acquired')} className="text-right">
+                      <th onClick={() =>  handleSort('new_patients_for_doctor')} className="text-right">
                         New Patients {sortConfig.key === 'new_patients_acquired' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </th>
-                      <th onClick={() => handleSort('retained_patients')} className="text-right">
+                      <th onClick={() => handleSort('retained_patients_for_doctor')} className="text-right">
                         Retained {sortConfig.key === 'retained_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </th>
                       <th onClick={() => handleSort('retention_rate')}>
@@ -2175,8 +2175,12 @@ const NewPatientTrendChart = ({ data, groupBy }) => {
   });
 
   const periods = Array.from(periodMap.values());
-  const maxValue = Math.max(...periods.map(p => p.total), 1);
-  const yAxisMax = Math.ceil(maxValue * 1.2);
+  const rawMax = Math.max(...periods.map(p => p.total), 0);
+  const yAxisMax = rawMax <= 3 ? 3 : Math.ceil(rawMax * 1.2);
+  const yTicks = [];
+  for (let i = 4; i >= 0; i--) {
+    yTicks.push(Math.round((yAxisMax * i) / 4));
+  }
 
   const hasMultiplePeriods = periods.length > 1;
   const denom = hasMultiplePeriods ? periods.length - 1 : 1;
@@ -2198,9 +2202,9 @@ const NewPatientTrendChart = ({ data, groupBy }) => {
     <div className="trend-chart-container">
       <div className="trend-chart">
         <div className="trend-y-axis">
-          {[4, 3, 2, 1, 0].map(i => (
-            <div key={i} className="y-label">
-              {Math.round((yAxisMax * i) / 4)}
+          {yTicks.map((value, idx) => (
+            <div key={idx} className="y-label">
+              {value}
             </div>
           ))}
         </div>

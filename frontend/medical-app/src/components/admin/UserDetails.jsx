@@ -23,7 +23,7 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddSchedule, setShowAddSchedule] = useState(false);
-  const [selectedSchedule, setSelectedSchedule] = useState('');
+  const [selectedSchedules, setSelectedSchedules] = useState([]);
   const [customStartTime, setCustomStartTime] = useState('');
   const [customEndTime, setCustomEndTime] = useState('');
   const [useCustomTimes, setUseCustomTimes] = useState(false);
@@ -63,86 +63,87 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
     }
   };
 
-  const handleScheduleSelect = (e) => {
-    const value = e.target.value;
-    setSelectedSchedule(value);
-    
-    // Value format: "day_office_id"
-    if (value) {
-      const [day, officeId] = value.split('_');
-      const schedule = availableSchedules.find(s => 
-        s.day_of_week === day && s.office_id === parseInt(officeId)
-      );
-      if (schedule) {
-        setCustomStartTime(schedule.start_time);
-        setCustomEndTime(schedule.end_time);
-      }
+const handleScheduleSelect = (e) => {
+  const values = Array.from(e.target.selectedOptions).map(o => o.value);
+  setSelectedSchedules(values);
+
+  // If exactly one schedule selected, preload its default times
+  if (values.length === 1) {
+    const [day, officeId] = values[0].split('_');
+    const schedule = availableSchedules.find(
+      s => s.day_of_week === day && s.office_id === parseInt(officeId, 10)
+    );
+
+    if (schedule) {
+      setCustomStartTime(schedule.start_time);
+      setCustomEndTime(schedule.end_time);
     } else {
       setCustomStartTime('');
       setCustomEndTime('');
     }
+  } else {
+    // More than one or none selected → clear custom times + toggle
+    setCustomStartTime('');
+    setCustomEndTime('');
     setUseCustomTimes(false);
-  };
+  }
+};
 
-  const handleAddSchedule = async () => {
-    if (!selectedSchedule) {
-      setError('Please select a schedule');
-      return;
-    }
 
-    setSubmitting(true);
-    setError('');
+const handleAddSchedules = async () => {
+  if (!selectedSchedules.length) {
+    setError('Please select at least one schedule');
+    return;
+  }
 
-    try {
-      // Parse the selected value: "day_office_id"
-      const [dayOfWeek, officeId] = selectedSchedule.split('_');
+  setSubmitting(true);
+  setError('');
+
+  try {
+    for (const sel of selectedSchedules) {
+      const [dayOfWeek, officeId] = sel.split('_');
 
       const payload = {
         staff_id: user.staff_id,
-        office_id: parseInt(officeId),
-        day_of_week: dayOfWeek
+        office_id: parseInt(officeId, 10),
+        day_of_week: dayOfWeek,
       };
 
-      // Include custom times if the user modified them
+      // optional custom time: probably only if you're *not* multi-selecting,
+      // or you enforce same custom time for all selectedSchedules
       if (useCustomTimes) {
         payload.start_time = customStartTime;
         payload.end_time = customEndTime;
       }
 
-      const response = await fetch('/admin_api/users/add_staff_schedule.php', {
+      const res = await fetch('/admin_api/users/add_staff_schedule.php', {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        setShowAddSchedule(false);
-        setSelectedSchedule('');
-        setCustomStartTime('');
-        setCustomEndTime('');
-        setUseCustomTimes(false);
-
-        // Reload modal data
-        await loadUserDetails();
-
-        // 🔔 Tell parent to refresh list / work_location
-        if (typeof onUpdate === 'function') {
-          onUpdate();
-        }
-      } else {
-        setError(data.error || 'Failed to add schedule');
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to add one of the schedules');
       }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
     }
-  };
+
+    // reset and refresh
+    setShowAddSchedule(false);
+    setSelectedSchedules([]);
+    setCustomStartTime('');
+    setCustomEndTime('');
+    setUseCustomTimes(false);
+
+    await loadUserDetails();
+    onUpdate?.();
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setSubmitting(false);
+  }
+};
 
 
 const handleRemoveScheduleClick = (scheduleId) => {
@@ -354,20 +355,23 @@ const handleConfirmRemoveSchedule = async (scheduleId) => {
             {showAddSchedule && (
               <div className="add-schedule-form">
                 <div className="form-group">
-                  <label htmlFor="scheduleSelect">Select Day & Location</label>
+                  <label htmlFor="scheduleSelect">Select Day &amp; Location (you can select multiple)</label>
                   <select
                     id="scheduleSelect"
-                    value={selectedSchedule}
+                    multiple
+                    value={selectedSchedules}
                     onChange={handleScheduleSelect}
                     className="form-control"
                   >
-                    <option value="">Select a day and location...</option>
+                    {availableSchedules.length === 0 && (
+                      <option value="">No schedules available</option>
+                    )}
                     {availableSchedules.map((schedule) => {
                       const value = `${schedule.day_of_week}_${schedule.office_id}`;
                       return (
                         <option key={value} value={value}>
-                          {schedule.day_of_week} at {schedule.office_name} 
-                          ({formatTime(schedule.start_time)} - {formatTime(schedule.end_time)})
+                          {schedule.day_of_week} at {schedule.office_name} (
+                          {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)})
                         </option>
                       );
                     })}
@@ -379,7 +383,8 @@ const handleConfirmRemoveSchedule = async (scheduleId) => {
                   )}
                 </div>
 
-                {selectedSchedule && (
+                {/* Only show custom time toggle if at least one schedule is selected */}
+                {selectedSchedules.length > 0 && (
                   <>
                     <div className="form-group">
                       <div className="custom-time-toggle">
@@ -390,7 +395,7 @@ const handleConfirmRemoveSchedule = async (scheduleId) => {
                             onChange={(e) => setUseCustomTimes(e.target.checked)}
                           />
                           <Edit2 size={16} />
-                          Customize times
+                          Customize times (applies to all selected)
                         </label>
                       </div>
                     </div>
@@ -427,7 +432,7 @@ const handleConfirmRemoveSchedule = async (scheduleId) => {
                     className="btn btn-secondary btn-sm"
                     onClick={() => {
                       setShowAddSchedule(false);
-                      setSelectedSchedule('');
+                      setSelectedSchedules([]);
                       setCustomStartTime('');
                       setCustomEndTime('');
                       setUseCustomTimes(false);
@@ -437,10 +442,10 @@ const handleConfirmRemoveSchedule = async (scheduleId) => {
                   </button>
                   <button 
                     className="btn btn-primary btn-sm"
-                    onClick={handleAddSchedule}
-                    disabled={!selectedSchedule || submitting}
+                    onClick={handleAddSchedules}
+                    disabled={selectedSchedules.length === 0 || submitting}
                   >
-                    {submitting ? 'Adding...' : 'Add Schedule'}
+                    {submitting ? 'Adding...' : 'Add Schedule(s)'}
                   </button>
                 </div>
               </div>

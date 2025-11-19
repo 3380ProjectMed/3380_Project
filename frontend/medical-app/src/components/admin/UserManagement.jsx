@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import './UserManagement.css';
 import UserDetails from './UserDetails';
+import EditUserModal from './EditUserModal';
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -27,6 +28,8 @@ function UserManagement() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -82,6 +85,11 @@ function UserManagement() {
     }
   };
 
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setShowEditModal(true);
+  };
+
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => {
       const next = { ...prev, [filterName]: value };
@@ -106,6 +114,38 @@ function UserManagement() {
   const handleViewDetails = (user) => {
     setSelectedUser(user);
     setShowDetailsModal(true);
+  };
+
+  const handleToggleStatus = async (user) => {
+    try {
+      const nextActive = user.is_active ? 0 : 1;
+
+      const res = await fetch('/admin_api/users/toggle-active.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.user_id,
+          user_type: user.user_type, // already uppercase
+          is_active: nextActive,
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Toggle failed');
+
+      // update the local users array so we don't have to refetch everything
+      setUsers(prev =>
+        prev.map(u =>
+          u.user_id === user.user_id && u.user_type === user.user_type
+            ? { ...u, is_active: !!nextActive }
+            : u
+        )
+      );
+    } catch (err) {
+      console.error('Toggle status error:', err);
+      setError(err.message || 'Failed to toggle user status');
+    }
   };
 
   const filteredUsers = users.filter(user => {
@@ -217,6 +257,43 @@ function UserManagement() {
 
     return count;
   };
+
+  const toggleUserStatus = async (user) => {
+    const newStatus = user.is_active ? 0 : 1;
+    try {
+      const response = await fetch('/admin_api/users/toggle-active.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user.user_id,
+          user_type: user.user_type,
+          is_active: newStatus,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || `Failed to update status (HTTP ${response.status})`);
+      }
+
+      // Update local state so UI reflects change without full reload
+      setUsers(prev =>
+        prev.map(u =>
+          u.user_id === user.user_id && u.user_type === user.user_type
+            ? { ...u, is_active: newStatus }
+            : u
+        )
+      );
+    } catch (err) {
+      console.error('Error toggling user status:', err);
+      setError(err.message || 'Failed to update status');
+    }
+  };
+
 
   return (
     <div className="user-management">
@@ -412,24 +489,31 @@ function UserManagement() {
                       {filters.role !== 'patient' && (
                         <td>{user.work_location || 'N/A'}</td>
                       )}
-                      
                       <td>
-                        <span className={`status-badge ${user.is_active ? 'active' : 'inactive'}`}>
-                          {user.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td>
-                        <button 
-                          className="btn-icon" 
-                          title="View Details"
-                          onClick={() => handleViewDetails(user)}
+                        <button
+                          type="button"
+                          className={`status-badge ${user.is_active ? 'active' : 'inactive'}`}
+                          onClick={() => handleToggleStatus(user)}
                         >
-                          👁️
-                        </button>
-                        <button className="btn-icon" title="Edit">
-                          ✏️
+                          {user.is_active ? 'Active' : 'Inactive'}
                         </button>
                       </td>
+                    <td>
+                      <button 
+                        className="btn-icon" 
+                        title="View Details"
+                        onClick={() => handleViewDetails(user)}
+                      >
+                        👁️
+                      </button>
+                      <button 
+                        className="btn-icon" 
+                        title="Edit"
+                        onClick={() => handleEditUser(user)}
+                      >
+                        ✏️
+                      </button>
+                    </td>
                     </tr>
                   ))
                 )}
@@ -486,6 +570,21 @@ function UserManagement() {
           }}
           onUpdate={() => {
             loadUsers();
+          }}
+        />
+      )}
+
+      {showEditModal && editingUser && (
+        <EditUserModal
+          user={editingUser}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingUser(null);
+          }}
+          onSuccess={() => {
+            setShowEditModal(false);
+            setEditingUser(null);
+            loadUsers(); // refresh table
           }}
         />
       )}
