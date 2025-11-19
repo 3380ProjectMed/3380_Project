@@ -28,7 +28,7 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
   const [customEndTime, setCustomEndTime] = useState('');
   const [useCustomTimes, setUseCustomTimes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   useEffect(() => {
     loadUserDetails();
   }, [userId, userType]);
@@ -183,6 +183,50 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
       setSubmitting(false);
     }
   };
+
+const handleRemoveScheduleClick = (scheduleId) => {
+  if (confirmDeleteId !== scheduleId) {
+    setConfirmDeleteId(scheduleId);
+    return;
+  }
+
+  handleConfirmRemoveSchedule(scheduleId);
+};
+
+const handleConfirmRemoveSchedule = async (scheduleId) => {
+  setSubmitting(true);
+  setError('');
+
+  try {
+    const response = await fetch('/admin_api/users/remove_staff_schedule.php', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ schedule_id: scheduleId }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      await loadUserDetails();
+
+      if (typeof onUpdate === 'function') {
+        onUpdate();
+      }
+
+      setConfirmDeleteId(null);
+    } else {
+      setError(data.error || 'Failed to remove schedule');
+    }
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   const formatTime = (time) => {
     if (!time) return 'N/A';
@@ -467,13 +511,18 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
                         </div>
                       </div>
                       <button
-                        className="btn-icon-danger"
-                        onClick={() => handleRemoveSchedule(schedule.schedule_id)}
+                        className={`btn-icon-danger ${
+                          confirmDeleteId === schedule.schedule_id ? 'btn-icon-danger-confirm' : ''
+                        }`}
+                        onClick={() => handleRemoveScheduleClick(schedule.schedule_id)}
                         disabled={submitting}
-                        title="Remove schedule"
+                        title={confirmDeleteId === schedule.schedule_id ? 'Click again to confirm' : 'Remove schedule'}
                       >
                         <Trash2 size={16} />
                       </button>
+                      {confirmDeleteId === schedule.schedule_id && (
+                        <span className="schedule-confirm-hint">Click again to confirm</span>
+                      )}
                     </div>
                   ))}
                 </div>
