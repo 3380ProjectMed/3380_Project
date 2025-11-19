@@ -4,7 +4,7 @@ import './Schedule.css';
 import DayAppointmentsModal from './DayAppointmentsModal';
 
 /**
- * Schedule Component - FIXED VERSION
+ * Schedule Component - FINAL VERSION
  * 
  * Features:
  * - Monthly calendar view with LARGER day boxes
@@ -14,8 +14,6 @@ import DayAppointmentsModal from './DayAppointmentsModal';
  * - Click on individual appointment → Opens directly
  * - Location filtering
  * - Scrollable appointment lists
- * 
- * BUG FIX: Corrected date handling to show appointments on the correct day
  */
 function Schedule({ onAppointmentClick }) {
   const [currentDate, setCurrentDate] = useState(new Date()); 
@@ -144,19 +142,11 @@ function Schedule({ onAppointmentClick }) {
     
     if (!assignedLocation) return [];
     
-    // FIX: Parse appointment dates more carefully to avoid timezone issues
     let dayAppointments = appointments.filter(app => {
-      // Parse the appointment date string (format: YYYY-MM-DD)
-      const appDateStr = app.appointment_date;
-      if (!appDateStr) return false;
-      
-      // Extract year, month, day from the string directly
-      const [appYear, appMonth, appDay] = appDateStr.split('T')[0].split('-').map(Number);
-      
-      // Compare with calendar day (month is 0-indexed in currentDate.getMonth())
-      return appDay === day &&
-             appMonth === month + 1 && // appMonth is 1-12, month is 0-11
-             appYear === year;
+      const appDate = new Date(app.appointment_date);
+      return appDate.getDate() === day &&
+             appDate.getMonth() === month &&
+             appDate.getFullYear() === year;
     });
 
     if (selectedLocation !== 'all') {
@@ -207,8 +197,8 @@ function Schedule({ onAppointmentClick }) {
     
     // Show modal with all appointments for this day
     const year = currentDate.getFullYear();
-    const month = currentDate.getMonth() + 1; // Convert to 1-12 for display
-    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const month = currentDate.getMonth();
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     
     setSelectedDay(dateStr);
     setSelectedDayAppointments(dayAppointments);
