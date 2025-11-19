@@ -85,9 +85,8 @@ try {
             )";
 
 
-    $types  = 'ississi';
+    $types  = 'ssissi';
     $params = [
-        $doctor_id,
         $start_date . ' 00:00:00',
         $end_date   . ' 23:59:59',
         $doctor_id,
