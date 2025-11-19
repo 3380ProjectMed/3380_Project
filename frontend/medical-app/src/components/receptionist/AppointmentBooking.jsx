@@ -147,7 +147,7 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
       if (data.success) {
         // Normalize property names for consistency
         const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-        const normalizedDoctors = (data.doctors || []).map((doc, index) => {
+  const normalizedDoctors = (data.doctors || []).map((doc, index) => {
           // derive working days and default start/end from work_schedule
           const work_schedule = doc.work_schedule || [];
           const workDays = work_schedule.map(s => dayNames.indexOf(s.day)).filter(d => d >= 0);
@@ -175,6 +175,8 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
             workDays: workDays,
             startTime: startTime,
             endTime: endTime
+            ,
+            office_id: officeId // attach the office we're querying so availability checks can validate office context
           };
         });
         setDoctors(normalizedDoctors);
@@ -190,26 +192,33 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
   const doctorWorksOnDate = (doctor, dateStr) => {
     if (!doctor || !doctor.work_schedule) return false;
     if (!dateStr) return false;
-    const date = new Date(dateStr);
+    // Ensure doctor is associated with the current office
+    if (typeof doctor.office_id !== 'undefined' && typeof officeId !== 'undefined' && doctor.office_id !== officeId) return false;
+
+    // Parse date in local timezone robustly
+    const date = new Date(`${dateStr}T00:00:00`);
     const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayName = dayNames[date.getDay()];
-    return (doctor.work_schedule || []).some(s => s.day === dayName);
+    return (doctor.work_schedule || []).some(s => String(s.day || '').trim().toLowerCase() === String(dayName).toLowerCase());
   };
 
   // Helper: check if doctor is available at given date and time (HH:MM)
   const doctorAvailableAt = (doctor, dateStr, timeStr) => {
     if (!doctor || !doctor.work_schedule) return false;
     if (!dateStr || !timeStr) return false;
-    const date = new Date(dateStr);
+    // Ensure doctor is associated with the current office
+    if (typeof doctor.office_id !== 'undefined' && typeof officeId !== 'undefined' && doctor.office_id !== officeId) return false;
+
+    const date = new Date(`${dateStr}T00:00:00`);
     const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayName = dayNames[date.getDay()];
 
-    const schedule = (doctor.work_schedule || []).find(s => s.day === dayName);
+    const schedule = (doctor.work_schedule || []).find(s => String(s.day || '').trim().toLowerCase() === String(dayName).toLowerCase());
     if (!schedule) return false;
 
     // schedule.start/end are HH:MM strings
-    const [sH, sM] = schedule.start.split(':').map(Number);
-    const [eH, eM] = schedule.end.split(':').map(Number);
+    const [sH, sM] = (schedule.start || '00:00').split(':').map(Number);
+    const [eH, eM] = (schedule.end || '00:00').split(':').map(Number);
     const startMinutes = sH * 60 + sM;
     const endMinutes = eH * 60 + eM;
 
@@ -347,10 +356,14 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
       const data = await response.json();
       
       if (data.success && data.appointments) {
-        // Filter appointments for the selected doctor
-        const doctorAppointments = data.appointments.filter(
-          appt => appt.Doctor_id === selectedDoctor.Doctor_id
-        );
+        // Filter appointments for the selected doctor and ignore cancelled/no-show
+        const doctorAppointments = data.appointments.filter((appt) => {
+          if (appt.Doctor_id !== selectedDoctor.Doctor_id) return false;
+          const status = (appt.status || '').toString().toLowerCase();
+          // ignore cancelled or no-show appointments
+          if (status === 'cancelled' || status === 'canceled' || status === 'no-show') return false;
+          return true;
+        });
         
         // Check each appointment for conflicts
         for (const appt of doctorAppointments) {
