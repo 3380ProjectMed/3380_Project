@@ -1,381 +1,287 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Key, UserCheck, UserX, AlertCircle } from 'lucide-react';
-import './EditUserModal.css';
+import { X, AlertCircle, CheckCircle, Loader, UserPlus } from 'lucide-react';
 
-function EditUserModal({ user, onClose, onSave }) {
+function EditUserModal({ user, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
-    username: '',
+    firstName: '',
+    lastName: '',
     email: '',
-    role: '',
-    is_active: true
+    phoneNumber: '',
+    workLocation: '',
+    isActive: user.is_active ? 1 : 0,
   });
-  
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPasswordSection, setShowPasswordSection] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [passwordError, setPasswordError] = useState(null);
 
+  const [workLocations, setWorkLocations] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  // Initialize form from user prop
   useEffect(() => {
-    if (user) {
-      setFormData({
-        username: user.username || '',
-        email: user.email || '',
-        role: user.role || '',
-        is_active: user.is_active === 1 || user.is_active === true
-      });
-    }
-  }, [user]);
+    if (!user) return;
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const [first, ...rest] = (user.name || '').split(' ');
+    const last = rest.join(' ');
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      firstName: first || '',
+      lastName: last || '',
+      email: user.email || '',
+      phoneNumber: user.phone_number || '',
+      work_location: formData.workLocation
+        ? parseInt(formData.workLocation, 10)
+        : null,
+      isActive: user.is_active ? 1 : 0,
     }));
-  };
+  }, [user]);
 
-  const validatePassword = () => {
-    if (!showPasswordSection || !newPassword) return true;
-    
-    if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
-      return false;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match');
-      return false;
-    }
-    
-    setPasswordError(null);
-    return true;
-  };
-
-  const handleResetPassword = async () => {
-    if (!validatePassword()) return;
-    
-    try {
-      setLoading(true);
-      const res = await fetch('/admin_api/users/reset-password.php', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user.user_id,
-          new_password: newPassword
-        })
-      });
-      
-      const data = await res.json();
-      
-      if (data.success) {
-        alert('Password reset successfully');
-        setNewPassword('');
-        setConfirmPassword('');
-        setShowPasswordSection(false);
-      } else {
-        setPasswordError(data.error || 'Failed to reset password');
+  // Load locations (reuse same options as AddUserModal)
+  useEffect(() => {
+    const loadOptions = async () => {
+      setLoadingOptions(true);
+      try {
+        const response = await fetch('/admin_api/users/get_form_options.php', {
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        if (data.success) {
+          setWorkLocations(data.work_locations || []);
+        } else {
+          setError(data.error || 'Failed to load form options');
+        }
+      } catch (err) {
+        console.error('EditUserModal loadOptions error:', err);
+        setError(err.message || 'Failed to load form options');
+      } finally {
+        setLoadingOptions(false);
       }
-    } catch (err) {
-      setPasswordError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadOptions();
+  }, []);
+
+const handleChange = (e) => {
+  const { name, value } = e.target;
+
+  setFormData(prev => ({
+    ...prev,
+    firstName: first || '',
+    lastName: last || '',
+    email: user.email || '',
+    phoneNumber: user.phone_number || '',
+    workLocation: user.work_location_id
+      ? String(user.work_location_id)
+      : '',
+    isActive: user.is_active ? 1 : 0,
+  }));
+
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validatePassword()) return;
-    
+    setSubmitting(true);
+    setError('');
+
     try {
-      setLoading(true);
-      setError(null);
-      
-      const res = await fetch('/admin_api/update.php', {
+      const payload = {
+        user_id: user.user_id,
+        user_type: user.user_type,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        phone_number: formData.phoneNumber,
+        work_location: formData.workLocation
+          ? parseInt(formData.workLocation, 10)
+          : null,
+        is_active: formData.isActive ? 1 : 0,
+      };
+
+      const response = await fetch('/admin_api/users/update-user.php', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user.user_id,
-          username: formData.username,
-          email: formData.email,
-          role: formData.role,
-          is_active: formData.is_active
-        })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
-      
-      const data = await res.json();
-      
-      if (data.success) {
-        // If password was changed, reset it
-        if (showPasswordSection && newPassword) {
-          await handleResetPassword();
-        }
-        
-        onSave(data.user || formData);
-        onClose();
-      } else {
-        setError(data.error || 'Failed to update user');
+
+      const text = await response.text();
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (err) {
+        console.error('EditUserModal JSON parse error:', err);
+        throw new Error(`Invalid JSON from server (status ${response.status})`);
       }
+
+      if (!response.ok || !data || data.success === false) {
+        const msg =
+          (data && data.error) ||
+          text ||
+          `Update failed with status ${response.status}`;
+        throw new Error(msg);
+      }
+
+      setSuccess(true);
+      setTimeout(() => {
+        onSuccess();
+      }, 1200);
     } catch (err) {
-      setError(err.message);
+      console.error('EditUserModal handleSubmit error:', err);
+      setError(err.message || 'Failed to update user');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const toggleStatus = async () => {
-    const newStatus = !formData.is_active;
-    const action = newStatus ? 'activate' : 'deactivate';
-    
-    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
-    
-    try {
-      setLoading(true);
-      const res = await fetch('/admin_api/update.php', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user.user_id,
-          is_active: newStatus
-        })
-      });
-      
-      const data = await res.json();
-      
-      if (data.success) {
-        setFormData(prev => ({ ...prev, is_active: newStatus }));
-        alert(`User ${action}d successfully`);
-      } else {
-        setError(data.error || `Failed to ${action} user`);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!user) return null;
+  const roleLabel = user.user_type
+    ? user.user_type.charAt(0) + user.user_type.slice(1).toLowerCase()
+    : 'User';
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
         <div className="modal-header">
-          <h2>Edit User</h2>
-          <button onClick={onClose} className="modal-close">
+          <h2>Edit {roleLabel}</h2>
+          <button className="close-btn" onClick={onClose}>
             <X size={24} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="modal-body">
-          {error && (
-            <div className="alert alert-error">
-              <AlertCircle size={20} />
-              <span>{error}</span>
-            </div>
-          )}
-
+        {success ? (
+          <div className="success-message">
+            <CheckCircle size={48} />
+            <h3>User updated successfully!</h3>
+          </div>
+        ) : loadingOptions ? (
+          <div className="loading-container" style={{ padding: '3rem' }}>
+            <Loader className="spinner" size={40} />
+            <p>Loading form...</p>
+          </div>
+        ) : (
           <form onSubmit={handleSubmit}>
-            {/* User Info Section */}
-            <div className="form-section">
-              <h3>User Information</h3>
-              
-              <div className="form-group">
-                <label htmlFor="username">Username</label>
-                <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="email">Email</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="role">Role</label>
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select Role</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="DOCTOR">Doctor</option>
-                  <option value="NURSE">Nurse</option>
-                  <option value="PATIENT">Patient</option>
-                </select>
-              </div>
-
-              <div className="form-group checkbox-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    name="is_active"
-                    checked={formData.is_active}
-                    onChange={handleChange}
-                  />
-                  <span>Active Account</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Password Section */}
-            <div className="form-section">
-              <div className="section-header">
-                <h3>Password Management</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowPasswordSection(!showPasswordSection)}
-                  className="btn-link"
-                >
-                  <Key size={16} />
-                  {showPasswordSection ? 'Cancel' : 'Reset Password'}
-                </button>
-              </div>
-
-              {showPasswordSection && (
-                <>
-                  {passwordError && (
-                    <div className="alert alert-error">
-                      <AlertCircle size={20} />
-                      <span>{passwordError}</span>
-                    </div>
-                  )}
-                  
-                  <div className="form-group">
-                    <label htmlFor="newPassword">New Password</label>
-                    <input
-                      type="password"
-                      id="newPassword"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password (min 8 characters)"
-                      minLength={8}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="confirmPassword">Confirm Password</label>
-                    <input
-                      type="password"
-                      id="confirmPassword"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm new password"
-                      minLength={8}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* User Details Display */}
-            {user.full_name && (
-              <div className="form-section">
-                <h3>Additional Information</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <span className="info-label">Full Name:</span>
-                    <span className="info-value">{user.full_name}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">User ID:</span>
-                    <span className="info-value">{user.user_id}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Created:</span>
-                    <span className="info-value">
-                      {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Last Login:</span>
-                    <span className="info-value">
-                      {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never'}
-                    </span>
-                  </div>
-                  {user.doctor_phone && (
-                    <div className="info-item">
-                      <span className="info-label">Phone:</span>
-                      <span className="info-value">{user.doctor_phone}</span>
-                    </div>
-                  )}
-                  {user.License_Number && (
-                    <div className="info-item">
-                      <span className="info-label">License:</span>
-                      <span className="info-value">{user.License_Number}</span>
-                    </div>
-                  )}
-                </div>
+            {error && (
+              <div className="alert alert-error">
+                <AlertCircle size={20} />
+                <span>{error}</span>
               </div>
             )}
-          </form>
-        </div>
 
-        {/* Footer */}
-        <div className="modal-footer">
-          <div className="footer-left">
-            <button
-              type="button"
-              onClick={toggleStatus}
-              className={formData.is_active ? 'btn-danger' : 'btn-success'}
-              disabled={loading}
-            >
-              {formData.is_active ? (
-                <>
-                  <UserX size={16} />
-                  Deactivate User
-                </>
-              ) : (
-                <>
-                  <UserCheck size={16} />
-                  Activate User
-                </>
-              )}
-            </button>
-          </div>
-          <div className="footer-right">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              className="btn-save"
-              disabled={loading}
-            >
-              <Save size={16} />
-              {loading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="firstName">First Name *</label>
+                <input
+                  type="text"
+                  id="firstName"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="lastName">Last Name *</label>
+                <input
+                  type="text"
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="email">Email *</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="phoneNumber">Phone</label>
+                <input
+                  type="text"
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="workLocation">Work Location</label>
+                <select
+                  id="workLocation"
+                  name="workLocation"
+                  value={formData.workLocation}
+                  onChange={handleChange}
+                >
+                  <option value="">(None)</option>
+                  {workLocations.map(loc => (
+                    <option key={loc.office_id} value={loc.office_id}>
+                      {loc.name} - {loc.address}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="isActive">Status</label>
+              <select
+                id="isActive"
+                name="isActive"
+                value={formData.isActive}
+                onChange={handleChange}
+              >
+                <option value={1}>Active</option>
+                <option value={0}>Inactive</option>
+              </select>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onClose}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <Loader className="spinner" size={16} />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={16} />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
