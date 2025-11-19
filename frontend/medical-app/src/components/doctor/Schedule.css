@@ -1,0 +1,410 @@
+/* ========== SCHEDULE COMPONENT - FIXED VERSION ========== */
+/* This version has all visibility issues fixed */
+
+.schedule {
+  padding: 1.5rem;
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Header with Month Navigation */
+.schedule-header {
+  margin-bottom: 1.5rem;
+}
+
+.month-navigation {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.nav-arrow {
+  background-color: #e5e7eb;
+  border: none;
+  border-radius: 50%;
+  width: 3.5rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.nav-arrow:hover {
+  background-color: #d1d5db;
+}
+
+.nav-arrow svg {
+  color: #374151;
+}
+
+.month-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+/* Filter Section */
+.filter-section {
+  background-color: white;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border: 2px solid #e5e7eb;
+  transition: all 0.2s ease;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.filter-section label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.location-select {
+  padding: 0.625rem 2.5rem 0.625rem 1rem;
+  border: 2px solid #d1d5db;
+  border-radius: 0.5rem;
+  background-color: white;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  min-width: 120px;
+  flex: 0 1 220px;
+  max-width: 100%;
+}
+
+.location-select:hover {
+  border-color: #00b4d8;
+  background-color: #f8f9fa;
+}
+
+.location-select:focus {
+  outline: none;
+  border-color: #0077b6;
+  box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.15);
+  background-color: white;
+}
+
+.filter-section:has(.location-select:not([value="all"])) {
+  background: linear-gradient(135deg, #e0f2fe, #ffffff);
+  border-color: #0077b6;
+}
+
+/* Calendar Container */
+.calendar-container {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Calendar Grid */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  grid-auto-rows: minmax(11rem, auto); /* Increased from 9rem */
+  align-items: stretch;
+}
+
+/* Weekday Headers */
+.weekday-header {
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #6b7280;
+  padding: 0.5rem 0.25rem;
+  background-color: transparent;
+  border-radius: 0.5rem;
+}
+
+/* Calendar Day Cell */
+.calendar-day {
+  min-height: 10rem; /* Increased from 7rem */
+  max-height: 200px; /* Increased from 12rem */
+  height: 200px; 
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background-color: white;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.calendar-day:hover:not(.empty-day):not(.weekend) {
+  border-color: #c7d2fe;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.calendar-day.weekend {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.calendar-day.filtered {
+  opacity: 0.35;
+  background-color: #fafafa;
+  pointer-events: none;
+  position: relative;
+}
+
+.calendar-day.filtered::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(0, 0, 0, 0.03) 10px,
+    rgba(0, 0, 0, 0.03) 20px
+  );
+  pointer-events: none;
+  border-radius: 0.75rem;
+}
+
+.calendar-day.today {
+  border-color: #0077b6;
+  border-width: 2px;
+  background: white;
+  position: relative;
+}
+
+.calendar-day.empty-day {
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+/* ========== DAY HEADER - CRITICAL SECTION ========== */
+/* This is where day numbers and location badges appear */
+
+.day-header {
+  display: flex !important; /* Force display */
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+  visibility: visible !important; /* Force visibility */
+  opacity: 1 !important;
+  position: relative;
+  z-index: 1;
+  min-height: 2rem; /* Ensure it has height */
+}
+
+/* ========== DAY NUMBER - CRITICAL ========== */
+.day-number {
+  display: flex !important; /* Force display */
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #1f2937 !important; /* Force color */
+  font-size: 1rem !important; /* Force size */
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  visibility: visible !important; /* Force visibility */
+  opacity: 1 !important;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Today's date highlight */
+.calendar-day.today .day-number {
+  background: linear-gradient(135deg, #0077b6, #00b4d8) !important;
+  color: white !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 8px rgba(0, 119, 182, 0.4);
+}
+
+/* ========== LOCATION BADGE - CRITICAL ========== */
+.location-badge {
+  display: inline-block !important; /* Force display */
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 999px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  visibility: visible !important; /* Force visibility */
+  opacity: 1 !important;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+/* Day Content - Scrollable appointments area */
+.day-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.25rem;
+  min-height: 0;
+}
+
+/* Scrollbar styling */
+.day-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.day-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.day-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.day-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.day-content {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f1f1;
+}
+
+/* Appointments */
+.appointments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.appointment-count {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  min-width: 1.5rem;
+  text-align: center;
+  z-index: 2;
+}
+
+.appointment-item {
+  background-color: #eef2ff;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border-left: 3px solid #4f46e5;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.appointment-item:hover {
+  background-color: #e0e7ff;
+  transform: translateX(2px);
+}
+
+.appointment-time {
+  font-weight: 700;
+  color: #4338ca;
+  font-size: 0.875rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.appointment-patient {
+  font-size: 0.75rem;
+  color: #4b5563;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-appointments {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  margin: auto 0;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .calendar-grid {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 1024px) {
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .calendar-grid {
+    min-width: 700px;
+  }
+  
+  .calendar-day {
+    min-height: 7rem;
+  }
+}
+
+/* ========== OVERRIDE ANY CONFLICTING STYLES ========== */
+/* Add these at the end to ensure they take priority */
+
+.schedule .day-number,
+.schedule .day-header,
+.schedule .location-badge {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure nothing is accidentally hidden */
+.schedule * {
+  box-sizing: border-box;
+}
+
+/* Make sure flexbox is working */
+.schedule .calendar-day {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.schedule .day-header {
+  display: flex !important;
+  flex-direction: row !important;
+}

@@ -1,0 +1,408 @@
+/* Appointments styles - Clean, modern design */
+
+/* Section styling */
+.patient-appointments-section { 
+  margin-bottom: 3rem; 
+}
+
+.patient-appointments-section h2 { 
+  font-size: 1.75rem; 
+  font-weight: 700; 
+  color: #03045e; 
+  margin: 2rem 0 1.5rem 0; 
+}
+
+/* Appointments list container */
+.appointments-list { 
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1200px;
+}
+
+/* Main appointment card */
+.patient-appointments-section .appointment-card { 
+  background: white; 
+  border-radius: 1rem; 
+  padding: 2rem; 
+  box-shadow: 0 2px 8px rgba(0, 119, 182, 0.08); 
+  border: 2px solid #e5e7eb;
+  transition: all 0.3s ease;
+  display: grid;
+  grid-template-columns: 180px 1fr 160px;
+  gap: 2rem;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.patient-appointments-section .appointment-card:hover { 
+  border-color: #00b4d8; 
+  box-shadow: 0 6px 16px rgba(0, 180, 216, 0.15);
+  transform: translateY(-2px);
+}
+
+/* LEFT SECTION - Doctor Info */
+.patient-appointments-section .appointment-doctor-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.patient-appointments-section .doctor-avatar {
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(135deg, #90e0ef, #00b4d8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 180, 216, 0.25);
+}
+
+.patient-appointments-section .appointment-doctor-info h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #03045e;
+  line-height: 1.3;
+}
+
+.patient-appointments-section .specialty-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+  background: #f3f4f6;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+}
+
+/* MIDDLE SECTION - Appointment Details */
+.patient-appointments-section .appointment-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.patient-appointments-section .appointment-details p {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  color: #1f2937;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.patient-appointments-section .appointment-details svg,
+.patient-appointments-section .appointment-details .appointments-small-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: #0077b6;
+}
+
+/* RIGHT SECTION - Actions */
+.patient-appointments-section .appointment-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  justify-content: center;
+}
+
+/* Status badges */
+.patient-status-badge { 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem; 
+  border-radius: 999px; 
+  font-size: 0.875rem; 
+  font-weight: 600;
+  text-transform: capitalize; 
+  white-space: nowrap;
+  min-width: 100px;
+}
+
+.patient-status-badge.scheduled { 
+  background: #dbeafe; 
+  color: #1e40af; 
+}
+
+.patient-status-badge.ready { 
+  background: #d1fae5; 
+  color: #065f46; 
+}
+
+.patient-status-badge.completed { 
+  background: #e5e7eb; 
+  color: #374151; 
+}
+
+.patient-status-badge.cancelled { 
+  background: #fee2e2; 
+  color: #991b1b; 
+}
+
+/* Cancel button */
+.patient-appointments-section .appointment-actions .btn-danger {
+  padding: 0.65rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  width: 100%;
+  justify-content: center;
+}
+
+/* Empty state */
+.appointments-empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 1rem;
+  border: 2px dashed #cbd5e1;
+}
+
+.appointments-empty-state h3 {
+  margin: 1.5rem 0 0.75rem 0;
+  color: #03045e;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.appointments-empty-state p {
+  color: #6b7280;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+/* Loading state */
+.appointments-loading {
+  text-align: center;
+  padding: 4rem;
+}
+
+.appointments-loading p {
+  color: #6b7280;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+}
+
+.appointments-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #0077b6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* History section */
+.history-list { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 1rem; 
+}
+
+.history-item { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem; 
+  background: white;
+  border-radius: 1rem; 
+  transition: all 0.2s ease; 
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0, 119, 182, 0.04);
+  text-align: left;
+}
+
+.history-item:hover { 
+  border-color: #00b4d8; 
+  transform: translateX(6px);
+  box-shadow: 0 4px 12px rgba(0, 180, 216, 0.1);
+}
+
+.history-item-content {
+  flex: 1;
+  text-align: left;
+}
+
+.history-item h4 { 
+  margin: 0 0 0.5rem 0; 
+  font-size: 1.2rem; 
+  font-weight: 700; 
+  color: #03045e; 
+}
+
+.history-item-date {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0.25rem 0;
+  font-weight: 500;
+}
+
+.history-item-reason {
+  color: #374151;
+  margin: 0.5rem 0;
+  font-size: 1rem;
+}
+
+/* Item type badge */
+.item-type-badge { 
+  display: inline-block; 
+  padding: 0.35rem 0.85rem; 
+  background: #e0f2fe; 
+  color: #0369a1; 
+  border-radius: 0.5rem; 
+  font-size: 0.8rem; 
+  font-weight: 600; 
+  margin-top: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Utility classes */
+.text-gray { 
+  color: #9ca3af; 
+  font-style: italic; 
+}
+
+.appointments-text-muted { 
+  color: #9ca3af; 
+  font-style: italic;
+  font-size: 0.95rem;
+}
+
+.appointments-small-icon { 
+  width: 18px; 
+  height: 18px; 
+  color: #0077b6; 
+}
+
+/* Visit Summary Modal */
+.visit-summary-modal { 
+  max-width: 700px; 
+  width: 90vw; 
+}
+
+.visit-info-grid { 
+  display: grid; 
+  gap: 1.5rem; 
+  grid-template-columns: 1fr; 
+}
+
+@media (min-width: 768px) {
+  .visit-info-grid { 
+    grid-template-columns: 1fr 1fr; 
+  }
+}
+
+.visit-info-item { 
+  padding: 1.25rem; 
+  background: #f8fafc; 
+  border-radius: 0.75rem; 
+  border-left: 4px solid #0077b6; 
+}
+
+.visit-info-label { 
+  display: flex; 
+  align-items: center; 
+  gap: 0.5rem; 
+  font-weight: 600; 
+  color: #374151; 
+  margin-bottom: 0.5rem; 
+  font-size: 0.9rem; 
+}
+
+.visit-info-value { 
+  color: #1f2937; 
+  font-weight: 500; 
+  line-height: 1.5;
+  font-size: 1rem;
+}
+
+.patient-specialty {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
+.patient-address {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 968px) {
+  .patient-appointments-section .appointment-card {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+  
+  .patient-appointments-section .appointment-doctor-info {
+    flex-direction: row;
+    text-align: left;
+    justify-content: flex-start;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f3f4f6;
+  }
+  
+  .patient-appointments-section .doctor-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 1.25rem;
+  }
+  
+  .patient-appointments-section .appointment-details {
+    gap: 0.5rem;
+  }
+  
+  .patient-appointments-section .appointment-actions {
+    flex-direction: row;
+    justify-content: space-between;
+    padding-top: 1rem;
+    border-top: 2px solid #f3f4f6;
+  }
+  
+  .history-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .patient-appointments-section .appointment-card {
+    padding: 1.25rem;
+  }
+  
+  .patient-appointments-section .appointment-details p {
+    font-size: 0.9rem;
+  }
+  
+  .patient-appointments-section .appointment-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .patient-appointments-section .appointment-actions .btn-danger {
+    width: 100%;
+  }
+}

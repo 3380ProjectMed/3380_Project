@@ -1,0 +1,471 @@
+/* Medical Records styles - Better layout design */
+
+/* Main layout - Stacked cards with better flow */
+.records-grid { 
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 2rem;
+  max-width: 1400px;
+}
+
+/* Two column layout for sections with actions */
+.records-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 2rem;
+}
+
+.record-card { 
+  background: white;
+  border-radius: 1rem; 
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 119, 182, 0.08);
+  border: 2px solid #e5e7eb;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.record-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 180, 216, 0.12);
+  border-color: #00b4d8;
+}
+
+/* Card header */
+.record-card h3 { 
+  margin: 0;
+  color: #03045e;
+  font-weight: 700; 
+  font-size: 1.5rem;
+  padding: 1.75rem 2rem;
+  border-bottom: 2px solid #f3f4f6;
+  background: linear-gradient(135deg, #f8fafc, white);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Add button in header */
+.record-card h3 + .record-add-btn {
+  display: block; /* Show the add button */
+}
+
+.record-card h3::after {
+  content: '';
+  /* We'll add button via JSX instead */
+}
+
+.record-add-btn {
+  margin: 0;
+  padding: 0 2rem 1.5rem 2rem;
+  flex-shrink: 0;
+}
+
+.record-add-btn .btn-primary,
+.record-add-btn .btn-primary.btn-sm {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  border: none;
+  color: white;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.record-add-btn .btn-primary:hover,
+.record-add-btn .btn-primary.btn-sm:hover {
+  background: linear-gradient(135deg, #005f8f, #0096b8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
+}
+
+/* Content area - compact and clean */
+.record-card > ul,
+.record-card > p.text-gray {
+  padding: 1.5rem 2rem 2rem 2rem;
+  margin: 0;
+}
+
+.text-gray { 
+  color: #9ca3af;
+  font-style: italic;
+  text-align: center;
+  padding: 2.5rem 2rem !important;
+  font-size: 1rem;
+}
+
+/* List styling - more compact */
+.medication-list,
+.allergy-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Vaccination list styling */
+.record-card ul:not(.medication-list):not(.allergy-list) {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.record-card ul:not(.medication-list):not(.allergy-list) li {
+  padding: 1rem 1.25rem;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  border-left: 4px solid #0077b6;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+
+.record-card ul:not(.medication-list):not(.allergy-list) li:hover {
+  background: #e0f2fe;
+  transform: translateX(4px);
+}
+
+.record-card ul:not(.medication-list):not(.allergy-list) li strong {
+  color: #03045e;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+/* Medication and Allergy Items - cleaner design */
+.medication-item,
+.allergy-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  border-left: 4px solid #0077b6;
+  transition: all 0.2s ease;
+}
+
+.medication-item:hover,
+.allergy-item:hover {
+  background: #e0f2fe;
+  transform: translateX(4px);
+}
+
+.medication-item span,
+.allergy-item span {
+  flex: 1;
+  margin-right: 1rem;
+  color: #374151;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.btn-delete {
+  background: #ef4444;
+  color: white;
+  border: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-delete:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.btn-delete:active {
+  transform: scale(0.95);
+}
+
+/* Form styles */
+.record-form {
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 2px solid #e5e7eb;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #03045e;
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select,
+.form-select {
+  padding: 0.875rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  background: white;
+  transition: all 0.2s ease;
+  color: #1f2937;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #00b4d8;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.1);
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-success:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-success:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 1rem;
+  padding: 0;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0, 119, 182, 0.2);
+  border: 2px solid #e5e7eb;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.75rem 2rem;
+  border-bottom: 2px solid #f3f4f6;
+  background: linear-gradient(135deg, #f8fafc, white);
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #03045e;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #03045e;
+}
+
+.modal-form {
+  padding: 2rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.form-divider {
+  text-align: center;
+  margin: 1.5rem 0;
+  position: relative;
+}
+
+.form-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.form-divider span {
+  background: white;
+  padding: 0 1rem;
+  color: #6b7280;
+  font-weight: 500;
+  position: relative;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0077b6, #00b4d8);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #005f8f, #0096b8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3);
+}
+
+.btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #6b7280;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #f3f4f6;
+  border-color: #00b4d8;
+  color: #0077b6;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .records-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .records-grid {
+    gap: 1.5rem;
+  }
+
+  .record-card h3 {
+    font-size: 1.25rem;
+    padding: 1.5rem;
+  }
+
+  .record-card > ul,
+  .record-card > p.text-gray,
+  .record-add-btn {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .form-row,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-content {
+    width: 95%;
+  }
+  
+  .modal-header,
+  .modal-form {
+    padding: 1.5rem;
+  }
+
+  .medication-item,
+  .allergy-item {
+    padding: 0.875rem;
+  }
+}
