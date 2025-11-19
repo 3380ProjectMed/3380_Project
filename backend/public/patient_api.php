@@ -169,7 +169,7 @@ if ($endpoint === 'test') {
 if ($endpoint === 'dashboard') {
     if ($method === 'GET') {
         try {
-            // Get upcoming appointments
+            // Get upcoming appointments (including same-day appointments regardless of timezone)
             $stmt = $mysqli->prepare("
                 SELECT 
                     a.appointment_id,
@@ -186,7 +186,7 @@ if ($endpoint === 'dashboard') {
                 LEFT JOIN specialty s ON d.specialty = s.specialty_id
                 LEFT JOIN office o ON a.office_id = o.office_id
                 WHERE a.patient_id = ? 
-                AND a.appointment_date >= NOW()
+                AND DATE(a.appointment_date) >= CURDATE()
                 ORDER BY a.appointment_date ASC
             ");
             $stmt->bind_param('i', $patient_id);
@@ -546,7 +546,7 @@ elseif ($endpoint === 'appointments') {
                     LEFT JOIN specialty s ON d.specialty = s.specialty_id
                     LEFT JOIN office o ON a.office_id = o.office_id
                     WHERE a.patient_id = ? 
-                    AND a.appointment_date >= NOW()
+                    AND DATE(a.appointment_date) >= CURDATE()
                     ORDER BY a.appointment_date ASC
                 ");
                 $stmt->bind_param('i', $patient_id);
