@@ -1953,30 +1953,50 @@ elseif ($endpoint === 'schedule') {
                     return;
                 }
 
-                // Define standard time slots (business hours 8 AM - 6 PM)
+                // Define standard time slots (business hours 8 AM - 6 PM with 30-minute intervals)
                 $all_time_slots = [
                     '8:00 AM',
+                    '8:30 AM',
                     '9:00 AM',
+                    '9:30 AM',
                     '10:00 AM',
+                    '10:30 AM',
                     '11:00 AM',
+                    '11:30 AM',
                     '1:00 PM',
+                    '1:30 PM',
                     '2:00 PM',
+                    '2:30 PM',
                     '3:00 PM',
+                    '3:30 PM',
                     '4:00 PM',
-                    '5:00 PM'
+                    '4:30 PM',
+                    '5:00 PM',
+                    '5:30 PM',
+                    '6:00 PM'
                 ];
 
                 // Convert to 24-hour format for database comparison
                 $time_slot_mapping = [
                     '8:00 AM' => '08:00:00',
+                    '8:30 AM' => '08:30:00',
                     '9:00 AM' => '09:00:00',
+                    '9:30 AM' => '09:30:00',
                     '10:00 AM' => '10:00:00',
+                    '10:30 AM' => '10:30:00',
                     '11:00 AM' => '11:00:00',
+                    '11:30 AM' => '11:30:00',
                     '1:00 PM' => '13:00:00',
+                    '1:30 PM' => '13:30:00',
                     '2:00 PM' => '14:00:00',
+                    '2:30 PM' => '14:30:00',
                     '3:00 PM' => '15:00:00',
+                    '3:30 PM' => '15:30:00',
                     '4:00 PM' => '16:00:00',
-                    '5:00 PM' => '17:00:00'
+                    '4:30 PM' => '16:30:00',
+                    '5:00 PM' => '17:00:00',
+                    '5:30 PM' => '17:30:00',
+                    '6:00 PM' => '18:00:00'
                 ];
 
                 // Get existing appointments for this doctor on this date
