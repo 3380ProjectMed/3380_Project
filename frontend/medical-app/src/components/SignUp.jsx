@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Phone, Calendar, MapPin, UserPlus } from 'lucide-react';
 import './SignUp.css';
 
@@ -15,7 +16,9 @@ const [formData, setFormData] = useState({
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [flash, setFlash] = useState({ type: null, message: '' });
+  const navigate = useNavigate();
+  
   const validateForm = () => {
     const newErrors = {};
 
