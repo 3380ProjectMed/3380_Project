@@ -144,45 +144,6 @@ function UserDetails({ userId, userType, onClose, onUpdate }) {
     }
   };
 
-  const handleRemoveSchedule = async (scheduleId) => {
-    if (!window.confirm('Are you sure you want to remove this schedule?')) {
-      return;
-    }
-
-    setSubmitting(true);
-    setError('');
-
-    try {
-      const response = await fetch('/admin_api/users/remove_staff_schedule.php', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          schedule_id: scheduleId
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Reload modal data
-        await loadUserDetails();
-
-        // 🔔 Tell parent to refresh list / work_location
-        if (typeof onUpdate === 'function') {
-          onUpdate();
-        }
-      } else {
-        setError(data.error || 'Failed to remove schedule');
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
 const handleRemoveScheduleClick = (scheduleId) => {
   if (confirmDeleteId !== scheduleId) {
