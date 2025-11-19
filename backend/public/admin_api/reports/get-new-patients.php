@@ -185,18 +185,15 @@ try {
     $result            = $stmt->get_result();
     $doctorPerformance = $result->fetch_all(MYSQLI_ASSOC);
 
-    // Calculate retention and avg visits
     foreach ($doctorPerformance as &$doc) {
-        $newPatients = (int)$doc['new_patients_acquired'];
-        $retained    = (int)$doc['retained_patients'];
-
-        $doc['retention_rate'] = $newPatients > 0
-            ? round(($retained / $newPatients) * 100, 1)
+        $panelSize = (int)$doc['total_patients_seen'];
+        $retainedForDoctor = (int)$doc['retained_patients_for_doctor'];
+        $doc['retention_rate'] = $panelSize > 0
+            ? round(($retainedForDoctor / $panelSize) * 100, 1)
             : 0;
 
-        $totalSeen = (int)$doc['total_patients_seen'];
-        $doc['avg_visits_per_patient'] = $totalSeen > 0
-            ? round((int)$doc['total_completed'] / $totalSeen, 1)
+        $doc['avg_visits_per_patient'] = $panelSize > 0
+            ? round((int)$doc['total_completed'] / $panelSize, 1)
             : 0;
     }
     unset($doc);

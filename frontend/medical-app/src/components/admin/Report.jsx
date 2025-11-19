@@ -425,10 +425,17 @@ function Report() {
       filename = `new_patients_${startDate}_to_${endDate}.csv`;
 
       // Doctor performance section
-      csvContent = 'Doctor,New Patients,Retained,Retention Rate,Total Patients,Avg Visits,Completed\n';
-      (newPatientsData.doctor_performance || []).forEach(doc => {
-        csvContent += `"Dr. ${doc.doctor_name}",${doc.new_patients_acquired},${doc.retained_patients},${doc.retention_rate}%,${doc.total_patients_seen},${doc.avg_visits_per_patient},${doc.total_completed}\n`;
-      });
+    csvContent = 'Doctor,New Patients (this doctor),Retained (this doctor),Retention Rate,Total Patients,Avg Visits,Completed,New to Practice\n';
+    (newPatientsData.doctor_performance || []).forEach(doc => {
+      csvContent += `"Dr. ${doc.doctor_name}",` +
+        `${doc.new_patients_for_doctor},` +
+        `${doc.retained_patients_for_doctor},` +
+        `${doc.retention_rate}%,` +
+        `${doc.total_patients_seen},` +
+        `${doc.avg_visits_per_patient},` +
+        `${doc.total_completed},` +
+        `${doc.new_patients_acquired}\n`;
+    });
 
       // Booking method breakdown section
 
@@ -1280,14 +1287,15 @@ function Report() {
                       >
                         <td className="text-bold">Dr. {doc.doctor_name}</td>
                         <td className="text-right text-primary">
-                          {doc.new_patients_acquired}
-                          { ![1,2,3,4].includes(Number(doc.specialty)) &&
-                            <span className="pill-muted">
-                              ({doc.new_patients_for_doctor} new to this doctor)
-                            </span>
-                          }
+                          {doc.new_patients_for_doctor}
+                          {PRIMARY_SPECIALTIES.includes(Number(doc.specialty)) &&
+                            doc.new_patients_acquired > 0 && (
+                              <span className="pill-muted">
+                                ({doc.new_patients_acquired} new to practice)
+                              </span>
+                          )}
                         </td>
-                        <td className="text-right text-success">{doc.retained_patients}</td>
+                        <td className="text-right text-success">{doc.retained_patients_for_doctor}</td>
                         <td>
                           <div className="retention-cell">
                             <span className={`badge ${
@@ -1385,12 +1393,12 @@ function Report() {
                           <td className="text-right text-danger">{p.no_shows}</td>
                           <td className="text-right text-warning">{p.cancelled_appointments}</td>
                           <td>
-                            {p.is_new_patient
+                            {Number(p.is_new_patient) === 1 
                               ? <span className="badge badge-success">New</span>
                               : <span className="badge badge-muted">Existing</span>}
                           </td>
                           <td>
-                            {p.is_retained
+                            {Number(p.is_retained) === 1
                               ? <span className="badge badge-info">Retained</span>
                               : <span className="badge badge-muted">Single visit</span>}
                           </td>
