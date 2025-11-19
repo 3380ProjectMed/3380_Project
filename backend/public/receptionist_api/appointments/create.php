@@ -54,14 +54,39 @@ try {
         exit;
     }
 
-    // Verify doctor exists and works at this office
-    $doctorSql = "SELECT doctor_id FROM doctor WHERE doctor_id = ?";
+    // Verify doctor exists and get staff_id for schedule checks
+    $doctorSql = "SELECT doctor_id, staff_id FROM doctor WHERE doctor_id = ?";
     $doctorResult = executeQuery($conn, $doctorSql, 'i', [$input['Doctor_id']]);
 
     if (empty($doctorResult)) {
         closeDBConnection($conn);
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid doctor ID']);
+        exit;
+    }
+    $doctorRow = $doctorResult[0];
+    $doctor_staff_id = (int)$doctorRow['staff_id'];
+
+    // Validate appointment datetime falls within the doctor's work_schedule for that office
+    try {
+        $apptDT = new DateTime($input['Appointment_date']);
+        $dayOfWeek = $apptDT->format('l'); // e.g., Monday
+        $timeHHMM = $apptDT->format('H:i'); // e.g., 14:30
+
+        $scheduleCheckSql = "SELECT 1 FROM work_schedule WHERE staff_id = ? AND office_id = ? AND day_of_week = ? AND start_time <= ? AND end_time > ? LIMIT 1";
+        $scheduleMatch = executeQuery($conn, $scheduleCheckSql, 'iisss', [$doctor_staff_id, $input['Office_id'], $dayOfWeek, $timeHHMM, $timeHHMM]);
+
+        if (empty($scheduleMatch)) {
+            closeDBConnection($conn);
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Doctor is not scheduled to work at the requested date/time']);
+            exit;
+        }
+    } catch (Exception $e) {
+        // If parsing fails, reject the request
+        closeDBConnection($conn);
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid appointment date/time']);
         exit;
     }
 

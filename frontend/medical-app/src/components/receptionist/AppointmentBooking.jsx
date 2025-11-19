@@ -146,16 +146,37 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
       
       if (data.success) {
         // Normalize property names for consistency
-        const normalizedDoctors = (data.doctors || []).map(doc => ({
-          doctor_id: doc.Doctor_id,
-          Doctor_id: doc.Doctor_id,
-          first_name: doc.First_Name,
-          First_Name: doc.First_Name,
-          last_name: doc.Last_Name,
-          Last_Name: doc.Last_Name,
-          specialty_name: doc.specialty_name,
-          specialty_id: doc.specialty_id
-        }));
+        const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const normalizedDoctors = (data.doctors || []).map((doc, index) => {
+          // derive working days and default start/end from work_schedule
+          const work_schedule = doc.work_schedule || [];
+          const workDays = work_schedule.map(s => dayNames.indexOf(s.day)).filter(d => d >= 0);
+
+          // default hours
+          let startTime = 9;
+          let endTime = 17;
+          // if doctor has a schedule for any day, try to find the first schedule to derive defaults
+          if (work_schedule.length > 0) {
+            const first = work_schedule[0];
+            startTime = parseInt(first.start.split(':')[0], 10);
+            endTime = parseInt(first.end.split(':')[0], 10);
+          }
+
+          return {
+            doctor_id: doc.Doctor_id,
+            Doctor_id: doc.Doctor_id,
+            first_name: doc.First_Name,
+            First_Name: doc.First_Name,
+            last_name: doc.Last_Name,
+            Last_Name: doc.Last_Name,
+            specialty_name: doc.specialty_name,
+            specialty_id: doc.specialty_id,
+            work_schedule: work_schedule,
+            workDays: workDays,
+            startTime: startTime,
+            endTime: endTime
+          };
+        });
         setDoctors(normalizedDoctors);
       }
     } catch (err) {
@@ -163,6 +184,39 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
     } finally {
       setDoctorsLoading(false);
     }
+  };
+
+  // Helper: check if doctor works on given date
+  const doctorWorksOnDate = (doctor, dateStr) => {
+    if (!doctor || !doctor.work_schedule) return false;
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayName = dayNames[date.getDay()];
+    return (doctor.work_schedule || []).some(s => s.day === dayName);
+  };
+
+  // Helper: check if doctor is available at given date and time (HH:MM)
+  const doctorAvailableAt = (doctor, dateStr, timeStr) => {
+    if (!doctor || !doctor.work_schedule) return false;
+    if (!dateStr || !timeStr) return false;
+    const date = new Date(dateStr);
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayName = dayNames[date.getDay()];
+
+    const schedule = (doctor.work_schedule || []).find(s => s.day === dayName);
+    if (!schedule) return false;
+
+    // schedule.start/end are HH:MM strings
+    const [sH, sM] = schedule.start.split(':').map(Number);
+    const [eH, eM] = schedule.end.split(':').map(Number);
+    const startMinutes = sH * 60 + sM;
+    const endMinutes = eH * 60 + eM;
+
+    const [tH, tM] = timeStr.split(':').map(Number);
+    const tMinutes = tH * 60 + tM;
+
+    return tMinutes >= startMinutes && tMinutes <= endMinutes;
   };
 
   /**
@@ -230,6 +284,27 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
     const timeSlotAvailable = await isTimeSlotAvailable();
     if (!timeSlotAvailable) {
       return false;
+    }
+
+    // Ensure doctor works on the selected date/time
+    if (!doctorWorksOnDate(selectedDoctor, appointmentDate)) {
+      setError('Selected doctor does not work on the chosen date. Please pick another date or doctor.');
+      return false;
+    }
+
+    if (!doctorAvailableAt(selectedDoctor, appointmentDate, appointmentTime)) {
+      setError('Selected doctor is not available at the chosen time. Please pick a different time or doctor.');
+      return false;
+    }
+
+    // Ensure appointment is not in the past
+    if (appointmentDate) {
+      const now = new Date();
+      const selected = new Date(`${appointmentDate}T${appointmentTime}`);
+      if (selected < now) {
+        setError('Cannot book an appointment in the past. Please select a future date/time.');
+        return false;
+      }
     }
     
     return true;
@@ -563,25 +638,37 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
                 ) : doctors.length === 0 ? (
                   <p>No doctors available</p>
                 ) : (
-                  doctors.map(doctor => (
-                    <div
-                      key={doctor.Doctor_id}
-                      className={`doctor-card ${
-                        selectedDoctor?.Doctor_id === doctor.Doctor_id ? 'selected' : ''
-                      }`}
-                      onClick={() => setSelectedDoctor(doctor)}
-                    >
-                      <div className="doctor-avatar">
-                        <User size={24} />
+                  doctors.map(doctor => {
+                    // determine availability based on selected date/time
+                    const availableByDate = appointmentDate ? doctorWorksOnDate(doctor, appointmentDate) : true;
+                    const availableByTime = (appointmentDate && appointmentTime) ? doctorAvailableAt(doctor, appointmentDate, appointmentTime) : true;
+                    const isAvailable = availableByDate && availableByTime;
+
+                    return (
+                      <div
+                        key={doctor.Doctor_id}
+                        className={`doctor-card ${selectedDoctor?.Doctor_id === doctor.Doctor_id ? 'selected' : ''} ${!isAvailable ? 'unavailable' : ''}`}
+                        onClick={() => {
+                          if (!isAvailable) {
+                            setError('Selected doctor is not available at the chosen date/time. Please select another doctor or adjust the date/time.');
+                            return;
+                          }
+                          setError(null);
+                          setSelectedDoctor(doctor);
+                        }}
+                      >
+                        <div className="doctor-avatar">
+                          <User size={24} />
+                        </div>
+                        <div>
+                          <p className="doctor-name">
+                            Dr. {doctor.First_Name} {doctor.Last_Name}
+                          </p>
+                          <p className="doctor-specialty">{doctor.specialty_name}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="doctor-name">
-                          Dr. {doctor.First_Name} {doctor.Last_Name}
-                        </p>
-                        <p className="doctor-specialty">{doctor.specialty_name}</p>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
