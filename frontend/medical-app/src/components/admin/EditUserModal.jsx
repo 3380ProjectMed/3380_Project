@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader, UserPlus } from 'lucide-react';
 
+function normalizeLicenseForRole(value, userType) {
+  const digits = (value || '').replace(/\D/g, '');
+  if (!digits) return '';
+
+  const six = digits.slice(0, 6);
+
+  if (userType === 'DOCTOR') {
+    return `TXMD${six}`;
+  }
+  if (userType === 'NURSE') {
+    return `RN${six}`;
+  }
+  // fallback: uppercase alphanumeric
+  return (value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
 function EditUserModal({ user, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     firstName: '',
@@ -8,7 +24,8 @@ function EditUserModal({ user, onClose, onSuccess }) {
     email: '',
     phoneNumber: '',
     workLocation: '',
-    isActive: user.is_active ? 1 : 0,
+    isActive: 1,
+    licenseNumber: '',
   });
 
   const [workLocations, setWorkLocations] = useState([]);
@@ -17,25 +34,38 @@ function EditUserModal({ user, onClose, onSuccess }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  const isDoctor = user?.user_type === 'DOCTOR';
+  const isNurse = user?.user_type === 'NURSE';
+
   // Initialize form from user prop
   useEffect(() => {
     if (!user) return;
 
-    const [first, ...rest] = (user.name || '').split(' ');
-    const last = rest.join(' ');
+    const fullName = String(user.name || '').trim();
+    let firstName = '';
+    let lastName = '';
+
+    if (fullName) {
+      const parts = fullName.split(/\s+/);
+      firstName = parts[0];
+      lastName = parts.slice(1).join(' ');
+    }
 
     setFormData(prev => ({
       ...prev,
-      firstName: first || '',
-      lastName: last || '',
+      firstName,
+      lastName,
       email: user.email || '',
       phoneNumber: user.phone_number || '',
-      work_location: formData.workLocation
-        ? parseInt(formData.workLocation, 10)
-        : null,
+      // use work_location_id (numeric) if you have it from API
+      workLocation:
+        !isDoctor && user.work_location_id
+          ? String(user.work_location_id)
+          : '',
       isActive: user.is_active ? 1 : 0,
+      licenseNumber: user.license_number || '',
     }));
-  }, [user]);
+  }, [user, isDoctor]);
 
   // Load locations (reuse same options as AddUserModal)
   useEffect(() => {
@@ -65,22 +95,19 @@ function EditUserModal({ user, onClose, onSuccess }) {
     loadOptions();
   }, []);
 
-const handleChange = (e) => {
-  const { name, value } = e.target;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
 
-  setFormData(prev => ({
-    ...prev,
-    firstName: first || '',
-    lastName: last || '',
-    email: user.email || '',
-    phoneNumber: user.phone_number || '',
-    workLocation: user.work_location_id
-      ? String(user.work_location_id)
-      : '',
-    isActive: user.is_active ? 1 : 0,
-  }));
-
-};
+    setFormData(prev => ({
+      ...prev,
+      [name]:
+        name === 'isActive'
+          ? Number(value)
+          : name === 'licenseNumber'
+          ? normalizeLicenseForRole(value, user.user_type)
+          : value,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,16 +117,25 @@ const handleChange = (e) => {
     try {
       const payload = {
         user_id: user.user_id,
-        user_type: user.user_type,
+        user_type: user.user_type, // e.g. 'DOCTOR', 'NURSE', 'RECEPTIONIST'
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
         phone_number: formData.phoneNumber,
-        work_location: formData.workLocation
-          ? parseInt(formData.workLocation, 10)
-          : null,
         is_active: formData.isActive ? 1 : 0,
       };
+
+      // Only non-doctors have a primary work_location here
+      if (!isDoctor) {
+        payload.work_location = formData.workLocation
+          ? parseInt(formData.workLocation, 10)
+          : null;
+      }
+
+      // Doctors & nurses can edit license number
+      if (isDoctor || isNurse) {
+        payload.license_number = formData.licenseNumber.trim();
+      }
 
       const response = await fetch('/admin_api/users/update-user.php', {
         method: 'POST',
@@ -222,23 +258,45 @@ const handleChange = (e) => {
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="workLocation">Work Location</label>
-                <select
-                  id="workLocation"
-                  name="workLocation"
-                  value={formData.workLocation}
-                  onChange={handleChange}
-                >
-                  <option value="">(None)</option>
-                  {workLocations.map(loc => (
-                    <option key={loc.office_id} value={loc.office_id}>
-                      {loc.name} - {loc.address}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Work Location: hide for DOCTOR */}
+              {!isDoctor && (
+                <div className="form-group">
+                  <label htmlFor="workLocation">Work Location</label>
+                  <select
+                    id="workLocation"
+                    name="workLocation"
+                    value={formData.workLocation}
+                    onChange={handleChange}
+                  >
+                    <option value="">(None)</option>
+                    {workLocations.map(loc => (
+                      <option key={loc.office_id} value={loc.office_id}>
+                        {loc.name} - {loc.address}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
+
+            {/* License: editable for DOCTOR + NURSE */}
+            {(isDoctor || isNurse) && (
+              <div className="form-group">
+                <label htmlFor="licenseNumber">License Number</label>
+                <input
+                  type="text"
+                  id="licenseNumber"
+                  name="licenseNumber"
+                  value={formData.licenseNumber}
+                  onChange={handleChange}
+                  placeholder={
+                    isDoctor
+                      ? 'TXMD123456'
+                      : 'RN123456'
+                  }
+                />
+              </div>
+            )}
 
             <div className="form-group">
               <label htmlFor="isActive">Status</label>
