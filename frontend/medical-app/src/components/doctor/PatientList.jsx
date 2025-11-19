@@ -143,11 +143,13 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     setError(null);
     try {
       // Prefer the clinical detail endpoint which returns medicalHistory, medicationHistory, chronicConditions and currentMedications
-      // The clinical endpoint expects a numeric patient_id. Convert 'P001' -> 1
-      const numericId = parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
-      const res = await fetch(`/doctor_api/clinical/get-patient-details.php?patient_id=${numericId}`, { credentials: 'include' });
-      const payload = await res.json();
-      if (payload.success && payload.patient) {
+      // The clinical endpoint expects a numeric patient_id. Prefer `patient.patient_id` when available.
+      const numericId = patient.patient_id || parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
+
+      if (numericId > 0) {
+        const res = await fetch(`/doctor_api/clinical/get-patient-details.php?patient_id=${numericId}`, { credentials: 'include' });
+        const payload = await res.json();
+        if (payload.success && payload.patient) {
         // Merge the lightweight row data we already have with the enriched details returned by the clinical endpoint
         const p = payload.patient;
         const visit = payload.visit || {};
@@ -174,18 +176,21 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
 
         setSelectedPatient(merged);
         if (onPatientClick) onPatientClick(merged);
+          } else {
+            // If clinical endpoint didn't return a patient object, fall through to attempt get-by-id below
+          }
       } else {
-        // Fallback: try the patients get-by-id if clinical endpoint didn't return details
-        const fallback = await fetch(`/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`, { credentials: 'include' });
+        // No numeric ID available — use the patients get-by-id endpoint which accepts string IDs
+        const fallback = await fetch(`/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id || '')}`, { credentials: 'include' });
         const fbPayload = await fallback.json();
         if (fbPayload.success && fbPayload.patient) {
-          // Add numeric patient_id
-          const numericId = parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
-          fbPayload.patient.patient_id = numericId;
+          // Ensure numeric patient_id is added when possible
+          const derivedNumericId = parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
+          fbPayload.patient.patient_id = fbPayload.patient.patient_id || derivedNumericId;
           setSelectedPatient(fbPayload.patient);
           if (onPatientClick) onPatientClick(fbPayload.patient);
         } else {
-          setError(payload.error || fbPayload.error || 'Failed to load patient details');
+          setError(fbPayload.error || 'Failed to load patient details');
         }
       }
     } catch (err) {
