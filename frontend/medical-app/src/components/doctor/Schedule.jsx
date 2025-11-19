@@ -141,8 +141,16 @@ function Schedule({ onAppointmentClick }) {
     const assignedLocation = getDailyLocation(year, month, day);
     
     if (!assignedLocation) return [];
-    
+    // Prefer string comparison on YYYY-MM-DD to avoid timezone shifts
+    const target = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
     let dayAppointments = appointments.filter(app => {
+      // If backend provided a date-only prefix (ISO), compare directly
+      if (app.appointment_date && typeof app.appointment_date === 'string') {
+        const dateOnly = app.appointment_date.split('T')[0];
+        if (dateOnly === target) return true;
+      }
+      // Fallback: parse as Date (may be subject to timezone differences)
       const appDate = new Date(app.appointment_date);
       return appDate.getDate() === day &&
              appDate.getMonth() === month &&

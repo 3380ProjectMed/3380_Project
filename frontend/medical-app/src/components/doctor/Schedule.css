@@ -1,5 +1,6 @@
-/* ========== DOCTOR SCHEDULE - MONTHLY CALENDAR VIEW ========== */
+/* ========== SCHEDULE COMPONENT - PROFESSIONAL MEDICAL CALENDAR ========== */
 
+/* Root Variables */
 :root {
   --primary-color: #03045e;
   --secondary-color: #0077b6;
@@ -14,14 +15,14 @@
 /* ========== MAIN CONTAINER ========== */
 .schedule {
   padding: 2rem;
-  max-width: 100%;
-  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ========== HEADER ========== */
+/* ========== HEADER WITH MONTH NAVIGATION ========== */
 .schedule-header {
   margin-bottom: 2rem;
 }
@@ -29,9 +30,14 @@
 .month-navigation {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 2rem;
+  justify-content: space-between;
+  gap: 1.5rem;
   margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, var(--fifth-color), white);
+  padding: 1.5rem 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 119, 182, 0.08);
+  border: 2px solid var(--border);
 }
 
 .nav-arrow {
@@ -63,6 +69,7 @@
   font-weight: 700;
   color: var(--primary-color);
   margin: 0;
+  flex: 1;
   text-align: center;
 }
 
@@ -115,6 +122,7 @@
   outline: none;
   border-color: var(--secondary-color);
   box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
+  background-color: white;
 }
 
 .filter-section:has(.location-select:not([value="all"])) {
@@ -131,16 +139,12 @@
   border: 2px solid var(--border);
 }
 
-/* ========== CALENDAR GRID - FIXED HEIGHT ========== */
+/* ========== CALENDAR GRID ========== */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 0.75rem;
   width: 100%;
-  box-sizing: border-box;
-  /* CRITICAL FIX: Much smaller height */
-  grid-auto-rows: minmax(140px, auto);
-  align-items: stretch;
 }
 
 /* ========== WEEKDAY HEADERS ========== */
@@ -159,6 +163,7 @@
 
 /* ========== CALENDAR DAY CELL ========== */
 .calendar-day {
+  min-height: 120px;
   padding: 0.75rem;
   border: 2px solid var(--border);
   border-radius: 0.75rem;
@@ -168,15 +173,12 @@
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  min-height: 140px;
-  cursor: pointer;
 }
 
-.calendar-day:hover:not(.empty-day):not(.filtered):not(.weekend) {
+.calendar-day:hover:not(.empty-day):not(.weekend) {
   border-color: var(--third-color);
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.1);
   transform: translateY(-2px);
-  background: linear-gradient(135deg, var(--fifth-color), white);
 }
 
 .calendar-day.weekend {
@@ -188,21 +190,19 @@
   border-color: var(--secondary-color);
   border-width: 3px;
   background: linear-gradient(135deg, var(--fifth-color), white);
-  box-shadow: 0 4px 16px rgba(0, 119, 182, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 119, 182, 0.15);
 }
 
 .calendar-day.empty-day {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   opacity: 0.5;
-  cursor: default;
 }
 
 .calendar-day.filtered {
   opacity: 0.3;
   background: #fafafa;
   pointer-events: none;
-  cursor: default;
 }
 
 .calendar-day.filtered::after {
@@ -220,70 +220,73 @@
     rgba(0, 0, 0, 0.02) 16px
   );
   border-radius: 0.75rem;
-  pointer-events: none;
 }
 
 /* ========== DAY HEADER ========== */
 .day-header {
-  display: flex !important;
+  display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.625rem;
   flex-shrink: 0;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: relative;
-  z-index: 1;
-  pointer-events: none;
 }
 
 /* ========== DAY NUMBER ========== */
 .day-number {
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
   font-weight: 700;
-  color: var(--primary-color) !important;
-  font-size: 1.125rem !important;
+  color: var(--primary-color);
+  font-size: 1.125rem;
   width: 2rem;
   height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   transition: all 0.2s ease;
-  visibility: visible !important;
-  opacity: 1 !important;
-  flex-shrink: 0;
-  line-height: 1;
 }
 
 .calendar-day.today .day-number {
-  background: linear-gradient(135deg, var(--secondary-color), var(--third-color)) !important;
-  color: white !important;
-  font-weight: 800 !important;
+  background: linear-gradient(135deg, var(--secondary-color), var(--third-color));
+  color: white;
+  font-weight: 800;
   box-shadow: 0 4px 12px rgba(0, 119, 182, 0.4);
   width: 2.25rem;
   height: 2.25rem;
-  font-size: 1.25rem !important;
+  font-size: 1.25rem;
 }
 
 .calendar-day.weekend .day-number {
-  color: var(--gray) !important;
+  color: var(--gray);
 }
 
 /* ========== LOCATION BADGE ========== */
 .location-badge {
-  display: inline-block !important;
-  font-size: 0.6875rem !important;
-  font-weight: 700 !important;
-  padding: 0.25rem 0.625rem !important;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
   border-radius: 999px;
-  white-space: nowrap;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  visibility: visible !important;
-  opacity: 1 !important;
-  flex-shrink: 0;
+  white-space: nowrap;
   line-height: 1.2;
+}
+
+.location-badge.dmc {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  color: #065f46;
+  border: 1px solid #10b981;
+}
+
+.location-badge.wfc {
+  background: linear-gradient(135deg, #e9d5ff, #d8b4fe);
+  color: #6b21a8;
+  border: 1px solid #a855f7;
+}
+
+.location-badge.tmc {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  border: 1px solid #f59e0b;
 }
 
 /* ========== DAY CONTENT ========== */
@@ -296,7 +299,6 @@
   overflow-x: hidden;
   padding-right: 0.25rem;
   min-height: 0;
-  pointer-events: none;
 }
 
 /* Custom Scrollbar */
@@ -316,11 +318,6 @@
 
 .day-content::-webkit-scrollbar-thumb:hover {
   background: var(--third-color);
-}
-
-.day-content {
-  scrollbar-width: thin;
-  scrollbar-color: var(--forth-color) var(--fifth-color);
 }
 
 /* ========== APPOINTMENTS ========== */
@@ -344,7 +341,6 @@
   text-align: center;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
   z-index: 2;
-  pointer-events: none;
 }
 
 .appointment-item {
@@ -355,7 +351,6 @@
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  pointer-events: auto;
 }
 
 .appointment-item:hover {
@@ -389,29 +384,22 @@
   font-size: 0.8125rem;
   margin: auto 0;
   font-style: italic;
-  padding: 1rem 0.5rem;
+  padding: 1.5rem 0.5rem;
   font-weight: 500;
-  pointer-events: none;
 }
 
 /* ========== RESPONSIVE DESIGN ========== */
-@media (max-width: 1600px) {
-  .calendar-grid {
-    grid-auto-rows: minmax(130px, auto);
-  }
-  
-  .calendar-day {
-    min-height: 130px;
-  }
-}
-
 @media (max-width: 1400px) {
-  .calendar-grid {
-    grid-auto-rows: minmax(120px, auto);
+  .schedule {
+    padding: 1.5rem;
   }
-  
+
+  .month-title {
+    font-size: 1.75rem;
+  }
+
   .calendar-day {
-    min-height: 120px;
+    min-height: 110px;
   }
 }
 
@@ -419,80 +407,189 @@
   .schedule {
     padding: 1rem;
   }
-  
-  .calendar-grid {
-    grid-auto-rows: minmax(110px, auto);
-    gap: 0.5rem;
+
+  .month-navigation {
+    padding: 1rem 1.5rem;
   }
-  
-  .calendar-day {
-    min-height: 110px;
-  }
-  
+
   .month-title {
     font-size: 1.5rem;
   }
-}
 
-@media (max-width: 768px) {
   .calendar-grid {
-    grid-auto-rows: minmax(100px, auto);
+    gap: 0.5rem;
   }
-  
+
   .calendar-day {
     min-height: 100px;
     padding: 0.625rem;
   }
-  
-  .day-number {
-    font-size: 1rem !important;
-    width: 1.75rem;
-    height: 1.75rem;
-  }
-  
-  .calendar-day.today .day-number {
-    font-size: 1.125rem !important;
-    width: 2rem;
-    height: 2rem;
-  }
-  
-  .location-badge {
-    font-size: 0.625rem !important;
-    padding: 0.1875rem 0.5rem !important;
-  }
-  
+
   .appointment-item {
     padding: 0.5rem;
   }
-  
+
   .appointment-time {
     font-size: 0.8125rem;
   }
-  
+
   .appointment-patient {
     font-size: 0.75rem;
   }
 }
 
-/* ========== OVERRIDE ANY CONFLICTING STYLES ========== */
-.schedule .day-number,
-.schedule .day-header,
-.schedule .location-badge {
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+@media (max-width: 768px) {
+  .schedule {
+    padding: 0.75rem;
+  }
+
+  .month-navigation {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .nav-arrow {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .month-title {
+    font-size: 1.25rem;
+  }
+
+  .filter-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .location-select {
+    width: 100%;
+  }
+
+  .calendar-container {
+    padding: 1rem;
+  }
+
+  .calendar-grid {
+    gap: 0.375rem;
+  }
+
+  .calendar-day {
+    min-height: 90px;
+    padding: 0.5rem;
+  }
+
+  .weekday-header {
+    padding: 0.75rem 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .day-number {
+    font-size: 1rem;
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .calendar-day.today .day-number {
+    font-size: 1.125rem;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .location-badge {
+    font-size: 0.625rem;
+    padding: 0.1875rem 0.5rem;
+  }
+
+  .appointment-item {
+    padding: 0.4375rem;
+  }
+
+  .appointment-time {
+    font-size: 0.75rem;
+  }
+
+  .appointment-patient {
+    font-size: 0.6875rem;
+  }
+
+  .appointment-count {
+    font-size: 0.6875rem;
+    padding: 0.1875rem 0.5rem;
+  }
 }
 
+@media (max-width: 480px) {
+  .calendar-day {
+    min-height: 80px;
+    padding: 0.375rem;
+  }
+
+  .day-number {
+    font-size: 0.875rem;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .appointment-time,
+  .appointment-patient {
+    font-size: 0.6875rem;
+  }
+}
+
+/* ========== LOADING & ERROR STATES ========== */
+.schedule-loading,
+.schedule-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  padding: 3rem;
+}
+
+.schedule-loading .spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--fifth-color);
+  border-top-color: var(--secondary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1.5rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.schedule-loading p,
+.schedule-error p {
+  font-size: 1.125rem;
+  color: var(--gray);
+  font-weight: 600;
+  margin: 0;
+}
+
+.schedule-error svg {
+  color: #ef4444;
+  margin-bottom: 1.5rem;
+}
+
+/* ========== UTILITY CLASSES ========== */
 .schedule * {
   box-sizing: border-box;
 }
 
-.schedule .calendar-day {
+/* Ensure visibility of key elements */
+.schedule .day-number,
+.schedule .day-header,
+.schedule .location-badge,
+.schedule .day-content {
   display: flex !important;
-  flex-direction: column !important;
-}
-
-.schedule .day-header {
-  display: flex !important;
-  flex-direction: row !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
