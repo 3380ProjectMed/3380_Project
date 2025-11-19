@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, Phone, Calendar, MapPin, UserPlus } from 'lucide-react';
 import './SignUp.css';
 
@@ -87,16 +87,46 @@ export default function SignUp() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const formatPhone = (value) => {
+    if (!value) return '';
+
+    // keep only digits, max 10
+    const digits = value.replace(/\D/g, '').slice(0, 10);
+    const len = digits.length;
+
+    if (len === 0) return '';
+
+    if (len < 4) {
+      // 1–3: "555"
+      return digits;
+    }
+
+    if (len < 7) {
+      // 4–6: "(555) 1", "(555) 12", "(555) 123"
+      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    }
+
+    // 7–10: "(555) 123-4", "(555) 123-45", ...
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    let newValue = value;
+
+    if (name === 'phone' || name === 'emergencyPhone') {
+      newValue = formatPhone(value);
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: newValue,
     }));
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
@@ -158,7 +188,9 @@ export default function SignUp() {
           <h1 className="signup-title">Create Patient Account</h1>
           <p className="signup-subtitle">Join us to manage your healthcare journey</p>
         </div>
-
+        <Link to="/" className="btn btn-secondary">
+              Back to Home
+        </Link>
         {/* Flash banner */}
         {flash.message && (
           <div className={`signup-flash signup-flash-${flash.type}`}>
