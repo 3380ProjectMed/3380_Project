@@ -9,10 +9,11 @@ $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
 $db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
 $port = getenv('AZURE_MYSQL_PORT') ?: '3306';
 
+// Initialize response array
 $response = [
     'success' => false,
     'message' => '',
-    'errors'  => [],
+    'errors' => []
 ];
 
 // Only accept POST requests
@@ -25,24 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Get JSON input
 $input = json_decode(file_get_contents('php://input'), true);
 
-// Basic required fields
-$required_fields = [
-    'firstName',
-    'lastName',
-    'email',
-    'password',
-    'confirmPassword',
-    'dateOfBirth',
-    'phone',
-    'gender',
-];
-
+// Validate required fields
+$required_fields = ['firstName', 'lastName', 'email', 'password', 'confirmPassword', 'dateOfBirth', 'phone', 'gender'];
 foreach ($required_fields as $field) {
     if (empty($input[$field])) {
         $response['errors'][$field] = ucfirst(str_replace('_', ' ', $field)) . ' is required';
     }
 }
 
+// If there are validation errors, return them
 if (!empty($response['errors'])) {
     $response['message'] = 'Please fill in all required fields';
     echo json_encode($response);
@@ -58,6 +50,7 @@ if (strlen($input['password']) < 8) {
     $response['errors']['password'] = 'Password must be at least 8 characters';
 }
 
+// Add password confirmation validation
 if ($input['password'] !== $input['confirmPassword']) {
     $response['errors']['confirmPassword'] = 'Passwords do not match';
 }
@@ -68,7 +61,7 @@ if (!empty($response['errors'])) {
     exit;
 }
 
-// Initialize mysqli with SSL support
+// Initialize mysqli with SSL support (like login.php)
 $mysqli = mysqli_init();
 if (!$mysqli) {
     $response['message'] = 'mysqli_init failed';
@@ -76,17 +69,19 @@ if (!$mysqli) {
     exit;
 }
 
+// Set SSL options BEFORE connecting
 $sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
 
 if (file_exists($sslCertPath)) {
-    $mysqli->ssl_set(null, null, $sslCertPath, null, null);
+    $mysqli->ssl_set(NULL, NULL, $sslCertPath, NULL, NULL);
     $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 1);
 } else {
-    $mysqli->ssl_set(null, null, null, null, null);
+    $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
     $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 0);
 }
 
-if (!@$mysqli->real_connect($host, $user, $pass, $db, (int)$port, null, MYSQLI_CLIENT_SSL)) {
+// NOW connect with SSL
+if (!@$mysqli->real_connect($host, $user, $pass, $db, (int)$port, NULL, MYSQLI_CLIENT_SSL)) {
     $response['message'] = 'Database connection failed: ' . $mysqli->connect_error;
     echo json_encode($response);
     exit;
@@ -98,36 +93,29 @@ $mysqli->set_charset('utf8mb4');
 $mysqli->begin_transaction();
 
 try {
-    // ── 1) Create unique username from email ────────────────────────────────
-    $username       = substr($input['email'], 0, strpos($input['email'], '@'));
-    $base_username  = $username;
-    $counter        = 1;
+    // Generate username from email (before @ symbol)
+    $username = substr($input['email'], 0, strpos($input['email'], '@'));
+    $base_username = $username;
+    $counter = 1;
 
+    // Check if username exists and make it unique
     $stmt = $mysqli->prepare("SELECT user_id FROM user_account WHERE username = ?");
-    if (!$stmt) {
-        throw new Exception('Prepare failed (check username): ' . $mysqli->error);
-    }
-
-    $stmt->bind_param('s', $username);
+    $stmt->bind_param("s", $username);
     $stmt->execute();
     $stmt->store_result();
 
     while ($stmt->num_rows > 0) {
         $username = $base_username . $counter;
-        $stmt->bind_param('s', $username);
+        $stmt->bind_param("s", $username);
         $stmt->execute();
         $stmt->store_result();
         $counter++;
     }
     $stmt->close();
 
-    // ── 2) Check if email exists ───────────────────────────────────────────
+    // Check if email already exists
     $stmt = $mysqli->prepare("SELECT user_id FROM user_account WHERE email = ?");
-    if (!$stmt) {
-        throw new Exception('Prepare failed (check email): ' . $mysqli->error);
-    }
-
-    $stmt->bind_param('s', $input['email']);
+    $stmt->bind_param("s", $input['email']);
     $stmt->execute();
     $stmt->store_result();
 
@@ -136,27 +124,49 @@ try {
     }
     $stmt->close();
 
-    // ── 3) Insert into user_account ────────────────────────────────────────
+    // Hash password
     $password_hash = password_hash($input['password'], PASSWORD_DEFAULT);
 
+    // Insert into user_account table
     $stmt = $mysqli->prepare(
-        "INSERT INTO user_account (username, email, password_hash, role, is_active)
+        "INSERT INTO user_account (username, email, password_hash, role, is_active) 
          VALUES (?, ?, ?, 'PATIENT', 1)"
     );
-    if (!$stmt) {
-        throw new Exception('Prepare failed (insert user_account): ' . $mysqli->error);
-    }
-
-    $stmt->bind_param('sss', $username, $input['email'], $password_hash);
+    $stmt->bind_param("sss", $username, $input['email'], $password_hash);
 
     if (!$stmt->execute()) {
-        throw new Exception('Failed to create user account: ' . $stmt->error);
+        throw new Exception('Failed to create user account');
     }
 
     $user_id = $mysqli->insert_id;
     $stmt->close();
 
-    // ── 4) Derived / normalized fields for Patient ─────────────────────────
+    // Map gender value to code (matching your SMALLINT field)
+    // Assuming: 1 = Male, 2 = Female, 3 = Other, 4 = Prefer not to say
+    $gender_map = [
+        'male' => 1,
+        'female' => 2,
+        'other' => 3,
+        'prefer-not-to-say' => 4
+    ];
+    $assigned_gender = $gender_map[strtolower($input['gender'])] ?? 3;
+
+    // Generate SSN placeholder (you should implement proper SSN handling)
+    // For now, using a temporary placeholder
+    $ssn = 'TEMP' . str_pad($user_id, 7, '0', STR_PAD_LEFT);
+
+    // Format phone number (remove non-numeric characters)
+    $phone = preg_replace('/[^0-9]/', '', $input['phone']);
+
+    // Format emergency contact
+    $emergency_contact = null;
+    if (!empty($input['emergencyContact']) && !empty($input['emergencyPhone'])) {
+        $emergency_phone = preg_replace('/[^0-9]/', '', $input['emergencyPhone']);
+        $emergency_contact = $input['emergencyContact'] . ':' . $emergency_phone;
+    }
+
+    // Insert into Patient table - Using PascalCase column names to match schema
+    // ----- Derived fields for Patient -----
     $first_name = trim($input['firstName']);
     $last_name  = trim($input['lastName']);
 
@@ -166,21 +176,22 @@ try {
         throw new Exception('Invalid date of birth format');
     }
 
-    // Temporary SSN placeholder
-    $ssn = 'TEMP' . str_pad((string)$user_id, 7, '0', STR_PAD_LEFT);
+    // $ssn already set above as TEMP + user_id
 
-    // You said you don't care about stripping -> store as-is from React
-    $phone = $input['phone'] ?? '';
+    // Emergency contact fields (all optional)
+    $ec_fn  = isset($input['emergencyContactfn']) && trim($input['emergencyContactfn']) !== '' ? trim($input['emergencyContactfn']) : null;
+    $ec_ln  = isset($input['emergencyContactln']) && trim($input['emergencyContactln']) !== '' ? trim($input['emergencyContactln']) : null;
+    $ec_rel = isset($input['emergencyContactrl']) && trim($input['emergencyContactrl']) !== '' ? trim($input['emergencyContactrl']) : null;
+    $ec_ph  = isset($input['emergencyPhone'])     && trim($input['emergencyPhone'])     !== '' ? substr(preg_replace('/\D+/', '', $input['emergencyPhone']), 0, 15) : null;
 
-    // Gender: from signup dropdown (codes_gender.gender_code)
-    $assigned_at_birth_gender = isset($input['gender']) ? (int)$input['gender'] : null;
-    $gender                   = $assigned_at_birth_gender;
+    // Gender map (SMALLINT)
+    $gender_map = ['male' => 1, 'female' => 2, 'other' => 3, 'prefer-not-to-say' => 4];
+    $assigned_at_birth_gender = $gender_map[strtolower($input['gender'])] ?? 3;
+    $gender = $assigned_at_birth_gender;
 
-    // Optional coded fields
-    $ethnicity = (isset($input['ethnicity']) && $input['ethnicity'] !== '')
-        ? (int)$input['ethnicity'] : null;
-    $race      = (isset($input['race']) && $input['race'] !== '')
-        ? (int)$input['race'] : null;
+    // Optional codes
+    $ethnicity = (isset($input['ethnicity']) && $input['ethnicity'] !== '') ? (int)$input['ethnicity'] : null;
+    $race      = (isset($input['race'])      && $input['race']      !== '') ? (int)$input['race']      : null;
 
     $email = $input['email'];
 
@@ -192,35 +203,31 @@ try {
     $allergies          = (isset($input['allergiesCode'])     && $input['allergiesCode']     !== '') ? (int)$input['allergiesCode']     : null;
     $blood_type         = (isset($input['bloodType'])         && $input['bloodType']         !== '') ? $input['bloodType']              : null;
 
-    // ── 5) Insert into patient ─────────────────────────────────────────────
     $stmt = $mysqli->prepare(
         "INSERT INTO patient (
-            patient_id,
-            first_name,
-            last_name,
-            dob,
-            ssn,
-            assigned_at_birth_gender,
-            gender,
-            ethnicity,
-            race,
-            email,
-            primary_doctor,
-            specialty_doctor,
-            insurance_id,
-            insurance_provider,
-            prescription,
-            allergies,
-            blood_type
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                patient_id,
+                first_name,
+                last_name,
+                dob,
+                ssn,
+                assigned_at_birth_gender,
+                gender,
+                ethnicity,
+                race,
+                email,
+                primary_doctor,
+                specialty_doctor,
+                insurance_id,
+                insurance_provider,
+                prescription,
+                allergies,
+                blood_type
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
-    if (!$stmt) {
-        throw new Exception('Prepare failed (insert patient): ' . $mysqli->error);
-    }
 
     $stmt->bind_param(
         'issssiiiisiiiiiis',
-        $user_id,
+        $user_id,          // patient_id == user_id
         $first_name,
         $last_name,
         $dob,
@@ -244,67 +251,58 @@ try {
     }
     $stmt->close();
 
+    // From here on, use $patient_id = $user_id
     $patient_id = $user_id;
 
-    // ── 6) Emergency contact (optional) ────────────────────────────────────
-    $ec_fn  = isset($input['emergencyContactfn']) && trim($input['emergencyContactfn']) !== ''
-        ? trim($input['emergencyContactfn']) : null;
-    $ec_ln  = isset($input['emergencyContactln']) && trim($input['emergencyContactln']) !== ''
-        ? trim($input['emergencyContactln']) : null;
-    $ec_rel = isset($input['emergencyContactrl']) && trim($input['emergencyContactrl']) !== ''
-        ? trim($input['emergencyContactrl']) : null;
-
-    // no stripping: store exactly what user typed
-    $ec_ph  = isset($input['emergencyPhone']) && trim($input['emergencyPhone']) !== ''
-        ? trim($input['emergencyPhone']) : null;
 
     if ($ec_fn || $ec_ln || $ec_rel || $ec_ph) {
         $stmt = $mysqli->prepare(
             "INSERT INTO emergency_contact (
-                patient_id,
-                ec_first_name,
-                ec_last_name,
-                ec_phone,
-                relationship
-            ) VALUES (?, ?, ?, ?, ?)"
+            patient_id,
+            ec_first_name,
+            ec_last_name,
+            ec_phone,
+            relationship
+        ) VALUES (?, ?, ?, ?, ?)"
         );
-        if (!$stmt) {
-            throw new Exception('Prepare failed (insert emergency_contact): ' . $mysqli->error);
-        }
 
-        $stmt->bind_param('issss', $patient_id, $ec_fn, $ec_ln, $ec_ph, $ec_rel);
+        // NOTE: order matches the column list above (phone before relationship)
+        $stmt->bind_param("issss", $patient_id, $ec_fn, $ec_ln, $ec_ph, $ec_rel);
 
         if (!$stmt->execute()) {
             throw new Exception('Failed to create emergency contact: ' . $stmt->error);
         }
-        $ec_id = $mysqli->insert_id;
         $stmt->close();
+        $ec_id = $mysqli->insert_id;
 
         $stmt = $mysqli->prepare(
             "UPDATE patient SET emergency_contact_id = ? WHERE patient_id = ?"
         );
+
         if (!$stmt) {
-            throw new Exception('Prepare failed (update patient emergency_contact_id): ' . $mysqli->error);
+            throw new Exception("Prepare failed (update patient): " . $mysqli->error);
         }
 
-        $stmt->bind_param('ii', $ec_id, $patient_id);
+        $stmt->bind_param("ii", $ec_id, $patient_id);
 
         if (!$stmt->execute()) {
-            throw new Exception('Execute failed (update patient emergency_contact_id): ' . $stmt->error);
+            throw new Exception("Execute failed (update patient): " . $stmt->error);
         }
-        $stmt->close();
     }
 
-    // ── 7) Commit ──────────────────────────────────────────────────────────
+    // Commit transaction
     $mysqli->commit();
 
     $response['success'] = true;
     $response['message'] = 'Account created successfully';
 } catch (Exception $e) {
+    // Rollback transaction on error
     $mysqli->rollback();
     $response['message'] = $e->getMessage();
 } finally {
+    // Close connection
     $mysqli->close();
 }
 
+// Return response
 echo json_encode($response);
