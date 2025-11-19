@@ -12,7 +12,7 @@
 .info-card {
   background: white;
   border-radius: 1rem;
-  padding: 0;
+  padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 119, 182, 0.08);
   border: 2px solid #e5e7eb;
   margin-bottom: 2rem;
