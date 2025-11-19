@@ -18,7 +18,8 @@ try {
 
     // Allow formats like 'P001' or '001' or numeric
     $numeric = intval(preg_replace('/[^0-9]/', '', $raw));
-    if ($numeric <= 0) throw new Exception('Invalid patient id');
+    if ($numeric <= 0)
+        throw new Exception('Invalid patient id');
 
     // Get patient basic info - all lowercase table and column names
     $sql = "SELECT 
@@ -29,10 +30,14 @@ try {
                 p.email,
                 p.emergency_contact_id,
                 p.blood_type,
-                ca.allergies_text as allergies,
+                (
+                    SELECT GROUP_CONCAT(ca2.allergies_text SEPARATOR ', ')
+                    FROM allergies_per_patient app2
+                    JOIN codes_allergies ca2 ON app2.allergy_id = ca2.allergies_code
+                    WHERE app2.patient_id = p.patient_id
+                ) as allergies,
                 cg.gender_text as gender
             FROM patient p
-            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
             WHERE p.patient_id = ?
             LIMIT 1";
@@ -58,7 +63,7 @@ try {
 
     $patient = [
         'id' => 'P' . str_pad($p['patient_id'], 3, '0', STR_PAD_LEFT),
-        'patient_id' => (int)$p['patient_id'],
+        'patient_id' => (int) $p['patient_id'],
         'name' => $p['first_name'] . ' ' . $p['last_name'],
         'dob' => $p['dob'],
         'age' => $age,
@@ -81,14 +86,14 @@ try {
                           FROM medical_condition mc
                           WHERE mc.patient_id = ?
                           ORDER BY mc.diagnosis_date DESC";
-        
+
         $conditions = executeQuery($conn, $conditions_sql, 'i', [$numeric]);
         if (is_array($conditions) && count($conditions) > 0) {
-            $patient['chronicConditions'] = array_map(function($c) {
+            $patient['chronicConditions'] = array_map(function ($c) {
                 return $c['condition_name'] ?? '';
             }, $conditions);
-            
-            $patient['medicalHistory'] = array_map(function($c) {
+
+            $patient['medicalHistory'] = array_map(function ($c) {
                 return [
                     'condition' => $c['condition_name'] ?? '',
                     'diagnosis_date' => $c['diagnosis_date'] ?? null
@@ -117,7 +122,7 @@ try {
 
         $meds = executeQuery($conn, $meds_sql, 'i', [$numeric]);
         if (is_array($meds)) {
-            $patient['currentMedications'] = array_map(function($m) {
+            $patient['currentMedications'] = array_map(function ($m) {
                 return [
                     'id' => $m['prescription_id'] ?? null,
                     'name' => $m['name'] ?? '',
@@ -153,7 +158,7 @@ try {
         $visits = executeQuery($conn, $visits_sql, 'i', [$numeric]);
         if (is_array($visits) && count($visits) > 0) {
             // If we have visits, append them to medical history
-            $visitHistory = array_map(function($v) {
+            $visitHistory = array_map(function ($v) {
                 return [
                     'visit_id' => $v['visit_id'] ?? null,
                     'appointment_id' => $v['appointment_id'] ?? null,
@@ -166,7 +171,7 @@ try {
                     'temperature' => $v['temperature'] ?? null
                 ];
             }, $visits);
-            
+
             // Merge visits with chronic conditions in medicalHistory
             $patient['medicalHistory'] = array_merge($patient['medicalHistory'], $visitHistory);
         }

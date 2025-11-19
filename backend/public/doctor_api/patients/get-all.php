@@ -55,17 +55,22 @@ try {
                 p.email,
                 p.emergency_contact_id,
                 p.blood_type,
-                ca.allergies_text as allergies,
+                (
+                    SELECT GROUP_CONCAT(ca2.allergies_text SEPARATOR ', ')
+                    FROM allergies_per_patient app2
+                    JOIN codes_allergies ca2 ON app2.allergy_id = ca2.allergies_code
+                    WHERE app2.patient_id = p.patient_id
+                ) as allergies,
                 cg.gender_text as gender,
                 MAX(a.Appointment_date) as last_visit,
                 MIN(CASE WHEN a.Appointment_date > NOW() THEN a.Appointment_date END) as next_appointment
             FROM patient p
-            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            
             LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
             LEFT JOIN appointment a ON p.patient_id = a.Patient_id
             WHERE p.primary_doctor = ?
             GROUP BY p.patient_id, p.first_name, p.last_name, p.dob, p.email, 
-                     p.emergency_contact_id, p.blood_type, ca.allergies_text, cg.gender_text
+                     p.emergency_contact_id, p.blood_type, cg.gender_text
             ORDER BY p.last_name, p.first_name";
 
     $patients = executeQuery($conn, $sql, 'i', [$doctor_id]);
