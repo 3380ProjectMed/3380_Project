@@ -40,55 +40,50 @@ try {
     $sql = "SELECT
                 p.patient_id,
                 CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
-
-                -- first/last visit with THIS doctor in the period
                 MIN(CASE WHEN a.Status NOT IN ('Cancelled', 'No-Show')
-                         THEN a.Appointment_date END) AS first_visit_date,
+                        THEN a.Appointment_date END) AS first_visit_date,
                 MAX(CASE WHEN a.Status NOT IN ('Cancelled', 'No-Show')
-                         THEN a.Appointment_date END) AS last_visit_date,
-
+                        THEN a.Appointment_date END) AS last_visit_date,
                 COUNT(*) AS total_appointments,
                 SUM(CASE WHEN a.Status = 'Completed' THEN 1 ELSE 0 END) AS completed_appointments,
                 SUM(CASE WHEN a.Status = 'No-Show'  THEN 1 ELSE 0 END) AS no_shows,
                 SUM(CASE WHEN a.Status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled_appointments,
-
-                -- NEW to THIS doctor: earliest lifetime visit with this doc falls in period
                 CASE
-                    WHEN (
+                    WHEN MIN(CASE WHEN a.Status NOT IN ('Cancelled', 'No-Show')
+                                THEN a.Appointment_date END) = (
                         SELECT MIN(a2.Appointment_date)
                         FROM appointment a2
                         WHERE a2.Patient_id = a.Patient_id
-                          AND a2.Doctor_id  = ?
-                          AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                    ) BETWEEN ? AND ?
+                        AND a2.Doctor_id  = a.Doctor_id
+                        AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                    )
+                    AND MIN(CASE WHEN a.Status NOT IN ('Cancelled', 'No-Show')
+                                THEN a.Appointment_date END)
+                        BETWEEN ? AND ?
                     THEN 1 ELSE 0
                 END AS is_new_patient,
-
-                -- RETAINED with THIS doctor: ≥2 lifetime visits with this doc
                 CASE
                     WHEN (
                         SELECT COUNT(*)
                         FROM appointment a3
                         WHERE a3.Patient_id = a.Patient_id
-                          AND a3.Doctor_id  = ?
-                          AND a3.Status NOT IN ('Cancelled', 'No-Show')
+                        AND a3.Doctor_id  = ?
+                        AND a3.Status NOT IN ('Cancelled', 'No-Show')
                     ) >= 2
                     THEN 1 ELSE 0
                 END AS is_retained
-
             FROM appointment a
             JOIN patient p ON p.patient_id = a.Patient_id
             WHERE a.Appointment_date BETWEEN ? AND ?
-              AND a.Doctor_id = ?";
+            AND a.Doctor_id = ?
+            AND EXISTS (
+                SELECT 1
+                FROM appointment a_seen
+                WHERE a_seen.Patient_id = a.Patient_id
+                    AND a_seen.Doctor_id  = a.Doctor_id
+                    AND a_seen.Status NOT IN ('Cancelled', 'No-Show')
+            )";
 
-    // placeholders:
-    // 1: doctor_id (for a2.Doctor_id)
-    // 2: start_date  (for BETWEEN in is_new_patient)
-    // 3: end_date    (for BETWEEN in is_new_patient)
-    // 4: doctor_id   (for a3.Doctor_id)
-    // 5: start_date  (for outer WHERE BETWEEN)
-    // 6: end_date    (for outer WHERE BETWEEN)
-    // 7: doctor_id   (for outer AND a.Doctor_id = ?)
 
     $types  = 'ississi';
     $params = [
