@@ -50,14 +50,15 @@ try {
                 SUM(CASE WHEN a.Status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled_appointments,
                 CASE
                     WHEN MIN(CASE WHEN a.Status NOT IN ('Cancelled', 'No-Show')
-                                  THEN a.Appointment_date END) = (
+                                THEN a.Appointment_date END) = (
                         SELECT MIN(a2.Appointment_date)
                         FROM appointment a2
                         WHERE a2.Patient_id = a.Patient_id
-                          AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                        AND a2.Doctor_id  = a.Doctor_id
+                        AND a2.Status NOT IN ('Cancelled', 'No-Show')
                     )
                     AND MIN(CASE WHEN a.Status NOT IN ('Cancelled', 'No-Show')
-                                  THEN a.Appointment_date END)
+                                THEN a.Appointment_date END)
                         BETWEEN ? AND ?
                     THEN 1 ELSE 0
                 END AS is_new_patient,
