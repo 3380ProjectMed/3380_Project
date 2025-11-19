@@ -61,7 +61,7 @@ try {
                 a.Appointment_date,
                 a.Reason_for_visit,
                 a.Office_id,
-                a.Status,                -- ✅ Get REAL status from database
+                a.Status,               
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.patient_id,
                 (
@@ -95,19 +95,45 @@ try {
     ];
 
     foreach ($appointments as $apt) {
-        $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
+        // Appointment DateTime in Chicago timezone
+        $appointmentDateTime = null;
+        try {
+            $appointmentDateTime = new DateTime($apt['Appointment_date']);
+            $appointmentDateTime->setTimezone($tz);
+        } catch (Exception $e) {
+            // fallback: create from date only
+            $appointmentDateTime = DateTime::createFromFormat('Y-m-d H:i:s', $apt['Appointment_date'], $tz) ?: new DateTime('now', $tz);
+        }
 
         // ========================================
-        // 🆕 KEY CHANGE: Use REAL status from database
-        // No more time-based calculation!
+        // Time-based calculation (Chicago timezone)
+        // Adds: minutesUntil and computedStatus (derived)
+        // Keep DB status in `status` and `dbStatus` for compatibility
         // ========================================
         $status = $apt['Status'] ?? 'Scheduled';
 
-        // Calculate waiting time if patient has checked in
+        // minutes until appointment (positive => in future, negative => in past)
+        $minutesUntil = (int) floor(($appointmentDateTime->getTimestamp() - $currentDateTime->getTimestamp()) / 60);
+
+        // Compute a derived status based on minutesUntil and DB status
+        // Rules (configurable thresholds):
+        // - >= 16 minutes: 'upcoming'
+        // - between -30 and 15: 'active' (about to start / in-progress)
+        // - < -30: 'past'
+        if ($minutesUntil >= 16) {
+            $computedStatus = 'upcoming';
+        } elseif ($minutesUntil >= -30 && $minutesUntil <= 15) {
+            $computedStatus = 'active';
+        } else {
+            $computedStatus = 'past';
+        }
+
+        // Calculate waiting time if patient has checked in (minutes)
         $waitingTime = 0;
         if (!empty($apt['checked_in_at'])) {
             try {
-                $checkedIn = new DateTime($apt['checked_in_at'], $tz);
+                $checkedIn = new DateTime($apt['checked_in_at']);
+                $checkedIn->setTimezone($tz);
                 $diff = $currentDateTime->diff($checkedIn);
                 $waitingTime = ($diff->h * 60) + $diff->i;
             } catch (Exception $e) {
@@ -121,8 +147,10 @@ try {
             'patientId' => $apt['patient_id'],
             'patientIdFormatted' => 'P' . str_pad($apt['patient_id'], 3, '0', STR_PAD_LEFT),
             'patientName' => $apt['patient_name'],
-            'time' => date('g:i A', strtotime($apt['Appointment_date'])),
+            'time' => date('g:i A', strtotime($apt['Appointment_date'] . ' UTC')),
             'appointmentDateTime' => $apt['Appointment_date'],
+            'minutesUntil' => $minutesUntil,
+            'computedStatus' => $computedStatus,
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
             'status' => $status,  // ✅ REAL status from database
             'dbStatus' => $status,  // Keep for compatibility
