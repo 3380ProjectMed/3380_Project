@@ -59,40 +59,52 @@ const [formData, setFormData] = useState({
       }));
     }
   };
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
+const handleSubmit = async () => {
+  if (!validateForm()) return;
 
-    setIsSubmitting(true);
-    
-    try {
-      const response = await fetch('/api/signup.php', {  // Adjust path as needed
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
+  setIsSubmitting(true);
+  setFlash({ type: null, message: '' });   // clear old message
+  
+  try {
+    const response = await fetch('/api/signup.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // show quick success flash, then redirect
+      setFlash({
+        type: 'success',
+        message: 'Account created successfully! Redirecting to your account…'
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        alert('Account created successfully!');
-        // Redirect to login or dashboard
-        window.location.href = '/login';
-      } else {
-        // Display server-side errors
-        if (data.errors) {
-          setErrors(data.errors);
-        }
-        alert(data.message || 'Registration failed');
+      setTimeout(() => {
+        // change '/login' to whatever “new account page” route you want
+        navigate('/login');
+      }, 1500);
+    } else {
+      if (data.errors) {
+        setErrors(data.errors);
       }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('An error occurred. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+
+      setFlash({
+        type: 'error',
+        message: data.message || 'Registration failed. Please review the form.'
+      });
     }
-  };
+  } catch (error) {
+    console.error('Error:', error);
+    setFlash({
+      type: 'error',
+      message: 'An unexpected error occurred. Please try again.'
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="signup-container">
@@ -105,7 +117,12 @@ const [formData, setFormData] = useState({
           <h1 className="signup-title">Create Patient Account</h1>
           <p className="signup-subtitle">Join us to manage your healthcare journey</p>
         </div>
-
+          {/* Flash banner */}
+          {flash.message && (
+            <div className={`signup-flash signup-flash-${flash.type}`}>
+              {flash.message}
+            </div>
+          )}
         {/* Main Card */}
         <div className="signup-card">
           <div className="signup-card-content">
