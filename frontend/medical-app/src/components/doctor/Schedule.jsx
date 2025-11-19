@@ -65,11 +65,24 @@ function Schedule({ onAppointmentClick }) {
       if (data.success) {
         const grouped = data.appointments || {};
         const flat = [];
-        Object.keys(grouped).forEach(date => {
-          grouped[date].forEach(a => {
+        Object.keys(grouped).forEach(dateKey => {
+          grouped[dateKey].forEach(a => {
+            // compute a Chicago date-only string (YYYY-MM-DD) to avoid timezone shifts
+            let dateOnlyChicago = null;
+            try {
+              if (a.appointment_date) {
+                const parsed = new Date(a.appointment_date);
+                // 'en-CA' format produces YYYY-MM-DD
+                dateOnlyChicago = parsed.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+              }
+            } catch (err) {
+              // ignore and fallback to group key below
+            }
+
             flat.push({
               appointment_id: a.id,
               appointment_date: a.appointment_date,
+              dateOnlyChicago: dateOnlyChicago || (typeof dateKey === 'string' ? dateKey.split('T')[0] : null),
               appointment_time: a.appointment_time,
               patient_name: a.patientName || a.patient_name || 'Patient',
               office_id: a.office_id || a.officeId || null,
@@ -142,7 +155,27 @@ function Schedule({ onAppointmentClick }) {
     
     if (!assignedLocation) return [];
     
+    // target date in YYYY-MM-DD for the clicked day (Chicago semantics)
+    const target = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
     let dayAppointments = appointments.filter(app => {
+      // prefer the precomputed Chicago date-only
+      if (app.dateOnlyChicago) {
+        return app.dateOnlyChicago === target;
+      }
+
+      // fallback: compute Chicago date-only on the fly
+      try {
+        if (app.appointment_date) {
+          const parsed = new Date(app.appointment_date);
+          const dChicago = parsed.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+          if (dChicago === target) return true;
+        }
+      } catch (err) {
+        // ignore
+      }
+
+      // last-resort: original local-parse matching (may be subject to timezone issues)
       const appDate = new Date(app.appointment_date);
       return appDate.getDate() === day &&
              appDate.getMonth() === month &&
