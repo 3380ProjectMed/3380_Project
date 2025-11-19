@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './Schedule.css';
+import DayAppointmentsModal from './DayAppointmentsModal';
 
 /**
- * Schedule Component
+ * Schedule Component - FINAL VERSION
  * 
- * Displays a monthly calendar view with doctor's appointments
  * Features:
- * - Monthly navigation (previous/next)
- * - Location-based filtering (dynamic from work schedule)
- * - Real-time data from API
- * - Appointment display with time and patient name
- * - Weekend highlighting based on work schedule
- * - Today's date highlighted with a circle
- * - Day click to view all appointments in modal
+ * - Monthly calendar view with LARGER day boxes
+ * - Location badges for each working day
+ * - Today's date highlighted with blue circle (19)
+ * - Click on day → Shows modal with list of ALL appointments
+ * - Click on individual appointment → Opens directly
+ * - Location filtering
+ * - Scrollable appointment lists
  */
 function Schedule({ onAppointmentClick }) {
   const [currentDate, setCurrentDate] = useState(new Date()); 
@@ -22,26 +22,24 @@ function Schedule({ onAppointmentClick }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedDay, setSelectedDay] = useState(null);
+  
+  // Modal state for showing day appointments
   const [showDayModal, setShowDayModal] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedDayAppointments, setSelectedDayAppointments] = useState([]);
 
-  // Fetch work schedule on component mount
   useEffect(() => {
     fetchWorkSchedule();
     fetchAppointments();
   }, []);
 
-  // Refetch appointments when month changes
   useEffect(() => {
     fetchAppointments();
   }, [currentDate]);
 
-  /**
-   * Fetch doctor's work schedule from API
-   */
   const fetchWorkSchedule = async () => {
     try {
-  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
       const response = await fetch(`${API_BASE}/doctor_api/schedule/get-doctor-schedule.php`, { credentials: 'include' });
       const data = await response.json();
       
@@ -55,20 +53,16 @@ function Schedule({ onAppointmentClick }) {
     }
   };
 
-  /**
-   * Fetch appointments for current month
-   */
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const month = currentDate.getMonth() + 1; // JS months are 0-indexed
+      const month = currentDate.getMonth() + 1;
       const year = currentDate.getFullYear();
-  const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
-  const response = await fetch(`${API_BASE}/doctor_api/appointments/get-by-month.php?month=${month}&year=${year}`, { credentials: 'include' });
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      const response = await fetch(`${API_BASE}/doctor_api/appointments/get-by-month.php?month=${month}&year=${year}`, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success) {
-        // The backend groups appointments by date. Flatten into a single array for easier filtering.
         const grouped = data.appointments || {};
         const flat = [];
         Object.keys(grouped).forEach(date => {
@@ -84,7 +78,6 @@ function Schedule({ onAppointmentClick }) {
             });
           });
         });
-
         setAppointments(flat);
       } else {
         setError(data.error || 'Failed to load appointments');
@@ -96,71 +89,59 @@ function Schedule({ onAppointmentClick }) {
     }
   };
 
-  /**
-   * Get the day of week name from a date
-   */
   const getDayOfWeekName = (date) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return days[date.getDay()];
   };
 
-  /**
-   * Get assigned location for a specific day based on work schedule
-   */
-const getDailyLocation = (year, month, day) => {
-  const date = new Date(year, month, day);
-  const dayOfWeekName = getDayOfWeekName(date);
-  
-  // Find work schedule entry for this day of week
-  const scheduleEntry = workSchedule.find(
-    s => (s.day_of_week || s.Day_of_week) === dayOfWeekName
-  );
-  
-  if (!scheduleEntry) {
-    return null; // Not working this day
-  }
-  
-  return {
-    office_id: scheduleEntry.office_id || scheduleEntry.Office_ID,
-    office_name: scheduleEntry.office_name,
-    address: scheduleEntry.address,
-    city: scheduleEntry.city || scheduleEntry.City,
-    state: scheduleEntry.state || scheduleEntry.State,
-    start_time: scheduleEntry.start_time || scheduleEntry.Start_time,
-    end_time: scheduleEntry.end_time || scheduleEntry.End_time
-  };
-};
-
-const getUniqueLocations = () => {
-  const locations = new Map();
-  workSchedule.forEach(schedule => {
-    const officeId = schedule.office_id || schedule.Office_ID;
-    const officeName = schedule.office_name;
-    const city = schedule.city || schedule.City;
+  const getDailyLocation = (year, month, day) => {
+    const date = new Date(year, month, day);
+    const dayOfWeekName = getDayOfWeekName(date);
     
-    if (!locations.has(officeId)) {
-      locations.set(officeId, {
-        id: officeId,
-        name: officeName,
-        city: city
-      });
+    const scheduleEntry = workSchedule.find(
+      s => (s.day_of_week || s.Day_of_week) === dayOfWeekName
+    );
+    
+    if (!scheduleEntry) {
+      return null;
     }
-  });
-  return Array.from(locations.values());
-};
+    
+    return {
+      office_id: scheduleEntry.office_id || scheduleEntry.Office_ID,
+      office_name: scheduleEntry.office_name,
+      address: scheduleEntry.address,
+      city: scheduleEntry.city || scheduleEntry.City,
+      state: scheduleEntry.state || scheduleEntry.State,
+      start_time: scheduleEntry.start_time || scheduleEntry.Start_time,
+      end_time: scheduleEntry.end_time || scheduleEntry.End_time
+    };
+  };
 
-  /**
-   * Get appointments for a specific day
-   */
+  const getUniqueLocations = () => {
+    const locations = new Map();
+    workSchedule.forEach(schedule => {
+      const officeId = schedule.office_id || schedule.Office_ID;
+      const officeName = schedule.office_name;
+      const city = schedule.city || schedule.City;
+      
+      if (!locations.has(officeId)) {
+        locations.set(officeId, {
+          id: officeId,
+          name: officeName,
+          city: city
+        });
+      }
+    });
+    return Array.from(locations.values());
+  };
+
   const getAppointmentsForDay = (day) => {
     const month = currentDate.getMonth();
     const year = currentDate.getFullYear();
     const assignedLocation = getDailyLocation(year, month, day);
     
-    // No appointments if not working
     if (!assignedLocation) return [];
     
-    // Filter appointments by date
     let dayAppointments = appointments.filter(app => {
       const appDate = new Date(app.appointment_date);
       return appDate.getDate() === day &&
@@ -168,7 +149,6 @@ const getUniqueLocations = () => {
              appDate.getFullYear() === year;
     });
 
-    // Apply location filter if not "all"
     if (selectedLocation !== 'all') {
       dayAppointments = dayAppointments.filter(app => {
         return app.office_id === parseInt(selectedLocation);
@@ -178,9 +158,6 @@ const getUniqueLocations = () => {
     return dayAppointments;
   };
 
-  /**
-   * Check if day should be visible based on location filter
-   */
   const isDayVisible = (day) => {
     const assignedLocation = getDailyLocation(
       currentDate.getFullYear(), 
@@ -188,31 +165,53 @@ const getUniqueLocations = () => {
       day
     );
     
-    // Always show non-working days (they're already grayed out)
     if (!assignedLocation) return true;
-    
-    // Show all locations
     if (selectedLocation === 'all') return true;
     
-    // Filter by selected location
     return assignedLocation.office_id === parseInt(selectedLocation);
   };
 
-  /**
-   * Get display name for location badge
-   */
   const getLocationBadge = (location) => {
-    // Extract name or use short name
-    if (location.name) {
-      return location.name;
+    if (location.office_name) {
+      const words = location.office_name.split(' ');
+      if (words.length > 1) {
+        return words.map(w => w[0]).join('').toUpperCase();
+      }
+      return location.office_name.substring(0, 3).toUpperCase();
     }
-    // Fallback to abbreviation of office name
-    return location.office_name.split(' ').map(w => w[0]).join('').toUpperCase();
+    return 'LOC';
   };
 
-  /**
-   * Navigation handlers
-   */
+  // FIXED: Show modal instead of opening first appointment
+  const handleDayClick = (day, e) => {
+    // Check if the click was on an appointment item
+    if (e.target.closest('.appointment-item')) {
+      return; // Let the appointment click handler deal with it
+    }
+    
+    const dayAppointments = getAppointmentsForDay(day);
+    
+    if (dayAppointments.length === 0) {
+      return; // Don't show modal if no appointments
+    }
+    
+    // Show modal with all appointments for this day
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
+    setSelectedDay(dateStr);
+    setSelectedDayAppointments(dayAppointments);
+    setShowDayModal(true);
+  };
+
+  const handleAppointmentClick = (appointment, e) => {
+    e.stopPropagation();
+    if (onAppointmentClick) {
+      onAppointmentClick(appointment);
+    }
+  };
+
   const goToPreviousMonth = () => {
     setCurrentDate(new Date(
       currentDate.getFullYear(), 
@@ -229,40 +228,6 @@ const getUniqueLocations = () => {
     ));
   };
 
-  /**
-   * Handle day click to show modal
-   */
-  const handleDayClick = (day) => {
-    const assignedLocation = getDailyLocation(
-      currentDate.getFullYear(), 
-      currentDate.getMonth(), 
-      day
-    );
-    
-    // Only open modal for working days
-    if (!assignedLocation) return;
-    
-    const dayAppointments = getAppointmentsForDay(day);
-    
-    setSelectedDay({
-      day,
-      date: new Date(currentDate.getFullYear(), currentDate.getMonth(), day),
-      location: assignedLocation,
-      appointments: dayAppointments
-    });
-    setShowDayModal(true);
-  };
-
-  /**
-   * Handle appointment click
-   */
-  const handleAppointmentClick = (appointment) => {
-    if (onAppointmentClick) {
-      onAppointmentClick(appointment);
-    }
-  };
-
-  // Calendar helper functions
   const getDaysInMonth = (date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
@@ -271,11 +236,9 @@ const getUniqueLocations = () => {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
-  // Get month name and year for display
   const currentMonthName = currentDate.toLocaleString('default', { month: 'long' });
   const currentYear = currentDate.getFullYear();
   
-  // Generate array of days in month
   const days = Array.from(
     { length: getDaysInMonth(currentDate) },
     (_, i) => i + 1
@@ -301,7 +264,15 @@ const getUniqueLocations = () => {
 
   return (
     <div className="schedule">
-      {/* ===== HEADER WITH MONTH NAVIGATION ===== */}
+      {/* Day Appointments Modal */}
+      <DayAppointmentsModal
+        isOpen={showDayModal}
+        onClose={() => setShowDayModal(false)}
+        date={selectedDay}
+        appointments={selectedDayAppointments}
+        onAppointmentClick={onAppointmentClick}
+      />
+      
       <div className="schedule-header">
         <div className="month-navigation">
           <button 
@@ -326,7 +297,6 @@ const getUniqueLocations = () => {
         </div>
       </div>
 
-      {/* ===== LOCATION FILTER ===== */}
       {uniqueLocations.length > 1 && (
         <div className="filter-section">
           <label htmlFor="location-filter">Filter Location:</label>
@@ -346,7 +316,6 @@ const getUniqueLocations = () => {
         </div>
       )}
 
-      {/* ===== CALENDAR GRID ===== */}
       <div className="calendar-container">
         {loading && (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
@@ -355,19 +324,16 @@ const getUniqueLocations = () => {
         )}
         
         <div className="calendar-grid">
-          {/* Weekday Headers */}
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div key={day} className="weekday-header">
               {day}
             </div>
           ))}
           
-          {/* Empty cells before first day of month */}
           {Array.from({ length: getStartingDay(currentDate) }).map((_, i) => (
             <div key={`empty-${i}`} className="calendar-day empty-day"></div>
           ))}
           
-          {/* Calendar Days */}
           {days.map(day => {
             const assignedLocation = getDailyLocation(
               currentDate.getFullYear(), 
@@ -378,24 +344,30 @@ const getUniqueLocations = () => {
             const dayAppointments = getAppointmentsForDay(day);
             const isVisible = isDayVisible(day);
             
-            // Check if this is today's date
             const today = new Date();
             const isToday = day === today.getDate() && 
                            currentDate.getMonth() === today.getMonth() && 
                            currentDate.getFullYear() === today.getFullYear();
             
+            const dayClasses = [
+              'calendar-day',
+              isNotWorking ? 'weekend' : '',
+              !isVisible && !isNotWorking ? 'filtered' : '',
+              isToday ? 'today' : ''
+            ].filter(Boolean).join(' ');
+            
             return (
               <div 
                 key={day} 
-                className={`calendar-day ${isNotWorking ? 'weekend' : ''} ${!isVisible && !isNotWorking ? 'filtered' : ''} ${isToday ? 'today' : ''}`}
-                onClick={() => !isNotWorking && handleDayClick(day)}
-                style={{ cursor: isNotWorking ? 'default' : 'pointer' }}
+                className={dayClasses}
+                onClick={(e) => !isNotWorking && handleDayClick(day, e)}
+                style={{ 
+                  cursor: !isNotWorking && dayAppointments.length > 0 ? 'pointer' : 'default' 
+                }}
               >
-                {/* Day Header */}
                 <div className="day-header">
-                  <span className={`day-number ${isToday ? '' : 'regular-day'}`}>{day}</span>
+                  <span className="day-number">{day}</span>
                   
-                  {/* Location Badge */}
                   {assignedLocation && (
                     <span 
                       className="location-badge"
@@ -410,16 +382,24 @@ const getUniqueLocations = () => {
                   )}
                 </div>
                 
-                {/* Day Content */}
                 <div className="day-content">
                   {isNotWorking ? (
                     <p className="no-appointments">Off</p>
                   ) : dayAppointments.length > 0 ? (
                     <div className="appointments">
-                      {dayAppointments.slice(0, 3).map(app => (
+                      {dayAppointments.map(app => (
                         <div 
                           key={app.appointment_id} 
                           className="appointment-item"
+                          onClick={(e) => handleAppointmentClick(app, e)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.stopPropagation();
+                              handleAppointmentClick(app, e);
+                            }
+                          }}
                         >
                           <p className="appointment-time">
                             {app.appointment_time ? app.appointment_time.substring(0, 5) : 'TBD'}
@@ -429,11 +409,6 @@ const getUniqueLocations = () => {
                           </p>
                         </div>
                       ))}
-                      {dayAppointments.length > 3 && (
-                        <p className="more-appointments">
-                          +{dayAppointments.length - 3} more
-                        </p>
-                      )}
                     </div>
                   ) : (
                     <p className="no-appointments">
@@ -446,81 +421,6 @@ const getUniqueLocations = () => {
           })}
         </div>
       </div>
-
-      {/* ===== DAY APPOINTMENTS MODAL ===== */}
-      {showDayModal && selectedDay && (
-        <div className="modal-overlay" onClick={() => setShowDayModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div className="modal-header">
-              <div>
-                <h2>
-                  {selectedDay.date.toLocaleDateString('default', { 
-                    weekday: 'long', 
-                    month: 'long', 
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </h2>
-                <p className="modal-location">
-                  📍 {selectedDay.location.office_name} - {selectedDay.location.city}, {selectedDay.location.state}
-                </p>
-                <p className="modal-hours">
-                  🕐 {selectedDay.location.start_time} - {selectedDay.location.end_time}
-                </p>
-              </div>
-              <button 
-                className="modal-close"
-                onClick={() => setShowDayModal(false)}
-                aria-label="Close modal"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="modal-body">
-              {selectedDay.appointments.length > 0 ? (
-                <div className="appointments-list">
-                  <h3>{selectedDay.appointments.length} Appointment{selectedDay.appointments.length !== 1 ? 's' : ''}</h3>
-                  {selectedDay.appointments.map((app) => (
-                    <div 
-                      key={app.appointment_id} 
-                      className="appointment-card"
-                      onClick={() => handleAppointmentClick(app)}
-                    >
-                      <div className="appointment-card-header">
-                        <span className="appointment-card-time">
-                          🕐 {app.appointment_time ? app.appointment_time.substring(0, 5) : 'TBD'}
-                        </span>
-                        {app.office_name && (
-                          <span className="appointment-card-location">
-                            📍 {app.office_name}
-                          </span>
-                        )}
-                      </div>
-                      <div className="appointment-card-body">
-                        <p className="appointment-card-patient">
-                          <strong>{app.patient_name || 'Patient'}</strong>
-                        </p>
-                        {app.reason && (
-                          <p className="appointment-card-reason">
-                            {app.reason}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="no-appointments-message">
-                  <p>No appointments scheduled for this day.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

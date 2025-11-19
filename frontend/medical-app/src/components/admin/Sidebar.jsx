@@ -16,7 +16,6 @@ function AdminSidebar({ currentPage, setCurrentPage, onLogout }) {
     { id: 'users', label: 'User Management', icon: Users },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'profile', label: 'Profile', icon: User },
-    { id: 'security', label: 'Security', icon: ShieldCheck }
   ];
 
   return (

@@ -27,7 +27,12 @@ export default function NurseProfile() {
       try {
         const data = await getNurseProfile();
         if (mounted && data) {
-          setProfile(prev => ({ ...prev, ...data }));
+          // Map workLocation to location for consistency
+          const profileData = {
+            ...data,
+            location: data.workLocation || data.location
+          };
+          setProfile(prev => ({ ...prev, ...profileData }));
         }
       } catch (e) {
         if (mounted) setError(e.message || 'Failed to load profile');
@@ -91,12 +96,7 @@ export default function NurseProfile() {
               </div>
               <div className="form-group">
                 <label>Gender</label>
-                <select value={profile.gender} onChange={e => handleChange('gender', e.target.value)}>
-                  <option value="">Select</option>
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                  <option value="other">Other</option>
-                </select>
+                <input value={profile.gender} onChange={e => handleChange('gender', e.target.value)} />
               </div>
               <div className="form-group">
                 <label>License Number</label>

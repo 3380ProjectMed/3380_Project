@@ -52,6 +52,21 @@ function Report() {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
   const [showChart, setShowChart] = useState(true);
 
+  const [selectedOfficeRow, setSelectedOfficeRow] = useState(null);
+  const [officeAppointments, setOfficeAppointments] = useState([]);
+  const [officeAppointmentsLoading, setOfficeAppointmentsLoading] = useState(false);
+
+  const [selectedDoctorRow, setSelectedDoctorRow] = useState(null);
+  const [doctorPatients, setDoctorPatients] = useState([]);
+  const [doctorPatientsLoading, setDoctorPatientsLoading] = useState(false);
+
+  const PRIMARY_SPECIALTIES = [1, 2, 3, 4];
+  const primaryCareRows = newPatientsData?.doctor_performance
+    ? newPatientsData.doctor_performance.filter(doc =>
+        PRIMARY_SPECIALTIES.includes(Number(doc.specialty))
+      )
+    : [];
+
   // Fetch filter options on mount
   useEffect(() => {
     fetchFilterOptions();
@@ -90,6 +105,77 @@ function Report() {
     }
   };
 
+  const fetchDoctorPatients = async (doc) => {
+    try {
+      setDoctorPatientsLoading(true);
+      setSelectedDoctorRow(doc);
+      setError(null);
+
+      const params = new URLSearchParams({
+        doctor_id: doc.doctor_id,
+        start_date: startDate,
+        end_date: endDate,
+      });
+
+      // optional: filter by office / status
+      if (selectedOffice !== 'all') params.append('office_id', selectedOffice);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+
+      const res = await fetch(
+        `/admin_api/reports/doctor-patients.php?${params.toString()}`,
+        { credentials: 'include' }
+      );
+      const data = await res.json();
+
+      if (data.success) {
+        setDoctorPatients(data.patients || []);
+      } else {
+        setError(data.error || 'Failed to load patient details');
+        setDoctorPatients([]);
+      }
+    } catch (err) {
+      setError(err.message);
+      setDoctorPatients([]);
+    } finally {
+      setDoctorPatientsLoading(false);
+    }
+  };
+
+
+  const fetchOfficeAppointments = async (office) => {
+    try {
+      setOfficeAppointmentsLoading(true);
+      setSelectedOfficeRow(office);
+      setError(null);
+
+      const params = new URLSearchParams({
+        office_id: office.office_id,
+        start_date: startDate,
+        end_date: endDate,
+      });
+
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+
+      const res = await fetch(
+        `/admin_api/reports/office-appointments.php?${params.toString()}`,
+        { credentials: 'include' }
+      );
+      const data = await res.json();
+
+      if (data.success) {
+        setOfficeAppointments(data.appointments || []);
+      } else {
+        setError(data.error || 'Failed to load appointment details');
+        setOfficeAppointments([]);
+      }
+    } catch (err) {
+      setError(err.message);
+      setOfficeAppointments([]);
+    } finally {
+      setOfficeAppointmentsLoading(false);
+    }
+  };
+
   const money = (v) => {
     const n = Number(v || 0);
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -107,32 +193,46 @@ function Report() {
     </div>
   );
 
-  const buildQueryParams = () => {
+  const buildQueryParams = (overrides = {}) => {
+    const start = overrides.startDate || startDate;
+    const end = overrides.endDate || endDate;
+    const group = overrides.groupBy || groupBy;
+
+    const office = overrides.selectedOffice ?? selectedOffice;
+    const doctor = overrides.selectedDoctor ?? selectedDoctor;
+    const insurance = overrides.selectedInsurance ?? selectedInsurance;
+    const status = overrides.statusFilter ?? statusFilter;
+
     const params = new URLSearchParams({
-      start_date: startDate,
-      end_date: endDate,
-      group_by: groupBy
+      start_date: start,
+      end_date: end,
+      group_by: group
     });
 
     // Only apply office filter for Financial & New Patients reports
-    if (activeReport !== 'office' && selectedOffice !== 'all') {
-      params.append('office_id', selectedOffice);
+    if (activeReport !== 'office' && office !== 'all') {
+      params.append('office_id', office);
     }
 
-    if (selectedDoctor !== 'all') params.append('doctor_id', selectedDoctor);
-    if (selectedInsurance !== 'all') params.append('insurance_id', selectedInsurance);
-    if (statusFilter !== 'all') params.append('status', statusFilter);
+    if (doctor !== 'all') params.append('doctor_id', doctor);
+    if (insurance !== 'all') params.append('insurance_id', insurance);
+    if (status !== 'all') params.append('status', status);
 
     return params.toString();
   };
 
+  const groupByLabel =
+    groupBy === 'week' ? 'Weekly' :
+    groupBy === 'month' ? 'Monthly' :
+    'Daily';
 
-  const fetchFinancialReport = async () => {
+
+  const fetchFinancialReport = async (overrides = {}) => {
     try {
       setLoading(true);
       setError(null);
       const res = await fetch(
-        `/admin_api/reports/financial-summary.php?${buildQueryParams()}`,
+        `/admin_api/reports/financial-summary.php?${buildQueryParams(overrides)}`,
         { credentials: 'include' }
       );
       const data = await res.json();
@@ -147,6 +247,7 @@ function Report() {
       setLoading(false);
     }
   };
+
 
   const fetchOfficeUtilization = async () => {
     try {
@@ -231,6 +332,74 @@ function Report() {
     });
   };
 
+    const getDrilldownRangeForPeriod = (row) => {
+    const key = String(row.period_group);
+
+    // Already daily: drilldown = just that day
+    if (groupBy === 'day') {
+      return { start: key.slice(0, 10), end: key.slice(0, 10) };
+    }
+
+    // Weekly: period_group is YEARWEEK, e.g. 202547
+    if (groupBy === 'week') {
+      const year = parseInt(key.slice(0, 4), 10);
+      const week = parseInt(key.slice(4), 10);
+      if (!year || !week) return null;
+
+      // Approximate ISO week Monday
+      const simple = new Date(year, 0, 1 + (week - 1) * 7);
+      const dayOfWeek = simple.getDay(); // 0 Sun..6 Sat
+      const monday = new Date(simple);
+      const diff = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek); // move to Monday
+      monday.setDate(simple.getDate() + diff);
+
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      return {
+        start: monday.toISOString().split('T')[0],
+        end: sunday.toISOString().split('T')[0]
+      };
+    }
+
+    // Monthly: period_group is "YYYY-MM"
+    if (groupBy === 'month') {
+      const [yearStr, monthStr] = key.split('-');
+      const year = parseInt(yearStr, 10);
+      const monthIndex = parseInt(monthStr, 10) - 1;
+      if (isNaN(year) || isNaN(monthIndex)) return null;
+
+      const first = new Date(year, monthIndex, 1);
+      const last = new Date(year, monthIndex + 1, 0);
+
+      return {
+        start: first.toISOString().split('T')[0],
+        end: last.toISOString().split('T')[0]
+      };
+    }
+
+    return null;
+  };
+
+  const handlePeriodDrilldown = (row) => {
+    const range = getDrilldownRangeForPeriod(row);
+    if (!range) return;
+
+    // Update UI filters to match the drill-down period
+    setStartDate(range.start);
+    setEndDate(range.end);
+    setGroupBy('day');       // drill down always shows day-level
+    setSelectedPeriod(null); // clear any previous highlight
+
+    // Fetch new financial data for this narrower range
+    fetchFinancialReport({
+      startDate: range.start,
+      endDate: range.end,
+      groupBy: 'day'
+    });
+  };
+
+
   const exportToCSV = () => {
     let csvContent = '';
     let filename = '';
@@ -256,13 +425,20 @@ function Report() {
       filename = `new_patients_${startDate}_to_${endDate}.csv`;
 
       // Doctor performance section
-      csvContent = 'Doctor,New Patients,Retained,Retention Rate,Total Patients,Avg Visits,Completed\n';
-      (newPatientsData.doctor_performance || []).forEach(doc => {
-        csvContent += `"Dr. ${doc.doctor_name}",${doc.new_patients_acquired},${doc.retained_patients},${doc.retention_rate}%,${doc.total_patients_seen},${doc.avg_visits_per_patient},${doc.total_completed}\n`;
-      });
+    csvContent = 'Doctor,New Patients (this doctor),Retained (this doctor),Retention Rate,Total Patients,Avg Visits,Completed,New to Practice\n';
+    (newPatientsData.doctor_performance || []).forEach(doc => {
+      csvContent += `"Dr. ${doc.doctor_name}",` +
+        `${doc.new_patients_for_doctor},` +
+        `${doc.retained_patients_for_doctor},` +
+        `${doc.retention_rate}%,` +
+        `${doc.total_patients_seen},` +
+        `${doc.avg_visits_per_patient},` +
+        `${doc.total_completed},` +
+        `${doc.new_patients_acquired}\n`;
+    });
 
       // Booking method breakdown section
-// Booking method breakdown section
+
       csvContent += '\nBooking Method,New Patients,Total Appointments,Completed,Unique Patients,Completion Rate\n';
       (newPatientsData.booking_breakdown || []).forEach(row => {
         const total = Number(row.total_appointments || 0);
@@ -296,10 +472,21 @@ function Report() {
     setStatusFilter('all');
   };
 
-  const setDateRange = (days) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - days);
+  const setDateRange = (range) => {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    if (range === 'today') {
+      start = today;
+      end = today;
+      setGroupBy('day');
+    } else {
+      end = today;
+      start = new Date();
+      start.setDate(end.getDate() - range);
+    }
+
     setStartDate(start.toISOString().split('T')[0]);
     setEndDate(end.toISOString().split('T')[0]);
   };
@@ -431,6 +618,7 @@ function Report() {
                 />
               </div>
               <div className="date-presets">
+                <button onClick={() => setDateRange('today')} className="btn-preset">Today Only</button>
                 <button onClick={() => setDateRange(7)} className="btn-preset">Last 7 days</button>
                 <button onClick={() => setDateRange(30)} className="btn-preset">Last 30 days</button>
                 <button onClick={() => setDateRange(90)} className="btn-preset">Last 90 days</button>
@@ -585,17 +773,17 @@ function Report() {
           <section className="report-section">
             <div className="section-header">
               <div>
-                <h3>Daily Revenue Breakdown</h3>
-                <p className="section-subtitle">
-                  {(
-                    selectedPeriod
-                      ? (financialData.daily_revenue || []).filter(
-                          (r) => r.period_label === selectedPeriod
-                        )
-                      : (financialData.daily_revenue || [])
-                  ).length}{' '}
-                  {selectedPeriod ? 'rows for selected period' : 'periods'}
-                </p>
+                <h3>{groupByLabel} Revenue Breakdown</h3>
+                  <p className="section-subtitle">
+                    {(
+                      selectedPeriod
+                        ? (financialData.daily_revenue || []).filter(
+                            (r) => r.period_label === selectedPeriod
+                          )
+                        : (financialData.daily_revenue || [])
+                    ).length}{' '}
+                    {selectedPeriod ? 'rows for selected period' : 'periods'} · Click a row to drill down
+                  </p>
               </div>
 
               {selectedPeriod && (
@@ -647,7 +835,11 @@ function Report() {
                       gross > 0 ? ((collected / gross) * 100).toFixed(1) : '0.0';
 
                     return (
-                      <tr key={idx}>
+                        <tr 
+                            key={idx}
+                            className="clickable-row"
+                            onClick={() => handlePeriodDrilldown(row)}
+                          >
                         <td className="text-bold">{row.period_label}</td>
                         <td>{row.total_visits}</td>
                         <td className="text-success">${money(row.gross_revenue)}</td>
@@ -674,6 +866,41 @@ function Report() {
               </table>
             </div>
           </section>
+
+          {financialData.doctor_performance && financialData.doctor_performance.length > 0 && (
+            <section className="report-section">
+              <div className="section-header">
+                <h3>Doctor Performance</h3>
+                <p className="section-subtitle">{financialData.doctor_performance.length} doctors</p>
+              </div>
+              <div className="table-container">
+                <table className="report-table">
+                  <thead>
+                    <tr>
+                      <th>Doctor Name</th>
+                      <th>Total Visits</th>
+                      <th>Total Revenue</th>
+                      <th>Collected</th>
+                      <th>Avg Per Visit</th>
+                      <th>Unique Patients</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {financialData.doctor_performance.map((doc, idx) => (
+                      <tr key={idx}>
+                        <td className="text-bold">Dr. {doc.doctor_name}</td>
+                        <td>{doc.total_visits}</td>
+                        <td className="text-success">${money(doc.total_revenue)}</td>
+                        <td className="text-primary">${money(doc.collected)}</td>
+                        <td>${money(doc.avg_per_visit)}</td>
+                        <td>{doc.unique_patients}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           {financialData.insurance_breakdown && financialData.insurance_breakdown.length > 0 && (
             <section className="report-section">
@@ -721,41 +948,6 @@ function Report() {
               </div>
             </section>
           )}
-
-          {financialData.doctor_performance && financialData.doctor_performance.length > 0 && (
-            <section className="report-section">
-              <div className="section-header">
-                <h3>Doctor Performance</h3>
-                <p className="section-subtitle">{financialData.doctor_performance.length} doctors</p>
-              </div>
-              <div className="table-container">
-                <table className="report-table">
-                  <thead>
-                    <tr>
-                      <th>Doctor Name</th>
-                      <th>Total Visits</th>
-                      <th>Total Revenue</th>
-                      <th>Collected</th>
-                      <th>Avg Per Visit</th>
-                      <th>Unique Patients</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {financialData.doctor_performance.map((doc, idx) => (
-                      <tr key={idx}>
-                        <td className="text-bold">Dr. {doc.doctor_name}</td>
-                        <td>{doc.total_visits}</td>
-                        <td className="text-success">${money(doc.total_revenue)}</td>
-                        <td className="text-primary">${money(doc.collected)}</td>
-                        <td>${money(doc.avg_per_visit)}</td>
-                        <td>{doc.unique_patients}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
         </>
       )}
 
@@ -784,13 +976,13 @@ function Report() {
               value={officeData.summary?.no_shows || 0}
               subtitle={`${officeData.summary?.no_show_rate || 0}% no-show rate`}
             />
-            <StatCard 
+            {/* <StatCard 
               type="info"
               icon={<Clock size={20} />}
               label="Avg Wait Time"
               value={officeData.summary?.avg_wait_minutes ? `${officeData.summary.avg_wait_minutes} min` : 'N/A'}
               subtitle="Across all offices"
-            />
+            /> */}
           </div>
 
           {officeData.office_stats && officeData.office_stats.length > 0 && (
@@ -801,7 +993,10 @@ function Report() {
                   Share of total appointments in this period
                 </p>
               </div>
-              <OfficeUtilizationPie offices={officeData.office_stats} />
+              <OfficeUtilizationPie 
+                offices={officeData.office_stats}
+                overallUtilization={officeData.summary?.overall_utilization}
+              />
             </section>
           )}
 
@@ -824,39 +1019,59 @@ function Report() {
                     <th onClick={() => handleSort('completed')}>
                       Completed {sortConfig.key === 'completed' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
+                    <th onClick={() => handleSort('scheduled')}>
+                      Scheduled {sortConfig.key === 'scheduled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
                     <th onClick={() => handleSort('cancelled')}>
                       Cancelled {sortConfig.key === 'cancelled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th onClick={() => handleSort('no_shows')}>
                       No-Shows {sortConfig.key === 'no_shows' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th onClick={() => handleSort('scheduled')}>
-                      Scheduled {sortConfig.key === 'scheduled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    <th onClick={() => handleSort('ready')}>
+                      Ready {sortConfig.key === 'ready' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('checked_in')}>
+                      Checked-In {sortConfig.key === 'checked_in' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('waiting')}>
+                      Waiting {sortConfig.key === 'waiting' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('in_progress')}>
+                      In Progress {sortConfig.key === 'in_progress' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th>No-Show Rate</th>
-                    <th>Avg Wait</th>
-                    <th>Utilization</th>
                   </tr>
                 </thead>
                 <tbody>
                   {getSortedData(officeData.office_stats || [], sortConfig.key).map((office, idx) => (
-                    <tr key={idx}>
+                    <tr
+                      key={idx}
+                      className="clickable-row"
+                      onClick={() => fetchOfficeAppointments(office)}
+                    >
                       <td className="text-bold">{office.office_name}</td>
                       <td className="text-muted">{office.address}</td>
                       <td>{office.total_appointments}</td>
                       <td className="text-success">{office.completed}</td>
+                      <td>{office.scheduled}</td>
                       <td className="text-warning">{office.cancelled}</td>
                       <td className="text-danger">{office.no_shows}</td>
-                      <td>{office.scheduled}</td>
+                      <td>{office.ready}</td>
+                      <td>{office.checked_in}</td>
+                      <td>{office.waiting}</td>
+                      <td>{office.in_progress}</td>
                       <td>
-                        <span className={`badge ${Number(office.no_show_rate) < 5 ? 'badge-success' : Number(office.no_show_rate) < 10 ? 'badge-warning' : 'badge-danger'}`}>
+                        <span
+                          className={`badge ${
+                            Number(office.no_show_rate) < 5
+                              ? 'badge-success'
+                              : Number(office.no_show_rate) < 10
+                              ? 'badge-warning'
+                              : 'badge-danger'
+                          }`}
+                        >
                           {office.no_show_rate}%
-                        </span>
-                      </td>
-                      <td>{office.avg_wait_minutes ? `${office.avg_wait_minutes} min` : 'N/A'}</td>
-                      <td>
-                        <span className={`badge ${Number(office.utilization_rate) >= 80 ? 'badge-success' : Number(office.utilization_rate) >= 60 ? 'badge-warning' : 'badge-danger'}`}>
-                          {office.utilization_rate}%
                         </span>
                       </td>
                     </tr>
@@ -902,6 +1117,66 @@ function Report() {
                   </tbody>
                 </table>
               </div>
+            </section>
+          )}
+          {selectedOfficeRow && (
+            <section className="report-section">
+              <div className="section-header">
+                <div>
+                  <h3>
+                    Appointments for {selectedOfficeRow.office_name}
+                  </h3>
+                  <p className="section-subtitle">
+                    {startDate} – {endDate} · Status: {statusFilter === 'all' ? 'All' : statusFilter}
+                  </p>
+                </div>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => {
+                    setSelectedOfficeRow(null);
+                    setOfficeAppointments([]);
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+
+              {officeAppointmentsLoading ? (
+                <div className="loading-container">
+                  <div className="loading-spinner" />
+                  <p>Loading appointments...</p>
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table className="report-table">
+                    <thead>
+                      <tr>
+                        <th>Date & Time</th>
+                        <th>Doctor</th>
+                        <th>Patient</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {officeAppointments.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="text-center text-muted">
+                            No appointments in this period for this office.
+                          </td>
+                        </tr>
+                      )}
+                      {officeAppointments.map((appt) => (
+                        <tr key={appt.Appointment_id}>
+                          <td>{new Date(appt.Appointment_date).toLocaleString()}</td>
+                          <td>Dr. {appt.doctor_name}</td>
+                          <td>{appt.patient_name}</td>
+                          <td>{appt.Status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
           )}
         </>
@@ -983,10 +1258,10 @@ function Report() {
                       <th onClick={() => handleSort('doctor_name')}>
                         Doctor {sortConfig.key === 'doctor_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </th>
-                      <th onClick={() => handleSort('new_patients_acquired')} className="text-right">
+                      <th onClick={() =>  handleSort('new_patients_for_doctor')} className="text-right">
                         New Patients {sortConfig.key === 'new_patients_acquired' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </th>
-                      <th onClick={() => handleSort('retained_patients')} className="text-right">
+                      <th onClick={() => handleSort('retained_patients_for_doctor')} className="text-right">
                         Retained {sortConfig.key === 'retained_patients' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </th>
                       <th onClick={() => handleSort('retention_rate')}>
@@ -1005,10 +1280,22 @@ function Report() {
                   </thead>
                   <tbody>
                     {getSortedData(newPatientsData.doctor_performance, sortConfig.key).map((doc, idx) => (
-                      <tr key={idx}>
+                       <tr
+                        key={idx}
+                        className="clickable-row"
+                        onClick={() => fetchDoctorPatients(doc)}
+                      >
                         <td className="text-bold">Dr. {doc.doctor_name}</td>
-                        <td className="text-right text-primary">{doc.new_patients_acquired}</td>
-                        <td className="text-right text-success">{doc.retained_patients}</td>
+                        <td className="text-right text-primary">
+                          {doc.new_patients_for_doctor}
+                          {PRIMARY_SPECIALTIES.includes(Number(doc.specialty)) &&
+                            doc.new_patients_acquired > 0 && (
+                              <span className="pill-muted">
+                                ({doc.new_patients_acquired} new to practice)
+                              </span>
+                          )}
+                        </td>
+                        <td className="text-right text-success">{doc.retained_patients_for_doctor}</td>
                         <td>
                           <div className="retention-cell">
                             <span className={`badge ${
@@ -1043,6 +1330,84 @@ function Report() {
                   </tbody>
                 </table>
               </div>
+            </section>
+          )}
+
+          {selectedDoctorRow && (
+            <section className="report-section">
+              <div className="section-header">
+                <div>
+                  <h3>Patients seen by Dr. {selectedDoctorRow.doctor_name}</h3>
+                  <p className="section-subtitle">
+                    {startDate} – {endDate}
+                    {selectedOffice !== 'all' && ` · Office: ${selectedOffice}`}
+                  </p>
+                </div>
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => {
+                    setSelectedDoctorRow(null);
+                    setDoctorPatients([]);
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+
+              {doctorPatientsLoading ? (
+                <div className="loading-container">
+                  <div className="loading-spinner" />
+                  <p>Loading patients...</p>
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table className="report-table">
+                    <thead>
+                      <tr>
+                        <th>Patient</th>
+                        <th>First Visit</th>
+                        <th>Last Visit</th>
+                        <th className="text-right">Total Appts</th>
+                        <th className="text-right">Completed</th>
+                        <th className="text-right">No-Shows</th>
+                        <th className="text-right">Cancelled</th>
+                        <th>New?</th>
+                        <th>Retained?</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {doctorPatients.length === 0 && (
+                        <tr>
+                          <td colSpan={9} className="text-center text-muted">
+                            No patients for this doctor in the selected period.
+                          </td>
+                        </tr>
+                      )}
+                      {doctorPatients.map((p) => (
+                        <tr key={p.patient_id}>
+                          <td className="text-bold">{p.patient_name}</td>
+                          <td>{p.first_visit_date ? new Date(p.first_visit_date).toLocaleString() : '—'}</td>
+                          <td>{p.last_visit_date ? new Date(p.last_visit_date).toLocaleString() : '—'}</td>
+                          <td className="text-right">{p.total_appointments}</td>
+                          <td className="text-right text-success">{p.completed_appointments}</td>
+                          <td className="text-right text-danger">{p.no_shows}</td>
+                          <td className="text-right text-warning">{p.cancelled_appointments}</td>
+                          <td>
+                            {Number(p.is_new_patient) === 1 
+                              ? <span className="badge badge-success">New</span>
+                              : <span className="badge badge-muted">Existing</span>}
+                          </td>
+                          <td>
+                            {Number(p.is_retained) === 1
+                              ? <span className="badge badge-info">Retained</span>
+                              : <span className="badge badge-muted">Single visit</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
           )}
 
@@ -1083,6 +1448,7 @@ function Report() {
               </div>
             </section>
           )}
+
           {newPatientsData.booking_breakdown && newPatientsData.booking_breakdown.length > 0 && (
             <section className="report-section">
               <div className="section-header">
@@ -1170,7 +1536,7 @@ function Report() {
   );
 }
 
-const OfficeUtilizationPie = ({ offices }) => {
+const OfficeUtilizationPie = ({ offices, overallUtilization }) => {
   const [hoveredIndex, setHoveredIndex] = React.useState(null);
   const [selectedOffice, setSelectedOffice] = React.useState(null);
 
@@ -1178,6 +1544,11 @@ const OfficeUtilizationPie = ({ offices }) => {
     (sum, o) => sum + (o.total_appointments || 0),
     0
   );
+
+  const combinedPercent =
+    typeof overallUtilization === 'number'
+      ? Math.min(100, Math.max(0, overallUtilization))
+      : 0;
 
   if (!total) {
     return <p className="chart-empty">No appointment data for this period.</p>;
@@ -1194,7 +1565,9 @@ const OfficeUtilizationPie = ({ offices }) => {
 
   const handleSliceClick = (office, e) => {
     e.stopPropagation();
-    setSelectedOffice(selectedOffice?.office_id === office.office_id ? null : office);
+    setSelectedOffice(
+      selectedOffice?.office_id === office.office_id ? null : office
+    );
   };
 
   React.useEffect(() => {
@@ -1209,29 +1582,29 @@ const OfficeUtilizationPie = ({ offices }) => {
   const slices = offices.map((office, idx) => {
     const value = office.total_appointments || 0;
     const slicePercent = value / total;
-    
+
     const startAngle = cumulativePercent * 360;
     const endAngle = (cumulativePercent + slicePercent) * 360;
-    
+
     cumulativePercent += slicePercent;
-    
+
     const startAngleRad = ((startAngle - 90) * Math.PI) / 180;
     const endAngleRad = ((endAngle - 90) * Math.PI) / 180;
-    
+
     const x1 = 200 + 160 * Math.cos(startAngleRad);
     const y1 = 200 + 160 * Math.sin(startAngleRad);
     const x2 = 200 + 160 * Math.cos(endAngleRad);
     const y2 = 200 + 160 * Math.sin(endAngleRad);
-    
+
     const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
-    
+
     const pathData = [
       `M 200 200`,
       `L ${x1} ${y1}`,
       `A 160 160 0 ${largeArcFlag} 1 ${x2} ${y2}`,
       `Z`
     ].join(' ');
-    
+
     return {
       office,
       path: pathData,
@@ -1243,17 +1616,19 @@ const OfficeUtilizationPie = ({ offices }) => {
   return (
     <div className="office-pie-card">
       <div className="pie-chart-container">
-        <svg 
-          viewBox="0 0 400 400" 
-          style={{ 
-            width: '100%', 
+        <svg
+          viewBox="0 0 400 400"
+          style={{
+            width: '100%',
             height: '100%',
             display: 'block'
           }}
         >
           {slices.map(({ office, path, color, index }) => {
-            const isActive = hoveredIndex === index || selectedOffice?.office_id === office.office_id;
-            
+            const isActive =
+              hoveredIndex === index ||
+              selectedOffice?.office_id === office.office_id;
+
             return (
               <path
                 key={office.office_id || index}
@@ -1265,7 +1640,9 @@ const OfficeUtilizationPie = ({ offices }) => {
                   cursor: 'pointer',
                   opacity: isActive ? 1 : 0.95,
                   transition: 'all 0.3s ease',
-                  filter: isActive ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' : 'drop-shadow(0 2px 6px rgba(0,0,0,0.15))'
+                  filter: isActive
+                    ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))'
+                    : 'drop-shadow(0 2px 6px rgba(0,0,0,0.15))'
                 }}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}
@@ -1273,7 +1650,8 @@ const OfficeUtilizationPie = ({ offices }) => {
               />
             );
           })}
-          
+
+          {/* center white circle stays */}
           <circle
             cx="200"
             cy="200"
@@ -1281,7 +1659,7 @@ const OfficeUtilizationPie = ({ offices }) => {
             fill="white"
             filter="drop-shadow(0 2px 8px rgba(0,0,0,0.1))"
           />
-          
+
           {hoveredIndex !== null && (
             <text
               x="200"
@@ -1295,7 +1673,7 @@ const OfficeUtilizationPie = ({ offices }) => {
                 pointerEvents: 'none'
               }}
             >
-              {offices[hoveredIndex].utilization_rate}%
+              {`${offices[hoveredIndex].volume_share ?? 0}%`}
             </text>
           )}
         </svg>
@@ -1304,21 +1682,34 @@ const OfficeUtilizationPie = ({ offices }) => {
       <div className="pie-legend">
         {offices.map((office, idx) => {
           const isHovered = hoveredIndex === idx;
-          
+
+          const activeCompleted =
+            (office.completed || 0) +
+            (office.ready || 0) +
+            (office.waiting || 0) +
+            (office.checked_in || 0) +
+            (office.in_progress || 0);
+
+          const scheduledCount = office.scheduled || 0;
+          const noShowCount = office.no_shows || 0;
+          const cancelledCount = office.cancelled || 0;
+
           return (
-            <div 
-              key={office.office_id || idx} 
+            <div
+              key={office.office_id || idx}
               className={`pie-legend-row ${
-                selectedOffice?.office_id === office.office_id ? 'legend-selected' : ''
+                selectedOffice?.office_id === office.office_id
+                  ? 'legend-selected'
+                  : ''
               } ${isHovered ? 'legend-hovered' : ''}`}
               onMouseEnter={() => setHoveredIndex(idx)}
               onMouseLeave={() => setHoveredIndex(null)}
               onClick={(e) => handleSliceClick(office, e)}
               style={{ cursor: 'pointer' }}
             >
-              <span 
+              <span
                 className="pie-legend-color"
-                style={{ 
+                style={{
                   backgroundColor: colors[idx % colors.length],
                   display: 'block'
                 }}
@@ -1326,13 +1717,15 @@ const OfficeUtilizationPie = ({ offices }) => {
               <div className="pie-legend-text">
                 <div className="pie-legend-title">{office.office_name}</div>
                 <div className="pie-legend-sub">
-                  {office.total_appointments} appts · {office.utilization_rate}%
+                  {office.total_appointments} appts · {office.volume_share}% of
+                  total
                 </div>
                 {isHovered && (
                   <div className="pie-legend-details">
-                    <span>✓ {office.completed} completed</span>
-                    <span>⚠ {office.no_shows} no-shows</span>
-                    <span>📅 {office.scheduled} scheduled</span>
+                    <span>✓ {activeCompleted} active/completed</span>
+                    <span>📅 {scheduledCount} scheduled</span>
+                    <span>⚠ {noShowCount} no-shows</span>
+                    <span>✕ {cancelledCount} cancelled</span>
                   </div>
                 )}
               </div>
@@ -1340,7 +1733,7 @@ const OfficeUtilizationPie = ({ offices }) => {
           );
         })}
       </div>
-
+      
       {selectedOffice && (
         <div className="office-detail-card" onClick={(e) => e.stopPropagation()}>
           <div className="office-detail-header">
@@ -1424,12 +1817,12 @@ const OfficeUtilizationPie = ({ offices }) => {
             </div>
 
             <div className="detail-stat">
-              <span className="detail-label">Avg Wait Time</span>
+              {/* <span className="detail-label">Avg Wait Time</span>
               <span className="detail-value">
                 {selectedOffice.avg_wait_minutes 
                   ? `${selectedOffice.avg_wait_minutes} min` 
                   : 'N/A'}
-              </span>
+              </span> */}
             </div>
 
             <div className="detail-stat">
@@ -1782,8 +2175,12 @@ const NewPatientTrendChart = ({ data, groupBy }) => {
   });
 
   const periods = Array.from(periodMap.values());
-  const maxValue = Math.max(...periods.map(p => p.total), 1);
-  const yAxisMax = Math.ceil(maxValue * 1.2);
+  const rawMax = Math.max(...periods.map(p => p.total), 0);
+  const yAxisMax = rawMax <= 3 ? 3 : Math.ceil(rawMax * 1.2);
+  const yTicks = [];
+  for (let i = 4; i >= 0; i--) {
+    yTicks.push(Math.round((yAxisMax * i) / 4));
+  }
 
   const hasMultiplePeriods = periods.length > 1;
   const denom = hasMultiplePeriods ? periods.length - 1 : 1;
@@ -1805,9 +2202,9 @@ const NewPatientTrendChart = ({ data, groupBy }) => {
     <div className="trend-chart-container">
       <div className="trend-chart">
         <div className="trend-y-axis">
-          {[4, 3, 2, 1, 0].map(i => (
-            <div key={i} className="y-label">
-              {Math.round((yAxisMax * i) / 4)}
+          {yTicks.map((value, idx) => (
+            <div key={idx} className="y-label">
+              {value}
             </div>
           ))}
         </div>

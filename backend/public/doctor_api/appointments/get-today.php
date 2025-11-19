@@ -28,7 +28,7 @@ try {
         }
 
         // user_id = staff_id for doctors, get doctor_id (YOUR AUTH SYSTEM)
-        $staff_id = (int)$_SESSION['uid'];
+        $staff_id = (int) $_SESSION['uid'];
 
         $rows = executeQuery(
             $conn,
@@ -44,7 +44,7 @@ try {
             exit;
         }
 
-        $doctor_id = (int)$rows[0]['doctor_id'];
+        $doctor_id = (int) $rows[0]['doctor_id'];
     }
 
     // Use America/Chicago timezone
@@ -64,8 +64,12 @@ try {
                 a.Status,                -- ✅ Get REAL status from database
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.patient_id,
-                p.allergies as allergy_code,
-                ca.allergies_text as allergies,
+                (
+                    SELECT GROUP_CONCAT(ca2.allergies_text SEPARATOR ', ')
+                    FROM allergies_per_patient app2
+                    JOIN codes_allergies ca2 ON app2.allergy_id = ca2.allergies_code
+                    WHERE app2.patient_id = p.patient_id
+                ) as allergies,
                 o.name as office_name,
                 pv.visit_id,             -- ✅ Check if patient has checked in
                 pv.blood_pressure,       -- ✅ Check if vitals recorded
@@ -73,7 +77,6 @@ try {
                 pv.created_at as checked_in_at  -- ✅ When patient checked in
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
-            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
             LEFT JOIN office o ON a.Office_id = o.office_id
             LEFT JOIN patient_visit pv ON pv.appointment_id = a.Appointment_id  -- ✅ Join visit data
             WHERE a.Doctor_id = ?
@@ -93,13 +96,13 @@ try {
 
     foreach ($appointments as $apt) {
         $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
-        
+
         // ========================================
         // 🆕 KEY CHANGE: Use REAL status from database
         // No more time-based calculation!
         // ========================================
         $status = $apt['Status'] ?? 'Scheduled';
-        
+
         // Calculate waiting time if patient has checked in
         $waitingTime = 0;
         if (!empty($apt['checked_in_at'])) {

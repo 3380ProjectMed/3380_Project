@@ -365,8 +365,21 @@ export default function PatientPortal({ onLogout }) {
   }
 
   // PCP Selection functions
-  function showPcpSelection() {
+  async function showPcpSelection() {
     setPcpFormData({ primary_doctor: '' });
+    
+    // Ensure doctors are loaded before showing modal
+    if (doctors.length === 0) {
+      setDoctorsLoadError(null);
+      try {
+        await loadDoctorsAndOffices();
+      } catch (e) {
+        console.warn('Failed loading doctors for PCP selection', e);
+        setToast({ message: 'Failed to load doctors. Please try again.', type: 'error' });
+        return;
+      }
+    }
+    
     setShowPcpModal(true);
   }
 
@@ -441,6 +454,16 @@ export default function PatientPortal({ onLogout }) {
       });
     }
   }, [showBookingModal]);
+
+  // Ensure doctors are loaded when PCP modal opens
+  useEffect(() => {
+    if (showPcpModal && doctors.length === 0) {
+      setDoctorsLoadError(null);
+      loadDoctorsAndOffices().catch(e => {
+        console.warn('Failed loading doctors for PCP selection', e);
+      });
+    }
+  }, [showPcpModal]);
 
   // Load available time slots and offices when doctor and date are selected
   useEffect(() => {
@@ -951,20 +974,34 @@ const renderBookingModal = () => (
         <div className="modal-body">
           <div className="form-group">
             <label>Select Primary Care Physician</label>
-            <select 
-              className="form-input" 
-              value={pcpFormData.primary_doctor} 
-              onChange={(e) => setPcpFormData({ ...pcpFormData, primary_doctor: e.target.value })}
-            >
-              <option value="">Select a Primary Care Physician</option>
-              {doctors.filter((doctor) => 
-                ['Internal Medicine', 'General Practice', 'Pediatrics'].includes(doctor.specialty_name)
-              ).map((doctor) => (
-                <option key={doctor.doctor_id} value={doctor.doctor_id}>
-                  {doctor.name} - {doctor.specialty_name} ({doctor.office_name})
-                </option>
-              ))}
-            </select>
+            {doctorsLoadError ? (
+              <div className="error-message" style={{ padding: '1rem', backgroundColor: '#fee', border: '1px solid #fcc', borderRadius: '0.5rem', color: '#c33', marginBottom: '1rem' }}>
+                <p>{doctorsLoadError}</p>
+                <button className="btn btn-secondary btn-sm" onClick={() => loadDoctorsAndOffices().catch(console.warn)}>
+                  Try Again
+                </button>
+              </div>
+            ) : doctors.length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+                <div className="loading-spinner" style={{ margin: '0 auto 1rem auto' }}></div>
+                Loading available doctors...
+              </div>
+            ) : (
+              <select 
+                className="form-input" 
+                value={pcpFormData.primary_doctor} 
+                onChange={(e) => setPcpFormData({ ...pcpFormData, primary_doctor: e.target.value })}
+              >
+                <option value="">Select a Primary Care Physician</option>
+                {doctors.filter((doctor) => 
+                  ['Internal Medicine', 'General Practice', 'Pediatrics', 'Family Medicine'].includes(doctor.specialty_name)
+                ).map((doctor) => (
+                  <option key={doctor.doctor_id} value={doctor.doctor_id}>
+                    {doctor.name} - {doctor.specialty_name} ({doctor.office_name})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
         <div className="modal-footer">
@@ -1023,6 +1060,7 @@ const renderBookingModal = () => (
     billingBalance,
     billingStatements,
     timeSlots,
+    setToast,
     setShowBookingModal,
     setBookingStep,
     handleBookingNext,

@@ -1,27 +1,68 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, Phone, Calendar, MapPin, UserPlus } from 'lucide-react';
 import './SignUp.css';
 
 export default function SignUp() {
-const [formData, setFormData] = useState({
-  firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
-  dateOfBirth: '', phone: '', gender: '',
-  address: '', city: '', state: '', zipCode: '',
-  emergencyContactfn: '',
-  emergencyContactln: '',
-  emergencyContactrl: '',
-  emergencyPhone: ''
-});
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    dateOfBirth: '',
+    phone: '',
+    gender: '',              // will hold gender_code (e.g. "1", "2", etc.)
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    emergencyContactfn: '',
+    emergencyContactln: '',
+    emergencyContactrl: '',
+    emergencyPhone: ''
+  });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [flash, setFlash] = useState({ type: null, message: '' });
+
+  // NEW: gender options from get_form_options
+  const [genderOptions, setGenderOptions] = useState([]);
+  const navigate = useNavigate();
+
+  // Load gender options on mount
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const res = await fetch('/admin_api/users/get_form_options.php', {
+          // if you later create a public version, change this URL
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          console.error('get_form_options failed with status', res.status);
+          return;
+        }
+
+        const data = await res.json();
+        if (data.success && Array.isArray(data.genders)) {
+          setGenderOptions(data.genders); // each: { id, label }
+        }
+      } catch (err) {
+        console.error('Error loading gender options:', err);
+      }
+    };
+
+    loadOptions();
+  }, []);
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -46,49 +87,91 @@ const [formData, setFormData] = useState({
     return Object.keys(newErrors).length === 0;
   };
 
+  const formatPhone = (value) => {
+    if (!value) return '';
+
+    // keep only digits, max 10
+    const digits = value.replace(/\D/g, '').slice(0, 10);
+    const len = digits.length;
+
+    if (len === 0) return '';
+
+    if (len < 4) {
+      // 1–3: "555"
+      return digits;
+    }
+
+    if (len < 7) {
+      // 4–6: "(555) 1", "(555) 12", "(555) 123"
+      return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    }
+
+    // 7–10: "(555) 123-4", "(555) 123-45", ...
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    let newValue = value;
+
+    if (name === 'phone' || name === 'emergencyPhone') {
+      newValue = formatPhone(value);
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: newValue,
     }));
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    
+    setFlash({ type: null, message: '' }); // clear old message
+
     try {
-      const response = await fetch('/api/signup.php', {  // Adjust path as needed
+      const response = await fetch('/api/signup.php', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
+        headers: { 'Content-Type': 'application/json' },
+        // If your PHP expects number for gender_code you can cast there: (int)$_POST['gender']
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        alert('Account created successfully!');
-        // Redirect to login or dashboard
-        window.location.href = '/login';
+        setFlash({
+          type: 'success',
+          message: 'Account created successfully! Redirecting to your account…',
+        });
+
+        setTimeout(() => {
+          navigate('/login');
+        }, 1500);
       } else {
-        // Display server-side errors
         if (data.errors) {
           setErrors(data.errors);
         }
-        alert(data.message || 'Registration failed');
+
+        setFlash({
+          type: 'error',
+          message: data.message || 'Registration failed. Please review the form.',
+        });
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('An error occurred. Please try again.');
+      setFlash({
+        type: 'error',
+        message: 'An unexpected error occurred. Please try again.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -105,6 +188,15 @@ const [formData, setFormData] = useState({
           <h1 className="signup-title">Create Patient Account</h1>
           <p className="signup-subtitle">Join us to manage your healthcare journey</p>
         </div>
+        <Link to="/" className="btn btn-secondary">
+              Back to Home
+        </Link>
+        {/* Flash banner */}
+        {flash.message && (
+          <div className={`signup-flash signup-flash-${flash.type}`}>
+            {flash.message}
+          </div>
+        )}
 
         {/* Main Card */}
         <div className="signup-card">
@@ -112,7 +204,7 @@ const [formData, setFormData] = useState({
             {/* Personal Information */}
             <div className="signup-section">
               <h3 className="signup-section-title">Personal Information</h3>
-              
+
               <div className="signup-grid">
                 <div className="signup-field">
                   <label htmlFor="firstName" className="signup-label">
@@ -129,7 +221,9 @@ const [formData, setFormData] = useState({
                       className={`signup-input signup-input-with-icon ${errors.firstName ? 'signup-input-error' : ''}`}
                     />
                   </div>
-                  {errors.firstName && <span className="signup-error-message">{errors.firstName}</span>}
+                  {errors.firstName && (
+                    <span className="signup-error-message">{errors.firstName}</span>
+                  )}
                 </div>
 
                 <div className="signup-field">
@@ -147,7 +241,9 @@ const [formData, setFormData] = useState({
                       className={`signup-input signup-input-with-icon ${errors.lastName ? 'signup-input-error' : ''}`}
                     />
                   </div>
-                  {errors.lastName && <span className="signup-error-message">{errors.lastName}</span>}
+                  {errors.lastName && (
+                    <span className="signup-error-message">{errors.lastName}</span>
+                  )}
                 </div>
               </div>
 
@@ -167,7 +263,9 @@ const [formData, setFormData] = useState({
                       className={`signup-input signup-input-with-icon ${errors.dateOfBirth ? 'signup-input-error' : ''}`}
                     />
                   </div>
-                  {errors.dateOfBirth && <span className="signup-error-message">{errors.dateOfBirth}</span>}
+                  {errors.dateOfBirth && (
+                    <span className="signup-error-message">{errors.dateOfBirth}</span>
+                  )}
                 </div>
 
                 <div className="signup-field">
@@ -182,12 +280,15 @@ const [formData, setFormData] = useState({
                     className={`signup-select ${errors.gender ? 'signup-select-error' : ''}`}
                   >
                     <option value="">Select gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                    <option value="prefer-not-to-say">Prefer not to say</option>
+                    {genderOptions.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.label}
+                      </option>
+                    ))}
                   </select>
-                  {errors.gender && <span className="signup-error-message">{errors.gender}</span>}
+                  {errors.gender && (
+                    <span className="signup-error-message">{errors.gender}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -195,7 +296,7 @@ const [formData, setFormData] = useState({
             {/* Contact Information */}
             <div className="signup-section">
               <h3 className="signup-section-title">Contact Information</h3>
-              
+
               <div className="signup-field">
                 <label htmlFor="email" className="signup-label">
                   Email Address *
@@ -211,7 +312,9 @@ const [formData, setFormData] = useState({
                     className={`signup-input signup-input-with-icon ${errors.email ? 'signup-input-error' : ''}`}
                   />
                 </div>
-                {errors.email && <span className="signup-error-message">{errors.email}</span>}
+                {errors.email && (
+                  <span className="signup-error-message">{errors.email}</span>
+                )}
               </div>
 
               <div className="signup-field">
@@ -230,7 +333,9 @@ const [formData, setFormData] = useState({
                     className={`signup-input signup-input-with-icon ${errors.phone ? 'signup-input-error' : ''}`}
                   />
                 </div>
-                {errors.phone && <span className="signup-error-message">{errors.phone}</span>}
+                {errors.phone && (
+                  <span className="signup-error-message">{errors.phone}</span>
+                )}
               </div>
 
               <div className="signup-field">
@@ -296,7 +401,7 @@ const [formData, setFormData] = useState({
             {/* Emergency Contact */}
             <div className="signup-section">
               <h3 className="signup-section-title">Emergency Contact</h3>
-              
+
               <div className="signup-grid">
                 <div className="signup-field">
                   <label htmlFor="emergencyContactfn" className="signup-label">
@@ -353,7 +458,7 @@ const [formData, setFormData] = useState({
             {/* Password */}
             <div className="signup-section">
               <h3 className="signup-section-title">Create Password</h3>
-              
+
               <div className="signup-field">
                 <label htmlFor="password" className="signup-label">
                   Password *
@@ -369,7 +474,9 @@ const [formData, setFormData] = useState({
                     className={`signup-input signup-input-with-icon ${errors.password ? 'signup-input-error' : ''}`}
                   />
                 </div>
-                {errors.password && <span className="signup-error-message">{errors.password}</span>}
+                {errors.password && (
+                  <span className="signup-error-message">{errors.password}</span>
+                )}
               </div>
 
               <div className="signup-field">
@@ -387,7 +494,11 @@ const [formData, setFormData] = useState({
                     className={`signup-input signup-input-with-icon ${errors.confirmPassword ? 'signup-input-error' : ''}`}
                   />
                 </div>
-                {errors.confirmPassword && <span className="signup-error-message">{errors.confirmPassword}</span>}
+                {errors.confirmPassword && (
+                  <span className="signup-error-message">
+                    {errors.confirmPassword}
+                  </span>
+                )}
               </div>
             </div>
 
