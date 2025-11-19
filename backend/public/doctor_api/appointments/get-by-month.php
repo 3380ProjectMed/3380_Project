@@ -80,7 +80,15 @@ try {
     // Group by date
     $grouped = [];
     foreach ($appointments as $apt) {
+        // Normalize appointment date and compute Chicago date-only to avoid timezone shifts
         $date = date('Y-m-d', strtotime($apt['Appointment_date']));
+        try {
+            $dt = new DateTime($apt['Appointment_date']);
+            $dt->setTimezone(new DateTimeZone('America/Chicago'));
+            $date_chicago = $dt->format('Y-m-d');
+        } catch (Exception $e) {
+            $date_chicago = $date;
+        }
         if (!isset($grouped[$date])) {
             $grouped[$date] = [];
         }
@@ -95,7 +103,9 @@ try {
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
             'location' => $apt['office_name'],
             'office_id' => isset($apt['office_id']) ? intval($apt['office_id']) : null,
-            'allergies' => $apt['allergies'] ?: 'No Known Allergies'
+            'allergies' => $apt['allergies'] ?: 'No Known Allergies',
+            // Date-only in Chicago timezone to help frontends avoid timezone parsing issues
+            'date_only_chicago' => $date_chicago
         ];
     }
 

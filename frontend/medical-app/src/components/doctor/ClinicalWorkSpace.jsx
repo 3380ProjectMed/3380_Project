@@ -1178,13 +1178,13 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                                     <span className="treatment-notes"> - {treatment.notes}</span>
                                   )}
                                 </div>
-                                <button 
+                                {/* <button 
                                   onClick={() => handleDeleteTreatment(treatment.tpv_id, treatment.treatment_name)}
                                   className="btn-icon-danger-small"
                                   title="Remove treatment"
                                 >
                                   <Trash2 size={14} />
-                                </button>
+                                </button> */}
                               </li>
                             ))}
                           </ul>
