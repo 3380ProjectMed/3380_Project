@@ -1012,43 +1012,59 @@ function Report() {
                     <th onClick={() => handleSort('completed')}>
                       Completed {sortConfig.key === 'completed' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
+                    <th onClick={() => handleSort('scheduled')}>
+                      Scheduled {sortConfig.key === 'scheduled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
                     <th onClick={() => handleSort('cancelled')}>
                       Cancelled {sortConfig.key === 'cancelled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th onClick={() => handleSort('no_shows')}>
                       No-Shows {sortConfig.key === 'no_shows' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th onClick={() => handleSort('scheduled')}>
-                      Scheduled {sortConfig.key === 'scheduled' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    <th onClick={() => handleSort('ready')}>
+                      Ready {sortConfig.key === 'ready' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('checked_in')}>
+                      Checked-In {sortConfig.key === 'checked_in' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('waiting')}>
+                      Waiting {sortConfig.key === 'waiting' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th onClick={() => handleSort('in_progress')}>
+                      In Progress {sortConfig.key === 'in_progress' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                     </th>
                     <th>No-Show Rate</th>
-                    {/* <th>Avg Wait</th> */}
-                    <th>Utilization</th>
                   </tr>
                 </thead>
                 <tbody>
                   {getSortedData(officeData.office_stats || [], sortConfig.key).map((office, idx) => (
-                        <tr 
-                          key={idx}
-                          className="clickable-row"
-                          onClick={() => fetchOfficeAppointments(office)}
-                        >
+                    <tr
+                      key={idx}
+                      className="clickable-row"
+                      onClick={() => fetchOfficeAppointments(office)}
+                    >
                       <td className="text-bold">{office.office_name}</td>
                       <td className="text-muted">{office.address}</td>
                       <td>{office.total_appointments}</td>
                       <td className="text-success">{office.completed}</td>
+                      <td>{office.scheduled}</td>
                       <td className="text-warning">{office.cancelled}</td>
                       <td className="text-danger">{office.no_shows}</td>
-                      <td>{office.scheduled}</td>
+                      <td>{office.ready}</td>
+                      <td>{office.checked_in}</td>
+                      <td>{office.waiting}</td>
+                      <td>{office.in_progress}</td>
                       <td>
-                        <span className={`badge ${Number(office.no_show_rate) < 5 ? 'badge-success' : Number(office.no_show_rate) < 10 ? 'badge-warning' : 'badge-danger'}`}>
+                        <span
+                          className={`badge ${
+                            Number(office.no_show_rate) < 5
+                              ? 'badge-success'
+                              : Number(office.no_show_rate) < 10
+                              ? 'badge-warning'
+                              : 'badge-danger'
+                          }`}
+                        >
                           {office.no_show_rate}%
-                        </span>
-                      </td>
-                      {/* <td>{office.avg_wait_minutes ? `${office.avg_wait_minutes} min` : 'N/A'}</td> */}
-                      <td>
-                        <span className={`badge ${Number(office.utilization_rate) >= 80 ? 'badge-success' : Number(office.utilization_rate) >= 60 ? 'badge-warning' : 'badge-danger'}`}>
-                          {office.utilization_rate}%
                         </span>
                       </td>
                     </tr>
@@ -1635,7 +1651,7 @@ const OfficeUtilizationPie = ({ offices, overallUtilization }) => {
             fill="white"
             filter="drop-shadow(0 2px 8px rgba(0,0,0,0.1))"
           />
-          
+
           {hoveredIndex !== null && (
             <text
               x="200"
