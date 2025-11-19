@@ -95,6 +95,10 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       const data = await response.json();
 
       if (data.success) {
+        console.log('Patient details loaded:', data);
+        console.log('Current prescriptions:', data.medications?.current_prescriptions);
+        console.log('Medication history:', data.medications?.medication_history);
+        
         setPatientData(data);
 
         // Pre-fill existing vitals from visit data
@@ -400,17 +404,28 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
     setManagementLoading(true);
     try {
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      
+      const requestData = {
+        patient_id: patientData.patient.patient_id,
+        ...medicationForm
+      };
+      
+      console.log('Adding medication with data:', requestData);
+      console.log('Medication type:', medicationForm.type);
+      
       const response = await fetch(`${API_BASE}/nurse_api/clinical/manage-medications.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patient_id: patientData.patient.patient_id,
-          ...medicationForm
-        })
+        body: JSON.stringify(requestData)
       });
 
       const data = await response.json();
+      console.log('Server response:', data);
+      
       if (data.success) {
+        const currentType = medicationForm.type; // Preserve the type for success message
+        console.log('Successfully added medication of type:', currentType);
+        
         setMedicationForm({
           medication_name: '',
           dosage: '',
@@ -421,7 +436,18 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         });
         setShowMedicationForm(false);
         await fetchPatientDetails();
-        showNotification('success', 'Medication added successfully!');
+        
+        let successMessage;
+        if (data.fallback && currentType === 'prescription') {
+          successMessage = 'Warning: Prescription failed, medication added to history instead.';
+          showNotification('error', successMessage);
+        } else if (currentType === 'prescription') {
+          successMessage = 'Active prescription added successfully!';
+          showNotification('success', successMessage);
+        } else {
+          successMessage = 'Medication added to history successfully!';
+          showNotification('success', successMessage);
+        }
       } else {
         showNotification('error', 'Error adding medication: ' + data.error);
       }
