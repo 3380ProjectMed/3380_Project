@@ -296,7 +296,17 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        setNotes(data.notes || []);
+        const incoming = data.notes || [];
+        // Sort notes newest -> oldest using visit_date or created_at as fallback
+        const sorted = [...incoming].sort((a, b) => {
+          const getTime = (n) => {
+            const d = n?.visit_date || n?.date || n?.created_at || n?.note_date || null;
+            const t = d ? Date.parse(d) : NaN;
+            return isNaN(t) ? 0 : t;
+          };
+          return getTime(b) - getTime(a);
+        });
+        setNotes(sorted);
       }
     } catch (err) {
       console.error('Error fetching notes:', err);
@@ -317,7 +327,16 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        setNotes(data.notes || []);
+        const incoming = data.notes || [];
+        const sorted = [...incoming].sort((a, b) => {
+          const getTime = (n) => {
+            const d = n?.visit_date || n?.date || n?.created_at || n?.note_date || null;
+            const t = d ? Date.parse(d) : NaN;
+            return isNaN(t) ? 0 : t;
+          };
+          return getTime(b) - getTime(a);
+        });
+        setNotes(sorted);
       }
     } catch (err) {
       console.error('Error fetching notes:', err);
