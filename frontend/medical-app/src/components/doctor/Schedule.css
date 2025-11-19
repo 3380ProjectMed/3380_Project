@@ -126,7 +126,7 @@
   gap: 0.5rem;
   width: 100%;
   box-sizing: border-box;
-  grid-auto-rows: minmax(9rem, auto);
+  grid-auto-rows: minmax(11rem, auto); /* Increased from 9rem */
   align-items: stretch;
 }
 
@@ -143,8 +143,8 @@
 
 /* Calendar Day Cell */
 .calendar-day {
-  min-height: 7rem;
-  max-height: 12rem;
+  min-height: 10rem; /* Increased from 7rem */
+  max-height: 16rem; /* Increased from 12rem */
   padding: 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 0.75rem;

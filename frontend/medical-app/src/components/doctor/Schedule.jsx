@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './Schedule.css';
+import DayAppointmentsModal from './DayAppointmentsModal';
 
 /**
- * Schedule Component - Complete Working Version
+ * Schedule Component - FINAL VERSION
  * 
  * Features:
- * - Monthly calendar view with day numbers
+ * - Monthly calendar view with LARGER day boxes
  * - Location badges for each working day
- * - Today's date highlighted with blue circle
- * - Click on day or appointment to view details
+ * - Today's date highlighted with blue circle (19)
+ * - Click on day → Shows modal with list of ALL appointments
+ * - Click on individual appointment → Opens directly
  * - Location filtering
  * - Scrollable appointment lists
  */
@@ -20,14 +22,17 @@ function Schedule({ onAppointmentClick }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Modal state for showing day appointments
+  const [showDayModal, setShowDayModal] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedDayAppointments, setSelectedDayAppointments] = useState([]);
 
-  // Fetch work schedule on component mount
   useEffect(() => {
     fetchWorkSchedule();
     fetchAppointments();
   }, []);
 
-  // Refetch appointments when month changes
   useEffect(() => {
     fetchAppointments();
   }, [currentDate]);
@@ -177,6 +182,7 @@ function Schedule({ onAppointmentClick }) {
     return 'LOC';
   };
 
+  // FIXED: Show modal instead of opening first appointment
   const handleDayClick = (day, e) => {
     // Check if the click was on an appointment item
     if (e.target.closest('.appointment-item')) {
@@ -184,10 +190,19 @@ function Schedule({ onAppointmentClick }) {
     }
     
     const dayAppointments = getAppointmentsForDay(day);
-    if (dayAppointments.length > 0 && onAppointmentClick) {
-      // Open the first appointment for the day
-      onAppointmentClick(dayAppointments[0]);
+    
+    if (dayAppointments.length === 0) {
+      return; // Don't show modal if no appointments
     }
+    
+    // Show modal with all appointments for this day
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
+    setSelectedDay(dateStr);
+    setSelectedDayAppointments(dayAppointments);
+    setShowDayModal(true);
   };
 
   const handleAppointmentClick = (appointment, e) => {
@@ -249,6 +264,15 @@ function Schedule({ onAppointmentClick }) {
 
   return (
     <div className="schedule">
+      {/* Day Appointments Modal */}
+      <DayAppointmentsModal
+        isOpen={showDayModal}
+        onClose={() => setShowDayModal(false)}
+        date={selectedDay}
+        appointments={selectedDayAppointments}
+        onAppointmentClick={onAppointmentClick}
+      />
+      
       <div className="schedule-header">
         <div className="month-navigation">
           <button 

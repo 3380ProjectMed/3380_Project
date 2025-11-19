@@ -26,7 +26,7 @@
 .workspace-header {
   background: white;
   border-bottom: 2px solid var(--border);
-  padding: 1.5rem 2rem;
+  padding: 1.5rem 5rem 1.5rem 2rem; /* Added right padding to prevent overlap with close button */
   position: sticky;
   top: 0;
   z-index: 100;
@@ -50,7 +50,6 @@
   color: var(--dark);
   font-weight: 600;
   flex-wrap: wrap;
-  text-align: center;
 }
 
 .patient-meta span {
@@ -73,6 +72,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 101;
 }
 
 .btn-close:hover {
@@ -141,6 +141,7 @@
   padding: 1.5rem;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  min-height: 120px; /* Ensure minimum height for cards */
 }
 
 .info-card:hover {
@@ -185,6 +186,7 @@
   background: linear-gradient(135deg, #fee2e2, #fef2f2);
   border: 2px solid #fca5a5;
   animation: subtle-pulse 3s ease-in-out infinite;
+  min-height: 100px; /* Specific minimum for allergy card */
 }
 
 @keyframes subtle-pulse {
@@ -201,6 +203,8 @@
   color: #991b1b;
   font-weight: 600;
   font-size: 0.95rem;
+  line-height: 1.6;
+  min-height: 20px;
 }
 
 /* ===== INFO GRID ===== */
@@ -313,6 +317,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-height: 80px; /* Minimum height even when empty */
 }
 
 .medication-item {
@@ -386,6 +391,25 @@
   border-color: var(--error);
 }
 
+/* Small danger button for treatment list items */
+.btn-icon-danger-small {
+  background: transparent;
+  border: 1px solid #fca5a5;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: var(--error);
+}
+
+.btn-icon-danger-small:hover {
+  background: #fee2e2;
+  border-color: var(--error);
+}
+
 /* ===== CONDITIONS & HISTORY ===== */
 .conditions-list ul {
   list-style: none;
@@ -394,6 +418,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-height: 60px; /* Minimum height */
 }
 
 .conditions-list li {
@@ -409,6 +434,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-height: 80px; /* Minimum height */
 }
 
 .history-item {
@@ -433,6 +459,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-height: 80px; /* Minimum height */
 }
 
 .med-history-item {
@@ -797,10 +824,12 @@
   border-radius: 6px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   border: 1px solid #dce4ff;
   transition: all 0.2s;
 }
+
 .treatment-list-item:hover {
   background: #f7f9ff;
   border-color: #667eea;
@@ -813,6 +842,15 @@
   font-size: 0.8rem;
   flex-shrink: 0;
 }
+
+.treatment-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
 .treatment-name {
   font-weight: 600;
   color: #2d3748;
@@ -1080,7 +1118,7 @@
   }
 
   .workspace-header {
-    padding: 1rem;
+    padding: 1rem 4rem 1rem 1rem;
   }
 
   .btn-close {
@@ -1136,7 +1174,7 @@
 
 @media (max-width: 480px) {
   .workspace-header {
-    padding: 0.75rem;
+    padding: 0.75rem 3.5rem 0.75rem 0.75rem;
   }
 
   .header-info h2 {
