@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './MedicalRecords.css';
 import { medicalRecordsAPI } from '../../patientapi.js';
+import api from '../../patientapi.js';
 
 export default function MedicalRecords(props) {
-  const { loading, vitalsHistory = [], medications = [], allergies = [], conditions = [], onRefresh, setToast } = props;
+  const { loading, vitalsHistory = [], medications = [], allergies = [], conditions = [], profile = {}, onRefresh, setToast } = props;
   
   // Debug logging
   console.log('MedicalRecords props:', { 
@@ -13,11 +14,14 @@ export default function MedicalRecords(props) {
     allergiesCount: allergies.length, 
     conditionsCount: conditions.length,
     conditions,
-    allergies 
+    allergies,
+    bloodType: profile?.blood_type
   });
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [showAllergyModal, setShowAllergyModal] = useState(false);
+  const [showBloodTypeModal, setShowBloodTypeModal] = useState(false);
   const [allAvailableAllergies, setAllAvailableAllergies] = useState([]);
+  const [selectedBloodType, setSelectedBloodType] = useState('');
   const [medicationForm, setMedicationForm] = useState({
     medication_name: '',
     dosage: '',
@@ -126,6 +130,29 @@ export default function MedicalRecords(props) {
     }
   };
 
+  const handleAddBloodType = async (e) => {
+    e.preventDefault();
+    if (!selectedBloodType) {
+      setToast && setToast({ message: 'Please select a blood type', type: 'error' });
+      return;
+    }
+    
+    try {
+      const data = await api.profile.updateProfile({ blood_type: selectedBloodType });
+      if (data.success) {
+        setShowBloodTypeModal(false);
+        setSelectedBloodType('');
+        onRefresh && onRefresh(); // Refresh the medical records
+        setToast && setToast({ message: 'Blood type updated successfully', type: 'success' });
+      } else {
+        setToast && setToast({ message: 'Error updating blood type: ' + data.message, type: 'error' });
+      }
+    } catch (error) {
+      console.error('Error updating blood type:', error);
+      setToast && setToast({ message: 'Error updating blood type', type: 'error' });
+    }
+  };
+
   return (
     <div className="portal-content">
       <h1 className="page-title">Medical Records</h1>
@@ -133,6 +160,34 @@ export default function MedicalRecords(props) {
         <div className="loading-spinner">Loading...</div>
       ) : (
         <div className="records-grid">
+          <div className="record-card blood-type-card">
+            <h3>Blood Type</h3>
+            {!profile?.blood_type ? (
+              <>
+                <p className="text-gray">No blood type on file</p>
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowBloodTypeModal(true)}
+                >
+                  Add Blood Type
+                </button>
+              </>
+            ) : (
+              <div className="blood-type-display">
+                <span className="blood-type-value">{profile.blood_type}</span>
+                <button 
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setSelectedBloodType(profile.blood_type);
+                    setShowBloodTypeModal(true);
+                  }}
+                >
+                  Update
+                </button>
+              </div>
+            )}
+          </div>
+          
           <div className="record-card">
             <h3>Vaccinations</h3>
             {vitalsHistory.length === 0 ? <p className="text-gray">No vaccinations on file</p> : (
@@ -350,6 +405,62 @@ export default function MedicalRecords(props) {
                   disabled={!allergyForm.selected_allergy && !allergyForm.allergy_text.trim()}
                 >
                   Update Allergy
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Blood Type Modal */}
+      {showBloodTypeModal && (
+        <div className="modal-overlay" onClick={() => setShowBloodTypeModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{profile?.blood_type ? 'Update' : 'Add'} Blood Type</h2>
+              <button 
+                className="modal-close" 
+                onClick={() => setShowBloodTypeModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleAddBloodType}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Select Blood Type</label>
+                  <select
+                    value={selectedBloodType}
+                    onChange={(e) => setSelectedBloodType(e.target.value)}
+                    required
+                    className="form-select"
+                  >
+                    <option value="">-- Select Blood Type --</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setShowBloodTypeModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={!selectedBloodType}
+                >
+                  {profile?.blood_type ? 'Update' : 'Add'} Blood Type
                 </button>
               </div>
             </form>
