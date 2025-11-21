@@ -8,7 +8,6 @@ import PatientSearch from './PatientSearch';
 import AppointmentBooking from './AppointmentBooking';
 import PaymentProcessing from './PaymentProcessing';
 import ReceptionistProfile from './ReceptionistProfile';
-import Toast from '../common/Toast';
 import './ReceptionistPortal.css';
 
 /**
@@ -33,7 +32,7 @@ function ReceptionistPortal() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [officeInfo, setOfficeInfo] = useState({ id: null, name: 'Loading...' });
-  const [toast, setToast] = useState(null);
+  
   
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -172,18 +171,11 @@ function ReceptionistPortal() {
               setSelectedTimeSlot(null);
               setEditingAppointment(null);
             }}
-            setToast={setToast}
             officeId={officeInfo.id}
             officeName={officeInfo.name}
           />
         )}
-
-        {/* Global toast for receptionist flows */}
-        <Toast
-          message={toast?.message}
-          type={toast?.type || 'success'}
-          onClose={() => setToast(null)}
-        />
+        
         
         {currentPage === 'payment' && (
           <PaymentProcessing

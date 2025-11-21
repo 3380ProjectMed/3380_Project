@@ -9,7 +9,7 @@ import './AppointmentBooking.css';
  * Multi-step appointment booking process
  * Integrated with backend APIs for patients, doctors, and appointments
  */
-function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAppointment, onBack, onSuccess, officeId, officeName, setToast }) {
+function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAppointment, onBack, onSuccess, officeId, officeName }) {
   const [currentStep, setCurrentStep] = useState(preSelectedPatient ? 2 : 1);
   const [selectedPatient, setSelectedPatient] = useState(preSelectedPatient);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
@@ -465,20 +465,6 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
         const result = await response.json();
         
         if (result.success) {
-          // show toast with patient/doctor/date/time details then navigate back
-          try {
-            const pFirst = selectedPatient?.First_Name || selectedPatient?.first_name || (selectedPatient?.patient_name ? selectedPatient.patient_name.split(' ')[0] : '') || selectedPatient?.Patient_First || '';
-            const pLast = selectedPatient?.Last_Name || selectedPatient?.last_name || (selectedPatient?.patient_name ? selectedPatient.patient_name.split(' ').slice(1).join(' ') : '') || selectedPatient?.Patient_Last || '';
-            const dFirst = selectedDoctor?.First_Name || selectedDoctor?.first_name || '';
-            const dLast = selectedDoctor?.Last_Name || selectedDoctor?.last_name || '';
-            const displayDate = appointmentDate;
-            const displayTime = appointmentTime;
-            setToast && setToast({
-              message: `Updated appointment for ${pFirst} ${pLast} with Dr. ${dFirst} ${dLast} on ${displayDate} at ${displayTime}`,
-              type: 'success'
-            });
-          } catch (e) {}
-
           if (onSuccess) {
             onSuccess();
           }
@@ -507,20 +493,6 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
         const result = await response.json();
         
         if (result.success) {
-          // show toast with patient/doctor/date/time details then navigate back
-          try {
-            const pFirst = selectedPatient?.First_Name || selectedPatient?.first_name || (selectedPatient?.patient_name ? selectedPatient.patient_name.split(' ')[0] : '') || selectedPatient?.Patient_First || '';
-            const pLast = selectedPatient?.Last_Name || selectedPatient?.last_name || (selectedPatient?.patient_name ? selectedPatient.patient_name.split(' ').slice(1).join(' ') : '') || selectedPatient?.Patient_Last || '';
-            const dFirst = selectedDoctor?.First_Name || selectedDoctor?.first_name || '';
-            const dLast = selectedDoctor?.Last_Name || selectedDoctor?.last_name || '';
-            const displayDate = appointmentDate;
-            const displayTime = appointmentTime;
-            setToast && setToast({
-              message: `Created appointment for ${pFirst} ${pLast} with Dr. ${dFirst} ${dLast} on ${displayDate} at ${displayTime}`,
-              type: 'success'
-            });
-          } catch (e) {}
-
           if (onSuccess) {
             onSuccess();
           }
