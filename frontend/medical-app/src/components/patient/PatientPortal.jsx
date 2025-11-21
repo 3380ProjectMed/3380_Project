@@ -242,6 +242,8 @@ export default function PatientPortal({ onLogout }) {
     if (m.success) setMedications(m.data ?? []);
     if (a.success) setAllergies(a.data ?? []);
     if (c.success) setConditions(c.data ?? []);
+    // Also reload profile to get updated blood_type
+    await loadProfile();
   }
 
   async function loadInsurance() {
