@@ -225,7 +225,8 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
     const [tH, tM] = timeStr.split(':').map(Number);
     const tMinutes = tH * 60 + tM;
 
-    return tMinutes >= startMinutes && tMinutes <= endMinutes;
+    // Server uses end_time > time (exclusive end). Match that behavior here.
+    return tMinutes >= startMinutes && tMinutes < endMinutes;
   };
 
   /**
@@ -425,12 +426,23 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
       setCreating(true);
       setError(null);
 
-      // Parse time
-      const [hours, minutes] = appointmentTime.split(':');
-      
-      // Format datetime for API - parse date components directly to avoid timezone issues
-      const [year, month, day] = appointmentDate.split('-');
-      const appointmentDateTime = `${year}-${month}-${day} ${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
+  // Parse time and build a local Date object to avoid ambiguous string parsing across browsers/servers
+  const [hours, minutes] = appointmentTime.split(':').map(Number);
+  const [year, month, day] = appointmentDate.split('-').map(Number);
+
+  // Create local Date using numeric components (year, monthIndex, day, hour, minute)
+  let apptLocal;
+  if (preSelectedTimeSlot && preSelectedTimeSlot.date) {
+    // use the Date object passed from OfficeSchedule to preserve exact local date
+    apptLocal = new Date(preSelectedTimeSlot.date);
+    apptLocal.setHours(hours, minutes, 0, 0);
+  } else {
+    apptLocal = new Date(year, month - 1, day, hours, minutes, 0);
+  }
+
+  // Format datetime for API as local YYYY-MM-DD HH:MM:SS (no timezone suffix)
+  const pad = (n) => String(n).padStart(2, '0');
+  const appointmentDateTime = `${apptLocal.getFullYear()}-${pad(apptLocal.getMonth() + 1)}-${pad(apptLocal.getDate())} ${pad(apptLocal.getHours())}:${pad(apptLocal.getMinutes())}:00`;
 
       if (isEditMode && appointmentId) {
         // Update existing appointment
@@ -453,7 +465,6 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
         const result = await response.json();
         
         if (result.success) {
-          // Success! Navigate back
           if (onSuccess) {
             onSuccess();
           }
@@ -482,7 +493,6 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
         const result = await response.json();
         
         if (result.success) {
-          // Success! Navigate back
           if (onSuccess) {
             onSuccess();
           }
@@ -503,6 +513,14 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
    */
   const getMinDate = () => {
     return new Date().toISOString().split('T')[0];
+  };
+
+  // Local date formatter (matches OfficeSchedule.formatDateLocal)
+  const formatDateLocal = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   return (

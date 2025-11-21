@@ -33,6 +33,7 @@ function ReceptionistPortal() {
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [officeInfo, setOfficeInfo] = useState({ id: null, name: 'Loading...' });
   
+  
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
@@ -174,6 +175,7 @@ function ReceptionistPortal() {
             officeName={officeInfo.name}
           />
         )}
+        
         
         {currentPage === 'payment' && (
           <PaymentProcessing
