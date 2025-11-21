@@ -77,6 +77,8 @@ try {
     $doctor_id = $verifyResult[0]['Doctor_id'];
     $patient_first = $verifyResult[0]['first_name'];
     $patient_last = $verifyResult[0]['last_name'];
+    // Use receptionist's email from session for created_by/updated_by fields
+    $receptionist_email = $_SESSION['email'] ?? $_SESSION['username'] ?? null;
     
     // If validate_only mode, attempt insert in a transaction and rollback
     // This lets the trigger do the validation work
@@ -99,10 +101,10 @@ try {
             
             // Attempt to insert - trigger will validate
             // Use NULL for nurse_id during validation-only to avoid foreign key errors (frontend may pass 0)
-            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, nurse_id, office_id, start_at, insurance_policy_id_used)
-                              VALUES (?, ?, ?, NULL, ?, NOW(), NULL)";
-            // bind: appointment_id, patient_id, doctor_id, office_id
-            executeQuery($conn, $insertVisitSql, 'iiii', [$appointment_id, $patient_id, $doctor_id, $office_id]);
+            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, nurse_id, office_id, start_at, insurance_policy_id_used, created_by, updated_by)
+                              VALUES (?, ?, ?, NULL, ?, NOW(), NULL, ?, ?)";
+            // bind: appointment_id, patient_id, doctor_id, office_id, created_by, updated_by
+            executeQuery($conn, $insertVisitSql, 'iiiiss', [$appointment_id, $patient_id, $doctor_id, $office_id, $receptionist_email, $receptionist_email]);
             
             // Check for warnings from trigger
             $warningResult = $conn->query("SELECT @insurance_warning AS warning");
@@ -228,8 +230,8 @@ try {
         if (empty($existingVisit)) {
             // Create new patient_visit record
             // The trigger will validate insurance automatically and populate insurance_policy_id_used
-            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, nurse_id, office_id, start_at, insurance_policy_id_used)
-                              VALUES (?, ?, ?, ?, ?, NOW(), NULL)";
+                $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, nurse_id, office_id, start_at, insurance_policy_id_used, created_by, updated_by)
+                              VALUES (?, ?, ?, ?, ?, NOW(), NULL, ?, ?)";
 
             try {
                 // Ensure nurse_id is valid before attempting insert to avoid FK constraint failures
@@ -252,7 +254,7 @@ try {
                 }
 
                 // executeQuery will bind the nurse value; passing null will set NULL in statement
-                executeQuery($conn, $insertVisitSql, 'iiiii', [$appointment_id, $patient_id, $doctor_id, $nurseToUse, $office_id]);
+                executeQuery($conn, $insertVisitSql, 'iiiiss', [$appointment_id, $patient_id, $doctor_id, $nurseToUse, $office_id, $receptionist_email, $receptionist_email]);
 
             } catch (Exception $insertEx) {
                 // Trigger threw an error - parse it and return appropriate response
@@ -307,9 +309,9 @@ try {
             // Note: The trigger only fires on INSERT, not UPDATE
             // So we need to manually check insurance for updates
             $updateVisitSql = "UPDATE patient_visit 
-                              SET start_at = NOW()
+                              SET start_at = NOW(), updated_by = ?
                               WHERE appointment_id = ?";
-            executeQuery($conn, $updateVisitSql, 'i', [$appointment_id]);
+            executeQuery($conn, $updateVisitSql, 'si', [$receptionist_email, $appointment_id]);
         }
 
         // Check for insurance warnings (expiring soon)
