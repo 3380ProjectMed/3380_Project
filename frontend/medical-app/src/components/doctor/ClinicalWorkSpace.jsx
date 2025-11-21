@@ -56,31 +56,34 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
 
   useEffect(() => {
     // If patient object is provided directly (from PatientList), use it
-    // if (patient) {
-    //   setPatientData({
-    //     success: true,
-    //     has_visit: false,
-    //     patient: patient,
-    //     visit: {
-    //       patient_id: patient.patient_id || patient.id,
-    //       reason: '',
-    //       status: null,
-    //       diagnosis: null
-    //     },
-    //     vitals: {
-    //       blood_pressure: null,
-    //       temperature: null,
-    //       recorded_by: null
-    //     },
-    //     treatments: []
-    //   });
-    //   setLoading(false);
-    //   fetchTreatmentCatalog();
-    //   if (patient.patient_id || patient.id) {
-    //     fetchNotesByPatientId(patient.patient_id || patient.id);
-    //   }
-    // } 
-    // // If appointmentId is provided, fetch by appointment
+    if (patient) {
+      setPatientData({
+        success: true,
+        has_visit: false,
+        patient: patient,
+        visit: {
+          patient_id: patient.patient_id || patient.id,
+          reason: '',
+          status: null,
+          diagnosis: null
+        },
+        vitals: {
+          blood_pressure: null,
+          temperature: null,
+          recorded_by: null
+        },
+        treatments: []
+      });
+      setLoading(false);
+      fetchTreatmentCatalog();
+      // load prescriptions for this patient object
+      const pid = patient.patient_id || patient.id;
+      if (pid) fetchPrescriptions(pid, 0);
+      if (patient.patient_id || patient.id) {
+        fetchNotesByPatientId(patient.patient_id || patient.id);
+      }
+    } 
+    // If appointmentId is provided, fetch by appointment
     if (appointmentId) {
       fetchPatientDetails();
       fetchNotes();
@@ -151,6 +154,10 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
         } else {
           setSelectedTreatments([]);
         }
+        // Fetch prescriptions for this patient/appointment
+        const pid = data.patient?.patient_id || data.patient?.id;
+        const aid = data.visit?.appointment_id || appointmentId || 0;
+        if (pid) fetchPrescriptions(pid, aid);
       } else if (data.has_visit === false) {
         await fetchBasicPatientInfo();
       } else {
@@ -200,6 +207,9 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
         } else {
           setSelectedTreatments([]);
         }
+        // Fetch prescriptions for this patient
+        const pid = data.patient?.patient_id || data.patient?.id || patientId;
+        if (pid) fetchPrescriptions(pid, 0);
       } else {
         throw new Error(data.error || 'Failed to load patient data');
       }
@@ -296,7 +306,17 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        setNotes(data.notes || []);
+        const incoming = data.notes || [];
+        // Sort notes newest -> oldest using visit_date or created_at as fallback
+        const sorted = [...incoming].sort((a, b) => {
+          const getTime = (n) => {
+            const d = n?.visit_date || n?.date || n?.created_at || n?.note_date || null;
+            const t = d ? Date.parse(d) : NaN;
+            return isNaN(t) ? 0 : t;
+          };
+          return getTime(b) - getTime(a);
+        });
+        setNotes(sorted);
       }
     } catch (err) {
       console.error('Error fetching notes:', err);
@@ -317,7 +337,16 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        setNotes(data.notes || []);
+        const incoming = data.notes || [];
+        const sorted = [...incoming].sort((a, b) => {
+          const getTime = (n) => {
+            const d = n?.visit_date || n?.date || n?.created_at || n?.note_date || null;
+            const t = d ? Date.parse(d) : NaN;
+            return isNaN(t) ? 0 : t;
+          };
+          return getTime(b) - getTime(a);
+        });
+        setNotes(sorted);
       }
     } catch (err) {
       console.error('Error fetching notes:', err);
@@ -342,6 +371,47 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       }
     } catch (err) {
       console.error('Error fetching treatment catalog:', err);
+    }
+  };
+
+  // Fetch prescriptions for patient (and optional appointment) and attach to patientData.patient.currentMedications
+  const fetchPrescriptions = async (pid, aid = 0) => {
+    try {
+      if (!pid) return;
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      let url = `${API_BASE}/doctor_api/clinical/get-prescription.php?patient_id=${pid}`;
+      if (aid) url += `&appointment_id=${aid}`;
+
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) {
+        console.error('Failed to fetch prescriptions:', response.status);
+        return;
+      }
+
+      const data = await response.json();
+      if (!data.success) return;
+
+      const mapped = (data.prescriptions || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        dosage: p.dosage,
+        frequency: p.frequency,
+        route: p.route,
+        start_date: p.start_date,
+        end_date: p.end_date,
+        refills_allowed: p.refills_allowed,
+        instructions: p.instructions,
+        prescribed_by: p.prescribed_by
+      }));
+
+      setPatientData(prev => {
+        if (!prev) return prev;
+        const patientObj = { ...(prev.patient || {}) };
+        patientObj.currentMedications = mapped;
+        return { ...prev, patient: patientObj };
+      });
+    } catch (err) {
+      console.error('Error fetching prescriptions:', err);
     }
   };
 
@@ -1159,13 +1229,13 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                                     <span className="treatment-notes"> - {treatment.notes}</span>
                                   )}
                                 </div>
-                                <button 
+                                {/* <button 
                                   onClick={() => handleDeleteTreatment(treatment.tpv_id, treatment.treatment_name)}
                                   className="btn-icon-danger-small"
                                   title="Remove treatment"
                                 >
                                   <Trash2 size={14} />
-                                </button>
+                                </button> */}
                               </li>
                             ))}
                           </ul>

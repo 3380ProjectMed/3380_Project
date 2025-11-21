@@ -95,6 +95,10 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       const data = await response.json();
 
       if (data.success) {
+        console.log('Patient details loaded:', data);
+        console.log('Current prescriptions:', data.medications?.current_prescriptions);
+        console.log('Medication history:', data.medications?.medication_history);
+        
         setPatientData(data);
 
         // Pre-fill existing vitals from visit data
@@ -400,17 +404,28 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
     setManagementLoading(true);
     try {
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      
+      const requestData = {
+        patient_id: patientData.patient.patient_id,
+        ...medicationForm
+      };
+      
+      console.log('Adding medication with data:', requestData);
+      console.log('Medication type:', medicationForm.type);
+      
       const response = await fetch(`${API_BASE}/nurse_api/clinical/manage-medications.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patient_id: patientData.patient.patient_id,
-          ...medicationForm
-        })
+        body: JSON.stringify(requestData)
       });
 
       const data = await response.json();
+      console.log('Server response:', data);
+      
       if (data.success) {
+        const currentType = medicationForm.type; // Preserve the type for success message
+        console.log('Successfully added medication of type:', currentType);
+        
         setMedicationForm({
           medication_name: '',
           dosage: '',
@@ -421,7 +436,18 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         });
         setShowMedicationForm(false);
         await fetchPatientDetails();
-        showNotification('success', 'Medication added successfully!');
+        
+        let successMessage;
+        if (data.fallback && currentType === 'prescription') {
+          successMessage = 'Warning: Prescription failed, medication added to history instead.';
+          showNotification('error', successMessage);
+        } else if (currentType === 'prescription') {
+          successMessage = 'Active prescription added successfully!';
+          showNotification('success', successMessage);
+        } else {
+          successMessage = 'Medication added to history successfully!';
+          showNotification('success', successMessage);
+        }
       } else {
         showNotification('error', 'Error adding medication: ' + data.error);
       }
@@ -737,83 +763,106 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         )}
       </div>
 
-      {/* Current Medications */}
+      {/* Active Prescriptions Section */}
       <div className="medications-section">
         <div className="section-header">
-          <h3>💊 Current Medications</h3>
+          <h3>💊 Current Medications (Active Prescriptions)</h3>
           <button 
             className="btn-add-item" 
-            onClick={() => setShowMedicationForm(true)}
+            onClick={() => {
+              setMedicationForm(prev => ({ ...prev, type: 'prescription' }));
+              setShowMedicationForm(true);
+            }}
             disabled={managementLoading}
+            title="Add Active Prescription"
           >
             <Pill size={16} />
-            Add Medication
+            Add Prescription
           </button>
         </div>
         
-        {/* Active Prescriptions */}
-        {patientData?.medications?.current_prescriptions?.length > 0 && (
-          <div className="medications-subsection">
-            <h4>Active Prescriptions</h4>
-            <div className="medications-grid">
-              {patientData.medications.current_prescriptions.map((med, index) => (
-                <div key={index} className="medication-item">
-                  <div className="med-header">
-                    <div className="med-name">{med.medication_name}</div>
-                    <button 
-                      className="btn-remove"
-                      onClick={() => handleRemoveMedication(med.prescription_id, 'prescription')}
-                      disabled={managementLoading}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <div className="med-details">
-                    {med.dosage && <span className="med-dosage">{med.dosage}</span>}
-                    {med.frequency && <span className="med-frequency">{med.frequency}</span>}
-                    {med.route && <span className="med-route">{med.route}</span>}
-                  </div>
-                  {med.prescribed_by && (
-                    <div className="med-prescriber">Prescribed by: {med.prescribed_by}</div>
-                  )}
-                  <div className="med-dates">
-                    Start: {formatChicagoDate(med.start_date)}
-                    {med.end_date && ` | End: ${formatChicagoDate(med.end_date)}`}
-                  </div>
+        {/* Active Prescriptions List */}
+        {patientData?.medications?.current_prescriptions?.length > 0 ? (
+          <div className="medications-grid">
+            {patientData.medications.current_prescriptions.map((med, index) => (
+              <div key={index} className="medication-item prescription">
+                <div className="med-header">
+                  <div className="med-name">{med.medication_name}</div>
+                  <div className="med-status active">ACTIVE</div>
+                  <button 
+                    className="btn-remove"
+                    onClick={() => handleRemoveMedication(med.prescription_id, 'prescription')}
+                    disabled={managementLoading}
+                    title="Remove prescription"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Medication History */}
-        {patientData?.medications?.medication_history?.length > 0 && (
-          <div className="medications-subsection">
-            <h4>Medication History</h4>
-            <div className="medications-grid">
-              {patientData.medications.medication_history.map((med, index) => (
-                <div key={index} className="medication-item history">
-                  <div className="med-header">
-                    <div className="med-name">{med.drug_name}</div>
-                    <button 
-                      className="btn-remove"
-                      onClick={() => handleRemoveMedication(med.drug_id, 'history')}
-                      disabled={managementLoading}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <div className="med-frequency">{med.frequency}</div>
+                <div className="med-details">
+                  {med.dosage && <span className="med-dosage">{med.dosage}</span>}
+                  {med.frequency && <span className="med-frequency">{med.frequency}</span>}
+                  {med.route && <span className="med-route">{med.route}</span>}
                 </div>
-              ))}
-            </div>
+                {med.prescribed_by && (
+                  <div className="med-prescriber">Prescribed by: {med.prescribed_by}</div>
+                )}
+                <div className="med-dates">
+                  Start: {formatChicagoDate(med.start_date)}
+                  {med.end_date && ` | End: ${formatChicagoDate(med.end_date)}`}
+                </div>
+                {med.notes && <div className="med-notes">{med.notes}</div>}
+              </div>
+            ))}
           </div>
-        )}
-        
-        {/* No medications message */}
-        {(!patientData?.medications?.current_prescriptions?.length && !patientData?.medications?.medication_history?.length) && (
+        ) : (
           <div className="no-items-message">
-            No medications recorded
+            No active prescriptions
+          </div>
+        )}
+      </div>
+
+      {/* Medication History Section */}
+      <div className="medications-section">
+        <div className="section-header">
+          <h3>📋 Medication History</h3>
+          <button 
+            className="btn-add-item secondary" 
+            onClick={() => {
+              setMedicationForm(prev => ({ ...prev, type: 'history' }));
+              setShowMedicationForm(true);
+            }}
+            disabled={managementLoading}
+            title="Add to Medication History"
+          >
+            <Plus size={16} />
+            Add to History
+          </button>
+        </div>
+        
+        {/* Medication History List */}
+        {patientData?.medications?.medication_history?.length > 0 ? (
+          <div className="medications-grid">
+            {patientData.medications.medication_history.map((med, index) => (
+              <div key={index} className="medication-item history">
+                <div className="med-header">
+                  <div className="med-name">{med.drug_name}</div>
+                  <div className="med-status history">HISTORY</div>
+                  <button 
+                    className="btn-remove"
+                    onClick={() => handleRemoveMedication(med.drug_id, 'history')}
+                    disabled={managementLoading}
+                    title="Remove from history"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <div className="med-frequency">{med.frequency}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="no-items-message">
+            No medication history recorded
           </div>
         )}
 

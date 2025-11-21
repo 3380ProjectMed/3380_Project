@@ -358,11 +358,20 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
       
       if (data.success && data.appointments) {
         // Filter appointments for the selected doctor and ignore cancelled/no-show
+        // Also ignore the appointment currently being edited (so editing doesn't conflict with itself)
         const doctorAppointments = data.appointments.filter((appt) => {
           if (appt.Doctor_id !== selectedDoctor.Doctor_id) return false;
           const status = (appt.status || '').toString().toLowerCase();
           // ignore cancelled or no-show appointments
           if (status === 'cancelled' || status === 'canceled' || status === 'no-show') return false;
+
+          // Determine appointment id (support different casing)
+          const apptId = appt.Appointment_id ?? appt.AppointmentId ?? appt.appointment_id ?? appt.id;
+          if (isEditMode && appointmentId && apptId && Number(apptId) === Number(appointmentId)) {
+            // Skip the appointment being edited so it doesn't conflict with itself
+            return false;
+          }
+
           return true;
         });
         
@@ -536,6 +545,14 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
           <p className="page-subtitle">{officeName}</p>
         </div>
       </div>
+
+      {/* Edit mode banner */}
+      {isEditMode && appointmentId && (
+        <div className="edit-banner">
+          <strong>Editing appointment #{appointmentId}</strong>
+          <span> — Changes will update the existing appointment (not create a new one).</span>
+        </div>
+      )}
 
       {/* ===== STEP INDICATOR ===== */}
       <div className="step-indicator">

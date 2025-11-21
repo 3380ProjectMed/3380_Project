@@ -3,20 +3,23 @@ import { CreditCard, X, CheckCircle, AlertCircle } from 'lucide-react';
 import './Billing.css';
 
 export default function Billing(props) {
-  const { loading, billingBalance = 0, billingStatements = [], processPayment } = props;
+  const { loading, billingBalance = {}, billingStatements = [], processPayment } = props;
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [selectedStatement, setSelectedStatement] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [notification, setNotification] = useState(null);
   
-  // billingBalance may come back as a string from the API (e.g. "0.00"). Coerce to number for safe math/formatting.
-  const balanceNumber = typeof billingBalance === 'string' ? parseFloat(billingBalance || 0) : Number(billingBalance || 0);
+  // Handle billingBalance as either a number (old format) or object (new format with breakdown)
+  const balanceData = typeof billingBalance === 'object' && billingBalance !== null ? billingBalance : { outstanding_balance: billingBalance || 0 };
+  const totalBalance = Number(balanceData.outstanding_balance || 0);
+  const visitBalance = Number(balanceData.visit_balance || 0);
+  const noShowBalance = Number(balanceData.no_show_balance || 0);
 
   const handleMakePayment = () => {
     // Choose the first outstanding statement if available
     const stmt = billingStatements.find(s => Number(s.balance) > 0) || null;
-    const defaultAmount = stmt ? Number(stmt.balance).toFixed(2) : balanceNumber.toFixed(2);
+    const defaultAmount = stmt ? Number(stmt.balance).toFixed(2) : totalBalance.toFixed(2);
     
     setSelectedStatement(stmt);
     setPaymentAmount(defaultAmount);
@@ -36,10 +39,28 @@ export default function Billing(props) {
     }
 
     setProcessingPayment(true);
-    const visitId = selectedStatement ? selectedStatement.id : null;
+    
+    // Prepare payment data based on record type
+    let paymentData = { amount };
+    
+    if (selectedStatement) {
+      if (selectedStatement.record_type === 'no_show') {
+        // No-show penalty payment
+        paymentData.penalty_id = selectedStatement.id;
+        paymentData.record_type = 'no_show';
+      } else {
+        // Regular visit payment
+        paymentData.visit_id = selectedStatement.id;
+        paymentData.record_type = 'visit';
+      }
+    } else {
+      // Default to visit if no statement selected
+      paymentData.visit_id = null;
+      paymentData.record_type = 'visit';
+    }
     
     try {
-      await processPayment({ visit_id: visitId, amount });
+      await processPayment(paymentData);
       setShowPaymentModal(false);
       setPaymentAmount('');
       setSelectedStatement(null);
@@ -92,7 +113,26 @@ export default function Billing(props) {
           <div className="billing-summary">
             <div className="balance-card">
               <h3>Outstanding Balance</h3>
-              <h1 className="balance-amount">${balanceNumber.toFixed(2)}</h1>
+              <h1 className="balance-amount">${totalBalance.toFixed(2)}</h1>
+              
+              {/* Show breakdown if there are multiple types of charges */}
+              {(visitBalance > 0 || noShowBalance > 0) && (
+                <div className="balance-breakdown">
+                  {visitBalance > 0 && (
+                    <div className="balance-breakdown-item">
+                      <span>Visit Charges:</span>
+                      <span>${visitBalance.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {noShowBalance > 0 && (
+                    <div className="balance-breakdown-item no-show">
+                      <span>No-Show Penalties:</span>
+                      <span>${noShowBalance.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <button className="btn btn-primary btn-large" onClick={handleMakePayment}>
                 <CreditCard className="icon" /> Make Payment
               </button>
@@ -106,7 +146,7 @@ export default function Billing(props) {
             ) : (
               <div className="appointments-list">
                 {billingStatements.map(s => (
-                  <div key={s.id} className="billing-statement-card">
+                  <div key={`${s.record_type}-${s.id}`} className={`billing-statement-card ${s.record_type === 'no_show' ? 'no-show-penalty' : ''}`}>
                     <div className="statement-header">
                       <div className="statement-info">
                         <h3>{s.service}</h3>
@@ -114,6 +154,9 @@ export default function Billing(props) {
                         <span className={`status-badge ${s.status.toLowerCase().replace(' ', '-')}`}>
                           {s.status}
                         </span>
+                        {s.record_type === 'no_show' && (
+                          <span className="penalty-badge">No-Show Penalty</span>
+                        )}
                       </div>
                       <div className="statement-balance">
                         <div className="balance-label">Amount Due</div>
@@ -121,6 +164,27 @@ export default function Billing(props) {
                       </div>
                     </div>
                     
+                    {/* Different breakdown for no-show penalties vs regular visits */}
+                    {s.record_type === 'no_show' ? (
+                      <div className="cost-breakdown">
+                        <h4>Penalty Details</h4>
+                        <div className="breakdown-grid">
+                          <div className="breakdown-item">
+                            <span className="breakdown-label">Missed Appointment Fee:</span>
+                            <span className="breakdown-amount">${Number(s.no_show_fee || 0).toFixed(2)}</span>
+                          </div>
+                          <div className="breakdown-item total">
+                            <span className="breakdown-label"><strong>Total Due:</strong></span>
+                            <span className="breakdown-amount"><strong>${Number(s.amount || 0).toFixed(2)}</strong></span>
+                          </div>
+                        </div>
+                        {s.payment_made > 0 && (
+                          <div className="payment-info">
+                            <p>Paid: ${Number(s.payment_made).toFixed(2)}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
                     <div className="cost-breakdown">
                       <h4>Cost Breakdown</h4>
                       <div className="breakdown-grid">
@@ -175,6 +239,7 @@ export default function Billing(props) {
                         </div>
                       )}
                     </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -197,7 +262,15 @@ export default function Billing(props) {
               {selectedStatement && (
                 <div className="payment-details">
                   <p><strong>Statement:</strong> {selectedStatement.service}</p>
+                  {selectedStatement.record_type === 'no_show' && (
+                    <p className="penalty-notice"><strong>⚠️ No-Show Penalty</strong></p>
+                  )}
                   <p><strong>Outstanding Balance:</strong> ${Number(selectedStatement.balance).toFixed(2)}</p>
+                  {selectedStatement.record_type === 'no_show' && (
+                    <p className="text-small" style={{ marginTop: '0.5rem', color: '#6b7280' }}>
+                      Payment Method: Credit Card
+                    </p>
+                  )}
                 </div>
               )}
               <div className="form-group">

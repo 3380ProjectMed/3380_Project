@@ -33,10 +33,16 @@ try {
     $appointment_id = (int)$input['Appointment_id'];
     $user_id = (int)$_SESSION['uid'];
 
+    // Defensive: do not allow clients to attempt to change the primary key via payload.
+    // We already read Appointment_id to identify the row; remove any accidental or malicious
+    // Appointment_id/appointment_id fields so they're not considered for updates below.
+    if (isset($input['Appointment_id'])) unset($input['Appointment_id']);
+    if (isset($input['appointment_id'])) unset($input['appointment_id']);
+
     $conn = getDBConnection();
 
-    // Verify receptionist has access to this appointment's office
-    $verifySql = "SELECT a.Appointment_id, a.Office_id
+    // Authorization: receptionist with work_schedule for the appointment's office OR the patient who owns the appointment
+    $verifySql = "SELECT a.Appointment_id, a.Office_id, a.Patient_id, a.Status
                   FROM appointment a
                   JOIN user_account ua ON ua.user_id = ?
                   JOIN staff s ON ua.email = s.staff_email
@@ -45,7 +51,24 @@ try {
 
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$user_id, $appointment_id]);
 
+    $isPatientOwner = false;
+    $isReceptionist = !empty($verifyResult);
+
     if (empty($verifyResult)) {
+        // Not a receptionist with access; check if the logged-in user is the patient who owns the appointment
+        $patientCheckSql = "SELECT Appointment_id, Patient_id, Status FROM appointment WHERE Appointment_id = ? AND Patient_id = ?";
+        $patientResult = executeQuery($conn, $patientCheckSql, 'ii', [$appointment_id, $user_id]);
+
+        if (!empty($patientResult)) {
+            $isPatientOwner = true;
+            // Expose appointment status for later validation
+            $appointmentStatus = $patientResult[0]['Status'] ?? null;
+        }
+    } else {
+        $appointmentStatus = $verifyResult[0]['Status'] ?? null;
+    }
+
+    if (!$isReceptionist && !$isPatientOwner) {
         closeDBConnection($conn);
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Access denied or appointment not found']);
@@ -75,7 +98,8 @@ try {
         $values[] = $input['Doctor_id'];
     }
 
-    if (isset($input['Status'])) {
+    // Only receptionists/staff may update arbitrary status values.
+    if (isset($input['Status']) && $isReceptionist) {
         $validStatuses = ['Scheduled', 'Pending', 'Waiting', 'Checked-in', 'In Progress', 'Completed', 'Cancelled', 'No-Show'];
         if (in_array($input['Status'], $validStatuses)) {
             $updateFields[] = 'Status = ?';
@@ -101,6 +125,27 @@ try {
             $types .= 's';
             $values[] = $bookingMethod;
         }
+    }
+
+    // If the logged-in user is the patient owner, restrict what they can update
+    if ($isPatientOwner) {
+        // Disallow edits when appointment is checked-in, cancelled, or no-show
+        $forbiddenStatuses = ['Checked-in', 'Checked in', 'Cancelled', 'Canceled', 'No-Show', 'No-Show'];
+        if (in_array($appointmentStatus, $forbiddenStatuses)) {
+            closeDBConnection($conn);
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Cannot edit appointment in its current status']);
+            exit;
+        }
+
+        // Filter out any fields the patient is not allowed to change
+    $allowedForPatient = ['Appointment_date', 'Reason_for_visit', 'Doctor_id', 'method', 'booking_channel'];
+        $updateFields = array_values(array_filter($updateFields, function($f) use ($allowedForPatient) {
+            foreach ($allowedForPatient as $allowed) {
+                if (stripos($f, $allowed) !== false) return true;
+            }
+            return false;
+        }));
     }
 
     if (empty($updateFields)) {

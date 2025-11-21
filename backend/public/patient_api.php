@@ -1551,9 +1551,11 @@ elseif ($endpoint === 'billing') {
             switch ($type) {
                 case 'balance':
                     error_log("Billing balance query for patient_id: " . $patient_id);
+                    
+                    // Calculate outstanding balance from visits
                     $stmt = $mysqli->prepare("
                         SELECT 
-                            COALESCE(SUM(visit_balance), 0) as outstanding_balance,
+                            COALESCE(SUM(visit_balance), 0) as visit_balance,
                             COUNT(*) as visit_count
                         FROM (
                             SELECT 
@@ -1571,15 +1573,42 @@ elseif ($endpoint === 'billing') {
                     $stmt->bind_param('i', $patient_id);
                     $stmt->execute();
                     $result = $stmt->get_result();
-                    $balance = $result->fetch_assoc();
+                    $visit_balance_data = $result->fetch_assoc();
+                    
+                    // Calculate outstanding no-show penalties
+                    $stmt = $mysqli->prepare("
+                        SELECT 
+                            COALESCE(SUM(nsp.fee), 0) as no_show_balance,
+                            COUNT(*) as no_show_count
+                        FROM no_show_penalty nsp
+                        JOIN appointment a ON nsp.appointment_id = a.Appointment_id
+                        WHERE a.patient_id = ? AND nsp.date_paid IS NULL
+                    ");
+                    $stmt->bind_param('i', $patient_id);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $no_show_data = $result->fetch_assoc();
+                    
+                    // Combine both balances
+                    $balance = [
+                        'outstanding_balance' => ($visit_balance_data['visit_balance'] ?? 0) + ($no_show_data['no_show_balance'] ?? 0),
+                        'visit_balance' => $visit_balance_data['visit_balance'] ?? 0,
+                        'no_show_balance' => $no_show_data['no_show_balance'] ?? 0,
+                        'visit_count' => $visit_balance_data['visit_count'] ?? 0,
+                        'no_show_count' => $no_show_data['no_show_count'] ?? 0
+                    ];
+                    
                     error_log("Billing balance result: " . json_encode($balance));
                     sendResponse(true, $balance);
                     break;
 
                 case 'statements':
                     error_log("Billing statements query for patient_id: " . $patient_id);
+                    
+                    // Query for visit statements
                     $stmt = $mysqli->prepare("
                         SELECT 
+                            'visit' as record_type,
                             v.visit_id as id,
                             DATE(v.date) as date,
                             CONCAT('Appointment with Dr. ', doc_staff.last_name, ' on ', DATE_FORMAT(v.date, '%M %d, %Y')) as service,
@@ -1619,7 +1648,10 @@ elseif ($endpoint === 'billing') {
                             
                             -- Insurance info for reference
                             ip.name as insurance_name,
-                            ipl.plan_name as insurance_plan
+                            ipl.plan_name as insurance_plan,
+                            
+                            NULL as appointment_id,
+                            NULL as no_show_fee
                             
                         FROM patient_visit v
                         LEFT JOIN doctor d ON v.doctor_id = d.doctor_id
@@ -1633,10 +1665,53 @@ elseif ($endpoint === 'billing') {
                         WHERE v.patient_id = ? AND v.status = 'Completed'
                         GROUP BY v.visit_id, v.date, doc_staff.first_name, doc_staff.last_name, ipl.copay, ipl.coinsurance_rate, v.payment, ip.name, ipl.plan_name
                         HAVING (COALESCE(ipl.copay, 0) + SUM(COALESCE(tpv.total_cost, 0)) * (COALESCE(ipl.coinsurance_rate, 0) / 100)) >= 0
-                        ORDER BY v.date DESC
+                        
+                        UNION ALL
+                        
+                        SELECT 
+                            'no_show' as record_type,
+                            nsp.id as id,
+                            DATE(nsp.date_applied) as date,
+                            CONCAT('No-Show Penalty for Appointment on ', DATE_FORMAT(a.appointment_date, '%M %d, %Y'), ' with Dr. ', doc_staff.last_name) as service,
+                            
+                            0 as copay_amount,
+                            0 as treatment_cost,
+                            0 as coinsurance_rate,
+                            0 as coinsurance_amount,
+                            
+                            JSON_ARRAY() as treatment_details,
+                            
+                            nsp.fee as amount,
+                            CASE 
+                                WHEN nsp.date_paid IS NOT NULL THEN 0
+                                ELSE nsp.fee
+                            END as balance,
+                            
+                            CASE 
+                                WHEN nsp.date_paid IS NOT NULL THEN 'Paid'
+                                ELSE 'Unpaid'
+                            END as status,
+                            CASE 
+                                WHEN nsp.date_paid IS NOT NULL THEN nsp.fee
+                                ELSE 0
+                            END as payment_made,
+                            
+                            NULL as insurance_name,
+                            NULL as insurance_plan,
+                            
+                            a.Appointment_id as appointment_id,
+                            nsp.fee as no_show_fee
+                            
+                        FROM no_show_penalty nsp
+                        JOIN appointment a ON nsp.appointment_id = a.Appointment_id
+                        LEFT JOIN doctor d ON a.doctor_id = d.doctor_id
+                        LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
+                        WHERE a.patient_id = ?
+                        
+                        ORDER BY date DESC
                         LIMIT 50
                     ");
-                    $stmt->bind_param('i', $patient_id);
+                    $stmt->bind_param('ii', $patient_id, $patient_id);
                     $stmt->execute();
                     $result = $stmt->get_result();
                     $statements = $result->fetch_all(MYSQLI_ASSOC);
@@ -1668,17 +1743,67 @@ elseif ($endpoint === 'billing') {
             error_log("Payment request - Session data: " . json_encode($_SESSION));
             error_log("Payment request - Patient ID: " . ($patient_id ?? 'NULL'));
 
-            // Process a payment for a visit
+            // Process a payment for a visit or no-show penalty
             $input = json_decode(file_get_contents('php://input'), true);
             error_log("Payment request - Input data: " . json_encode($input));
             $visit_id = isset($input['visit_id']) ? (int) $input['visit_id'] : null;
+            $penalty_id = isset($input['penalty_id']) ? (int) $input['penalty_id'] : null;
+            $record_type = isset($input['record_type']) ? $input['record_type'] : 'visit';
             $amount = isset($input['amount']) ? floatval($input['amount']) : 0;
 
             if ($amount <= 0) {
                 sendResponse(false, [], 'Invalid payment amount', 400);
             }
 
-            if ($visit_id) {
+            // Handle no-show penalty payment
+            if ($record_type === 'no_show' && $penalty_id) {
+                error_log("Processing no-show penalty payment for penalty_id: $penalty_id");
+                
+                // Verify penalty belongs to patient
+                $stmt = $mysqli->prepare("
+                    SELECT nsp.id, nsp.fee, nsp.date_paid, a.patient_id 
+                    FROM no_show_penalty nsp
+                    JOIN appointment a ON nsp.appointment_id = a.Appointment_id
+                    WHERE nsp.id = ? AND a.patient_id = ?
+                ");
+                $stmt->bind_param('ii', $penalty_id, $patient_id);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                $penalty = $res->fetch_assoc();
+                
+                if (!$penalty) {
+                    sendResponse(false, [], 'No-show penalty not found', 404);
+                }
+                
+                if ($penalty['date_paid']) {
+                    sendResponse(false, [], 'This penalty has already been paid', 400);
+                }
+                
+                $penalty_fee = floatval($penalty['fee']);
+                
+                if ($amount < $penalty_fee) {
+                    sendResponse(false, [], 'Payment amount must equal or exceed the penalty fee', 400);
+                }
+                
+                // Update no_show_penalty with payment info
+                $stmt = $mysqli->prepare("
+                    UPDATE no_show_penalty 
+                    SET payment_method = 'Credit Card', date_paid = NOW() 
+                    WHERE id = ?
+                ");
+                $stmt->bind_param('i', $penalty_id);
+                $stmt->execute();
+                
+                error_log("No-show penalty payment recorded for penalty_id: $penalty_id");
+                sendResponse(true, [
+                    'penalty_id' => $penalty_id, 
+                    'paid' => $amount, 
+                    'payment_method' => 'Credit Card',
+                    'record_type' => 'no_show'
+                ], 'No-show penalty payment processed');
+                
+            } elseif ($visit_id) {
+                // Handle regular visit payment
                 $stmt = $mysqli->prepare("SELECT copay_amount_due, payment FROM patient_visit WHERE visit_id = ? AND patient_id = ? LIMIT 1");
                 $stmt->bind_param('ii', $visit_id, $patient_id);
                 $stmt->execute();
@@ -1700,8 +1825,8 @@ elseif ($endpoint === 'billing') {
 
                 sendResponse(true, ['visit_id' => $visit_id, 'paid' => $amount, 'new_balance' => $newDue], 'payment processed');
             } else {
-                // No visit specified: apply as credit (not implemented fully).
-                sendResponse(false, [], 'Visit id required for payment', 400);
+                // No visit or penalty specified
+                sendResponse(false, [], 'Visit ID or Penalty ID required for payment', 400);
             }
         } catch (Exception $e) {
             error_log('payment error: ' . $e->getMessage());
@@ -1953,30 +2078,50 @@ elseif ($endpoint === 'schedule') {
                     return;
                 }
 
-                // Define standard time slots (business hours 8 AM - 6 PM)
+                // Define standard time slots (business hours 8 AM - 6 PM with 30-minute intervals)
                 $all_time_slots = [
                     '8:00 AM',
+                    '8:30 AM',
                     '9:00 AM',
+                    '9:30 AM',
                     '10:00 AM',
+                    '10:30 AM',
                     '11:00 AM',
+                    '11:30 AM',
                     '1:00 PM',
+                    '1:30 PM',
                     '2:00 PM',
+                    '2:30 PM',
                     '3:00 PM',
+                    '3:30 PM',
                     '4:00 PM',
-                    '5:00 PM'
+                    '4:30 PM',
+                    '5:00 PM',
+                    '5:30 PM',
+                    '6:00 PM'
                 ];
 
                 // Convert to 24-hour format for database comparison
                 $time_slot_mapping = [
                     '8:00 AM' => '08:00:00',
+                    '8:30 AM' => '08:30:00',
                     '9:00 AM' => '09:00:00',
+                    '9:30 AM' => '09:30:00',
                     '10:00 AM' => '10:00:00',
+                    '10:30 AM' => '10:30:00',
                     '11:00 AM' => '11:00:00',
+                    '11:30 AM' => '11:30:00',
                     '1:00 PM' => '13:00:00',
+                    '1:30 PM' => '13:30:00',
                     '2:00 PM' => '14:00:00',
+                    '2:30 PM' => '14:30:00',
                     '3:00 PM' => '15:00:00',
+                    '3:30 PM' => '15:30:00',
                     '4:00 PM' => '16:00:00',
-                    '5:00 PM' => '17:00:00'
+                    '4:30 PM' => '16:30:00',
+                    '5:00 PM' => '17:00:00',
+                    '5:30 PM' => '17:30:00',
+                    '6:00 PM' => '18:00:00'
                 ];
 
                 // Get existing appointments for this doctor on this date
