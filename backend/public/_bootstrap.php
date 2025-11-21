@@ -41,7 +41,6 @@ try {
         exit;
     }
 
-    // Resolve nurse office via staff.work_location (email match)
     $nurseOfficeId = null;
     if (!empty($email)) {
         $q = $pdo->prepare('SELECT s.work_location AS office_id FROM staff s WHERE s.staff_email = ? LIMIT 1');

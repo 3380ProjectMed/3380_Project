@@ -22,7 +22,6 @@ try {
 
     $userType = strtoupper($userType);
 
-    // ── Get user details based on type ────────────────────────────────────────
     $query = "SELECT 
                 ua.user_id,
                 ua.email,
@@ -68,7 +67,6 @@ try {
 
     $user = $userResults[0];
 
-    // ── Work locations (from existing schedules) ──────────────────────────────
     $locationsQuery = "SELECT DISTINCT 
                             o.office_id,
                             o.name   AS office_name,
@@ -98,7 +96,6 @@ try {
         $user['all_locations']  = [];
     }
 
-    // ── Assigned schedules for this staff member ──────────────────────────────
     $schedulesQuery = "SELECT 
                             ws.schedule_id, 
                             ws.day_of_week, 
@@ -122,12 +119,10 @@ try {
 
     $schedules = executeQuery($conn, $schedulesQuery, 'i', [$user['staff_id']]);
 
-    // ── Build available template schedules (role-aware) ──────────────────────
 
     $staffId        = (int)$user['staff_id'];
     $staffRoleUpper = strtoupper($user['staff_role'] ?? '');
 
-    // For NURSE / RECEPTIONIST: determine their "home" office if they already have schedules
     $homeOfficeId = null;
     if (in_array($staffRoleUpper, ['NURSE', 'RECEPTIONIST'], true)) {
         $homeOfficeQuery = "
@@ -141,14 +136,6 @@ try {
             $homeOfficeId = (int)$homeOfficeResult[0]['office_id'];
         }
     }
-
-    /*
-     * Now build available_schedules from work_schedule_templates:
-     *  - Doctors: all templates from all offices
-     *  - Nurse/Recept with existing schedules: templates only for their home office
-     *  - Nurse/Recept with no schedules yet: templates from all offices
-     *  Overlap and single-office rules are enforced in add_staff_schedule.php.
-     */
 
     $availableSql = "
         SELECT

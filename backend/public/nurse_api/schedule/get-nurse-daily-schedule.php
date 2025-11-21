@@ -1,10 +1,5 @@
 <?php
 
-/**
- * Get nurse's daily schedule with assigned patients
- * Path: /backend/public/nurse_api/schedule/get-nurse-daily-schedule.php
- */
-
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
@@ -18,7 +13,6 @@ try {
 
     $conn = getDBConnection();
 
-    // Get nurse_id from session (staff_id == user_id)
     $rows = executeQuery(
         $conn,
         "SELECT n.nurse_id, CONCAT(s.first_name, ' ', s.last_name) AS nurse_name
@@ -40,11 +34,9 @@ try {
     $nurse_id   = (int)$rows[0]['nurse_id'];
     $nurse_name = $rows[0]['nurse_name'];
 
-    // --- Date & day-of-week --------------------------------------------------
-    $date = $_GET['date'] ?? date('Y-m-d');          // e.g. "2025-11-05"
-    $dayOfWeek = date('l', strtotime($date));        // "Monday", ...
+    $date = $_GET['date'] ?? date('Y-m-d');          
+    $dayOfWeek = date('l', strtotime($date));        
 
-    // --- Get nurse's work schedule for that day ------------------------------
     $scheduleQuery = "SELECT 
             ws.start_time,
             ws.end_time,
@@ -76,19 +68,15 @@ try {
 
     $workSchedule = $scheduleRows[0];
 
-    // --- Time range (can be overridden via query params) ---------------------
-    // Accept ?start_time=HH:MM and ?end_time=HH:MM (optional)
-    $startTime = $_GET['start_time'] ?? $workSchedule['start_time']; // "08:00:00" or "08:00"
-    $endTime   = $_GET['end_time']   ?? $workSchedule['end_time'];   // "16:00:00" or "16:00"
+    $startTime = $_GET['start_time'] ?? $workSchedule['start_time']; 
+    $endTime   = $_GET['end_time']   ?? $workSchedule['end_time'];   
 
-    // Normalize to HH:MM:SS if client sent HH:MM
     if (strlen($startTime) === 5) $startTime .= ':00';
     if (strlen($endTime)   === 5) $endTime   .= ':00';
 
-    $startDateTime = $date . ' ' . $startTime;   // "2025-11-05 08:00:00"
-    $endDateTime   = $date . ' ' . $endTime;     // "2025-11-05 16:00:00"
+    $startDateTime = $date . ' ' . $startTime;   
+    $endDateTime   = $date . ' ' . $endTime;     
 
-    // --- Pull appointments in that window -----------------------------------
     $sql = "SELECT 
                 a.Appointment_id AS appointment_id,
                 a.Appointment_date AS appointment_datetime,
@@ -124,10 +112,8 @@ try {
               AND a.Appointment_date <  ?
             ORDER BY a.Appointment_date ASC";
 
-    // nurse_id (int), startDateTime (string), endDateTime (string)
     $appointments = executeQuery($conn, $sql, 'iss', [$nurse_id, $startDateTime, $endDateTime]);
 
-    // --- Format for frontend -------------------------------------------------
     $formattedAppointments = array_map(function ($apt) {
         $hasVitals = !empty($apt['blood_pressure']) || !empty($apt['temperature']);
 

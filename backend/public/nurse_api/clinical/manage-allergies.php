@@ -64,10 +64,8 @@ try {
             $allergy_code = mysqli_insert_id($conn);
         }
 
-        // Try to insert into allergies_per_patient table (if it exists)
+        // Try to insert into allergies_per_patient table
         try {
-            // First check if this allergy already exists for this patient
-            // Check using the correct column name (allergy_id instead of allergies_code)
             $check_existing_sql = "SELECT app_id FROM allergies_per_patient WHERE patient_id = ? AND allergy_id = ?";
             $existing = executeQuery($conn, $check_existing_sql, 'ii', [$patient_id, $allergy_code]);
             
@@ -121,7 +119,6 @@ try {
         }
 
         if ($allergy_id) {
-            // Remove from allergies_per_patient table
             try {
                 $delete_sql = "DELETE FROM allergies_per_patient WHERE app_id = ? AND patient_id = ?";
                 executeQuery($conn, $delete_sql, 'ii', [$allergy_id, $patient_id]);
@@ -130,7 +127,6 @@ try {
                 echo json_encode(['success' => false, 'error' => 'Failed to remove allergy: ' . $e->getMessage()]);
             }
         } elseif ($allergy_code) {
-            // Remove from patient table
             $update_sql = "UPDATE patient SET allergies = NULL WHERE patient_id = ? AND allergies = ?";
             executeQuery($conn, $update_sql, 'ii', [$patient_id, $allergy_code]);
             echo json_encode(['success' => true, 'message' => 'Allergy removed from patient record']);
@@ -140,7 +136,6 @@ try {
         }
 
     } elseif ($method === 'GET') {
-        // Get all available allergy codes for dropdown
         $allergy_codes_sql = "SELECT allergies_code, allergies_text FROM codes_allergies ORDER BY allergies_text";
         $allergy_codes = executeQuery($conn, $allergy_codes_sql);
         

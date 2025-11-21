@@ -53,9 +53,7 @@ if (!$input || !isset($input['action'])) {
 
 $action = $input['action'];
 
-// ==========================================
 // HANDLE PASSWORD RESET WITH SSN VERIFICATION
-// ==========================================
 if ($action === 'reset') {
     if (!isset($input['email']) || !isset($input['ssn']) || !isset($input['password'])) {
         http_response_code(400);

@@ -12,7 +12,6 @@ function createStaffAndUser(
 
 
 
-    // ---- Upfront payload validation -----------------------------------------
     $required = ['first_name', 'last_name', 'email', 'password', 'ssn', 'gender'];
     foreach ($required as $key) {
         if (!array_key_exists($key, $payload) || $payload[$key] === '' || $payload[$key] === null) {
@@ -21,9 +20,7 @@ function createStaffAndUser(
     }
 
     try {
-        // ---------------------------------------------------------------------
         // 1) Insert into user_account FIRST (source of truth for the ID)
-        // ---------------------------------------------------------------------
 
         $email        = $payload['email'];
         $passwordHash = password_hash($payload['password'], PASSWORD_BCRYPT);
@@ -64,7 +61,6 @@ function createStaffAndUser(
         $userId = (int)$conn->insert_id;
         $stmt->close();
 
-        // Now set the "nice" username like d101 / n205 / r501
         $username = strtolower(substr($staffRole, 0, 1)) . $userId;
         $stmt = $conn->prepare("UPDATE user_account SET username = ? WHERE user_id = ?");
         if (!$stmt) {
@@ -78,9 +74,7 @@ function createStaffAndUser(
         }
         $stmt->close();
 
-        // ---------------------------------------------------------------------
         // 2) Insert into staff using SAME ID as staff_id
-        // ---------------------------------------------------------------------
 
         $sqlStaff = "
             INSERT INTO staff (
@@ -130,9 +124,6 @@ function createStaffAndUser(
 
         $stmt->close();
 
-        // ---------------------------------------------------------------------
-        // 3) Optional weekly work_schedule from templates (unchanged logic)
-        // ---------------------------------------------------------------------
         $workScheduleCode = $payload['work_schedule'] ?? null;
 
         if (!empty($workScheduleCode)) {
