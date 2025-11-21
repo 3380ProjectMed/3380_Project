@@ -61,7 +61,7 @@ if (!empty($response['errors'])) {
     exit;
 }
 
-// Initialize mysqli with SSL support (like login.php)
+// Initialize mysqli with SSL support
 $mysqli = mysqli_init();
 if (!$mysqli) {
     $response['message'] = 'mysqli_init failed';
@@ -93,7 +93,7 @@ $mysqli->set_charset('utf8mb4');
 $mysqli->begin_transaction();
 
 try {
-    // Generate username from email (before @ symbol)
+    // Generate username from email 
     $username = substr($input['email'], 0, strpos($input['email'], '@'));
     $base_username = $username;
     $counter = 1;
@@ -141,8 +141,6 @@ try {
     $user_id = $mysqli->insert_id;
     $stmt->close();
 
-    // Map gender value to code (matching your SMALLINT field)
-    // Assuming: 1 = Male, 2 = Female, 3 = Other, 4 = Prefer not to say
     $gender_map = [
         'male' => 1,
         'female' => 2,
@@ -151,11 +149,8 @@ try {
     ];
     $assigned_gender = $gender_map[strtolower($input['gender'])] ?? 3;
 
-    // Generate SSN placeholder (you should implement proper SSN handling)
-    // For now, using a temporary placeholder
     $ssn = 'TEMP' . str_pad($user_id, 7, '0', STR_PAD_LEFT);
 
-    // Format phone number (remove non-numeric characters)
     $phone = preg_replace('/[^0-9]/', '', $input['phone']);
 
     // Format emergency contact
@@ -165,8 +160,6 @@ try {
         $emergency_contact = $input['emergencyContact'] . ':' . $emergency_phone;
     }
 
-    // Insert into Patient table - Using PascalCase column names to match schema
-    // ----- Derived fields for Patient -----
     $first_name = trim($input['firstName']);
     $last_name  = trim($input['lastName']);
 
@@ -176,20 +169,15 @@ try {
         throw new Exception('Invalid date of birth format');
     }
 
-    // $ssn already set above as TEMP + user_id
-
-    // Emergency contact fields (all optional)
     $ec_fn  = isset($input['emergencyContactfn']) && trim($input['emergencyContactfn']) !== '' ? trim($input['emergencyContactfn']) : null;
     $ec_ln  = isset($input['emergencyContactln']) && trim($input['emergencyContactln']) !== '' ? trim($input['emergencyContactln']) : null;
     $ec_rel = isset($input['emergencyContactrl']) && trim($input['emergencyContactrl']) !== '' ? trim($input['emergencyContactrl']) : null;
     $ec_ph  = isset($input['emergencyPhone'])     && trim($input['emergencyPhone'])     !== '' ? substr(preg_replace('/\D+/', '', $input['emergencyPhone']), 0, 15) : null;
 
-    // Gender map (SMALLINT)
     $gender_map = ['male' => 1, 'female' => 2, 'other' => 3, 'prefer-not-to-say' => 4];
     $assigned_at_birth_gender = $gender_map[strtolower($input['gender'])] ?? 3;
     $gender = $assigned_at_birth_gender;
 
-    // Optional codes
     $ethnicity = (isset($input['ethnicity']) && $input['ethnicity'] !== '') ? (int)$input['ethnicity'] : null;
     $race      = (isset($input['race'])      && $input['race']      !== '') ? (int)$input['race']      : null;
 
@@ -251,7 +239,6 @@ try {
     }
     $stmt->close();
 
-    // From here on, use $patient_id = $user_id
     $patient_id = $user_id;
 
 
@@ -266,7 +253,6 @@ try {
         ) VALUES (?, ?, ?, ?, ?)"
         );
 
-        // NOTE: order matches the column list above (phone before relationship)
         $stmt->bind_param("issss", $patient_id, $ec_fn, $ec_ln, $ec_ph, $ec_rel);
 
         if (!$stmt->execute()) {

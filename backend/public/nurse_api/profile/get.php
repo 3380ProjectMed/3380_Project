@@ -15,7 +15,6 @@ try {
     $conn = getDBConnection();
     $email = $_SESSION['email'] ?? '';
 
-    // Use work_schedule to resolve office rather than a non-existent staff.work_location
     $sql = "SELECT ua.username, ua.email, ua.role, s.first_name, s.last_name, s.license_number, s.gender, cg.gender_text AS gender_description,
                     n.nurse_id, n.staff_id, n.department,
                     ws.office_id, o.name AS office_name, o.address, o.city, o.state, o.zipcode

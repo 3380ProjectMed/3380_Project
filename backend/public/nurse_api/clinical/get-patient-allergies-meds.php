@@ -20,8 +20,6 @@ try {
         exit;
     }
 
-    // Get patient allergies from patient table (using existing structure for now)
-    // Note: allergies_per_patient table not yet created, so using patient.allergies field
     $patient_allergy_sql = "SELECT 
                             p.allergies as allergies_code,
                             ca.allergies_text
@@ -31,7 +29,6 @@ try {
     
     $patient_allergy = executeQuery($conn, $patient_allergy_sql, 'i', [$patient_id]);
 
-    // Get current medications from prescription table (if exists)
     $medications = [];
     try {
         $medications_sql = "SELECT 
@@ -57,7 +54,6 @@ try {
         $medications = [];
     }
 
-    // Also get medication history (if exists)
     $medication_history = [];
     try {
         $med_history_sql = "SELECT 
@@ -79,7 +75,7 @@ try {
     echo json_encode([
         'success' => true,
         'allergies' => [
-            'specific_allergies' => [], // Empty for now until allergies_per_patient table is created
+            'specific_allergies' => [], 
             'general_allergy' => $patient_allergy ?: []
         ],
         'medications' => [

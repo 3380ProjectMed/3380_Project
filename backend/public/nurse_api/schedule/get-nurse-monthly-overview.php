@@ -1,13 +1,5 @@
 <?php
-/**
- * get-nurse-monthly-overview.php
- * Get monthly overview for nurse showing patient counts per day
- * 
- * This provides a calendar view showing:
- * - Days the nurse is working
- * - Number of patients assigned each day
- * - Quick summary without full patient details
- */
+
 header('Content-Type: application/json');
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -53,7 +45,6 @@ try {
         exit;
     }
     
-    // Get nurse's work schedule (which days of week they work)
     $scheduleQuery = "SELECT 
             day_of_week,
             start_time,
@@ -69,7 +60,6 @@ try {
     
     $workSchedule = executeQuery($conn, $scheduleQuery, 'i', [$nurse_id]);
     
-    // Create map of day_of_week => schedule details
     $scheduleByDay = [];
     foreach ($workSchedule as $sched) {
         $scheduleByDay[$sched['day_of_week']] = [
@@ -100,7 +90,6 @@ try {
     
     $dailyCounts = executeQuery($conn, $sql, 'iss', [$nurse_id, $startDate, $endDate]);
     
-    // Create map of date => counts
     $countsByDate = [];
     foreach ($dailyCounts as $day) {
         $countsByDate[$day['appointment_date']] = [
