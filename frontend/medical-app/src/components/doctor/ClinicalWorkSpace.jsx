@@ -76,6 +76,9 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       });
       setLoading(false);
       fetchTreatmentCatalog();
+      // load prescriptions for this patient object
+      const pid = patient.patient_id || patient.id;
+      if (pid) fetchPrescriptions(pid, 0);
       if (patient.patient_id || patient.id) {
         fetchNotesByPatientId(patient.patient_id || patient.id);
       }
@@ -151,6 +154,10 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
         } else {
           setSelectedTreatments([]);
         }
+        // Fetch prescriptions for this patient/appointment
+        const pid = data.patient?.patient_id || data.patient?.id;
+        const aid = data.visit?.appointment_id || appointmentId || 0;
+        if (pid) fetchPrescriptions(pid, aid);
       } else if (data.has_visit === false) {
         await fetchBasicPatientInfo();
       } else {
@@ -200,6 +207,9 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
         } else {
           setSelectedTreatments([]);
         }
+        // Fetch prescriptions for this patient
+        const pid = data.patient?.patient_id || data.patient?.id || patientId;
+        if (pid) fetchPrescriptions(pid, 0);
       } else {
         throw new Error(data.error || 'Failed to load patient data');
       }
@@ -361,6 +371,47 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       }
     } catch (err) {
       console.error('Error fetching treatment catalog:', err);
+    }
+  };
+
+  // Fetch prescriptions for patient (and optional appointment) and attach to patientData.patient.currentMedications
+  const fetchPrescriptions = async (pid, aid = 0) => {
+    try {
+      if (!pid) return;
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      let url = `${API_BASE}/doctor_api/clinical/get-prescription.php?patient_id=${pid}`;
+      if (aid) url += `&appointment_id=${aid}`;
+
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) {
+        console.error('Failed to fetch prescriptions:', response.status);
+        return;
+      }
+
+      const data = await response.json();
+      if (!data.success) return;
+
+      const mapped = (data.prescriptions || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        dosage: p.dosage,
+        frequency: p.frequency,
+        route: p.route,
+        start_date: p.start_date,
+        end_date: p.end_date,
+        refills_allowed: p.refills_allowed,
+        instructions: p.instructions,
+        prescribed_by: p.prescribed_by
+      }));
+
+      setPatientData(prev => {
+        if (!prev) return prev;
+        const patientObj = { ...(prev.patient || {}) };
+        patientObj.currentMedications = mapped;
+        return { ...prev, patient: patientObj };
+      });
+    } catch (err) {
+      console.error('Error fetching prescriptions:', err);
     }
   };
 
