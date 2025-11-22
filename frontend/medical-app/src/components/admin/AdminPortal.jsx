@@ -13,6 +13,7 @@ import { useAuth } from '../../auth/AuthProvider.jsx';
 
 function AdminPortal({ preview = false }) {
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [pageConfig, setPageConfig] = useState(null); 
   const navigate = useNavigate();
   const { logout } = useAuth();
 
@@ -30,19 +31,41 @@ function AdminPortal({ preview = false }) {
     }
   };
 
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    if (page !== currentPage) {
+      setPageConfig(null);  
+    }
+  };
+
   return (
     <div>
       <AdminSidebar
         currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
+        setCurrentPage={handlePageChange}
         onLogout={handleLogout}
       />
 
       <main className="main-content">
         <div className="report-container">
-          {currentPage === 'dashboard' && <AdminDashboard setCurrentPage={setCurrentPage} />}
-          {currentPage === 'users' && <UserManagement />}
-          {currentPage === 'reports' && <Report />}
+          {currentPage === 'dashboard' && (
+            <AdminDashboard 
+              setCurrentPage={setCurrentPage} 
+              setPageConfig={setPageConfig} 
+            />
+          )}
+          {currentPage === 'users' && (
+            <UserManagement 
+              initialFilter={pageConfig?.activeTab} 
+              onFilterApplied={() => setPageConfig(null)} 
+            />
+          )}
+          {currentPage === 'reports' && (
+            <Report 
+              initialConfig={pageConfig}
+              onConfigApplied={() => setPageConfig(null)} 
+            />
+          )}
           {currentPage === 'profile' && <Profile />}
           {currentPage === 'security' && (
             <div>
