@@ -36,7 +36,7 @@ try {
     $stats['appointments_this_month'] = $result[0]['count'];
 
     // Active users
-    $result = executeQuery($conn, 'SELECT COUNT(*) as count FROM user_account WHERE is_active = 1');
+    $result = executeQuery($conn, "SELECT COUNT(*) as count FROM user_account WHERE user_account.`role` <> 'Patient' AND user_account.is_active = 1");
     $stats['active_users'] = $result[0]['count'];
 
     // Pending appointments (today)
