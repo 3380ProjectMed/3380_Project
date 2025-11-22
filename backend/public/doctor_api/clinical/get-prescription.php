@@ -1,8 +1,5 @@
 <?php
 
-/**
- * Get prescriptions for a patient and/or appointment
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
@@ -17,7 +14,6 @@ try {
 
     $user_id = (int) $_SESSION['uid'];
 
-    // Verify user is a doctor
     $conn = getDBConnection();
     $rows = executeQuery($conn, '
         SELECT s.staff_id 

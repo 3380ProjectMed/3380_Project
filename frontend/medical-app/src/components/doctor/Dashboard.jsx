@@ -146,9 +146,6 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
     }
   };
 
-  /**
-   * Get CSS class for status badge
-   */
   const getStatusClass = (status) => {
     const statusMap = {
       'scheduled': 'status-scheduled',
@@ -164,9 +161,6 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
     return statusMap[status.toLowerCase()] || 'status-scheduled';
   };
 
-  /**
-   * Handle appointment row click
-   */
   const handleAppointmentRowClick = (appointment) => {
     if (onAppointmentClick) {
       onAppointmentClick(appointment);
