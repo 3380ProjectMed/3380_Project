@@ -8,16 +8,10 @@ require_once __DIR__ . '/../../session.php';
 
 header('Content-Type: application/json');
 
-// if (empty($_SESSION['uid']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
-//     http_response_code(403);
-//     echo json_encode(['success' => false, 'error' => 'Admin access required']);
-//     exit;
-// }
 
 try {
     $conn = getDBConnection();
 
-    // ── Branch 1: schedules for a specific office ────────────────────────────
     if (isset($_GET['office_id']) && $_GET['office_id'] !== '') {
         $officeId = (int)$_GET['office_id'];
 
@@ -67,7 +61,6 @@ try {
         exit;
     }
 
-    // ── Branch 2: base form options (work locations, etc.) ───────────────────
     // Work locations
     $locSql = "
         SELECT office_id, name, address
@@ -110,7 +103,7 @@ try {
         ];
     }, $genderRows);
 
-    // NEW: Departments for nurses (distinct list)
+    // Departments for nurses 
     $deptSql = "
         SELECT DISTINCT department
         FROM nurse
@@ -121,7 +114,7 @@ try {
 
     $departments = array_map(static function ($row) {
         return [
-            'id'   => $row['department'],  // simple string id is fine
+            'id'   => $row['department'], 
             'name' => $row['department'],
         ];
     }, $deptRows);
@@ -133,7 +126,7 @@ try {
         'work_locations' => $workLocations,
         'specialties'    => $specialties,
         'genders'        => $genders,
-        'departments'    => $departments,   // <- added
+        'departments'    => $departments,  
     ]);
 } catch (Exception $e) {
     http_response_code(500);

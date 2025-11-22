@@ -6,14 +6,6 @@ import {
 } from 'lucide-react';
 import './ClinicalWorkSpace.css';
 
-/**
- * ClinicalWorkSpace Component
- * 
- * Can be initialized with either:
- * - appointmentId: For viewing/editing a specific appointment
- * - patientId: For viewing patient chart without specific appointment
- * - patient: Patient object with full details (from PatientList)
- */
 export default function ClinicalWorkSpace({ appointmentId, patientId, patient, onClose }) {
   const [patientData, setPatientData] = useState(null);
   const [notes, setNotes] = useState([]);
@@ -55,7 +47,6 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
   });
 
   useEffect(() => {
-    // If patient object is provided directly (from PatientList), use it
     if (patient) {
       setPatientData({
         success: true,
@@ -76,6 +67,8 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       });
       setLoading(false);
       fetchTreatmentCatalog();
+      const pid = patient.patient_id || patient.id;
+      if (pid) fetchPrescriptions(pid, 0);
       if (patient.patient_id || patient.id) {
         fetchNotesByPatientId(patient.patient_id || patient.id);
       }
@@ -95,7 +88,6 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
    
   }, [appointmentId, patientId, patient]);
 
-  // Alert helper: { message, type }
   const showAlert = (message, type = 'success', timeout = 4000) => {
     setAlert({ message, type });
     if (alertTimer.current) clearTimeout(alertTimer.current);
@@ -145,12 +137,14 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
           setPresentIllnesses(data.visit.present_illnesses);
         }
         
-        // Load existing treatments from current visit into UI
         if (data.treatments && Array.isArray(data.treatments) && data.treatments.length > 0) {
           setSelectedTreatments(data.treatments);
         } else {
           setSelectedTreatments([]);
         }
+        const pid = data.patient?.patient_id || data.patient?.id;
+        const aid = data.visit?.appointment_id || appointmentId || 0;
+        if (pid) fetchPrescriptions(pid, aid);
       } else if (data.has_visit === false) {
         await fetchBasicPatientInfo();
       } else {
@@ -194,12 +188,13 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
           setPresentIllnesses(data.visit.present_illnesses);
         }
         
-        // Load existing treatments from current visit into UI
         if (data.treatments && Array.isArray(data.treatments) && data.treatments.length > 0) {
           setSelectedTreatments(data.treatments);
         } else {
           setSelectedTreatments([]);
         }
+        const pid = data.patient?.patient_id || data.patient?.id || patientId;
+        if (pid) fetchPrescriptions(pid, 0);
       } else {
         throw new Error(data.error || 'Failed to load patient data');
       }
@@ -297,7 +292,6 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       
       if (data.success) {
         const incoming = data.notes || [];
-        // Sort notes newest -> oldest using visit_date or created_at as fallback
         const sorted = [...incoming].sort((a, b) => {
           const getTime = (n) => {
             const d = n?.visit_date || n?.date || n?.created_at || n?.note_date || null;
@@ -364,6 +358,47 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
     }
   };
 
+  // Fetch prescriptions for patient (and optional appointment) and attach to patientData.patient.currentMedications
+  const fetchPrescriptions = async (pid, aid = 0) => {
+    try {
+      if (!pid) return;
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      let url = `${API_BASE}/doctor_api/clinical/get-prescription.php?patient_id=${pid}`;
+      if (aid) url += `&appointment_id=${aid}`;
+
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) {
+        console.error('Failed to fetch prescriptions:', response.status);
+        return;
+      }
+
+      const data = await response.json();
+      if (!data.success) return;
+
+      const mapped = (data.prescriptions || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        dosage: p.dosage,
+        frequency: p.frequency,
+        route: p.route,
+        start_date: p.start_date,
+        end_date: p.end_date,
+        refills_allowed: p.refills_allowed,
+        instructions: p.instructions,
+        prescribed_by: p.prescribed_by
+      }));
+
+      setPatientData(prev => {
+        if (!prev) return prev;
+        const patientObj = { ...(prev.patient || {}) };
+        patientObj.currentMedications = mapped;
+        return { ...prev, patient: patientObj };
+      });
+    } catch (err) {
+      console.error('Error fetching prescriptions:', err);
+    }
+  };
+
   const handleSaveDiagnosis = async () => {
     if (!diagnosis.trim()) {
       showAlert('Please enter a diagnosis before saving', 'error');
@@ -406,7 +441,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        // show a short, friendly notification and clear the input fields
+        // show a notification and clear the input fields
         showAlert('Save successfully', 'success');
         setDiagnosis('');
         setPresentIllnesses('');
@@ -491,11 +526,9 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        // Show success message
         const message = data.message || 'Treatments updated successfully!';
         showAlert(message, 'success');
         
-        // Refresh patient data to show treatments in previous notes
         if (appointmentId) {
           fetchPatientDetails();
           fetchNotes();
@@ -539,7 +572,6 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       if (data.success) {
         showAlert(data.message || 'Treatment removed successfully', 'success');
         
-        // Refresh notes to reflect deletion
         if (appointmentId) {
           fetchNotes();
           fetchPatientDetails();
@@ -1178,13 +1210,6 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                                     <span className="treatment-notes"> - {treatment.notes}</span>
                                   )}
                                 </div>
-                                {/* <button 
-                                  onClick={() => handleDeleteTreatment(treatment.tpv_id, treatment.treatment_name)}
-                                  className="btn-icon-danger-small"
-                                  title="Remove treatment"
-                                >
-                                  <Trash2 size={14} />
-                                </button> */}
                               </li>
                             ))}
                           </ul>

@@ -90,7 +90,7 @@ try {
     echo json_encode([
         'success' => true,
         'data' => $grouped,
-        'appointments' => $grouped // Support both formats
+        'appointments' => $grouped
     ]);
 } catch (Exception $e) {
     if (isset($conn)) {

@@ -1,13 +1,7 @@
-// src/components/nurse/NurseClinicalWorkspace.jsx - UPDATED WITH STATUS HANDLING
 import React, { useState, useEffect } from 'react';
 import { Activity, AlertCircle, Save, X, CheckCircle, User, Calendar, Plus, Edit2, Trash2, Pill, Heart, Thermometer } from 'lucide-react';
 import './NurseClinicalWorkSpace.css';
 
-/**
- * NurseClinicalWorkspace - Vitals Recording with Status Updates
- * 
- * When vitals are saved, appointment status automatically changes to "Ready"
- */
 function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
   const formatChicagoDate = (date, options = {}) => {
     return new Intl.DateTimeFormat('en-US', {

@@ -1,17 +1,8 @@
 <?php
-
-/**
- * Get doctor profile
- * Updated for new table structure
- */
-
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    //session_start();
-
-    // Verify authentication and role first
     if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -20,7 +11,6 @@ try {
 
     $conn = getDBConnection();
 
-    // Get logged-in user's doctor_id (if they're a doctor)
     $logged_in_doctor_id = null;
     if ($_SESSION['role'] === 'DOCTOR') {
         $staff_id = (int) $_SESSION['uid'];
@@ -35,11 +25,9 @@ try {
         }
     }
 
-    // Determine which doctor profile to fetch
     if (isset($_GET['doctor_id'])) {
         $requested_doctor_id = intval($_GET['doctor_id']);
 
-        // Security: Only allow viewing own profile or if admin/receptionist
         if ($_SESSION['role'] === 'DOCTOR' && $requested_doctor_id !== $logged_in_doctor_id) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'Cannot view other doctor profiles']);
@@ -48,7 +36,6 @@ try {
 
         $doctor_id = $requested_doctor_id;
     } else {
-        // No parameter - use logged-in doctor
         if ($_SESSION['role'] !== 'DOCTOR' || !$logged_in_doctor_id) {
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'Doctor access required']);
@@ -58,7 +45,6 @@ try {
         $doctor_id = $logged_in_doctor_id;
     }
 
-    // SQL query for doctor info
     $sql = "SELECT 
                 d.doctor_id,
                 d.staff_id,

@@ -32,7 +32,6 @@ try {
 
     $nurseId = (int)$nurseRows[0]['nurse_id'];
 
-    // Handle IDs - strip "A" prefix from appointment IDs if present
     $visit_id = isset($_GET['visit_id']) ? intval($_GET['visit_id']) : 0;
     $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
     $appointment_id = 0;
@@ -54,7 +53,6 @@ try {
     $rows = [];
 
     if ($appointment_id > 0) {
-        // Get appointment details first
         $apptSql = "SELECT 
                     a.Appointment_id,
                     a.Patient_id,
@@ -93,7 +91,6 @@ try {
         $appt = $apptRows[0];
         $apptDate = date('Y-m-d', strtotime($appt['Appointment_date']));
 
-        // Look for existing patient_visit for this appointment
         $visitSql = "SELECT 
                     pv.visit_id,
                     pv.appointment_id,
@@ -135,7 +132,7 @@ try {
                 'blood_pressure' => null,
                 'temperature' => null,
                 'doctor_id' => $appt['Doctor_id'],
-                'nurse_id' => $nurseId, // Assign current nurse
+                'nurse_id' => $nurseId, 
                 'status' => 'Scheduled',
                 'diagnosis' => null,
                 'reason_for_visit' => $appt['Reason_for_visit'],
@@ -173,7 +170,6 @@ try {
         ];
 
     } else {
-        // Look up by visit_id
         $visitSql = "SELECT 
                     pv.visit_id,
                     pv.appointment_id,
@@ -247,7 +243,6 @@ try {
     // Get detailed allergies and medications for the patient
     $patient_id = $result['patient']['patient_id'];
 
-    // Get patient allergies from allergies_per_patient table (primary) and patient table (fallback)
     $specific_allergies = [];
     $patient_allergy = [];
     
@@ -271,7 +266,7 @@ try {
         $specific_allergies = [];
     }
 
-    // Also get patient allergies from patient table (fallback for legacy data)
+    // Also get patient allergies from patient table
     $patient_allergy_sql = "SELECT 
                             p.allergies as allergies_code,
                             ca.allergies_text
@@ -307,7 +302,6 @@ try {
         $medications = [];
     }
 
-    // Also get medication history (if exists)
     $medication_history = [];
     try {
         $med_history_sql = "SELECT 

@@ -58,7 +58,6 @@ try {
                 $end_date = $input['end_date'] ?? null;
                 $refills_allowed = $input['refills_allowed'] ?? 0;
                 
-                // Get the doctor_id from the current appointment/visit if available
                 $doctor_id = null;
                 if ($patient_id) {
                     $doctor_query = "SELECT doctor_id FROM patient_visit WHERE patient_id = ? AND (status = 'Scheduled' OR status = 'In Progress' OR status = 'Ready') ORDER BY date DESC LIMIT 1";

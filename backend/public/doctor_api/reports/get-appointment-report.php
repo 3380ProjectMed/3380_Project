@@ -1,16 +1,4 @@
 <?php
-
-/**
- * Doctor-Focused Appointment Report API
- * Location: /doctor_api/reports/get-appointment-report.php
- * 
- * Provides clinical insights for doctors:
- * - Patient volume and scheduling patterns
- * - Completion rates and no-show tracking
- * - Common diagnoses and visit reasons
- * - Visit duration analytics
- */
-
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -22,7 +10,6 @@ require_once '/home/site/wwwroot/session.php';
 try {
     header('Content-Type: application/json; charset=utf-8');
 
-    //session_start();
 
     if (!function_exists('getDBConnection')) {
         throw new Exception('Database helper functions not loaded');
@@ -41,7 +28,6 @@ try {
 
     $user_id = intval($_SESSION['uid']);
 
-    // Get user role and associated doctor info
     $userQuery = "SELECT ua.role, d.doctor_id 
               FROM user_account ua 
               LEFT JOIN staff s ON ua.user_id = s.staff_id
@@ -60,7 +46,6 @@ try {
     $userRole = $userInfo[0]['role'];
     $loggedInDoctorId = $userInfo[0]['doctor_id'];
 
-    // Verify user has permission to access reports
     if (!in_array($userRole, ['DOCTOR', 'ADMIN'])) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Access denied. Only doctors and admins can access reports.']);
@@ -68,12 +53,10 @@ try {
         exit;
     }
 
-    // Build dynamic WHERE clause based on parameters
     $whereConditions = [];
     $params = [];
     $types = '';
 
-    // 1. Date Range (Required - defaults to current month if not provided)
     $startDate = isset($_GET['StartDate']) ? $_GET['StartDate'] : date('Y-m-01');
     $endDate = isset($_GET['EndDate']) ? $_GET['EndDate'] : date('Y-m-t');
 
@@ -82,7 +65,6 @@ try {
     $params[] = $endDate;
     $types .= 'ss';
 
-    // 2. Doctor Filter (doctors only see their own data)
     if ($userRole === 'DOCTOR') {
         if ($loggedInDoctorId === null) {
             http_response_code(403);
@@ -99,45 +81,39 @@ try {
         $types .= 'i';
     }
 
-    // 3. Office Location
     if (isset($_GET['OfficeID']) && $_GET['OfficeID'] !== '' && $_GET['OfficeID'] !== 'all') {
         $whereConditions[] = "a.Office_id = ?";
         $params[] = intval($_GET['OfficeID']);
         $types .= 'i';
     }
 
-    // 4. Appointment Status
     if (isset($_GET['Status']) && $_GET['Status'] !== '' && $_GET['Status'] !== 'all') {
         $whereConditions[] = "pv.status = ?";
         $params[] = $_GET['Status'];
         $types .= 's';
     }
 
-    // 5. Patient Filter
     if (isset($_GET['PatientID']) && $_GET['PatientID'] !== '' && $_GET['PatientID'] !== 'all') {
         $whereConditions[] = "a.Patient_id = ?";
         $params[] = intval($_GET['PatientID']);
         $types .= 'i';
     }
 
-    // 6. Visit Reason
     if (isset($_GET['VisitReason']) && $_GET['VisitReason'] !== '') {
         $whereConditions[] = "a.Reason_for_visit LIKE ?";
         $params[] = '%' . $_GET['VisitReason'] . '%';
         $types .= 's';
     }
 
-    // 7. Nurse Assigned
     if (isset($_GET['NurseID']) && $_GET['NurseID'] !== '' && $_GET['NurseID'] !== 'all') {
         $whereConditions[] = "pv.nurse_id = ?";
         $params[] = intval($_GET['NurseID']);
         $types .= 'i';
     }
 
-    // Build WHERE clause
     $whereClause = count($whereConditions) > 0 ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
 
-    // Main query - DOCTOR-FOCUSED FIELDS
+
     $sql = "SELECT 
         a.Appointment_id as appointment_id,
         DATE(a.Appointment_date) as appointment_date,
@@ -162,7 +138,6 @@ try {
         pv.visit_id as visit_id,
         pv.status as status,
         pv.diagnosis as diagnosis,
-        -- pv.treatment as treatment_notes,
         pv.present_illnesses as present_illnesses,
         pv.start_at as visit_start,
         pv.end_at as visit_end,
@@ -196,10 +171,8 @@ try {
 
     error_log("Executing main query");
 
-    // Execute query
     $appointments = executeQuery($conn, $sql, $types, $params);
 
-    // Get comprehensive statistics for doctors
     $statsQuery = "SELECT 
         COUNT(DISTINCT a.Appointment_id) as total_appointments,
         COUNT(DISTINCT a.Patient_id) as unique_patients,
@@ -225,7 +198,6 @@ try {
 
     $stats = executeQuery($conn, $statsQuery, $types, $params);
 
-    // Get top diagnoses
     $diagnosisQuery = "SELECT 
         pv.diagnosis,
         COUNT(*) as diagnosis_count
@@ -245,7 +217,6 @@ try {
 
     $topDiagnoses = executeQuery($conn, $diagnosisQuery, $types, $params);
 
-    // Get top visit reasons
     $reasonQuery = "SELECT 
         a.Reason_for_visit as reason,
         COUNT(*) as reason_count
@@ -265,7 +236,6 @@ try {
 
     $topReasons = executeQuery($conn, $reasonQuery, $types, $params);
 
-    // Get appointments by day of week
     $dayOfWeekQuery = "SELECT 
         DATE_FORMAT(a.Appointment_date, '%W') as day_name,
         COUNT(*) as appointment_count
@@ -282,15 +252,21 @@ try {
 
     $appointmentsByDay = executeQuery($conn, $dayOfWeekQuery, $types, $params);
 
-    // Cast numeric types for frontend consistency
     foreach ($appointments as &$apt) {
-        if (isset($apt['appointment_id'])) $apt['appointment_id'] = (int)$apt['appointment_id'];
-        if (isset($apt['patient_id'])) $apt['patient_id'] = (int)$apt['patient_id'];
-        if (isset($apt['doctor_id'])) $apt['doctor_id'] = (int)$apt['doctor_id'];
-        if (isset($apt['nurse_id'])) $apt['nurse_id'] = (int)$apt['nurse_id'];
-        if (isset($apt['visit_id'])) $apt['visit_id'] = (int)$apt['visit_id'];
-        if (isset($apt['patient_age'])) $apt['patient_age'] = (int)$apt['patient_age'];
-        if (isset($apt['visit_duration_minutes'])) $apt['visit_duration_minutes'] = $apt['visit_duration_minutes'] === null ? null : (int)$apt['visit_duration_minutes'];
+        if (isset($apt['appointment_id']))
+            $apt['appointment_id'] = (int) $apt['appointment_id'];
+        if (isset($apt['patient_id']))
+            $apt['patient_id'] = (int) $apt['patient_id'];
+        if (isset($apt['doctor_id']))
+            $apt['doctor_id'] = (int) $apt['doctor_id'];
+        if (isset($apt['nurse_id']))
+            $apt['nurse_id'] = (int) $apt['nurse_id'];
+        if (isset($apt['visit_id']))
+            $apt['visit_id'] = (int) $apt['visit_id'];
+        if (isset($apt['patient_age']))
+            $apt['patient_age'] = (int) $apt['patient_age'];
+        if (isset($apt['visit_duration_minutes']))
+            $apt['visit_duration_minutes'] = $apt['visit_duration_minutes'] === null ? null : (int) $apt['visit_duration_minutes'];
     }
     unset($apt);
 
@@ -298,15 +274,14 @@ try {
     $numericStats = ['total_appointments', 'unique_patients', 'completed_count', 'scheduled_count', 'canceled_count', 'noshow_count', 'past_appointments', 'upcoming_appointments'];
     foreach ($numericStats as $k) {
         if (isset($statsRow[$k])) {
-            $statsRow[$k] = (int)$statsRow[$k];
+            $statsRow[$k] = (int) $statsRow[$k];
         } else {
             $statsRow[$k] = 0;
         }
     }
 
-    // Round average visit duration
     if (isset($statsRow['avg_visit_duration'])) {
-        $statsRow['avg_visit_duration'] = round((float)$statsRow['avg_visit_duration'], 1);
+        $statsRow['avg_visit_duration'] = round((float) $statsRow['avg_visit_duration'], 1);
     }
 
     closeDBConnection($conn);

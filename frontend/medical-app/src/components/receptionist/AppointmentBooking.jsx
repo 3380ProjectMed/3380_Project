@@ -147,7 +147,7 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
       if (data.success) {
         // Normalize property names for consistency
         const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-        const normalizedDoctors = (data.doctors || []).map((doc, index) => {
+  const normalizedDoctors = (data.doctors || []).map((doc, index) => {
           // derive working days and default start/end from work_schedule
           const work_schedule = doc.work_schedule || [];
           const workDays = work_schedule.map(s => dayNames.indexOf(s.day)).filter(d => d >= 0);
@@ -175,6 +175,8 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
             workDays: workDays,
             startTime: startTime,
             endTime: endTime
+            ,
+            office_id: officeId // attach the office we're querying so availability checks can validate office context
           };
         });
         setDoctors(normalizedDoctors);
@@ -190,33 +192,41 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
   const doctorWorksOnDate = (doctor, dateStr) => {
     if (!doctor || !doctor.work_schedule) return false;
     if (!dateStr) return false;
-    const date = new Date(dateStr);
+    // Ensure doctor is associated with the current office
+    if (typeof doctor.office_id !== 'undefined' && typeof officeId !== 'undefined' && doctor.office_id !== officeId) return false;
+
+    // Parse date in local timezone robustly
+    const date = new Date(`${dateStr}T00:00:00`);
     const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayName = dayNames[date.getDay()];
-    return (doctor.work_schedule || []).some(s => s.day === dayName);
+    return (doctor.work_schedule || []).some(s => String(s.day || '').trim().toLowerCase() === String(dayName).toLowerCase());
   };
 
   // Helper: check if doctor is available at given date and time (HH:MM)
   const doctorAvailableAt = (doctor, dateStr, timeStr) => {
     if (!doctor || !doctor.work_schedule) return false;
     if (!dateStr || !timeStr) return false;
-    const date = new Date(dateStr);
+    // Ensure doctor is associated with the current office
+    if (typeof doctor.office_id !== 'undefined' && typeof officeId !== 'undefined' && doctor.office_id !== officeId) return false;
+
+    const date = new Date(`${dateStr}T00:00:00`);
     const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const dayName = dayNames[date.getDay()];
 
-    const schedule = (doctor.work_schedule || []).find(s => s.day === dayName);
+    const schedule = (doctor.work_schedule || []).find(s => String(s.day || '').trim().toLowerCase() === String(dayName).toLowerCase());
     if (!schedule) return false;
 
     // schedule.start/end are HH:MM strings
-    const [sH, sM] = schedule.start.split(':').map(Number);
-    const [eH, eM] = schedule.end.split(':').map(Number);
+    const [sH, sM] = (schedule.start || '00:00').split(':').map(Number);
+    const [eH, eM] = (schedule.end || '00:00').split(':').map(Number);
     const startMinutes = sH * 60 + sM;
     const endMinutes = eH * 60 + eM;
 
     const [tH, tM] = timeStr.split(':').map(Number);
     const tMinutes = tH * 60 + tM;
 
-    return tMinutes >= startMinutes && tMinutes <= endMinutes;
+    // Server uses end_time > time (exclusive end). Match that behavior here.
+    return tMinutes >= startMinutes && tMinutes < endMinutes;
   };
 
   /**
@@ -347,10 +357,23 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
       const data = await response.json();
       
       if (data.success && data.appointments) {
-        // Filter appointments for the selected doctor
-        const doctorAppointments = data.appointments.filter(
-          appt => appt.Doctor_id === selectedDoctor.Doctor_id
-        );
+        // Filter appointments for the selected doctor and ignore cancelled/no-show
+        // Also ignore the appointment currently being edited (so editing doesn't conflict with itself)
+        const doctorAppointments = data.appointments.filter((appt) => {
+          if (appt.Doctor_id !== selectedDoctor.Doctor_id) return false;
+          const status = (appt.status || '').toString().toLowerCase();
+          // ignore cancelled or no-show appointments
+          if (status === 'cancelled' || status === 'canceled' || status === 'no-show') return false;
+
+          // Determine appointment id (support different casing)
+          const apptId = appt.Appointment_id ?? appt.AppointmentId ?? appt.appointment_id ?? appt.id;
+          if (isEditMode && appointmentId && apptId && Number(apptId) === Number(appointmentId)) {
+            // Skip the appointment being edited so it doesn't conflict with itself
+            return false;
+          }
+
+          return true;
+        });
         
         // Check each appointment for conflicts
         for (const appt of doctorAppointments) {
@@ -412,12 +435,23 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
       setCreating(true);
       setError(null);
 
-      // Parse time
-      const [hours, minutes] = appointmentTime.split(':');
-      
-      // Format datetime for API - parse date components directly to avoid timezone issues
-      const [year, month, day] = appointmentDate.split('-');
-      const appointmentDateTime = `${year}-${month}-${day} ${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
+  // Parse time and build a local Date object to avoid ambiguous string parsing across browsers/servers
+  const [hours, minutes] = appointmentTime.split(':').map(Number);
+  const [year, month, day] = appointmentDate.split('-').map(Number);
+
+  // Create local Date using numeric components (year, monthIndex, day, hour, minute)
+  let apptLocal;
+  if (preSelectedTimeSlot && preSelectedTimeSlot.date) {
+    // use the Date object passed from OfficeSchedule to preserve exact local date
+    apptLocal = new Date(preSelectedTimeSlot.date);
+    apptLocal.setHours(hours, minutes, 0, 0);
+  } else {
+    apptLocal = new Date(year, month - 1, day, hours, minutes, 0);
+  }
+
+  // Format datetime for API as local YYYY-MM-DD HH:MM:SS (no timezone suffix)
+  const pad = (n) => String(n).padStart(2, '0');
+  const appointmentDateTime = `${apptLocal.getFullYear()}-${pad(apptLocal.getMonth() + 1)}-${pad(apptLocal.getDate())} ${pad(apptLocal.getHours())}:${pad(apptLocal.getMinutes())}:00`;
 
       if (isEditMode && appointmentId) {
         // Update existing appointment
@@ -440,7 +474,6 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
         const result = await response.json();
         
         if (result.success) {
-          // Success! Navigate back
           if (onSuccess) {
             onSuccess();
           }
@@ -469,7 +502,6 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
         const result = await response.json();
         
         if (result.success) {
-          // Success! Navigate back
           if (onSuccess) {
             onSuccess();
           }
@@ -492,6 +524,14 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
     return new Date().toISOString().split('T')[0];
   };
 
+  // Local date formatter (matches OfficeSchedule.formatDateLocal)
+  const formatDateLocal = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   return (
     <div className="appointment-booking-page">
       {/* ===== HEADER ===== */}
@@ -505,6 +545,14 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
           <p className="page-subtitle">{officeName}</p>
         </div>
       </div>
+
+      {/* Edit mode banner */}
+      {isEditMode && appointmentId && (
+        <div className="edit-banner">
+          <strong>Editing appointment #{appointmentId}</strong>
+          <span> — Changes will update the existing appointment (not create a new one).</span>
+        </div>
+      )}
 
       {/* ===== STEP INDICATOR ===== */}
       <div className="step-indicator">

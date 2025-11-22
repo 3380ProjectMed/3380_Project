@@ -892,6 +892,9 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
                     const status = getSlotStatus(doctor, hour, minute);
                     const isSelected = isSlotSelected(doctor.Doctor_id, hour, minute);
                     
+                    // Get appointment (if any) tied to this slot so we can render details
+                    const appointmentForThisSlot = getAppointmentForSlot(doctor.Doctor_id, hour, minute);
+
                     return (
                       <div
                         key={`${doctor.Doctor_id}-${hour}-${minute}`}
@@ -899,6 +902,8 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
                         onClick={() => handleSlotClick(doctor, hour, minute, status)}
                         title={
                           status === 'available' ? 'Click to select this time slot' :
+                          status === 'booked' && appointmentForThisSlot ?
+                            `${appointmentForThisSlot.patient_name} — Dr. ${appointmentForThisSlot.doctor_name} — ID: ${appointmentForThisSlot.appointment_id}` :
                           status === 'booked' ? 'This time slot is already booked' :
                           status === 'past' ? 'This time has passed' :
                           'Doctor not available at this time'
@@ -909,11 +914,21 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
                             <Check size={20} />
                           </div>
                         )}
-                        {status === 'available' && !isSelected && (
+
+                        {status === 'booked' && appointmentForThisSlot ? (
+                          <div className="booked-content">
+                            <div className="booked-patient" title={appointmentForThisSlot.patient_name}>
+                              {appointmentForThisSlot.patient_name}
+                            </div>
+                            <div className="booked-meta">
+                              Dr. {appointmentForThisSlot.doctor_name} • #{appointmentForThisSlot.appointment_id}
+                            </div>
+                          </div>
+                        ) : (status === 'available' && !isSelected && (
                           <div className="hover-indicator">
                             Click to select
                           </div>
-                        )}
+                        ))}
                       </div>
                     );
                   })}

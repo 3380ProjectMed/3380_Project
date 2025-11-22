@@ -19,7 +19,7 @@ function bindParams(mysqli_stmt $stmt, string $types, array $params): void
 }
 
 try {
-    // ── Auth check ─────────────────────────────────────────────────────────────
+    // Auth check 
     if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Admin access required']);
@@ -28,7 +28,7 @@ try {
 
     $conn = getDBConnection();
 
-    // ── Params ────────────────────────────────────────────────────────────────
+    // Params
     $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-30 days'));
     $end_date   = isset($_GET['end_date'])   ? $_GET['end_date']   : date('Y-m-d');
     $group_by   = isset($_GET['group_by'])   ? $_GET['group_by']   : 'week';
@@ -66,9 +66,7 @@ try {
         $params[] = $doctor_id;
     }
 
-    // =========================================================================
     // 1. DOCTOR PERFORMANCE SUMMARY
-    // =========================================================================
     $doctorSql = "SELECT
             d.doctor_id,
             CONCAT(s.first_name, ' ', s.last_name) AS doctor_name,
@@ -95,7 +93,6 @@ try {
                 THEN a.Patient_id 
             END) AS total_patients_seen,
 
-            -- (you can keep this if you care about number of 1st-visit appts)
             SUM(CASE 
                 WHEN a.Appointment_date = (
                     SELECT MIN(a2.Appointment_date)
@@ -107,7 +104,6 @@ try {
                 THEN 1 ELSE 0 
             END) AS new_patient_appointments,
             
-            -- 2) RETAINED FOR PRACTICE (primary care only)
             COUNT(
             DISTINCT CASE
                 WHEN d.specialty IN (1,2,3,4)
@@ -144,7 +140,7 @@ try {
         END
         ) AS new_patients_for_doctor,
 
-        -- 4) RETAINED WITH THIS DOCTOR (≥2 visits with this doc)
+        -- 4) RETAINED WITH THIS DOCTOR
         COUNT(
         DISTINCT CASE 
             WHEN (
@@ -196,9 +192,7 @@ try {
     }
     unset($doc);
 
-    // =========================================================================
     // 2. TREND DATA (New Patients Over Time by Doctor)
-    // =========================================================================
     $trendSql = "SELECT
                     $periodExpr AS period_start,
                     d.doctor_id,
@@ -250,9 +244,7 @@ try {
     }
     unset($row);
 
-    // =========================================================================
     // 3. OFFICE BREAKDOWN
-    // =========================================================================
     $officeSql = "SELECT
                         o.office_id,
                         o.name AS office_name,
@@ -290,9 +282,7 @@ try {
     $result3        = $stmt3->get_result();
     $officeBreakdown = $result3->fetch_all(MYSQLI_ASSOC);
 
-    // =========================================================================
-    // 3b. BOOKING METHOD BREAKDOWN
-    // =========================================================================
+    // BOOKING METHOD BREAKDOWN
     $bookingSql = "SELECT
                         a.method,
                         COUNT(DISTINCT CASE 
@@ -340,9 +330,7 @@ try {
         }
     }
 
-    // =========================================================================
     // 4. SUMMARY METRICS
-    // =========================================================================
     $totalNewPatients      = array_sum(array_column($doctorPerformance, 'new_patients_acquired'));
     $totalRetained         = array_sum(array_column($doctorPerformance, 'retained_patients'));
     $avgRetentionRate      = $totalNewPatients > 0 ? round(($totalRetained / $totalNewPatients) * 100, 1) : 0;

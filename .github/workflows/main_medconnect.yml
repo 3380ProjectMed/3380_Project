@@ -77,7 +77,6 @@ jobs:
           echo "---- Staged webroot ----"
           ls -la "$WEBROOT"
 
-      # ---------- (Optional) Composer ----------
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -145,7 +144,6 @@ jobs:
           echo "Waiting 30 seconds for deployment to complete..."
           sleep 30
 
-      # ---------- Post-deploy: Apply NGINX config & startup command ----------
       - name: Configure NGINX on App Service
         run: |
           echo "=== Setting startup command (idempotent - safe to run multiple times) ==="
