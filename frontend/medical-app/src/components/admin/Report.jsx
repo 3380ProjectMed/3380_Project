@@ -20,7 +20,7 @@ import {
 import '../doctor/Dashboard.css';
 import './Report.css';
 
-function Report() {
+function Report({ initialConfig, onConfigApplied }) {
   const [activeReport, setActiveReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -82,6 +82,31 @@ function Report() {
       fetchNewPatientsReport();
     }
   }, [activeReport]);
+
+    useEffect(() => {
+    if (initialConfig) {
+      if (initialConfig.reportType) {
+        setActiveReport(initialConfig.reportType);
+      }
+      if (initialConfig.timeFilter === 'today') {
+        const today = new Date().toISOString().split('T')[0];
+        setStartDate(today);
+        setEndDate(today);
+      } else if (initialConfig.timeFilter === 'thisMonth') {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        setStartDate(firstDay.toISOString().split('T')[0]);
+        setEndDate(today.toISOString().split('T')[0]);
+      }
+      if (initialConfig.statusFilter) {
+        setStatusFilter(initialConfig.statusFilter);
+      }
+      
+      if (onConfigApplied) {
+        onConfigApplied();  
+      }
+    }
+  }, [initialConfig, onConfigApplied]);
 
   const fetchFilterOptions = async () => {
     try {

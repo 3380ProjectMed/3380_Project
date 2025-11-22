@@ -3,7 +3,7 @@ import { Users, Calendar, Activity, DollarSign, TrendingUp, AlertCircle } from '
 import './Dashboard.css';
 import { WelcomeHeader, StatCard, StatsGrid } from '../shared';
 
-function AdminDashboard({ setCurrentPage }) { 
+function AdminDashboard({ setCurrentPage, setPageConfig }) {  
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,6 +33,20 @@ function AdminDashboard({ setCurrentPage }) {
     }
   };
 
+  const navigateToUsers = (roleFilter) => {
+    setCurrentPage('users');
+    if (setPageConfig) {
+      setPageConfig({ activeTab: roleFilter });
+    }
+  };
+
+  const navigateToReports = (reportType, dateConfig) => {
+    setCurrentPage('reports');
+    if (setPageConfig) {
+      setPageConfig({ reportType, ...dateConfig });
+    }
+  };
+
   if (loading) {
     return <div style={{ padding: 24 }}>Loading dashboard...</div>;
   }
@@ -57,7 +71,7 @@ function AdminDashboard({ setCurrentPage }) {
           value={stats.total_doctors} 
           label="Total Doctors" 
           type="primary"
-          onClick={() => setCurrentPage('users')}
+          onClick={() => navigateToUsers('doctors')} 
           clickable
         />
         <StatCard 
@@ -65,7 +79,7 @@ function AdminDashboard({ setCurrentPage }) {
           value={stats.total_nurses} 
           label="Total Nurses" 
           type="info"
-          onClick={() => setCurrentPage('users')} 
+          onClick={() => navigateToUsers('nurses')} 
           clickable
         />
         <StatCard 
@@ -79,7 +93,9 @@ function AdminDashboard({ setCurrentPage }) {
           value={stats.appointments_this_month} 
           label="Appointments This Month" 
           type="warning"
-          onClick={() => setCurrentPage('reports')} 
+          onClick={() => navigateToReports('office', { 
+            timeFilter: 'thisMonth' 
+          })} 
           clickable
         />
         <StatCard 
@@ -87,7 +103,7 @@ function AdminDashboard({ setCurrentPage }) {
           value={stats.active_users} 
           label="Active Users" 
           type="info"
-          onClick={() => setCurrentPage('users')}  
+          onClick={() => navigateToUsers('all')}  
           clickable
         />
         <StatCard 
@@ -95,7 +111,10 @@ function AdminDashboard({ setCurrentPage }) {
           value={stats.pending_appointments} 
           label="Pending Today" 
           type="warning"
-          onClick={() => setCurrentPage('reports')}  
+          onClick={() => navigateToReports('office', { 
+            timeFilter: 'today',
+            statusFilter: 'Scheduled' 
+          })}  
           clickable
         />
         <StatCard 
@@ -103,7 +122,10 @@ function AdminDashboard({ setCurrentPage }) {
           value={stats.completed_today} 
           label="Completed Today" 
           type="success"
-          onClick={() => setCurrentPage('reports')}  
+          onClick={() => navigateToReports('office', { 
+            timeFilter: 'today',
+            statusFilter: 'Completed' 
+          })}
           clickable
         />
       </StatsGrid>
@@ -114,13 +136,13 @@ function AdminDashboard({ setCurrentPage }) {
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           <button 
             className="btn-save" 
-            onClick={() => setCurrentPage('users')}
+            onClick={() => navigateToUsers('all')}
           >
             View All Users
           </button>
           <button 
             className="btn-save" 
-            onClick={() => setCurrentPage('reports')}  
+            onClick={() => navigateToReports('financial')}  
           >
             Generate Report
           </button>
