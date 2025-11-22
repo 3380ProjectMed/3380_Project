@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Users, Calendar, Activity, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
 import './Dashboard.css';
 import { WelcomeHeader, StatCard, StatsGrid } from '../shared';
 
-function AdminDashboard() {
+function AdminDashboard({ setCurrentPage }) { 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchStats();
@@ -59,7 +57,7 @@ function AdminDashboard() {
           value={stats.total_doctors} 
           label="Total Doctors" 
           type="primary"
-          onClick={() => navigate('/admin/users')}
+          onClick={() => setCurrentPage('users')}
           clickable
         />
         <StatCard 
@@ -67,7 +65,7 @@ function AdminDashboard() {
           value={stats.total_nurses} 
           label="Total Nurses" 
           type="info"
-          onClick={() => navigate('/admin/users')}
+          onClick={() => setCurrentPage('users')} 
           clickable
         />
         <StatCard 
@@ -81,7 +79,7 @@ function AdminDashboard() {
           value={stats.appointments_this_month} 
           label="Appointments This Month" 
           type="warning"
-          onClick={() => navigate('/admin/reports')}
+          onClick={() => setCurrentPage('reports')} 
           clickable
         />
         <StatCard 
@@ -89,7 +87,7 @@ function AdminDashboard() {
           value={stats.active_users} 
           label="Active Users" 
           type="info"
-          onClick={() => navigate('/admin/users')}
+          onClick={() => setCurrentPage('users')}  
           clickable
         />
         <StatCard 
@@ -97,7 +95,7 @@ function AdminDashboard() {
           value={stats.pending_appointments} 
           label="Pending Today" 
           type="warning"
-          onClick={() => navigate('/admin/reports')}
+          onClick={() => setCurrentPage('reports')}  
           clickable
         />
         <StatCard 
@@ -105,7 +103,7 @@ function AdminDashboard() {
           value={stats.completed_today} 
           label="Completed Today" 
           type="success"
-          onClick={() => navigate('/admin/reports')}
+          onClick={() => setCurrentPage('reports')}  
           clickable
         />
       </StatsGrid>
@@ -116,13 +114,13 @@ function AdminDashboard() {
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           <button 
             className="btn-save" 
-            onClick={() => navigate('/admin/users')}
+            onClick={() => setCurrentPage('users')}
           >
             View All Users
           </button>
           <button 
             className="btn-save" 
-            onClick={() => navigate('/admin/reports')}
+            onClick={() => setCurrentPage('reports')}  
           >
             Generate Report
           </button>
