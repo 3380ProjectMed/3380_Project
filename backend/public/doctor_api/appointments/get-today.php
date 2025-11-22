@@ -1,8 +1,5 @@
 <?php
-/**
- * Get today's appointments for a doctor with REAL-TIME status from database
- * Updated to work with your authentication system (staff_id based)
- */
+// Get today's appointments for a doctor 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
@@ -10,11 +7,9 @@ require_once '/home/site/wwwroot/session.php';
 try {
     $conn = getDBConnection();
 
-    // Get doctor_id from query param or derive from session
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
     } else {
-        // Verify authentication and role (YOUR AUTH SYSTEM)
         if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
             http_response_code(401);
             echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -27,7 +22,6 @@ try {
             exit;
         }
 
-        // user_id = staff_id for doctors, get doctor_id (YOUR AUTH SYSTEM)
         $staff_id = (int) $_SESSION['uid'];
 
         $rows = executeQuery(
@@ -47,15 +41,11 @@ try {
         $doctor_id = (int) $rows[0]['doctor_id'];
     }
 
-    // Use America/Chicago timezone
     $tz = new DateTimeZone('America/Chicago');
     $dt = new DateTime('now', $tz);
     $today = $dt->format('Y-m-d');
     $currentDateTime = new DateTime('now', $tz);
 
-    // ========================================
-    // 🆕 KEY CHANGE: Get appointments with patient_visit data
-    // ========================================
     $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
@@ -71,14 +61,14 @@ try {
                     WHERE app2.patient_id = p.patient_id
                 ) as allergies,
                 o.name as office_name,
-                pv.visit_id,             -- ✅ Check if patient has checked in
-                pv.blood_pressure,       -- ✅ Check if vitals recorded
+                pv.visit_id,            
+                pv.blood_pressure,       
                 pv.temperature,
-                pv.created_at as checked_in_at  -- ✅ When patient checked in
+                pv.created_at as checked_in_at  
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             LEFT JOIN office o ON a.Office_id = o.office_id
-            LEFT JOIN patient_visit pv ON pv.appointment_id = a.Appointment_id  -- ✅ Join visit data
+            LEFT JOIN patient_visit pv ON pv.appointment_id = a.Appointment_id  
             WHERE a.Doctor_id = ?
             AND DATE(a.Appointment_date) = ?
             ORDER BY a.Appointment_date";
@@ -95,31 +85,18 @@ try {
     ];
 
     foreach ($appointments as $apt) {
-        // Appointment DateTime in Chicago timezone
         $appointmentDateTime = null;
         try {
             $appointmentDateTime = new DateTime($apt['Appointment_date']);
             $appointmentDateTime->setTimezone($tz);
         } catch (Exception $e) {
-            // fallback: create from date only
             $appointmentDateTime = DateTime::createFromFormat('Y-m-d H:i:s', $apt['Appointment_date'], $tz) ?: new DateTime('now', $tz);
         }
 
-        // ========================================
-        // Time-based calculation (Chicago timezone)
-        // Adds: minutesUntil and computedStatus (derived)
-        // Keep DB status in `status` and `dbStatus` for compatibility
-        // ========================================
         $status = $apt['Status'] ?? 'Scheduled';
 
-        // minutes until appointment (positive => in future, negative => in past)
         $minutesUntil = (int) floor(($appointmentDateTime->getTimestamp() - $currentDateTime->getTimestamp()) / 60);
 
-        // Compute a derived status based on minutesUntil and DB status
-        // Rules (configurable thresholds):
-        // - >= 16 minutes: 'upcoming'
-        // - between -30 and 15: 'active' (about to start / in-progress)
-        // - < -30: 'past'
         if ($minutesUntil >= 16) {
             $computedStatus = 'upcoming';
         } elseif ($minutesUntil >= -30 && $minutesUntil <= 15) {
@@ -128,7 +105,7 @@ try {
             $computedStatus = 'past';
         }
 
-        // Calculate waiting time if patient has checked in (minutes)
+        // Calculate waiting time if patient has checked in 
         $waitingTime = 0;
         if (!empty($apt['checked_in_at'])) {
             try {
@@ -152,8 +129,8 @@ try {
             'minutesUntil' => $minutesUntil,
             'computedStatus' => $computedStatus,
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
-            'status' => $status,  // ✅ REAL status from database
-            'dbStatus' => $status,  // Keep for compatibility
+            'status' => $status,  
+            'dbStatus' => $status,  
             'location' => $apt['office_name'],
             'allergies' => $apt['allergies'] ?: 'No Known Allergies',
             'waitingMinutes' => $waitingTime,
@@ -162,7 +139,7 @@ try {
             'checkedInAt' => $apt['checked_in_at']
         ];
 
-        // Update stats based on REAL status
+        // Update stats based on status
         $statusLower = strtolower($status);
         if (in_array($statusLower, ['waiting', 'ready', 'checked-in'])) {
             $stats['waiting']++;

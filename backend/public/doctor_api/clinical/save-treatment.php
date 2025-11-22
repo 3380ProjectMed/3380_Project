@@ -1,9 +1,4 @@
 <?php
-/**
- * Save treatments for a patient visit
- * REPLACES all existing treatments with the new list
- * This allows proper handling of both additions and deletions
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
@@ -19,7 +14,6 @@ try {
     
     $user_id = (int)$_SESSION['uid'];
     
-    // Verify user is a doctor
     $conn = getDBConnection();
     $rows = executeQuery($conn, '
         SELECT s.staff_id 
@@ -34,7 +28,6 @@ try {
         exit;
     }
     
-    // Get POST data
     $input = json_decode(file_get_contents('php://input'), true);
     
     $visit_id = isset($input['visit_id']) ? intval($input['visit_id']) : 0;
@@ -53,8 +46,7 @@ try {
         echo json_encode(['success' => false, 'error' => 'treatments must be an array']);
         exit;
     }
-    
-    // Verify visit exists
+
     $visitCheck = executeQuery(
         $conn,
         'SELECT visit_id FROM patient_visit WHERE visit_id = ?',
@@ -69,15 +61,12 @@ try {
         exit;
     }
     
-    // Begin transaction
     $conn->begin_transaction();
     
     try {
-        // Step 1: Delete all existing treatments for this visit
         $deleteSql = "DELETE FROM treatment_per_visit WHERE visit_id = ?";
         executeQuery($conn, $deleteSql, 'i', [$visit_id]);
         
-        // Step 2: Insert new treatments (if any)
         $inserted_count = 0;
         
         if (!empty($treatments)) {

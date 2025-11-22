@@ -8,7 +8,6 @@ try {
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
     } else {
-        //session_start();
         if (!isset($_SESSION['uid'])) {
             http_response_code(401);
             echo json_encode(['success' => false, 'error' => 'Not authenticated']);

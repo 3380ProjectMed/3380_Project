@@ -1,15 +1,13 @@
 <?php
 
-/**
- * Delete a prescription
- */
+//Delete a prescription
+ 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 header('Content-Type: application/json');
 
 try {
-    //session_start();
 
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
@@ -19,7 +17,6 @@ try {
 
     $user_id = (int)$_SESSION['uid'];
 
-    // Verify user is a doctor
     $conn = getDBConnection();
     $rows = executeQuery($conn, '
         SELECT s.staff_id 
@@ -35,8 +32,6 @@ try {
     }
 
     $doctor_id = (int)$rows[0]['doctor_id'];
-
-    // Get prescription_id from request
     $input = json_decode(file_get_contents('php://input'), true);
     $prescription_id = isset($input['prescription_id']) ? intval($input['prescription_id']) : 0;
 
