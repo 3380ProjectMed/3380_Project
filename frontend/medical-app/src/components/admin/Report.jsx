@@ -1371,7 +1371,7 @@ function Report() {
                         <th className="text-right">Completed</th>
                         <th className="text-right">No-Shows</th>
                         <th className="text-right">Cancelled</th>
-                        <th>New?</th>
+                        <th>New To Network?</th>
                         <th>Retained?</th>
                       </tr>
                     </thead>
