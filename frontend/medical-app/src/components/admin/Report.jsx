@@ -1270,9 +1270,9 @@ function Report() {
                       <th onClick={() => handleSort('total_patients_seen')} className="text-right">
                         Total Patients {sortConfig.key === 'total_patients_seen' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </th>
-                      <th onClick={() => handleSort('avg_visits_per_patient')} className="text-right">
+                      {/* <th onClick={() => handleSort('avg_visits_per_patient')} className="text-right">
                         Avg Visits/Patient {sortConfig.key === 'avg_visits_per_patient' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                      </th>
+                      </th> */}
                       <th onClick={() => handleSort('total_completed')} className="text-right">
                         Completed {sortConfig.key === 'total_completed' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </th>
@@ -1323,7 +1323,7 @@ function Report() {
                           </div>
                         </td>
                         <td className="text-right">{doc.total_patients_seen}</td>
-                        <td className="text-right">{doc.avg_visits_per_patient}</td>
+                        {/* <td className="text-right">{doc.avg_visits_per_patient}</td> */}
                         <td className="text-right">{doc.total_completed}</td>
                       </tr>
                     ))}
