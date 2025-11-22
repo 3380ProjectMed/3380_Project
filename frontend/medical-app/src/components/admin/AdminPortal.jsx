@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 
 function AdminPortal({ preview = false }) {
-  const [currentPage, setCurrentPage] = useState('dashboard'); // default landing page
+  const [currentPage, setCurrentPage] = useState('dashboard');
   const navigate = useNavigate();
   const { logout } = useAuth();
 
@@ -40,9 +40,9 @@ function AdminPortal({ preview = false }) {
 
       <main className="main-content">
         <div className="report-container">
-          {currentPage === 'dashboard' && <AdminDashboard />}
+          {currentPage === 'dashboard' && <AdminDashboard setCurrentPage={setCurrentPage} />}
           {currentPage === 'users' && <UserManagement />}
-          {currentPage === 'reports' && <Report />}     {}
+          {currentPage === 'reports' && <Report />}
           {currentPage === 'profile' && <Profile />}
           {currentPage === 'security' && (
             <div>
