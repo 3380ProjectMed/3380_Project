@@ -2,7 +2,6 @@
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
-
 header('Content-Type: application/json');
 
 try {
@@ -12,17 +11,24 @@ try {
         exit;
     }
 
-    // Get JSON input
-    $input = json_decode(file_get_contents('php://input'), true);
+    // Get JSON input - works for both POST and DELETE methods
+    $rawInput = file_get_contents('php://input');
+    error_log("Delete condition - Raw input: " . $rawInput); // DEBUG
+    
+    $input = json_decode($rawInput, true);
     
     if (!$input) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Invalid JSON input']);
+        echo json_encode(['success' => false, 'error' => 'Invalid JSON input', 'raw' => $rawInput]);
         exit;
     }
 
+    error_log("Delete condition - Parsed input: " . json_encode($input)); // DEBUG
+    
     $condition_id = isset($input['condition_id']) ? intval($input['condition_id']) : 0;
     $patient_id = isset($input['patient_id']) ? intval($input['patient_id']) : 0;
+
+    error_log("Delete condition - condition_id: $condition_id, patient_id: $patient_id"); // DEBUG
 
     // Validation
     if ($condition_id <= 0) {

@@ -208,11 +208,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
         )}
         <button 
           className="action-btn-small btn-cancel"
-          onClick={() => {
-            if (window.confirm('Mark this appointment as No-Show?')) {
-              updateAppointmentStatus(appointment.id, 'No-Show');
-            }
-          }}
+          onClick={() => updateAppointmentStatus(appointment.id, 'No-Show')}
           title="No-Show"
         >
           <XCircle size={14} />
