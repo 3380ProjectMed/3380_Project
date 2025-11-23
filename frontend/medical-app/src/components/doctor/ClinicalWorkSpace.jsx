@@ -550,9 +550,7 @@ const [conditionForm, setConditionForm] = useState({
       ? 'This will remove all treatments from this visit. Continue?'
       : null;
     
-    if (confirmMessage && !confirm(confirmMessage)) {
-      return;
-    }
+    // proceed without blocking browser confirmation dialog
 
     try {
       setSaving(true);
@@ -598,9 +596,7 @@ const [conditionForm, setConditionForm] = useState({
   };
 
   const handleDeleteTreatment = async (tpv_id, treatmentName) => {
-    if (!confirm(`Are you sure you want to remove "${treatmentName}" from this visit?`)) {
-      return;
-    }
+    // proceed without blocking browser confirmation dialog
 
     try {
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
@@ -711,9 +707,7 @@ const [conditionForm, setConditionForm] = useState({
   };
 
   const handleDeletePrescription = async (prescriptionId) => {
-    if (!confirm('Are you sure you want to delete this prescription?')) {
-      return;
-    }
+    // proceed without blocking browser confirmation dialog
 
     try {
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
@@ -823,11 +817,11 @@ const [conditionForm, setConditionForm] = useState({
 };
 
 const handleDeleteCondition = async (conditionId) => {
-  if (!confirm('Are you sure you want to delete this medical condition?')) {
-    return;
-  }
+  // proceed without blocking browser confirmation dialog
 
   const currentPatientId = patientData?.patient?.id || patientData?.visit?.patient_id || patientId;
+
+  console.log('Deleting condition:', { conditionId, currentPatientId }); // DEBUG
 
   try {
     const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
@@ -837,7 +831,7 @@ const handleDeleteCondition = async (conditionId) => {
     const response = await fetch(
       `${API_BASE}/doctor_api/clinical/delete-medical-condition.php`,
       {
-        method: 'POST',
+        method: 'POST', // Keep as POST for consistency
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
