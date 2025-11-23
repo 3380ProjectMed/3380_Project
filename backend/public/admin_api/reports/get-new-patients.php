@@ -41,7 +41,6 @@ try {
     $office_id = !empty($_GET['office_id']) && $_GET['office_id'] !== 'all' ? (int)$_GET['office_id'] : null;
     $doctor_id = !empty($_GET['doctor_id']) && $_GET['doctor_id'] !== 'all' ? (int)$_GET['doctor_id'] : null;
 
-    // Period expression for trend grouping
     switch ($group_by) {
         case 'month':
             $periodExpr = "DATE_FORMAT(a.Appointment_date, '%Y-%m-01')";
@@ -55,7 +54,6 @@ try {
             break;
     }
 
-    // Base types/params used for date/office/doctor filters
     $types  = 'ss';
     $params = [$start_date . ' 00:00:00', $end_date . ' 23:59:59'];
 
