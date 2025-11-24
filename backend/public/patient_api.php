@@ -456,6 +456,13 @@ elseif ($endpoint === 'profile') {
                 }
             }
 
+            if (isset($input['blood_type'])) {
+                $bloodType = trim((string) $input['blood_type']);
+                $updateFields[] = "blood_type = ?";
+                $updateValues[] = $bloodType;
+                $bindTypes .= 's';
+            }
+
             if (isset($input['primary_doctor'])) {
                 $primaryDoctor = trim((string) $input['primary_doctor']);
                 $updateFields[] = "primary_doctor = NULLIF(?, '')";

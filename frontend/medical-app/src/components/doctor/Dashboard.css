@@ -227,7 +227,6 @@
 
 .appointments-table .table-header {
   display: grid;
-  /* Evenly distribute the main columns (TIME, APPT ID, PATIENT, REASON, STATUS) and keep ACTIONS fixed */
   grid-template-columns: repeat(5, 1fr) 120px;
   gap: 1.5rem;
   padding: 1rem 1.5rem;
@@ -392,7 +391,6 @@
   
   .appointments-table .table-header,
   .appointments-table .table-row {
-    /* tablet: a mix of fixed and flexible columns */
     grid-template-columns: 100px 80px 1fr 1fr 1fr 120px;
     gap: 1rem;
     padding: 1rem;

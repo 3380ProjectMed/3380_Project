@@ -1,10 +1,4 @@
 <?php
-/**
- * Get patient by id
- * Accepts `patient_id` (numeric) or `id` like 'P001'
- * FIXED: Uses lowercase table/column names throughout
- */
-
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
@@ -16,12 +10,10 @@ try {
         throw new Exception('patient_id or id required');
     }
 
-    // Allow formats like 'P001' or '001' or numeric
     $numeric = intval(preg_replace('/[^0-9]/', '', $raw));
     if ($numeric <= 0)
         throw new Exception('Invalid patient id');
 
-    // Get patient basic info - all lowercase table and column names
     $sql = "SELECT 
                 p.patient_id,
                 p.first_name,
@@ -57,7 +49,6 @@ try {
             $now = new DateTime();
             $age = $now->diff($dob)->y;
         } catch (Exception $e) {
-            // Age calculation failed, keep as 0
         }
     }
 
@@ -69,7 +60,6 @@ try {
         'age' => $age,
         'gender' => $p['gender'] ?: 'Not Specified',
         'email' => $p['email'] ?: 'No email',
-        'phone' => '', // Will be populated from emergency_contact if needed
         'allergies' => $p['allergies'] ?: 'No Known Allergies',
         'bloodType' => $p['blood_type'] ?: 'Unknown',
         'medicalHistory' => [],
@@ -77,7 +67,6 @@ try {
         'currentMedications' => []
     ];
 
-    // Fetch medical conditions (chronic conditions)
     try {
         $conditions_sql = "SELECT 
                             mc.condition_id,
@@ -104,7 +93,6 @@ try {
         error_log("Error fetching medical conditions: " . $e->getMessage());
     }
 
-    // Fetch current prescriptions
     try {
         $meds_sql = "SELECT 
                      p.prescription_id, 
@@ -138,7 +126,6 @@ try {
         error_log("Error fetching medications: " . $e->getMessage());
     }
 
-    // Fetch recent visit summaries from patient_visit
     try {
         $visits_sql = "SELECT 
                        v.visit_id, 
@@ -157,7 +144,6 @@ try {
 
         $visits = executeQuery($conn, $visits_sql, 'i', [$numeric]);
         if (is_array($visits) && count($visits) > 0) {
-            // If we have visits, append them to medical history
             $visitHistory = array_map(function ($v) {
                 return [
                     'visit_id' => $v['visit_id'] ?? null,
