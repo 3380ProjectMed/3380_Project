@@ -10,7 +10,6 @@ require_once '/home/site/wwwroot/session.php';
 
 
 try {
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -26,7 +25,6 @@ try {
     $visit_id = (int)$_GET['visit_id'];
     $conn = getDBConnection();
 
-    // Get visit with patient info
     $sql = "SELECT 
                 pv.visit_id,
                 pv.patient_id,
@@ -55,7 +53,6 @@ try {
 
     $visit = $visits[0];
 
-    // Get patient's PRIMARY insurance copay
     $insuranceSql = "SELECT 
                         pi.id as insurance_id,
                         pi.member_id,

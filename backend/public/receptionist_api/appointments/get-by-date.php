@@ -9,8 +9,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    // Start session and require that the user is logged in
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -26,7 +24,6 @@ try {
     $date = $_GET['date'];
     $user_id = (int) $_SESSION['uid'];
 
-    // Resolve the receptionist's office ID from work_schedule
     $conn = getDBConnection();
 
     try {
@@ -85,10 +82,8 @@ try {
         $dbStatus = $apt['apt_status'] ?? 'Scheduled';
         $visitStatus = $apt['visit_status'] ?? null;
 
-        // Determine display status
-        // Priority: 1. visit_status if set, 2. appointment status, 3. check start_at for legacy data
         $displayStatus = $dbStatus;
-        
+
         if ($visitStatus === 'Completed') {
             $displayStatus = 'Completed';
         } elseif ($visitStatus === 'Checked In') {

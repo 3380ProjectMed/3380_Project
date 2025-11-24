@@ -20,7 +20,6 @@ try {
 
     $conn = getDBConnection();
 
-    // First, get all doctors who work at this office
     $sql = "SELECT DISTINCT 
                 d.doctor_id, 
                 s.first_name, 
@@ -38,8 +37,7 @@ try {
     $doctorRows = executeQuery($conn, $sql, 'i', [$officeId]);
     
     $doctors = [];
-    
-    // For each doctor, get their work schedule at this office
+
     foreach ($doctorRows as $doctor) {
         $scheduleSQL = "SELECT 
                             day_of_week,
@@ -51,12 +49,12 @@ try {
         
         $scheduleRows = executeQuery($conn, $scheduleSQL, 'ii', [(int)$doctor['staff_id'], $officeId]);
         
-        $workSchedule = [];
+            $workSchedule = [];
         foreach ($scheduleRows as $schedule) {
             if ($schedule['day_of_week']) {
                 $workSchedule[] = [
                     'day' => $schedule['day_of_week'],
-                    'start' => substr($schedule['start_time'], 0, 5), // HH:MM format
+                    'start' => substr($schedule['start_time'], 0, 5),
                     'end' => substr($schedule['end_time'], 0, 5)
                 ];
             }

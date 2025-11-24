@@ -184,9 +184,7 @@ try {
     $email = $input['email'];
 
     $primary_doctor     = (isset($input['primaryDoctor'])     && $input['primaryDoctor']     !== '') ? (int)$input['primaryDoctor']     : null;
-    $specialty_doctor   = (isset($input['specialtyDoctor'])   && $input['specialtyDoctor']   !== '') ? (int)$input['specialtyDoctor']   : null;
     $insurance_id       = (isset($input['insuranceId'])       && $input['insuranceId']       !== '') ? (int)$input['insuranceId']       : null;
-    $insurance_provider = (isset($input['insuranceProvider']) && $input['insuranceProvider'] !== '') ? (int)$input['insuranceProvider'] : null;
     $prescription       = (isset($input['prescriptionId'])    && $input['prescriptionId']    !== '') ? (int)$input['prescriptionId']    : null;
     $allergies          = (isset($input['allergiesCode'])     && $input['allergiesCode']     !== '') ? (int)$input['allergiesCode']     : null;
     $blood_type         = (isset($input['bloodType'])         && $input['bloodType']         !== '') ? $input['bloodType']              : null;
@@ -204,17 +202,15 @@ try {
                 race,
                 email,
                 primary_doctor,
-                specialty_doctor,
                 insurance_id,
-                insurance_provider,
                 prescription,
                 allergies,
                 blood_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
 
     $stmt->bind_param(
-        'issssiiiisiiiiiis',
+        'issssiiiisiiiis',
         $user_id,          // patient_id == user_id
         $first_name,
         $last_name,
@@ -226,9 +222,7 @@ try {
         $race,
         $email,
         $primary_doctor,
-        $specialty_doctor,
         $insurance_id,
-        $insurance_provider,
         $prescription,
         $allergies,
         $blood_type

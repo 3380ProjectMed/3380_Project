@@ -10,7 +10,6 @@ require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
 try {
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -19,7 +18,6 @@ try {
 
     $conn = getDBConnection();
 
-    // Get all active insurance plans with payer information
     $sql = "SELECT 
                 ip.plan_id,
                 ip.plan_name,
@@ -36,7 +34,6 @@ try {
 
     $plans = executeQuery($conn, $sql, '', []);
 
-    // Group plans by payer
     $grouped_plans = [];
     foreach ($plans as $plan) {
         $payer_id = $plan['payer_id'];
