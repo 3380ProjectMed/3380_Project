@@ -437,7 +437,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
         
         let successMessage;
         if (data.fallback && currentType === 'prescription') {
-          successMessage = 'Warning: Prescription failed, medication added to history instead.';
+          successMessage = data.message || 'Warning: Prescription failed, medication added to history instead.';
           showNotification('error', successMessage);
         } else if (currentType === 'prescription') {
           successMessage = 'Active prescription added successfully!';
