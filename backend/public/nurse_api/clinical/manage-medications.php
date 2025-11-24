@@ -60,29 +60,61 @@ try {
                 
                 $doctor_id = null;
                 if ($patient_id) {
-                    $doctor_query = "SELECT doctor_id FROM patient_visit WHERE patient_id = ? AND (status = 'Scheduled' OR status = 'In Progress' OR status = 'Ready') ORDER BY date DESC LIMIT 1";
+                    // First try to find doctor from current patient visit
+                    $doctor_query = "SELECT pv.doctor_id FROM patient_visit pv WHERE pv.patient_id = ? AND pv.doctor_id IS NOT NULL AND (pv.status = 'Scheduled' OR pv.status = 'In Progress' OR pv.status = 'Ready') ORDER BY pv.date DESC LIMIT 1";
                     $doctor_rows = executeQuery($conn, $doctor_query, 'i', [$patient_id]);
-                    if (!empty($doctor_rows)) {
+                    if (!empty($doctor_rows) && $doctor_rows[0]['doctor_id']) {
                         $doctor_id = $doctor_rows[0]['doctor_id'];
+                        error_log("Found doctor_id from patient_visit: " . $doctor_id);
+                    }
+                    
+                    // If no doctor from visit, try to find from recent appointments
+                    if (!$doctor_id) {
+                        $appt_query = "SELECT a.Doctor_id FROM appointment a WHERE a.Patient_id = ? AND a.Doctor_id IS NOT NULL ORDER BY a.Appointment_date DESC LIMIT 1";
+                        $appt_rows = executeQuery($conn, $appt_query, 'i', [$patient_id]);
+                        if (!empty($appt_rows) && $appt_rows[0]['Doctor_id']) {
+                            $doctor_id = $appt_rows[0]['Doctor_id'];
+                            error_log("Found doctor_id from appointment: " . $doctor_id);
+                        }
                     }
                 }
                 
-                // If no doctor found from visit, use the nurse's staff_id (nurse acting as prescriber)
-                $prescriber_id = $doctor_id ?? $staff_id;
+                // If no doctor found, we cannot create a prescription (due to foreign key constraint)
+                if (!$doctor_id) {
+                    error_log("No doctor_id found for patient $patient_id, cannot create prescription");
+                    throw new Exception("No associated doctor found for prescription. A doctor must be assigned to create prescriptions.");
+                }
 
                 $insert_prescription_sql = "INSERT INTO prescription 
                     (patient_id, medication_name, dosage, frequency, route, start_date, end_date, notes, refills_allowed, doctor_id) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 
+                // Debug logging before insertion
+                error_log("Attempting prescription insertion with params: " . json_encode([
+                    'patient_id' => $patient_id,
+                    'medication_name' => $medication_name,
+                    'dosage' => $dosage,
+                    'frequency' => $frequency,
+                    'route' => $route,
+                    'start_date' => $start_date,
+                    'end_date' => $end_date,
+                    'notes' => $notes,
+                    'refills_allowed' => $refills_allowed,
+                    'doctor_id' => $doctor_id
+                ]));
+                
                 executeQuery($conn, $insert_prescription_sql, 'isssssssii', [
                     $patient_id, $medication_name, $dosage, $frequency, $route, 
-                    $start_date, $end_date, $notes, $refills_allowed, $prescriber_id
+                    $start_date, $end_date, $notes, $refills_allowed, $doctor_id
                 ]);
+                
+                $prescription_id = mysqli_insert_id($conn);
+                error_log("Prescription inserted successfully with ID: " . $prescription_id);
                 
                 echo json_encode([
                     'success' => true,
                     'message' => 'Prescription added successfully',
-                    'prescription_id' => mysqli_insert_id($conn)
+                    'prescription_id' => $prescription_id
                 ]);
             } catch (Exception $e) {
                 error_log("Prescription insertion failed: " . $e->getMessage());
@@ -104,9 +136,10 @@ try {
                 
                 echo json_encode([
                     'success' => true,
-                    'message' => 'Prescription failed, added to history instead. Error: ' . $e->getMessage(),
+                    'message' => 'Cannot create prescription without an assigned doctor. Medication added to history instead.',
                     'drug_id' => mysqli_insert_id($conn),
-                    'fallback' => true
+                    'fallback' => true,
+                    'reason' => 'No doctor assigned to patient'
                 ]);
             }
         } else {
