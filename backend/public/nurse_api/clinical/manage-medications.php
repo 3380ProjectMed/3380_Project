@@ -87,8 +87,17 @@ try {
             } catch (Exception $e) {
                 error_log("Prescription insertion failed: " . $e->getMessage());
                 
-                // Fall back to medication history
+                // Fall back to medication history with date information
                 $duration_frequency = $dosage && $frequency ? "$dosage - $frequency" : ($frequency ?: 'As directed');
+                
+                // Add date information if available
+                if ($start_date) {
+                    $date_info = "Started: " . date('M Y', strtotime($start_date));
+                    if ($end_date) {
+                        $date_info .= " | Stopped: " . date('M Y', strtotime($end_date));
+                    }
+                    $duration_frequency .= " (" . $date_info . ")";
+                }
                 
                 $insert_history_sql = "INSERT INTO medication_history (patient_id, drug_name, duration_and_frequency_of_drug_use) VALUES (?, ?, ?)";
                 executeQuery($conn, $insert_history_sql, 'iss', [$patient_id, $medication_name, $duration_frequency]);
@@ -103,7 +112,27 @@ try {
         } else {
             // Add to medication history
             try {
-                $duration_frequency = $dosage && $frequency ? "$dosage - $frequency" : ($frequency ?: 'As directed');
+                $start_date = $input['start_date'] ?? null;
+                $end_date = $input['end_date'] ?? null;
+                
+                // Build duration_frequency with date information
+                $duration_frequency = '';
+                if ($dosage && $frequency) {
+                    $duration_frequency = "$dosage - $frequency";
+                } else if ($frequency) {
+                    $duration_frequency = $frequency;
+                } else {
+                    $duration_frequency = 'As directed';
+                }
+                
+                // Add date information to the duration field if available
+                if ($start_date) {
+                    $date_info = "Started: " . date('M Y', strtotime($start_date));
+                    if ($end_date) {
+                        $date_info .= " | Stopped: " . date('M Y', strtotime($end_date));
+                    }
+                    $duration_frequency .= " (" . $date_info . ")";
+                }
                 
                 $insert_history_sql = "INSERT INTO medication_history (patient_id, drug_name, duration_and_frequency_of_drug_use) VALUES (?, ?, ?)";
                 executeQuery($conn, $insert_history_sql, 'iss', [$patient_id, $medication_name, $duration_frequency]);

@@ -851,6 +851,20 @@ textarea::placeholder {
   margin-bottom: 0.75rem;
 }
 
+.date-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.date-input-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+
 .form-or {
   color: #6b7280;
   font-size: 0.85rem;

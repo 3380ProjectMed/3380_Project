@@ -41,6 +41,8 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
     dosage: '',
     frequency: '',
     route: 'Oral',
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: '',
     notes: '',
     type: 'history'
   });
@@ -425,6 +427,8 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
           dosage: '',
           frequency: '',
           route: 'Oral',
+          start_date: new Date().toISOString().split('T')[0],
+          end_date: '',
           notes: '',
           type: 'history'
         });
@@ -850,7 +854,9 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
                     <Trash2 size={14} />
                   </button>
                 </div>
-                <div className="med-frequency">{med.frequency}</div>
+                <div className="med-details">
+                  {med.duration_and_frequency_of_drug_use || med.frequency || 'No details available'}
+                </div>
               </div>
             ))}
           </div>
@@ -889,6 +895,35 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
                   className="form-input"
                 />
               </div>
+              
+              {/* Date fields - show for both prescriptions and history */}
+              <div className="form-row">
+                <div className="date-input-group">
+                  <label>
+                    {medicationForm.type === 'prescription' ? 'Start Date *' : 'Start Date (when first taken)'}
+                  </label>
+                  <input
+                    type="date"
+                    value={medicationForm.start_date}
+                    onChange={(e) => setMedicationForm(prev => ({ ...prev, start_date: e.target.value }))}
+                    className="form-input"
+                    required={medicationForm.type === 'prescription'}
+                  />
+                </div>
+                <div className="date-input-group">
+                  <label>
+                    {medicationForm.type === 'prescription' ? 'End Date (optional)' : 'End Date (when stopped)'}
+                  </label>
+                  <input
+                    type="date"
+                    value={medicationForm.end_date}
+                    onChange={(e) => setMedicationForm(prev => ({ ...prev, end_date: e.target.value }))}
+                    className="form-input"
+                    min={medicationForm.start_date}
+                  />
+                </div>
+              </div>
+              
               <div className="form-row">
                 <select
                   value={medicationForm.route}
@@ -931,6 +966,8 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
                       dosage: '',
                       frequency: '',
                       route: 'Oral',
+                      start_date: new Date().toISOString().split('T')[0],
+                      end_date: '',
                       notes: '',
                       type: 'history'
                     });
