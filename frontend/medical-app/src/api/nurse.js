@@ -29,6 +29,7 @@ async function fetchJson(path, opts = {}) {
 export async function getNurseDashboardStats(date) {
   const d = date || new Date().toISOString().slice(0, 10);
   const data = await fetchJson(`${BASE_URL}/dashboard/get-stats.php`, { params: { date: d } });
+  console.log('Nurse stats API response:', data);
   return {
     total: Number(data?.total ?? data?.totalAppointments ?? 0),
     waiting: Number(data?.waiting ?? data?.waitingCount ?? 0),
