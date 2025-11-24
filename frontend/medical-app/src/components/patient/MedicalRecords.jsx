@@ -17,6 +17,7 @@ export default function MedicalRecords(props) {
     allergies,
     bloodType: profile?.blood_type
   });
+
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [showAllergyModal, setShowAllergyModal] = useState(false);
   const [showBloodTypeModal, setShowBloodTypeModal] = useState(false);
@@ -194,7 +195,7 @@ export default function MedicalRecords(props) {
               <ul>
                 {vitalsHistory.map((v, i) => (
                   <li key={i}>
-                    <strong>{v.vaccine}</strong> - Given: {v.date_given}
+                    <strong>{v.vaccine}</strong> Given: {v.date_given}
                     {v.booster_due && <span> | Booster Due: {v.booster_due}</span>}
                   </li>
                 ))}
