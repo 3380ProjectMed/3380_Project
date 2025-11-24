@@ -48,12 +48,11 @@
 
 /* Add button in header */
 .record-card h3 + .record-add-btn {
-  display: block; /* Show the add button */
+  display: block;
 }
 
 .record-card h3::after {
   content: '';
-  /* We'll add button via JSX instead */
 }
 
 .record-add-btn {
@@ -101,7 +100,7 @@
   font-size: 1rem;
 }
 
-/* List styling - more compact */
+/* List styling */
 .medication-list,
 .allergy-list {
   list-style: none;
@@ -145,7 +144,7 @@
   margin-bottom: 0.25rem;
 }
 
-/* Medication and Allergy Items - cleaner design */
+/* Medication and Allergy Items */
 .medication-item,
 .allergy-item {
   display: flex;
