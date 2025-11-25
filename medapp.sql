@@ -83,6 +83,82 @@ LOCK TABLES `appointment` WRITE;
 INSERT INTO `appointment` VALUES (1001,1,1,1,'2025-11-07 11:00:00','2025-10-20 14:30:00','Annual physical examination','No-Show','Phone'),(1002,3,1,1,'2025-11-05 14:00:00','2025-10-02 16:45:00','Follow-up consultation','No-Show','Walk-in'),(1003,5,1,1,'2025-11-10 10:30:00','2023-12-22 09:15:00','Annual checkup','In Progress','Walk-in'),(1004,7,2,4,'2025-11-17 11:00:00','2024-01-08 14:25:00','Heart condition monitoring','No-Show','Phone'),(1006,8,3,2,'2025-11-18 15:45:00','2024-01-11 12:15:00','Vaccination','In Progress','Online'),(1007,4,4,3,'2025-11-16 08:45:00','2023-12-28 11:20:00','Orthopedic consultation','No-Show','Phone'),(1008,1,1,1,'2025-11-04 16:00:00','2025-01-09 17:40:00','Knee pain evaluation','No-Show','Online'),(1009,6,5,4,'2024-11-17 09:30:00','2024-01-05 08:30:00','OB/GYN appointment','Scheduled','Phone'),(1010,3,1,2,'2025-11-11 10:00:00','2024-01-12 09:50:00','Internal medicine consultation','Completed','Phone'),(1011,4,7,4,'2024-01-19 14:30:00','2024-01-15 16:20:00','Dermatology screening','Scheduled','Phone'),(1012,4,1,2,'2025-11-06 09:00:00','2025-10-20 09:00:00','Follow-up consultation','In Progress','Phone'),(1013,5,1,1,'2025-11-06 13:00:00','2025-10-23 10:00:00','Vaccination','In Progress','Phone'),(1014,1,1,1,'2025-11-07 16:00:00','2025-11-03 22:34:36','Annual health check up ','No-Show','Phone'),(1015,2,6,1,'2025-11-10 11:00:00','2025-11-03 22:34:36','Vaccination','No-Show','Walk-in'),(1017,7,1,1,'2025-11-10 10:00:00','2025-11-11 01:33:01','Health Check-up','No-Show','Phone'),(1018,9,1,1,'2025-11-08 12:00:00','2025-11-11 01:34:02','Vaccination','No-Show','Online'),(1019,7,1,1,'2025-11-11 09:00:00','2025-11-11 01:48:37','Knee pain ','Completed','Online'),(1020,1,1,1,'2025-10-29 09:00:00','2025-10-15 14:30:00','Annual physical examination','No-Show','Walk-in'),(1021,2,1,2,'2025-10-29 10:30:00','2025-10-16 09:15:00','Hypertension follow-up','No-Show','Online'),(1022,3,2,1,'2025-10-29 14:00:00','2025-10-17 16:45:00','Diabetes management','No-Show','Online'),(1023,4,3,3,'2025-10-30 11:15:00','2025-10-18 10:20:00','Pediatric wellness check','No-Show','Phone'),(1024,5,4,2,'2025-10-30 15:30:00','2025-10-19 08:50:00','Cardiology follow-up','No-Show','Phone'),(1025,6,5,1,'2025-10-31 08:45:00','2025-10-20 13:25:00','Dermatology screening','No-Show','Online'),(1026,7,6,3,'2025-10-31 13:20:00','2025-10-21 11:10:00','Orthopedic consultation','No-Show','Online'),(1027,8,1,1,'2025-11-03 10:00:00','2025-10-22 15:40:00','Vaccination','No-Show','Walk-in'),(1028,9,2,1,'2025-11-03 16:15:00','2025-10-23 12:30:00','Mental health therapy','No-Show','Online'),(1029,10,3,3,'2025-11-04 09:30:00','2025-10-24 14:15:00','Prenatal checkup','No-Show','Phone'),(1030,11,1,2,'2025-11-04 14:45:00','2025-10-25 10:05:00','Allergy testing','No-Show','Walk-in'),(1031,12,2,1,'2025-11-05 11:30:00','2025-10-26 16:20:00','Sports physical','No-Show','Walk-in'),(1032,13,3,3,'2025-11-05 15:00:00','2025-10-27 09:30:00','Eye examination','No-Show','Online'),(1033,14,4,2,'2025-11-06 10:45:00','2025-10-28 14:50:00','Nutrition counseling','No-Show','Online'),(1034,15,5,1,'2025-11-10 13:15:00','2025-10-29 11:25:00','Lab results follow-up','No-Show','Online'),(1035,16,6,3,'2025-11-11 08:30:00','2025-10-30 15:10:00','Medication review','No-Show','Online'),(1036,17,7,2,'2025-11-12 09:00:00','2025-11-01 10:40:00','Urgent care','No-Show','Phone'),(1037,18,1,1,'2025-11-12 09:15:00','2025-11-02 13:15:00','Blood work','Completed','Walk-in'),(1038,19,2,3,'2025-11-13 10:30:00','2025-11-03 08:45:00','Physical therapy','No-Show','Phone'),(1039,20,3,2,'2025-11-14 14:00:00','2025-11-04 12:20:00','Surgical clearance','No-Show','Phone'),(1040,21,4,4,'2025-11-17 16:45:00','2025-11-05 14:35:00','Pain management','No-Show','Walk-in'),(1041,22,2,3,'2025-11-18 08:00:00','2025-11-06 09:50:00','STD testing','No-Show','Online'),(1042,23,3,2,'2025-11-19 11:20:00','2025-11-07 16:25:00','Geriatric assessment','No-Show','Online'),(1043,24,4,1,'2025-11-20 13:40:00','2025-11-08 10:15:00','Weight management','No-Show','Walk-in'),(1044,25,1,2,'2025-11-21 15:00:00','2025-11-09 08:30:00','Post-operative follow-up','No-Show','Phone'),(1045,2,6,1,'2025-11-12 09:00:00','2025-11-11 07:15:31','Feeling Unwell','No-Show','Online'),(1047,1,2,4,'2025-11-13 10:00:00','2025-11-11 21:04:52','testing trigger for referral','No-Show','Online'),(1049,4,1,1,'2025-11-14 09:00:00','2025-11-12 12:12:46','Blood work','No-Show','Walk-in'),(1051,1,7,1,'2025-11-27 09:00:00','2025-11-13 00:16:48','skin rash','Scheduled','Phone'),(1054,1,1,1,'2025-11-13 15:30:00','2025-11-13 20:33:46','TEST for check-in','No-Show','Walk-in'),(1056,1,1,1,'2025-11-14 12:30:00','2025-11-14 18:25:50','TEST for insurance','No-Show','Walk-in'),(1057,3,2,1,'2025-11-14 15:30:00','2025-11-14 21:19:24','Heart check up','No-Show','Online'),(1058,1,1,1,'2025-11-17 09:00:00','2025-11-15 11:03:22','TEST for check-in','Ready','Phone'),(1059,8,1,1,'2025-11-17 09:30:00','2025-11-15 12:12:32','TEST for check-in 2','Ready','Phone'),(1060,5,1,1,'2025-11-15 12:30:00','2025-11-14 12:30:00','Annual checkup','Completed','Online'),(1061,1,1,1,'2025-11-15 17:30:00','2025-11-15 15:27:00','Test for waiting','No-Show','Online'),(1063,2,1,1,'2025-11-16 10:00:00','2025-11-15 22:15:39','nurse test','Ready','Online'),(1065,212,1,1,'2025-11-16 11:00:00','2025-11-15 23:57:47','Annual Checkup','No-Show','Online'),(1066,212,1,1,'2025-11-16 08:00:00','2025-11-16 00:24:47','Sick','Checked-in','Phone'),(1067,1,8,1,'2025-11-17 08:00:00','2025-11-17 06:15:47','Stomach Sickness','Ready','Online'),(1068,2,1,1,'2025-11-17 08:30:00','2025-11-17 06:20:10','Indecision','Ready','Online'),(1071,2,1,1,'2025-11-17 08:00:00','2025-11-17 13:04:25','reason','Cancelled','Walk-in'),(1076,212,8,4,'2025-11-18 13:30:00','2025-11-18 19:28:13','TEST','No-Show','Walk-in'),(1077,212,8,4,'2025-11-18 14:30:00','2025-11-18 19:35:07','TEST','No-Show','Online'),(1078,212,8,4,'2025-11-18 16:00:00','2025-11-18 19:52:21','Feeling unwell','No-Show','Online'),(1080,225,9,3,'2025-11-19 16:00:00','2025-11-19 08:14:57','testing','No-Show','Online'),(1081,8,1,1,'2025-11-19 15:00:00','2025-11-19 08:14:57','Annual Checkup','No-Show','Walk-in'),(1084,11,1,1,'2025-11-19 17:15:00','2025-11-19 08:14:57','Vaccination','No-Show','Online'),(1085,2,6,2,'2025-11-20 09:00:00','2025-11-19 22:12:12','Sick','No-Show','Online'),(1086,2,6,3,'2025-11-19 17:00:00','2025-11-19 22:14:23','Sick','No-Show','Online'),(1088,226,1,1,'2025-11-19 16:00:00','2025-11-19 22:37:09','Sick','No-Show','Online'),(1090,228,1,1,'2025-11-19 18:00:00','2025-11-19 23:00:03','Pregnant','Cancelled','Online'),(1091,231,1,1,'2025-11-19 17:30:00','2025-11-19 23:37:01','skin rash','No-Show','Online'),(1092,1,1,1,'2025-11-21 11:30:00','2025-11-19 23:41:45','check up','Ready','Phone'),(1093,1,1,1,'2025-11-21 13:30:00','2025-11-21 18:10:31','TEST','No-Show','Online'),(1094,2,1,1,'2025-11-21 13:00:00','2025-11-21 18:47:20','No-show fee','No-Show','Online'),(1095,2,1,1,'2025-11-21 14:00:00','2025-11-21 20:07:54','Not feeling well','No-Show','Online'),(1096,1,1,1,'2025-11-21 14:30:00','2025-11-21 20:35:48','Give me the late fee','No-Show','Online');
 /*!40000 ALTER TABLE `appointment` ENABLE KEYS */;
 UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `trg_appointment_check_referral` BEFORE INSERT ON `appointment` FOR EACH ROW BEGIN
+    DECLARE patient_pcp_id INT;
+    DECLARE has_approved_referral INT;
+    
+    -- Get the patient's Primary Care Physician
+    SELECT Primary_Doctor INTO patient_pcp_id
+    FROM Patient
+    WHERE Patient_ID = NEW.Patient_id;
+    
+    -- Check if booking with PCP
+    IF NEW.Doctor_id = patient_pcp_id THEN
+        SET NEW.Status = 'Scheduled';
+    ELSE
+        -- Not PCP, check if they have an approved referral for this specialist
+        SELECT COUNT(*) INTO has_approved_referral
+        FROM referral
+        WHERE patient_id = NEW.Patient_id
+        AND specialist_doctor_staff_id = NEW.Doctor_id
+        AND date_of_approval IS NOT NULL
+        AND appointment_id IS NULL;
+        
+        IF has_approved_referral > 0 THEN
+            SET NEW.Status = 'Scheduled';
+        ELSE
+            -- No referral found
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'You must have a referral to book an appointment with a specialist. Please contact your primary care physician.';
+        END IF;
+    END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `appointment_NO_SHOW` AFTER UPDATE ON `appointment` FOR EACH ROW BEGIN
+  IF NEW.Status = 'No-Show' AND OLD.Status != 'No-Show' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM no_show_penalty
+      WHERE Appointment_id = NEW.Appointment_id
+    ) THEN
+      INSERT INTO no_show_penalty (
+        appointment_id,
+        fee,
+        date_applied
+      ) VALUES (
+        NEW.Appointment_id,
+        50.00,
+        NOW()
+      );
+    END IF;
+  END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `codes_allergies`
@@ -399,7 +475,7 @@ CREATE TABLE `medication_history` (
   PRIMARY KEY (`drug_id`),
   KEY `idx_medhist_patient` (`patient_id`),
   CONSTRAINT `fk_drugs_hist_patient_id` FOREIGN KEY (`patient_id`) REFERENCES `patient` (`patient_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -408,7 +484,7 @@ CREATE TABLE `medication_history` (
 
 LOCK TABLES `medication_history` WRITE;
 /*!40000 ALTER TABLE `medication_history` DISABLE KEYS */;
-INSERT INTO `medication_history` VALUES (2,1,'Metformin 500mg','Twice daily since December 2023'),(3,2,'Albuterol Inhaler','As needed since November 2024'),(4,2,'Sumatriptan 50mg','As needed for migraines since March 2018'),(5,3,'Atorvastatin 20mg','Once daily since June 2021'),(6,4,'Levothyroxine 75mcg','Once daily since May 2017'),(7,5,'Ibuprofen 600mg','Three times daily as needed since June 2012'),(8,5,'Omeprazole 20mg','Once daily since May 2021'),(9,6,'Sertraline 50mg','Once daily since August 2020'),(10,7,'Spiriva HandiHaler','Once daily since September 2024'),(11,7,'Albuterol Nebulizer','Four times daily since Feburary 2021'),(12,8,'Metformin 1000mg','Twice daily since January 2022'),(13,8,'Drospirenone/Ethinyl Estradiol','Once daily since March 2025');
+INSERT INTO `medication_history` VALUES (2,1,'Metformin 500mg','Twice daily since December 2023'),(3,2,'Albuterol Inhaler','As needed since November 2024'),(4,2,'Sumatriptan 50mg','As needed for migraines since March 2018'),(5,3,'Atorvastatin 20mg','Once daily since June 2021'),(6,4,'Levothyroxine 75mcg','Once daily since May 2017'),(7,5,'Ibuprofen 600mg','Three times daily as needed since June 2012'),(8,5,'Omeprazole 20mg','Once daily since May 2021'),(9,6,'Sertraline 50mg','Once daily since August 2020'),(10,7,'Spiriva HandiHaler','Once daily since September 2024'),(11,7,'Albuterol Nebulizer','Four times daily since Feburary 2021'),(12,8,'Metformin 1000mg','Twice daily since January 2022'),(13,8,'Drospirenone/Ethinyl Estradiol','Once daily since March 2025'),(25,1,'pop','500 mg - twice daily (Started: Jun 2019 | Stopped: Nov 2025)'),(26,1,'popo','500mg - twice daily (Started: Nov 2025)'),(29,1,'opopop','400mg - twice daily (Started: Nov 2025 | Stopped: Nov 2025)');
 /*!40000 ALTER TABLE `medication_history` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -543,7 +619,7 @@ CREATE TABLE `patient` (
   CONSTRAINT `fk_patient__primary_doctor` FOREIGN KEY (`primary_doctor`) REFERENCES `doctor` (`doctor_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_patient__race` FOREIGN KEY (`race`) REFERENCES `codes_race` (`race_code`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_user_id` FOREIGN KEY (`patient_id`) REFERENCES `user_account` (`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=232 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=234 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -905,7 +981,7 @@ CREATE TABLE `user_account` (
   PRIMARY KEY (`user_id`) USING BTREE,
   UNIQUE KEY `ux_user_username` (`username`),
   UNIQUE KEY `ux_user_email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=233 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=234 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
