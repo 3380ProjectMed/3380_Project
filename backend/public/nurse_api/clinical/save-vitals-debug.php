@@ -25,7 +25,6 @@ try {
         throw new Exception('Invalid appointment ID');
     }
 
-    // Simple test: try to find the patient_visit record first
     error_log('[save-vitals-debug] Looking for visit with appointment_id: ' . $appointmentId);
 
     $visitRows = executeQuery(

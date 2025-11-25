@@ -21,7 +21,6 @@ try {
 
     $conn = getDBConnection();
     
-    // First check if the schedule exists and has a staff_id (not a template)
     $checkQuery = "SELECT schedule_id, staff_id FROM work_schedule WHERE schedule_id = ?";
     $checkResults = executeQuery($conn, $checkQuery, 'i', [$scheduleId]);
     

@@ -1,6 +1,4 @@
-/* ========== SIDEBAR COMPONENT ========== */
 .sidebar {
-  /* Make sidebar translucent so the page background shows through slightly */
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(6px);
   width: 16rem;
@@ -13,10 +11,8 @@
   display: flex;
   flex-direction: column;
   z-index: 1000;
-  /* CRITICAL: Make sure sidebar is always visible on desktop */
   visibility: visible !important;
   opacity: 1 !important;
-  /* ensure sidebar uses the same font as the app */
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
@@ -68,7 +64,6 @@
   box-shadow: 0 4px 12px rgba(0, 119, 182, 0.15);
 }
 
-/* Sidebar Footer with Log Out */
 .sidebar-footer {
   padding: 1rem 0.5rem;
   border-top: 1px solid #e6eef8;
@@ -103,7 +98,6 @@
   transform: translateX(2px);
 }
 
-/* Mobile Responsive - only hide on very small screens */
 @media (max-width: 767px) {
   .sidebar {
     transform: translateX(-100%);
@@ -115,7 +109,6 @@
   }
 }
 
-/* Ensure sidebar is visible on tablet and desktop */
 @media (min-width: 768px) {
   .sidebar {
     transform: translateX(0) !important;

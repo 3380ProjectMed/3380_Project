@@ -10,14 +10,14 @@ export default function Billing(props) {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [notification, setNotification] = useState(null);
   
-  // Handle billingBalance as either a number (old format) or object (new format with breakdown)
+  // Handle billingBalance
   const balanceData = typeof billingBalance === 'object' && billingBalance !== null ? billingBalance : { outstanding_balance: billingBalance || 0 };
   const totalBalance = Number(balanceData.outstanding_balance || 0);
   const visitBalance = Number(balanceData.visit_balance || 0);
   const noShowBalance = Number(balanceData.no_show_balance || 0);
 
   const handleMakePayment = () => {
-    // Choose the first outstanding statement if available
+    // Choose the first outstanding statement
     const stmt = billingStatements.find(s => Number(s.balance) > 0) || null;
     const defaultAmount = stmt ? Number(stmt.balance).toFixed(2) : totalBalance.toFixed(2);
     
@@ -65,7 +65,6 @@ export default function Billing(props) {
       setPaymentAmount('');
       setSelectedStatement(null);
       showNotification('Payment processed successfully!', 'success');
-      // Optionally reload data by full page or parent callback
       setTimeout(() => window.location.reload(), 2000); // Give time to see notification
     } catch (e) {
       console.error(e);

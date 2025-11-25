@@ -1,27 +1,20 @@
 <?php
-
-/**
- * Save/update clinical note and diagnosis in patient_visit
- * Note: Treatment field removed - treatments now in treatment_per_visit table
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 header('Content-Type: application/json');
 
 try {
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
 
-    $user_id = (int)$_SESSION['uid'];
+    $user_id = (int) $_SESSION['uid'];
 
-    // Get doctor info
     $conn = getDBConnection();
-    $rows = executeQuery($conn, 'SELECT d.doctor_id, CONCAT(s.first_name, " ", s.last_name) as doctor_name
+    $rows = executeQuery($conn, 'SELECT d.doctor_id, CONCAT(s.first_name, " ", s.last_name) as doctor_name, s.staff_email
             FROM user_account ua
             JOIN staff s ON ua.user_id = s.staff_id
             JOIN doctor d ON s.staff_id = d.staff_id
@@ -35,15 +28,14 @@ try {
         exit;
     }
 
-    $doctor_id = (int)$rows[0]['doctor_id'];
+    $doctor_id = (int) $rows[0]['doctor_id'];
     $doctor_name = $rows[0]['doctor_name'];
+    $doctor_email = $rows[0]['staff_email'];
 
-    // Get POST data
     $input = json_decode(file_get_contents('php://input'), true);
 
     $visit_id = isset($input['visit_id']) ? intval($input['visit_id']) : 0;
 
-    // Handle appointment IDs - strip "A" prefix if present
     $appointment_id_raw = isset($input['appointment_id']) ? trim($input['appointment_id']) : '';
     $appointment_id = 0;
     if (!empty($appointment_id_raw)) {
@@ -71,7 +63,6 @@ try {
         exit;
     }
 
-    // If we have appointment_id, find the visit
     if ($visit_id === 0 && $appointment_id > 0) {
         $visitRows = executeQuery(
             $conn,
@@ -81,7 +72,7 @@ try {
         );
 
         if (!empty($visitRows)) {
-            $visit_id = (int)$visitRows[0]['visit_id'];
+            $visit_id = (int) $visitRows[0]['visit_id'];
         } else {
             closeDBConnection($conn);
             http_response_code(404);
@@ -93,7 +84,6 @@ try {
         }
     }
 
-    // Update the diagnosis and present_illnesses in patient_visit
     $sql = "UPDATE patient_visit 
             SET diagnosis = ?,
                 present_illnesses = COALESCE(?, present_illnesses),
@@ -101,7 +91,7 @@ try {
                 updated_by = ?
             WHERE visit_id = ?";
 
-    executeQuery($conn, $sql, 'sssi', [$diagnosis, $present_illnesses, $doctor_name, $visit_id]);
+    executeQuery($conn, $sql, 'sssi', [$diagnosis, $present_illnesses, $doctor_email, $visit_id]);
 
     closeDBConnection($conn);
 

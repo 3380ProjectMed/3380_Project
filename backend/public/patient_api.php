@@ -8,28 +8,16 @@ header('Content-Type: application/json');
 
 // Azure App Service HTTPS detection
 
-error_log("Patient API: Session started with ID: " . session_id());
-error_log("Patient API: Session data after start: " . json_encode($_SESSION));
-
 // Helper functions
 function requireAuth($allowed_roles = ['PATIENT'])
 {
-    error_log("=== PATIENT API AUTH DEBUG ===");
-    error_log("Patient API: Full session data = " . json_encode($_SESSION));
-    error_log("Patient API: Session ID = " . session_id());
-    error_log("Patient API: HTTP Headers = " . json_encode(getallheaders()));
-    error_log("===============================");
-
-    // Check if session data is completely empty but we have a session ID
+    // Check if session data is completely empty
     if (empty($_SESSION) && session_id()) {
-        error_log("Patient API: Empty session but session ID exists - possible session storage issue");
         // Try to regenerate session ID in case of corruption
         session_regenerate_id(false);
-        error_log("Patient API: Regenerated session ID: " . session_id());
     }
 
     if (!isset($_SESSION['uid']) || !isset($_SESSION['email'])) {
-        error_log("Patient API: Missing basic session data");
         sendResponse(false, [], 'User not properly authenticated', 401);
         exit();
     }
@@ -49,20 +37,15 @@ function requireAuth($allowed_roles = ['PATIENT'])
             $stmt->close();
 
             if (!$patient) {
-                error_log("Patient API: Cached patient_id " . $session_patient_id . " does not belong to email " . $user_email . " - clearing session");
                 unset($_SESSION['patient_id']);
-            } else {
-                error_log("Patient API: Validated cached patient_id = " . $session_patient_id);
             }
         } catch (Exception $e) {
-            error_log("Patient auth validation error - " . $e->getMessage());
             unset($_SESSION['patient_id']);
         }
     }
 
     if (!isset($_SESSION['patient_id'])) {
         $user_email = $_SESSION['email'];
-        error_log("Patient API: Looking up patient_id for email = " . $user_email);
 
         try {
             $mysqli = getDBConnection();
@@ -77,14 +60,11 @@ function requireAuth($allowed_roles = ['PATIENT'])
                 $_SESSION['patient_id'] = $patient['patient_id'];
                 $_SESSION['role'] = 'PATIENT';
                 $_SESSION['username'] = strtolower($patient['first_name'] . $patient['last_name']);
-                error_log("Patient auth: Set patient_id = " . $patient['patient_id'] . " for email = " . $user_email);
             } else {
-                error_log("Patient auth: No patient found for email = " . $user_email);
                 sendResponse(false, [], 'No patient record found for logged-in user', 403);
                 exit();
             }
         } catch (Exception $e) {
-            error_log("Patient auth: Database error - " . $e->getMessage());
             sendResponse(false, [], 'Authentication error: ' . $e->getMessage(), 500);
             exit();
         }
@@ -139,17 +119,8 @@ requireAuth(['PATIENT']);
 $patient_id = $_SESSION['patient_id'] ?? null;
 $session_email = $_SESSION['email'] ?? null;
 
-error_log("=== PATIENT ID VALIDATION ===");
-error_log("Session ID: " . session_id());
-error_log("Session email: " . ($session_email ?? 'NULL'));
-error_log("Session patient_id: " . ($patient_id ?? 'NULL'));
-error_log("Full session: " . json_encode($_SESSION));
-error_log("============================");
-
-// Patient ID should now be properly set by requireAuth function
 if (!$patient_id) {
     $user_email = $_SESSION['email'] ?? null;
-    error_log("FALLBACK: patient_id still null after requireAuth for email: " . ($user_email ?? 'NULL'));
     sendResponse(false, [], 'Patient authentication failed', 403);
 }
 
@@ -169,7 +140,7 @@ if ($endpoint === 'test') {
 if ($endpoint === 'dashboard') {
     if ($method === 'GET') {
         try {
-            // Get upcoming appointments (including same-day appointments regardless of timezone)
+            // Get upcoming appointments (including same-day appointments)
             $stmt = $mysqli->prepare("
                 SELECT 
                     a.appointment_id,
@@ -245,7 +216,7 @@ if ($endpoint === 'dashboard') {
             $result = $stmt->get_result();
             $recent_activity = $result->fetch_all(MYSQLI_ASSOC);
 
-            // Get approved referrals (notifications) with expiration info
+            // Get approved referrals with expiration info
             $stmt = $mysqli->prepare("
                 SELECT 
                     r.referral_id as visit_id,
@@ -300,8 +271,6 @@ if ($endpoint === 'dashboard') {
                 'recent_activity' => $recent_activity
             ]);
         } catch (Exception $e) {
-            error_log("Dashboard error: " . $e->getMessage());
-            error_log("Dashboard error trace: " . $e->getTraceAsString());
             sendResponse(false, [], 'Failed to load dashboard', 500);
         }
     }
@@ -364,7 +333,6 @@ elseif ($endpoint === 'profile') {
 
             sendResponse(true, $profile);
         } catch (Exception $e) {
-            error_log("Profile error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load profile', 500);
         }
     } elseif ($method === 'PUT') {
@@ -390,7 +358,7 @@ elseif ($endpoint === 'profile') {
                 return $row && isset($row[$idCol]) ? (string) $row[$idCol] : '';
             };
 
-            // Build dynamic UPDATE query based on provided fields
+            // UPDATE query based on provided fields
             $updateFields = [];
             $updateValues = [];
             $bindTypes = '';
@@ -456,6 +424,13 @@ elseif ($endpoint === 'profile') {
                 }
             }
 
+            if (isset($input['blood_type'])) {
+                $bloodType = trim((string) $input['blood_type']);
+                $updateFields[] = "blood_type = ?";
+                $updateValues[] = $bloodType;
+                $bindTypes .= 's';
+            }
+
             if (isset($input['primary_doctor'])) {
                 $primaryDoctor = trim((string) $input['primary_doctor']);
                 $updateFields[] = "primary_doctor = NULLIF(?, '')";
@@ -516,7 +491,6 @@ elseif ($endpoint === 'profile') {
 
             sendResponse(true, [], 'Profile updated successfully');
         } catch (Exception $e) {
-            error_log("Profile update error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to update profile: ' . $e->getMessage(), 500);
         }
     }
@@ -577,7 +551,6 @@ elseif ($endpoint === 'appointments') {
 
             sendResponse(true, $appointments);
         } catch (Exception $e) {
-            error_log("Appointments error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load appointments', 500);
         }
     } elseif ($method === 'POST') {
@@ -614,17 +587,14 @@ elseif ($endpoint === 'appointments') {
             $result = $mysqli->query("SELECT COALESCE(MAX(`Appointment_id`), 0) + 1 as next_id FROM `appointment`");
             if (!$result) {
                 $mysqli->rollback();
-                error_log("Failed to generate appointment ID: " . $mysqli->error);
                 sendResponse(false, [], 'Failed to generate appointment ID', 500);
                 return;
             }
             $row = $result->fetch_assoc();
             $next_id = $row['next_id'];
-            error_log("Generated appointment ID: " . $next_id);
 
             // Parse appointment date
             $appointmentdateTime = $input['appointment_date'];
-            error_log("Original appointment date from frontend: " . $appointmentdateTime);
             
             if (strpos($appointmentdateTime, 'AM') !== false || strpos($appointmentdateTime, 'PM') !== false) {
                 // Try multiple format patterns to handle different time formats
@@ -640,7 +610,6 @@ elseif ($endpoint === 'appointments') {
                     $dt = DateTime::createFromFormat($format, $appointmentdateTime);
                     if ($dt && $dt !== false) {
                         // Don't check exact format match, just ensure valid parsing
-                        error_log("Successfully parsed date with format: " . $format);
                         break;
                     }
                     $dt = null;
@@ -648,10 +617,8 @@ elseif ($endpoint === 'appointments') {
 
                 if ($dt) {
                     $appointmentdateTime = $dt->format('Y-m-d H:i:s');
-                    error_log("Converted to MySQL format: " . $appointmentdateTime);
                 } else {
                     // Log the parsing error
-                    error_log("Date parsing failed for: " . $appointmentdateTime);
                     sendResponse(false, [], 'Invalid date format. Please use YYYY-MM-DD HH:MM AM/PM format.', 400);
                     return;
                 }
@@ -678,23 +645,11 @@ elseif ($endpoint === 'appointments') {
                 $method
             );
 
-            // Enhanced error logging for debugging
-            error_log("Attempting to insert appointment with parameters: " . json_encode([
-                'next_id' => $next_id,
-                'patient_id' => $patient_id,
-                'doctor_id' => $input['doctor_id'],
-                'office_id' => $input['office_id'],
-                'appointment_date' => $appointmentdateTime,
-                'reason' => $input['reason']
-            ]));
-
             $exec_result = $stmt->execute();
 
             if (!$exec_result) {
                 $error_msg = $stmt->error;
                 $mysqli->rollback();
-                error_log("SQL execution failed: " . $error_msg);
-                error_log("MySQL error number: " . $stmt->errno);
                 sendResponse(false, [], 'Database error occurred: ' . $error_msg, 500);
                 return;
             }
@@ -731,7 +686,6 @@ elseif ($endpoint === 'appointments') {
             sendResponse(true, ['appointment_id' => $next_id], 'Appointment booked successfully!');
         } catch (Exception $e) {
             $mysqli->rollback();
-            error_log("Book appointment error: " . $e->getMessage());
             $error_msg = $e->getMessage();
 
             // Handle trigger validation errors (these come as exceptions)
@@ -784,7 +738,6 @@ elseif ($endpoint === 'appointments') {
             sendResponse(true, [], 'Appointment cancelled successfully');
         } catch (Exception $e) {
             $mysqli->rollback();
-            error_log("Cancel appointment error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to cancel appointment', 500);
         }
     }
@@ -829,7 +782,6 @@ elseif ($endpoint === 'doctors') {
             $doctors = $result->fetch_all(MYSQLI_ASSOC);
             sendResponse(true, $doctors);
         } catch (Exception $e) {
-            error_log("Doctors error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load doctors', 500);
         }
     }
@@ -857,7 +809,6 @@ elseif ($endpoint === 'offices') {
             $offices = $result->fetch_all(MYSQLI_ASSOC);
             sendResponse(true, $offices);
         } catch (Exception $e) {
-            error_log("Offices error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load offices: ' . $e->getMessage(), 500);
         }
     }
@@ -903,7 +854,6 @@ elseif ($endpoint === 'visit') {
 
             sendResponse(true, $visit);
         } catch (Exception $e) {
-            error_log("Visit details error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load visit details', 500);
         }
     }
@@ -1030,7 +980,6 @@ elseif ($endpoint === 'medical-records') {
                     sendResponse(false, [], 'Invalid medical record type', 400);
             }
         } catch (Exception $e) {
-            error_log("Medical records error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load medical records', 500);
         }
     } elseif ($method === 'POST') {
@@ -1120,7 +1069,6 @@ elseif ($endpoint === 'medical-records') {
                     sendResponse(false, [], 'Invalid medical record type for POST', 400);
             }
         } catch (Exception $e) {
-            error_log("Medical records POST error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to update medical records', 500);
         }
     } elseif ($method === 'DELETE') {
@@ -1170,7 +1118,6 @@ elseif ($endpoint === 'medical-records') {
                     sendResponse(false, [], 'Invalid medical record type for DELETE', 400);
             }
         } catch (Exception $e) {
-            error_log("Medical records DELETE error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to delete medical record', 500);
         }
     }
@@ -1356,7 +1303,6 @@ elseif ($endpoint === 'insurance') {
                         $update_patient_stmt->bind_param('ii', $insurance_id, $patient_id);
                         $update_patient_stmt->execute();
                         $update_patient_stmt->close();
-                        error_log("Insurance PUT: Ensured patient " . $patient_id . " is linked to insurance " . $insurance_id);
                     }
                     
                     $mysqli->commit();
@@ -1372,27 +1318,21 @@ elseif ($endpoint === 'insurance') {
 
             $stmt->close();
         } catch (Exception $e) {
-            error_log("Insurance update error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to update insurance', 500);
         }
     } elseif ($method === 'POST') {
         // Add new insurance policy
-        error_log("Insurance POST: Starting add insurance process for patient_id: " . $patient_id);
         
         $raw_input = file_get_contents('php://input');
-        error_log("Insurance POST: Raw input received: " . $raw_input);
         
         if (empty($raw_input)) {
-            error_log("Insurance POST: No data provided");
             sendResponse(false, [], 'No data provided', 400);
             return;
         }
 
         $data = json_decode($raw_input, true);
-        error_log("Insurance POST: Decoded data: " . json_encode($data));
         
         if (!$data) {
-            error_log("Insurance POST: Invalid JSON data");
             sendResponse(false, [], 'Invalid JSON data', 400);
             return;
         }
@@ -1400,7 +1340,7 @@ elseif ($endpoint === 'insurance') {
         try {
             $mysqli->begin_transaction();
 
-            // Check if patient already has insurance (enforce single policy restriction)
+            // Check if patient already has insurance
             $check_stmt = $mysqli->prepare("SELECT COUNT(*) as count FROM patient_insurance WHERE patient_id = ?");
             $check_stmt->bind_param('i', $patient_id);
             $check_stmt->execute();
@@ -1487,7 +1427,7 @@ elseif ($endpoint === 'insurance') {
                 $insert_types .= 's';
             }
 
-            // Set as primary insurance (since we only allow one)
+            // Set as primary insurance
             $insert_fields[] = 'is_primary';
             $insert_values[] = 1;
             $insert_types .= 'i';
@@ -1510,7 +1450,6 @@ elseif ($endpoint === 'insurance') {
                 $update_patient_stmt = $mysqli->prepare("UPDATE patient SET insurance_id = ? WHERE patient_id = ?");
                 if (!$update_patient_stmt) {
                     $mysqli->rollback();
-                    error_log("Insurance POST: Failed to prepare patient update: " . $mysqli->error);
                     sendResponse(false, [], 'Failed to link insurance to patient: ' . $mysqli->error, 500);
                     return;
                 }
@@ -1518,24 +1457,20 @@ elseif ($endpoint === 'insurance') {
                 $update_patient_stmt->bind_param('ii', $new_insurance_id, $patient_id);
                 if (!$update_patient_stmt->execute()) {
                     $mysqli->rollback();
-                    error_log("Insurance POST: Failed to update patient table: " . $update_patient_stmt->error);
                     sendResponse(false, [], 'Failed to link insurance to patient: ' . $update_patient_stmt->error, 500);
                     return;
                 }
                 
                 $update_patient_stmt->close();
                 $mysqli->commit();
-                error_log("Insurance POST: Successfully added insurance ID " . $new_insurance_id . " and linked to patient " . $patient_id);
                 sendResponse(true, ['id' => $new_insurance_id], 'Insurance added successfully');
             } else {
                 $mysqli->rollback();
-                error_log("Insurance POST: Failed to execute insert: " . $stmt->error);
                 sendResponse(false, [], 'Failed to add insurance: ' . $stmt->error, 500);
             }
 
             $stmt->close();
         } catch (Exception $e) {
-            error_log("Insurance add error: " . $e->getMessage());
             $mysqli->rollback();
             sendResponse(false, [], 'Failed to add insurance', 500);
         }
@@ -1550,8 +1485,6 @@ elseif ($endpoint === 'billing') {
         try {
             switch ($type) {
                 case 'balance':
-                    error_log("Billing balance query for patient_id: " . $patient_id);
-                    
                     // Calculate outstanding balance from visits
                     $stmt = $mysqli->prepare("
                         SELECT 
@@ -1598,13 +1531,10 @@ elseif ($endpoint === 'billing') {
                         'no_show_count' => $no_show_data['no_show_count'] ?? 0
                     ];
                     
-                    error_log("Billing balance result: " . json_encode($balance));
                     sendResponse(true, $balance);
                     break;
 
                 case 'statements':
-                    error_log("Billing statements query for patient_id: " . $patient_id);
-                    
                     // Query for visit statements
                     $stmt = $mysqli->prepare("
                         SELECT 
@@ -1725,7 +1655,6 @@ elseif ($endpoint === 'billing') {
                         }
                     }
                     
-                    error_log("Billing statements result count: " . count($statements));
                     sendResponse(true, $statements);
                     break;
 
@@ -1733,19 +1662,12 @@ elseif ($endpoint === 'billing') {
                     sendResponse(false, [], 'Invalid billing type', 400);
             }
         } catch (Exception $e) {
-            error_log("Billing error: " . $e->getMessage());
             sendResponse(false, [], 'Failed to load billing information', 500);
         }
     } elseif ($method === 'POST') {
         try {
-            error_log("=== PAYMENT DEBUG ===");
-            error_log("Payment request - Session ID: " . session_id());
-            error_log("Payment request - Session data: " . json_encode($_SESSION));
-            error_log("Payment request - Patient ID: " . ($patient_id ?? 'NULL'));
-
             // Process a payment for a visit or no-show penalty
             $input = json_decode(file_get_contents('php://input'), true);
-            error_log("Payment request - Input data: " . json_encode($input));
             $visit_id = isset($input['visit_id']) ? (int) $input['visit_id'] : null;
             $penalty_id = isset($input['penalty_id']) ? (int) $input['penalty_id'] : null;
             $record_type = isset($input['record_type']) ? $input['record_type'] : 'visit';
@@ -1757,8 +1679,6 @@ elseif ($endpoint === 'billing') {
 
             // Handle no-show penalty payment
             if ($record_type === 'no_show' && $penalty_id) {
-                error_log("Processing no-show penalty payment for penalty_id: $penalty_id");
-                
                 // Verify penalty belongs to patient
                 $stmt = $mysqli->prepare("
                     SELECT nsp.id, nsp.fee, nsp.date_paid, a.patient_id 
@@ -1794,7 +1714,6 @@ elseif ($endpoint === 'billing') {
                 $stmt->bind_param('i', $penalty_id);
                 $stmt->execute();
                 
-                error_log("No-show penalty payment recorded for penalty_id: $penalty_id");
                 sendResponse(true, [
                     'penalty_id' => $penalty_id, 
                     'paid' => $amount, 
@@ -1829,7 +1748,6 @@ elseif ($endpoint === 'billing') {
                 sendResponse(false, [], 'Visit ID or Penalty ID required for payment', 400);
             }
         } catch (Exception $e) {
-            error_log('payment error: ' . $e->getMessage());
             sendResponse(false, [], 'Failed to process payment', 500);
         }
     }
@@ -1918,7 +1836,6 @@ elseif ($endpoint === 'referrals') {
                     'used_count' => count($used)
                 ], 'Referrals retrieved successfully');
             } catch (Exception $e) {
-                error_log("Referrals error: " . $e->getMessage());
                 sendResponse(false, [], 'Failed to load referrals: ' . $e->getMessage(), 500);
             }
         }
@@ -1949,7 +1866,7 @@ elseif ($endpoint === 'schedule') {
                         return;
                     }
 
-                    $day_of_week = $datetime->format('l'); // Monday, Tuesday, etc.
+                    $day_of_week = $datetime->format('l'); 
 
                     $stmt = $mysqli->prepare("
                         SELECT DISTINCT
@@ -2020,13 +1937,7 @@ elseif ($endpoint === 'schedule') {
                     return;
                 }
 
-                $day_of_week = $datetime->format('l'); // Monday, Tuesday, etc.
-
-                // First check if doctor works on this day
-                error_log("=== TIMESLOTS DEBUG ===");
-                error_log("Doctor ID: $doctor_id");
-                error_log("Date: $date");
-                error_log("Day of week: $day_of_week");
+                $day_of_week = $datetime->format('l');
 
                 $stmt = $mysqli->prepare("
                     SELECT COUNT(*) as schedule_count, 
@@ -2049,30 +1960,13 @@ elseif ($endpoint === 'schedule') {
                 $result = $stmt->get_result();
                 $schedule_check = $result->fetch_assoc();
 
-                error_log("Schedule check result: " . json_encode($schedule_check));
-
                 if (!$schedule_check || $schedule_check['schedule_count'] == 0) {
-                    // Let's also check what schedules exist for this doctor on any day
-                    $debug_stmt = $mysqli->prepare("
-                        SELECT ws.day_of_week, ws.office_id, ws.start_time, ws.end_time, d.staff_id
-                        FROM work_schedule ws
-                        JOIN doctor d ON ws.staff_id = d.staff_id
-                        WHERE d.doctor_id = ?
-                    ");
-                    $debug_stmt->bind_param('i', $doctor_id);
-                    $debug_stmt->execute();
-                    $debug_result = $debug_stmt->get_result();
-                    $all_schedules = $debug_result->fetch_all(MYSQLI_ASSOC);
-
-                    error_log("All schedules for doctor $doctor_id: " . json_encode($all_schedules));
-
                     sendResponse(true, [
                         'available_slots' => [],
                         'booked_slots' => [],
                         'date' => $date,
                         'doctor_id' => $doctor_id,
                         'day_of_week' => $day_of_week,
-                        'debug_all_schedules' => $all_schedules,
                         'message' => 'Doctor is not scheduled to work on this date'
                     ], 'No available time slots for this date');
                     return;
@@ -2161,7 +2055,6 @@ elseif ($endpoint === 'schedule') {
                     'schedule_info' => $schedule_check
                 ], 'Available time slots retrieved successfully');
             } catch (Exception $e) {
-                error_log("Time slots error: " . $e->getMessage());
                 sendResponse(false, [], 'Failed to load time slots: ' . $e->getMessage(), 500);
             }
         }

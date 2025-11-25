@@ -1,15 +1,11 @@
 <?php
 
-/**
- * Save or update a prescription
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 header('Content-Type: application/json');
 
 try {
-    //session_start();
 
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
@@ -19,7 +15,6 @@ try {
 
     $user_id = (int)$_SESSION['uid'];
 
-    // Get doctor info
     $conn = getDBConnection();
     $rows = executeQuery($conn, '
         SELECT s.staff_id 
@@ -36,7 +31,6 @@ try {
 
     $doctor_id = (int)$rows[0]['doctor_id'];
 
-    // Get POST data
     $input = json_decode(file_get_contents('php://input'), true);
 
     $prescription_id = isset($input['prescription_id']) ? intval($input['prescription_id']) : 0;
@@ -66,7 +60,6 @@ try {
     }
 
     if ($prescription_id > 0) {
-        // UPDATE existing prescription
         $sql = "UPDATE prescription 
                 SET medication_name = ?,
                     dosage = ?,
@@ -93,7 +86,6 @@ try {
 
         $message = 'Prescription updated successfully';
     } else {
-        // INSERT new prescription
         $sql = "INSERT INTO prescription 
                 (patient_id, doctor_id, appointment_id, medication_name, dosage, frequency, route, start_date, end_date, refills_allowed, notes)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

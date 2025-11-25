@@ -48,12 +48,11 @@
 
 /* Add button in header */
 .record-card h3 + .record-add-btn {
-  display: block; /* Show the add button */
+  display: block;
 }
 
 .record-card h3::after {
   content: '';
-  /* We'll add button via JSX instead */
 }
 
 .record-add-btn {
@@ -101,7 +100,7 @@
   font-size: 1rem;
 }
 
-/* List styling - more compact */
+/* List styling */
 .medication-list,
 .allergy-list {
   list-style: none;
@@ -145,7 +144,7 @@
   margin-bottom: 0.25rem;
 }
 
-/* Medication and Allergy Items - cleaner design */
+/* Medication and Allergy Items */
 .medication-item,
 .allergy-item {
   display: flex;
@@ -468,4 +467,49 @@
   .allergy-item {
     padding: 0.875rem;
   }
+}
+/* Blood Type Card Styling */
+.blood-type-card {
+  max-width: 400px;
+}
+
+.blood-type-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+}
+
+.blood-type-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #dc2626;
+  background: linear-gradient(135deg, #fee2e2, #fef2f2);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  border: 2px solid #fca5a5;
+  display: inline-block;
+  min-width: 80px;
+  text-align: center;
+}
+
+.blood-type-card .btn {
+  margin-top: 1rem;
+}
+
+.form-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  transition: all 0.2s;
+  background: white;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #0077b6;
+  box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
 }

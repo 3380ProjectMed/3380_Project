@@ -20,7 +20,7 @@ import {
 import '../doctor/Dashboard.css';
 import './Report.css';
 
-function Report() {
+function Report({ initialConfig, onConfigApplied }) {
   const [activeReport, setActiveReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -82,6 +82,31 @@ function Report() {
       fetchNewPatientsReport();
     }
   }, [activeReport]);
+
+    useEffect(() => {
+    if (initialConfig) {
+      if (initialConfig.reportType) {
+        setActiveReport(initialConfig.reportType);
+      }
+      if (initialConfig.timeFilter === 'today') {
+        const today = new Date().toISOString().split('T')[0];
+        setStartDate(today);
+        setEndDate(today);
+      } else if (initialConfig.timeFilter === 'thisMonth') {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        setStartDate(firstDay.toISOString().split('T')[0]);
+        setEndDate(today.toISOString().split('T')[0]);
+      }
+      if (initialConfig.statusFilter) {
+        setStatusFilter(initialConfig.statusFilter);
+      }
+      
+      if (onConfigApplied) {
+        onConfigApplied();  
+      }
+    }
+  }, [initialConfig, onConfigApplied]);
 
   const fetchFilterOptions = async () => {
     try {
@@ -1270,9 +1295,9 @@ function Report() {
                       <th onClick={() => handleSort('total_patients_seen')} className="text-right">
                         Total Patients {sortConfig.key === 'total_patients_seen' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </th>
-                      <th onClick={() => handleSort('avg_visits_per_patient')} className="text-right">
+                      {/* <th onClick={() => handleSort('avg_visits_per_patient')} className="text-right">
                         Avg Visits/Patient {sortConfig.key === 'avg_visits_per_patient' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                      </th>
+                      </th> */}
                       <th onClick={() => handleSort('total_completed')} className="text-right">
                         Completed {sortConfig.key === 'total_completed' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </th>
@@ -1323,7 +1348,7 @@ function Report() {
                           </div>
                         </td>
                         <td className="text-right">{doc.total_patients_seen}</td>
-                        <td className="text-right">{doc.avg_visits_per_patient}</td>
+                        {/* <td className="text-right">{doc.avg_visits_per_patient}</td> */}
                         <td className="text-right">{doc.total_completed}</td>
                       </tr>
                     ))}
@@ -1371,7 +1396,7 @@ function Report() {
                         <th className="text-right">Completed</th>
                         <th className="text-right">No-Shows</th>
                         <th className="text-right">Cancelled</th>
-                        <th>New?</th>
+                        <th>New To Network?</th>
                         <th>Retained?</th>
                       </tr>
                     </thead>

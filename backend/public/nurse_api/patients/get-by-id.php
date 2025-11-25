@@ -38,7 +38,6 @@ if (preg_match('/^p?(\d+)$/i', $id, $m)) {
     exit;
 }
 
-// Ensure the patient is associated with this nurse via patient_visit
 $sql = "SELECT p.patient_id, p.first_name, p.last_name, DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.allergies, p.email
         FROM patient p
         JOIN patient_visit pv ON pv.patient_id = p.patient_id

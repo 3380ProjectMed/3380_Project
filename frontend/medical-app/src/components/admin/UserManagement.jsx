@@ -16,7 +16,7 @@ import './UserManagement.css';
 import UserDetails from './UserDetails';
 import EditUserModal from './EditUserModal';
 
-function UserManagement() {
+function UserManagement({ initialFilter, onFilterApplied }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,14 +24,12 @@ function UserManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState('doctor');
   
-
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
-  // Filter states
   const [filters, setFilters] = useState({
     role: 'all',
     activeStatus: 'all',
@@ -39,9 +37,17 @@ function UserManagement() {
     department: 'all'
   });
   
-  // Filter options
   const [locations, setLocations] = useState([]);
   const [departments, setDepartments] = useState([]);
+
+  useEffect(() => {
+    if (initialFilter) {
+      setFilters(prev => ({ ...prev, role: initialFilter })); 
+      if (onFilterApplied) {
+        onFilterApplied();  
+      }
+    }
+  }, [initialFilter, onFilterApplied]);
 
   useEffect(() => {
     loadUsers();

@@ -21,7 +21,6 @@ import Toast from '../common/Toast.jsx';
 export default function PatientPortal({ onLogout }) {
   const navigate = useNavigate();
 
-  // --- Auth/user comes from context (don't rely on a prop) ---
   const { user, logout: ctxLogout } = useAuth();
 
   // --- UI state ---
@@ -63,7 +62,7 @@ export default function PatientPortal({ onLogout }) {
   const [showPcpModal, setShowPcpModal] = useState(false);
   const [pcpFormData, setPcpFormData] = useState({ primary_doctor: '' });
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null); // { message, type }
+  const [toast, setToast] = useState(null);
   const [profileErrors, setProfileErrors] = useState({});
   const [editingProfile, setEditingProfile] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -206,7 +205,6 @@ export default function PatientPortal({ onLogout }) {
         emergency_contact_last_name: r.data.emergency_contact_last_name || '',
         emergency_contact_relationship: r.data.emergency_contact_relationship || '',
         primary_doctor: r.data.pcp_id || '',
-        // prefer human-readable labels returned by the API
         gender: r.data.Gender_Text ?? r.data.gender ?? fd.gender,
         genderAtBirth: r.data.AssignedAtBirth_Gender_Text ?? r.data.assigned_at_birth_gender ?? fd.genderAtBirth,
         ethnicity: r.data.Ethnicity_Text ?? r.data.ethnicity ?? fd.ethnicity,
@@ -242,6 +240,8 @@ export default function PatientPortal({ onLogout }) {
     if (m.success) setMedications(m.data ?? []);
     if (a.success) setAllergies(a.data ?? []);
     if (c.success) setConditions(c.data ?? []);
+    // Also reload profile to get updated blood_type
+    await loadProfile();
   }
 
   async function loadInsurance() {
@@ -276,12 +276,12 @@ export default function PatientPortal({ onLogout }) {
     if (!formData.last_name || String(formData.last_name).trim().length === 0) {
       errors.last_name = 'Last name is required';
     }
-    // Email basic format check (allow empty -> backend will store NULL)
+    // Email basic format check
     if (formData.email && formData.email.length > 0) {
       const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
       if (!emailRe.test(formData.email)) errors.email = 'Please enter a valid email address';
     }
-    // DOB sane range: not in future, and person age <= 120
+    // DOB sane range
     if (formData.dob) {
       const dobDate = new Date(formData.dob);
       const now = new Date();
@@ -402,7 +402,7 @@ export default function PatientPortal({ onLogout }) {
 
       const res = await api.profile.updateProfile(payload);
       if (res.success) {
-        // Refresh both profile and dashboard data to ensure PCP updates everywhere
+        // Refresh both profile and dashboard data
         await loadProfile();
         await loadDashboard();
         hidePcpSelection();
@@ -478,7 +478,7 @@ export default function PatientPortal({ onLogout }) {
     }
   }, [selectedDoctor, selectedDate]);
 
-  // Fetch doctors and offices separately with UI-friendly errors
+  // Fetch doctors and offices
   async function loadDoctorsAndOffices() {
     try {
       const d = await api.appointments.getDoctors();
@@ -551,12 +551,10 @@ export default function PatientPortal({ onLogout }) {
       reason: appointmentReason.trim(),
     };
     
-    console.log('Appointment data being sent:', appointmentData);
     try {
       const r = await api.appointments.bookAppointment(appointmentData);
       console.log('Booking API response:', r);
       if (r && r.success) {
-        // Show success toast instead of alert
         setToast({ message: 'Appointment booked successfully!', type: 'success' });
         // Force close modal and reset state
         setShowBookingModal(false);
@@ -580,10 +578,8 @@ export default function PatientPortal({ onLogout }) {
     } catch (err) {
       console.error('Booking error', err);
       
-      // Extract user-friendly message from API error response
       let errorMessage = 'Failed to book appointment';
       if (err.message) {
-        // Try to extract JSON from error message (handles multiline JSON)
         const jsonMatch = err.message.match(/- (\{[\s\S]*\})$/);
         
         if (jsonMatch) {
@@ -606,7 +602,6 @@ export default function PatientPortal({ onLogout }) {
   }
 
   async function handleCancelAppointment(id) {
-    // Show confirmation modal instead of browser confirm
     setAppointmentToCancel(id);
     setShowCancelModal(true);
   }
@@ -628,21 +623,18 @@ export default function PatientPortal({ onLogout }) {
     } catch (err) {
       console.error('Cancel appointment error', err);
       
-      // Extract user-friendly message from API error response
       let errorMessage = 'Failed to cancel appointment';
       if (err.message) {
-        // Try to extract JSON from error message (handles multiline JSON)
+        // Try to extract JSON from error message
         const jsonMatch = err.message.match(/- (\{[\s\S]*\})$/);
         if (jsonMatch) {
           try {
             const errorData = JSON.parse(jsonMatch[1]);
             errorMessage = errorData.message || errorMessage;
           } catch (parseErr) {
-            // If JSON parsing fails, use the original error message
             errorMessage = err.message;
           }
         } else {
-          // If no JSON match found, use the original error message
           errorMessage = err.message;
         }
       }
@@ -654,7 +646,7 @@ export default function PatientPortal({ onLogout }) {
     }
   }
 
-  // --- Logout handler (uses context if no prop provided) ---
+  // --- Logout handler ---
   async function handleLogout() {
     try {
       if (onLogout) {
@@ -675,7 +667,7 @@ export default function PatientPortal({ onLogout }) {
     genderAtBirth: '',
     ethnicity: '',
     race: '',
-    // personal fields (populated from profile GET)
+    // personal fields
     first_name: '',
     last_name: '',
     dob: '',
@@ -694,8 +686,6 @@ export default function PatientPortal({ onLogout }) {
 
   const genderOptions = ['Male', 'Female', 'Non-Binary', 'Prefer to Self-Describe', 'Prefer not to say', 'Other'];
   const genderAtBirthOptions = ['Male', 'Female', 'Intersex', 'Prefer not to say', 'Other'];
-  // Keep these lists in sync with CodesEthnicity and CodesRace in the DB so
-  // frontend labels match server lookup values used by the profile mapper.
   const ethnicityOptions = [
     'Hispanic or Latino',
     'Non-Hispanic or Latino',
@@ -1089,7 +1079,7 @@ const renderBookingModal = () => (
 
   return (
     <div className="patient-portal-root">
-      {/* Sidebar (fixed on the left) */}
+      {/* Sidebar */}
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
 
       {/* Main Content */}

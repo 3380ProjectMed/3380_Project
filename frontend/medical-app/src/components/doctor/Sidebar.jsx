@@ -17,7 +17,6 @@ function Sidebar({ currentPage, setCurrentPage, onLogout }) {
     { id: 'schedule', label: 'Schedule', icon: Calendar },
     { id: 'patients', label: 'My Patients', icon: Users },
     { id: 'clinical', label: 'Clinical Workspace', icon: FileText }
-    // , { id: 'reports', label: 'Reports', icon: FileText }
     , { id: 'referrals', label: 'Referrals', icon: Stethoscope }
     , { id: 'profile', label: 'Profile', icon: User }
   ];
@@ -53,9 +52,9 @@ function Sidebar({ currentPage, setCurrentPage, onLogout }) {
 
       <div className="sidebar-footer">
         <button
-          type="button"            // ensure it never acts like a form submit
+          type="button"            
           className="logout-btn"
-          onClick={onLogout}       // no confirm or redirect here
+          onClick={onLogout}       
         >
           <LogOut size={20} />
           <span>Log Out</span>

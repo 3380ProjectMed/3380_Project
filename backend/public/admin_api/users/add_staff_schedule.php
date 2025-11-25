@@ -17,7 +17,6 @@ try {
     $officeId   = $input['office_id']   ?? null;
     $dayOfWeek  = $input['day_of_week'] ?? null;
 
-    // Optional custom times
     $customStartTime = $input['start_time'] ?? null;
     $customEndTime   = $input['end_time']   ?? null;
 
@@ -38,7 +37,6 @@ try {
         exit;
     }
 
-    // Normalize role (e.g., 'Nurse' -> 'NURSE')
     $role = strtoupper($roleResult[0]['staff_role'] ?? '');
 
     // 2) For NURSE / RECEPTIONIST: enforce single office
@@ -89,7 +87,6 @@ try {
 
     $template = $templateResults[0];
 
-    // 4) Use custom times if provided, otherwise template times
     $startTime = $customStartTime ?? $template['start_time'];
     $endTime   = $customEndTime   ?? $template['end_time'];
 
@@ -102,11 +99,7 @@ try {
         exit;
     }
 
-    // 5) Prevent overlapping schedules on the same day for this staff member
-    //    (Doctors can do multiple offices, but no overlapping times.)
-    //
-    // Overlap condition:
-    // NOT (existing_end <= new_start OR existing_start >= new_end)
+    // 4) Check for schedule conflicts for this staff on the same day
     $conflictQuery = "SELECT schedule_id, office_id, start_time, end_time
                         FROM work_schedule
                         WHERE staff_id = ?

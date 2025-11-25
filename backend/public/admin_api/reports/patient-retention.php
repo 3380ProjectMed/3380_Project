@@ -20,8 +20,6 @@ try {
     $end_date   = isset($_GET['end_date'])   ? $_GET['end_date']   : date('Y-m-d');
     $doctor_id  = !empty($_GET['doctor_id']) && $_GET['doctor_id'] !== 'all' ? (int)$_GET['doctor_id'] : null;
 
-    // ---- Patient Retention Analysis ----
-    // This identifies new patients in the period and tracks if they returned
     $sql = "
         SELECT
             p.patient_id,
@@ -117,7 +115,6 @@ try {
     $result = $stmt->get_result();
     $patients = $result->fetch_all(MYSQLI_ASSOC);
 
-    // ---- Calculate Summary ----
     $total_new_patients = count($patients);
     $retained_count = 0;
     $at_risk_count = 0;

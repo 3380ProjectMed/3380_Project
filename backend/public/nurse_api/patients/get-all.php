@@ -35,7 +35,6 @@ try {
 
     if (!empty($search)) {
         $searchParam = "%{$search}%";
-        // Fixed: Use explicit column names without ambiguity
         $sql = "SELECT DISTINCT 
                     patient.patient_id, 
                     patient.first_name, 
@@ -60,7 +59,6 @@ try {
                      AND (patient.first_name LIKE ? OR patient.last_name LIKE ?)";
         $countResult = executeQuery($conn, $countSql, 'iss', [$nurse_id, $searchParam, $searchParam]);
     } else {
-        // Fixed: Use explicit table names
         $sql = "SELECT DISTINCT 
                     patient.patient_id, 
                     patient.first_name, 

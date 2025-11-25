@@ -35,9 +35,6 @@ try {
 
   // 3) Connect (TLS is required by Azure MySQL)
   $conn = mysqli_init();
-  // Optional strict verification if you shipped the CA file:
-  // $ca = __DIR__ . '/certs/DigiCertGlobalRootCA.crt.pem';
-  // if (is_file($ca)) { mysqli_ssl_set($conn, null, null, $ca, null, null); }
 
   $conn->real_connect($host, $user, $pass, $db, (int)$port, null, MYSQLI_CLIENT_SSL);
 
@@ -53,7 +50,7 @@ try {
   $tableCount = (int)($tcRes->fetch_assoc()['table_count'] ?? 0);
   $stmt->close();
 
-  // 6) List up to 50 tables (safe)
+  // 6) List up to 50 tables
   $tables = [];
   $stmt = $conn->prepare('SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = ? LIMIT 50');
   $stmt->bind_param('s', $db);

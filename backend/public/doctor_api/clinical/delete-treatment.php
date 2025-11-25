@@ -1,9 +1,4 @@
 <?php
-/**
- * Save treatments for a patient visit
- * Appends new treatments without deleting existing ones
- * Prevents duplicate treatment entries
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
@@ -19,7 +14,7 @@ try {
 
     $user_id = (int) $_SESSION['uid'];
 
-    // Verify user is a doctor
+    // Verify 
     $conn = getDBConnection();
     $rows = executeQuery($conn, '
         SELECT s.staff_id 
@@ -34,7 +29,6 @@ try {
         exit;
     }
 
-    // Get POST data
     $input = json_decode(file_get_contents('php://input'), true);
 
     $visit_id = isset($input['visit_id']) ? intval($input['visit_id']) : 0;
@@ -54,7 +48,6 @@ try {
         exit;
     }
 
-    // Verify visit exists
     $visitCheck = executeQuery(
         $conn,
         'SELECT visit_id FROM patient_visit WHERE visit_id = ?',
@@ -69,13 +62,9 @@ try {
         exit;
     }
 
-    // Begin transaction
     $conn->begin_transaction();
 
     try {
-        // Delete treatments for the visit. Input `treatments` should be an array
-        // of objects with `treatment_id` (or integers). We'll check existence first
-        // and only delete if present to provide useful counts.
         $deleted_count = 0;
         $skipped_count = 0;
 
@@ -87,7 +76,6 @@ try {
                 continue;
             }
 
-            // Check if this treatment exists for this visit
             $checkSql = "SELECT visit_treatment_id FROM treatment_per_visit 
                         WHERE visit_id = ? AND treatment_id = ? 
                         LIMIT 1";
@@ -98,7 +86,6 @@ try {
                 continue;
             }
 
-            // Delete the treatment row(s)
             $deleteSql = "DELETE FROM treatment_per_visit WHERE visit_id = ? AND treatment_id = ?";
             executeQuery($conn, $deleteSql, 'ii', [$visit_id, $treatment_id]);
             $deleted_count++;

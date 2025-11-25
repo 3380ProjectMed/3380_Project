@@ -3,7 +3,7 @@ import { Users, Calendar, Activity, DollarSign, TrendingUp, AlertCircle } from '
 import './Dashboard.css';
 import { WelcomeHeader, StatCard, StatsGrid } from '../shared';
 
-function AdminDashboard() {
+function AdminDashboard({ setCurrentPage, setPageConfig }) {  
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,6 +33,20 @@ function AdminDashboard() {
     }
   };
 
+  const navigateToUsers = (roleFilter) => {
+    setCurrentPage('users');
+    if (setPageConfig) {
+      setPageConfig({ activeTab: roleFilter });
+    }
+  };
+
+  const navigateToReports = (reportType, dateConfig) => {
+    setCurrentPage('reports');
+    if (setPageConfig) {
+      setPageConfig({ reportType, ...dateConfig });
+    }
+  };
+
   if (loading) {
     return <div style={{ padding: 24 }}>Loading dashboard...</div>;
   }
@@ -50,25 +64,91 @@ function AdminDashboard() {
     <div className="dashboard">
       <WelcomeHeader title="Admin Dashboard" subtitle="System Overview" />
 
-      {/* Stats Grid (use shared StatCard components) */}
+      {/* Stats Grid with clickable cards */}
       <StatsGrid>
-        <StatCard icon={Users} value={stats.total_doctors} label="Total Doctors" variant="stat-primary" />
-        <StatCard icon={Activity} value={stats.total_nurses} label="Total Nurses" variant="stat-info" />
-        <StatCard icon={Users} value={stats.total_patients} label="Total Patients" variant="stat-success" />
-        <StatCard icon={Calendar} value={stats.appointments_this_month} label="Appointments This Month" variant="stat-warning" />
-        <StatCard icon={Activity} value={stats.active_users} label="Active Users" variant="stat-info" />
-        <StatCard icon={Calendar} value={stats.pending_appointments} label="Pending Today" variant="stat-warning" />
-        <StatCard icon={TrendingUp} value={stats.completed_today} label="Completed Today" variant="stat-success" />
-        {/* <StatCard icon={DollarSign} value={`$${stats.revenue_today.toFixed(2)}`} label="Revenue Today" variant="stat-primary" /> */}
+        <StatCard 
+          icon={Users} 
+          value={stats.total_doctors} 
+          label="Total Doctors" 
+          type="primary"
+          onClick={() => navigateToUsers('doctors')} 
+          clickable
+        />
+        <StatCard 
+          icon={Activity} 
+          value={stats.total_nurses} 
+          label="Total Nurses" 
+          type="info"
+          onClick={() => navigateToUsers('nurses')} 
+          clickable
+        />
+        <StatCard 
+          icon={Users} 
+          value={stats.total_patients} 
+          label="Total Patients" 
+          type="success"
+        />
+        <StatCard 
+          icon={Calendar} 
+          value={stats.appointments_this_month} 
+          label="Appointments This Month" 
+          type="warning"
+          onClick={() => navigateToReports('office', { 
+            timeFilter: 'thisMonth' 
+          })} 
+          clickable
+        />
+        <StatCard 
+          icon={Activity} 
+          value={stats.active_users} 
+          label="Active Users" 
+          type="info"
+          onClick={() => navigateToUsers('all')}  
+          clickable
+        />
+        <StatCard 
+          icon={Calendar} 
+          value={stats.pending_appointments} 
+          label="Pending Today" 
+          type="warning"
+          onClick={() => navigateToReports('office', { 
+            timeFilter: 'today',
+            statusFilter: 'Scheduled' 
+          })}  
+          clickable
+        />
+        <StatCard 
+          icon={TrendingUp} 
+          value={stats.completed_today} 
+          label="Completed Today" 
+          type="success"
+          onClick={() => navigateToReports('office', { 
+            timeFilter: 'today',
+            statusFilter: 'Completed' 
+          })}
+          clickable
+        />
       </StatsGrid>
 
       {/* Quick Actions */}
       <div className="quick-actions">
         <h3>Quick Actions</h3>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          <button className="btn-save">View All Users</button>
-          <button className="btn-save">Generate Report</button>
-          <button className="btn-save">System Settings</button>
+          <button 
+            className="btn-save" 
+            onClick={() => navigateToUsers('all')}
+          >
+            View All Users
+          </button>
+          <button 
+            className="btn-save" 
+            onClick={() => navigateToReports('financial')}  
+          >
+            Generate Report
+          </button>
+          <button className="btn-save">
+            System Settings
+          </button>
         </div>
       </div>
     </div>

@@ -1,17 +1,10 @@
 <?php
 
-/**
- * Get all doctors (for admin or dropdowns)
- * FIXED: Excludes the logged-in doctor from the list
- */
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    //session_start();
-
-    // Optional: Require authentication
     if (!isset($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -20,7 +13,6 @@ try {
 
     $conn = getDBConnection();
 
-    // Get the current logged-in doctor's ID to exclude them from the list
     $current_doctor_id = null;
     $user_id = isset($_SESSION['uid']) ? intval($_SESSION['uid']) : null;
     if ($user_id) {
@@ -35,8 +27,6 @@ try {
         }
     }
 
-    // Get all doctors with their specialty
-    // FIXED: Use correct column names from correct tables
     $sql = "SELECT 
                 d.doctor_id,
                 st.first_name,
@@ -54,28 +44,26 @@ try {
 
     $doctors = executeQuery($conn, $sql, '', []);
 
-    // Format response - exclude the current logged-in doctor
     $formatted_doctors = [];
     foreach ($doctors as $doc) {
         $doc_id = (int)$doc['doctor_id'];
 
-        // Skip the current logged-in doctor
         if ($current_doctor_id && $doc_id === $current_doctor_id) {
             continue;
         }
 
         $formatted_doctors[] = [
             'doctor_id' => $doc_id,
-            'id' => $doc_id, // Add 'id' field for frontend compatibility
+            'id' => $doc_id, 
             'firstName' => $doc['first_name'],
             'lastName' => $doc['last_name'],
-            'name' => $doc['first_name'] . ' ' . $doc['last_name'], // Add 'name' field for dropdown
+            'name' => $doc['first_name'] . ' ' . $doc['last_name'], 
             'fullName' => $doc['first_name'] . ' ' . $doc['last_name'],
             'email' => $doc['staff_email'],
             'phone' => $doc['staff_phone'] ?: 'Not provided',
             'licenseNumber' => $doc['license_number'],
             'specialty' => $doc['specialty_name'],
-            'specialty_name' => $doc['specialty_name'], // Add for consistency
+            'specialty_name' => $doc['specialty_name'], 
             'gender' => $doc['gender']
         ];
     }

@@ -1,24 +1,15 @@
 <?php
-
-/**
- * Get patient visit details - DATE-SPECIFIC VERSION
- * Now includes treatments from treatment_per_visit and treatment_catalog
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 header('Content-Type: application/json');
-
 try {
-    //session_start();
-
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
 
-    // Handle IDs - strip "A" prefix from appointment IDs
     $visit_id = isset($_GET['visit_id']) ? intval($_GET['visit_id']) : 0;
 
     $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
@@ -41,7 +32,6 @@ try {
 
     $conn = getDBConnection();
 
-    // BASE QUERY for patient_visit data
     $baseSelect = "SELECT 
                 pv.visit_id,
                 pv.appointment_id,
@@ -88,9 +78,7 @@ try {
 
     $rows = [];
 
-    // MAIN LOGIC: If appointment_id provided, match by BOTH appointment_id AND date
     if ($appointment_id > 0) {
-        // Step 1: Get appointment details first
         $apptSql = "SELECT 
                     a.Appointment_id,
                     a.Patient_id,
@@ -131,8 +119,6 @@ try {
         $patient_id = $appt['Patient_id'];
         $appointment_date = $appt['Appointment_date'];
 
-        // Step 2: Look for patient_visit that matches appointment_id
-// Search by appointment_id only (nurse_id doesn't matter for viewing)
         $visitSql = $baseSelect . ", a.Appointment_date, a.Reason_for_visit as appointment_reason"
             . $baseFrom
             . " LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
@@ -141,7 +127,6 @@ try {
             LIMIT 1";
         $rows = executeQuery($conn, $visitSql, 'i', [$appointment_id]);
 
-        // DEBUG: Log what we found
         if (!empty($rows)) {
             error_log('[get-patient-details] Found visit: visit_id=' . $rows[0]['visit_id'] .
                 ', patient_id=' . $rows[0]['patient_id'] .
@@ -150,7 +135,6 @@ try {
         } else {
             error_log('[get-patient-details] No visit found for appointment_id=' . $appointment_id);
 
-            // DEBUG: Check if ANY visit exists for this appointment
             $debugSql = "SELECT visit_id, appointment_id, patient_id, nurse_id, blood_pressure 
                  FROM patient_visit 
                  WHERE appointment_id = ?";
@@ -160,9 +144,7 @@ try {
                 error_log('[get-patient-details] First visit: ' . json_encode($debugRows[0]));
             }
         }
-        // Step 3: If no patient_visit found for this appointment date
         if (empty($rows)) {
-            // Calculate age
             $age = null;
             if (!empty($appt['dob'])) {
                 try {
@@ -170,14 +152,12 @@ try {
                     $now = new DateTime();
                     $age = $now->diff($dob)->y;
                 } catch (Exception $e) {
-                    // Keep age as null
+
                 }
             }
 
-            // Get appointment status from appointment table
             $appointmentStatus = $appt['Status'] ?? 'Unknown Status';
 
-            // Return appointment data WITHOUT patient_visit
             $response = [
                 'success' => true,
                 'has_visit' => false,
@@ -190,14 +170,14 @@ try {
                     'reason' => $appt['Reason_for_visit'] ?? '',
                     'office_name' => $appt['office_name'],
                     'doctor_name' => $appt['doctor_name'],
-                    'status' => $appointmentStatus  // Add this line
+                    'status' => $appointmentStatus
                 ],
                 'visit' => [
                     'visit_id' => null,
                     'appointment_id' => $appt['Appointment_id'],
                     'patient_id' => $patient_id,
                     'date' => $appt['Appointment_date'],
-                    'status' => $appointmentStatus, // Change this from 'Scheduled' to use actual status
+                    'status' => $appointmentStatus,
                     'reason' => $appt['Reason_for_visit'] ?? '',
                     'department' => null,
                     'diagnosis' => null,
@@ -241,11 +221,9 @@ try {
             exit;
         }
     } elseif ($visit_id > 0) {
-        // Direct visit_id lookup
         $sql = $baseSelect . $baseFrom . " WHERE pv.visit_id = ?";
         $rows = executeQuery($conn, $sql, 'i', [$visit_id]);
     } else {
-        // Patient_id only - get most recent visit
         $sql = $baseSelect . $baseFrom
             . " WHERE pv.patient_id = ?
                 ORDER BY pv.date DESC
@@ -253,7 +231,6 @@ try {
         $rows = executeQuery($conn, $sql, 'i', [$patient_id]);
     }
 
-    // No visit found
     if (empty($rows)) {
         http_response_code(404);
         echo json_encode([
@@ -264,12 +241,8 @@ try {
         closeDBConnection($conn);
         exit;
     }
-
-    // Patient visit EXISTS - return full data
     $visit = $rows[0];
 
-    // Prefer appointment-level Status when patient_visit.status is the default 'Scheduled'
-    // (some flows update appointment.Status to 'Checked-in' but patient_visit.status defaults to 'Scheduled')
     try {
         $apptStatusRows = executeQuery($conn, 'SELECT Status FROM appointment WHERE Appointment_id = ? LIMIT 1', 'i', [$visit['appointment_id']]);
         $appointment_status = !empty($apptStatusRows) ? $apptStatusRows[0]['Status'] : null;
@@ -282,7 +255,6 @@ try {
         $computed_visit_status = $appointment_status;
     }
 
-    // Calculate age
     $age = null;
     if (!empty($visit['dob'])) {
         try {
@@ -290,7 +262,6 @@ try {
             $now = new DateTime();
             $age = $now->diff($dob)->y;
         } catch (Exception $e) {
-            // Keep age as null
         }
     }
 
@@ -338,10 +309,8 @@ try {
         ]
     ];
 
-    // Fetch treatments for this visit
     fetchVisitTreatments($conn, $visit['visit_id'], $response);
 
-    // Fetch additional patient data
     fetchPatientData($conn, $visit['patient_id'], $response);
 
     closeDBConnection($conn);
@@ -356,9 +325,7 @@ try {
     ]);
 }
 
-/**
- * Fetch treatments for a specific visit
- */
+
 function fetchVisitTreatments($conn, $visit_id, &$response)
 {
     try {
@@ -396,12 +363,8 @@ function fetchVisitTreatments($conn, $visit_id, &$response)
     }
 }
 
-/**
- * Helper function to fetch patient medical data
- */
 function fetchPatientData($conn, $patient_id, &$response)
 {
-    // Fetch medical conditions (chronic conditions)
     try {
         $mc_sql = "SELECT condition_name, diagnosis_date FROM medical_condition WHERE patient_id = ? ORDER BY diagnosis_date DESC";
         $mcs = executeQuery($conn, $mc_sql, 'i', [$patient_id]);
@@ -420,7 +383,6 @@ function fetchPatientData($conn, $patient_id, &$response)
         error_log("Error fetching conditions: " . $e->getMessage());
     }
 
-    // Fetch medication history
     try {
         $medhist_sql = "SELECT drug_name, duration_and_frequency_of_drug_use FROM medication_history WHERE patient_id = ?";
         $meds_h = executeQuery($conn, $medhist_sql, 'i', [$patient_id]);
@@ -436,7 +398,6 @@ function fetchPatientData($conn, $patient_id, &$response)
         error_log("Error fetching medication history: " . $e->getMessage());
     }
 
-    // Fetch current prescriptions
     try {
         $rx_sql = "SELECT 
                    p.prescription_id, 
