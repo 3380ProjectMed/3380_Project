@@ -29,77 +29,13 @@ This system provides a complete healthcare management solution with role-based a
 - **React Router**: Client-side routing
 - **CSS3**: Styling and responsive design
 
-## Project Structure
-
-```
-3380_Project/
-├── backend/
-│   ├── public/
-│   │   ├── patient_api.php          # Patient portal API endpoints
-│   │   ├── admin_api/               # Administrative endpoints
-│   │   │   ├── create.php           # User creation
-│   │   │   ├── dashboard/           # Analytics and statistics
-│   │   │   ├── profile/             # Staff profile management
-│   │   │   ├── reports/             # Business intelligence reports
-│   │   │   └── users/               # Staff management
-│   │   ├── doctor_api/              # Doctor portal endpoints
-│   │   │   ├── appointments/        # Appointment management
-│   │   │   ├── clinical/            # Clinical notes and prescriptions
-│   │   │   ├── patients/            # Patient records
-│   │   │   ├── referrals/           # Referral management
-│   │   │   └── schedule/            # Doctor scheduling
-│   │   ├── nurse_api/               # Nurse portal endpoints
-│   │   │   ├── appointments/        # Appointment coordination
-│   │   │   ├── clinical/            # Vitals and clinical data
-│   │   │   ├── patients/            # Patient information
-│   │   │   └── visits/              # Visit management
-│   │   ├── receptionist_api/        # Receptionist endpoints
-│   │   │   ├── appointments/        # Appointment scheduling
-│   │   │   ├── patients/            # Patient registration
-│   │   │   └── payments/            # Payment processing
-│   │   └── api/
-│   │       ├── login.php            # Authentication
-│   │       ├── signup.php           # Patient registration
-│   │       ├── session.php          # Session management
-│   │       └── password-reset.php   # Password recovery
-│   ├── cors.php                     # CORS configuration
-│   ├── database.php                 # Database connection
-│   └── lib/
-│       └── db.php                   # Database utilities
-├── frontend/
-│   └── medical-app/
-│       ├── src/
-│       │   ├── components/
-│       │   │   ├── patient/         # Patient portal components
-│       │   │   ├── doctor/          # Doctor portal components
-│       │   │   ├── nurse/           # Nurse portal components
-│       │   │   ├── receptionist/    # Receptionist components
-│       │   │   └── admin/           # Admin portal components
-│       │   ├── auth/
-│       │   │   ├── Login.jsx
-│       │   │   └── Signup.jsx
-│       │   ├── api/
-│       │   │   └── api.js           # API client utilities
-│       │   ├── patientapi.js        # Patient API interface
-│       │   ├── App.jsx              # Root component
-│       │   └── main.jsx             # Application entry point
-│       ├── public/
-│       │   └── assets/              # Static assets
-│       ├── package.json             # Node dependencies
-│       └── vite.config.js           # Vite configuration
-├── medapp.sql                       # Database schema and seed data
-├── compose.yaml                     # Docker compose configuration
-└── README.md                        # This file
-```
-
 ## Installation Instructions
 
 ### Prerequisites
 
 1. **Node.js** (v18 or higher)
    - Download from: https://nodejs.org/
-   - Verify installation: `node --version`
-
+     
 2. **MySQL** (v8.0 or higher)
    - Download from: https://dev.mysql.com/downloads/
    - Or use Azure MySQL Database for cloud deployment
