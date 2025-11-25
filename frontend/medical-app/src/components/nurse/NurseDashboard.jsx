@@ -12,12 +12,42 @@ export default function NurseDashboard({ setCurrentPage }) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [nurseName, setNurseName] = useState('');
 
+  const formatChicagoDate = (date, options = {}) => {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      ...options
+    }).format(new Date(date));
+  };
+
+  const getCurrentChicagoDateString = () => {
+    return formatChicagoDate(new Date(), {
+      weekday: 'long',
+      year: 'numeric', 
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const formatTimeStringChicago = (timeString) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Chicago',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
+  };
+
   useEffect(() => {
     let mounted = true;
     async function load() {
       setLoading(true);
       setError(null);
       try {
+        // Use the proper date format for the API (YYYY-MM-DD)
         const today = new Date().toISOString().slice(0, 10);
         const [s, appts, profile] = await Promise.all([
           getNurseDashboardStats(today),
@@ -26,6 +56,7 @@ export default function NurseDashboard({ setCurrentPage }) {
         ]);
         
         if (mounted && s) {
+          console.log('Nurse dashboard stats:', s);
           setStats({
             total: s.total,
             waiting: s.waiting,
@@ -78,7 +109,7 @@ export default function NurseDashboard({ setCurrentPage }) {
   };
 
   const getCurrentDate = () => {
-    return new Date().toLocaleDateString('en-US', {
+    return formatChicagoDate(new Date(), {
       month: 'short',
       day: 'numeric',
       year: 'numeric'

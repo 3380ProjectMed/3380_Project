@@ -193,9 +193,6 @@ try {
 
     error_log('[save-vitals] SQL executed successfully');
 
-    // ========================================
-    // 🆕 NEW: Update appointment status to "Ready"
-    // ========================================
     // This signals to the doctor that vitals are recorded and patient is ready to be seen
     try {
         $updateStatusSql = "UPDATE appointment 
@@ -211,7 +208,6 @@ try {
         error_log('[save-vitals] Failed to update appointment status: ' . $statusError->getMessage());
         $newStatus = null;
     }
-    // ========================================
 
     closeDBConnection($conn);
 
@@ -220,7 +216,7 @@ try {
         'visitId' => $visitId,
         'appointmentId' => $appointmentId,
         'patientId' => $patientId,
-        'new_status' => $newStatus, // 🆕 NEW: Return the new status
+        'new_status' => $newStatus,
         'vitals' => [
             'bp' => $bp,
             'hr' => $hr,

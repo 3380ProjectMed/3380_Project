@@ -32,7 +32,6 @@ try {
 
     $nurseId = (int)$nurseRows[0]['nurse_id'];
 
-    // Handle IDs - strip "A" prefix from appointment IDs if present
     $visit_id = isset($_GET['visit_id']) ? intval($_GET['visit_id']) : 0;
     $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
     $appointment_id = 0;
@@ -54,7 +53,6 @@ try {
     $rows = [];
 
     if ($appointment_id > 0) {
-        // Get appointment details first
         $apptSql = "SELECT 
                     a.Appointment_id,
                     a.Patient_id,
@@ -93,7 +91,6 @@ try {
         $appt = $apptRows[0];
         $apptDate = date('Y-m-d', strtotime($appt['Appointment_date']));
 
-        // Look for existing patient_visit for this appointment
         $visitSql = "SELECT 
                     pv.visit_id,
                     pv.appointment_id,
@@ -135,7 +132,7 @@ try {
                 'blood_pressure' => null,
                 'temperature' => null,
                 'doctor_id' => $appt['Doctor_id'],
-                'nurse_id' => $nurseId, // Assign current nurse
+                'nurse_id' => $nurseId, 
                 'status' => 'Scheduled',
                 'diagnosis' => null,
                 'reason_for_visit' => $appt['Reason_for_visit'],
@@ -173,7 +170,6 @@ try {
         ];
 
     } else {
-        // Look up by visit_id
         $visitSql = "SELECT 
                     pv.visit_id,
                     pv.appointment_id,
@@ -243,6 +239,95 @@ try {
             ]
         ];
     }
+
+    // Get detailed allergies and medications for the patient
+    $patient_id = $result['patient']['patient_id'];
+
+    $specific_allergies = [];
+    $patient_allergy = [];
+    
+    // First try to get allergies from allergies_per_patient table
+    try {
+        $specific_allergy_sql = "SELECT 
+                                app.app_id,
+                                app.patient_id,
+                                app.allergy_id,
+                                ca.allergies_text,
+                                app.notes,
+                                app.created_at
+                            FROM allergies_per_patient app
+                            LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
+                            WHERE app.patient_id = ?
+                            ORDER BY app.created_at DESC";
+        
+        $specific_allergies = executeQuery($conn, $specific_allergy_sql, 'i', [$patient_id]);
+    } catch (Exception $e) {
+        error_log("allergies_per_patient table query failed: " . $e->getMessage());
+        $specific_allergies = [];
+    }
+
+    // Also get patient allergies from patient table
+    $patient_allergy_sql = "SELECT 
+                            p.allergies as allergies_code,
+                            ca.allergies_text
+                        FROM patient p
+                        LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+                        WHERE p.patient_id = ? AND p.allergies IS NOT NULL";
+    
+    $patient_allergy = executeQuery($conn, $patient_allergy_sql, 'i', [$patient_id]);
+
+    // Get current medications from prescription table (if exists)
+    $medications = [];
+    try {
+        $medications_sql = "SELECT 
+                            p.prescription_id,
+                            p.medication_name,
+                            p.dosage,
+                            p.frequency,
+                            p.route,
+                            p.start_date,
+                            p.end_date,
+                            p.notes,
+                            p.refills_allowed,
+                            CONCAT(s.first_name, ' ', s.last_name) as prescribed_by
+                        FROM prescription p
+                        LEFT JOIN staff s ON p.doctor_id = s.staff_id
+                        WHERE p.patient_id = ? 
+                        AND (p.end_date IS NULL OR p.end_date >= CURDATE())
+                        ORDER BY p.start_date DESC";
+        
+        $medications = executeQuery($conn, $medications_sql, 'i', [$patient_id]);
+    } catch (Exception $e) {
+        error_log("Prescription table query failed: " . $e->getMessage());
+        $medications = [];
+    }
+
+    $medication_history = [];
+    try {
+        $med_history_sql = "SELECT 
+                            mh.drug_id,
+                            mh.drug_name,
+                            mh.duration_and_frequency_of_drug_use as frequency
+                        FROM medication_history mh
+                        WHERE mh.patient_id = ?
+                        ORDER BY mh.drug_id DESC";
+        
+        $medication_history = executeQuery($conn, $med_history_sql, 'i', [$patient_id]);
+    } catch (Exception $e) {
+        error_log("Medication history table query failed: " . $e->getMessage());
+        $medication_history = [];
+    }
+
+    // Add allergies and medications to the result
+    $result['allergies'] = [
+        'specific_allergies' => $specific_allergies ?: [],
+        'general_allergy' => $patient_allergy ?: []
+    ];
+    
+    $result['medications'] = [
+        'current_prescriptions' => $medications ?: [],
+        'medication_history' => $medication_history ?: []
+    ];
 
     closeDBConnection($conn);
     echo json_encode($result);

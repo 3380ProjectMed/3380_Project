@@ -88,6 +88,22 @@
   box-shadow: 0 10px 28px rgba(0, 119, 182, 0.15);
 }
 
+/* Clickable stat cards */
+.stat-card-clickable {
+  cursor: pointer;
+}
+
+.stat-card-clickable:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 32px rgba(0, 119, 182, 0.2);
+  border-color: #00b4d8;
+}
+
+.stat-card-clickable:active {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 119, 182, 0.15);
+}
+
 .stat-icon {
   width: 60px;
   height: 60px;
@@ -136,12 +152,39 @@
   font-weight: 500;
 }
 
+.stat-subtitle {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+}
+
+.stat-trend {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-trend.up {
+  color: #059669;
+}
+
+.stat-trend.down {
+  color: #dc2626;
+}
+
 /* Quick Actions */
 .quick-actions {
-  display: flex;
-  gap: 1rem;
   margin-bottom: 2rem;
-  flex-wrap: wrap;
+}
+
+.quick-actions h3 {
+  color: #03045e;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .action-btn {
@@ -410,6 +453,7 @@
     padding: 1rem;
   }
 }
+
 @media (max-width: 1024px) {
   .patient-list {
     padding: 1rem;
@@ -426,7 +470,6 @@
     padding: 1rem 1.5rem;
   }
 }
-
 
 @media (max-width: 768px) {
   .patient-list__title {

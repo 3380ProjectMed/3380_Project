@@ -31,7 +31,6 @@ try {
         exit;
     }
 
-    // Ensure appointment belongs to this nurse via patient_visit
     $sql = "SELECT a.Appointment_id AS id, a.Appointment_date AS time, a.Status AS status, a.Reason_for_visit AS reason,
                 p.patient_id AS patientId, CONCAT(p.first_name,' ',p.last_name) AS patientName,
                 DATE_FORMAT(p.dob, '%Y-%m-%d') AS dob, p.allergies AS allergies

@@ -628,7 +628,7 @@ CREATE TABLE `patient` (
 
 LOCK TABLES `patient` WRITE;
 /*!40000 ALTER TABLE `patient` DISABLE KEYS */;
-INSERT INTO `patient` VALUES (1,'John','Smith','1985-03-15','123-45-6789',1,3,2,1,'john.smith@email.com',3,1,1,NULL,NULL,'AB-'),(2,'Maria','Garcia','2020-07-22','123-45-6790',2,2,1,2,'maria.garcia@email.com',2,1,2,NULL,NULL,'A+'),(3,'David','Johnson','1992-11-30','123-45-6791',1,1,2,1,'david.johnson@email.com',NULL,2,3,NULL,3,'B+'),(4,'Sarah','Williams','1980-05-14','123-45-6792',2,2,2,1,'sarah.williams@email.com',NULL,3,4,NULL,2,'AB-'),(5,'Michael','Brown','1975-09-08','123-45-6793',1,1,2,2,'michael.brown@email.com',NULL,4,5,NULL,7,'O-'),(6,'Jennifer','Davis','1988-12-25','123-45-6794',2,2,2,1,'jennifer.davis@email.com',NULL,5,6,NULL,18,'A-'),(7,'Robert','Miller','1965-02-18','123-45-6795',1,1,2,1,'robert.miller@email.com',NULL,6,7,NULL,2,'B-'),(8,'Lisa','Wilson','1990-08-11','123-45-6796',2,2,1,3,'lisa.wilson@email.com',NULL,1,8,NULL,NULL,'AB+'),(9,'Emaad','Rahman','2000-02-01','123-49-6512',1,1,NULL,NULL,'emaad980@gmail.com',NULL,2,9,NULL,11,NULL),(10,'Kathiana','Rodriguez','2003-01-03','TEMP0000010',2,2,1,1,'kathiana119@gmail.com',NULL,3,10,NULL,22,NULL),(11,'Bartholomew','Fitzgerald','1972-04-18','476-78-9012',1,1,1,1,'bart.fitz@email.com',NULL,1,11,NULL,12,'A+'),(12,'Guinevere','Pembroke','1985-11-03','565-89-0123',2,2,1,1,'g.pembroke@email.com',NULL,2,12,NULL,11,'B+'),(13,'Theodore','Montgomery','1968-07-22','670-90-1234',1,1,1,1,'ted.montgomery@email.com',NULL,3,13,NULL,14,'O+'),(14,'Seraphina','Whitaker','1991-02-14','719-01-2345',2,2,1,1,'sera.whitaker@email.com',NULL,4,14,NULL,22,'AB-'),(15,'Percival','Harrington','1979-09-08','870-12-3456',1,1,1,1,'percy.h@email.com',NULL,5,15,NULL,21,'A-'),(16,'Lysandra','Blackwood','1988-12-25','931-23-4567',2,2,1,1,'lysandra.b@email.com',NULL,6,16,NULL,24,'O-'),(17,'Alistair','Kensington','1965-05-30','212-34-5678',1,1,1,1,'alistair.k@email.com',NULL,7,17,NULL,19,'B+'),(18,'Gwendolyn','Ashworth','1993-08-11','128-45-6789',2,2,1,1,'gwen.ashworth@email.com',NULL,1,18,NULL,12,'A+'),(19,'Phineas','Worthington','1977-01-19','234-56-7890',1,1,1,1,'phineas.w@email.com',NULL,2,19,NULL,10,'O+'),(20,'Cordelia','Fairchild','1983-06-07','345-67-8901',2,2,1,1,'cordelia.f@email.com',NULL,3,20,NULL,15,'B-'),(21,'Benedict','Kingsley','1990-03-26','456-88-9012',1,1,1,1,'ben.kingsley@email.com',NULL,4,21,NULL,6,'AB+'),(22,'Octavia','Rutherford','1974-10-13','569-89-0123',2,2,1,1,'octavia.r@email.com',NULL,2,22,NULL,9,'A+'),(23,'Sebastian','Hawthorne','1986-12-09','688-90-1234',1,1,1,1,'seb.hawthorne@email.com',NULL,3,23,NULL,14,'O-'),(24,'Persephone','Vance','1995-07-04','799-01-2345',2,2,1,1,'persephone.v@email.com',NULL,4,24,NULL,13,'B+'),(25,'Atticus','Pemberton','1969-04-21','890-12-7456',1,1,1,1,'atticus.p@email.com',NULL,1,25,NULL,1,'A-'),(211,'Nin','Li','2002-06-05','123-45-8123',4,4,NULL,NULL,'niuli@gmail.com',NULL,NULL,NULL,NULL,NULL,NULL),(212,'Jennifer','Sanchez','1995-08-05','TEMP0000212',2,2,1,1,'jennifer.sanchez@email.com',4,1,45,NULL,22,NULL),(218,'Queen','Lincoln','1999-05-20','TEMP0000218',2,2,NULL,NULL,'queen.linc@email.com',NULL,NULL,NULL,NULL,NULL,NULL),(221,'jim','ash','2000-02-11','TEMP0000221',1,1,NULL,NULL,'jim.ash@email.com',NULL,NULL,NULL,NULL,NULL,NULL),(223,'Justin','Bieber','2001-08-24','TEMP0000223',1,1,NULL,NULL,'justin.bieber@email.com',NULL,NULL,NULL,NULL,NULL,NULL),(224,'Phat Thanh','Do','2004-10-13','TEMP0000224',1,1,NULL,NULL,'t.do@gmail.com',NULL,NULL,NULL,NULL,NULL,NULL),(225,'Jason','Stathem','1993-01-15','TEMP0000225',3,3,NULL,NULL,'jason.stathem@email.com',NULL,9,NULL,NULL,NULL,NULL),(226,'Elena','Orozco','2001-08-24','TEMP0000226',3,3,NULL,NULL,'elena.orozco@email.com',NULL,1,NULL,NULL,NULL,'A+'),(228,'Emaad','bozo','1999-08-11','TEMP0000228',3,3,NULL,NULL,'emaad980@email.com',NULL,1,NULL,NULL,NULL,NULL),(231,'Emaad','bozo','2000-08-24','TEMP0000231',3,3,NULL,NULL,'emaa@email.com',NULL,1,NULL,NULL,NULL,NULL),(233,'paul','bunion','1945-12-22','TEMP0000233',3,3,NULL,NULL,'paul.b@email.com',NULL,NULL,NULL,NULL,NULL,NULL);
+INSERT INTO `patient` VALUES (1,'John','Smith','1985-03-15','123-45-6789',1,3,2,1,'john.smith@email.com',3,1,1,NULL,NULL,'AB-'),(2,'Maria','Garcia','2020-07-22','123-45-6790',2,2,1,2,'maria.garcia@email.com',2,1,2,NULL,NULL,'A+'),(3,'David','Johnson','1992-11-30','123-45-6791',1,1,2,1,'david.johnson@email.com',NULL,2,3,NULL,3,'B+'),(4,'Sarah','Williams','1980-05-14','123-45-6792',2,2,2,1,'sarah.williams@email.com',NULL,3,4,NULL,2,'AB-'),(5,'Michael','Brown','1975-09-08','123-45-6793',1,1,2,2,'michael.brown@email.com',NULL,4,5,NULL,7,'O-'),(6,'Jennifer','Davis','1988-12-25','123-45-6794',2,2,2,1,'jennifer.davis@email.com',NULL,5,6,NULL,18,'A-'),(7,'Robert','Miller','1965-02-18','123-45-6795',1,1,2,1,'robert.miller@email.com',NULL,6,7,NULL,2,'B-'),(8,'Lisa','Wilson','1990-08-11','123-45-6796',2,2,1,3,'lisa.wilson@email.com',NULL,1,8,NULL,NULL,'AB+'),(9,'Emaad','Rahman','2000-02-01','123-49-6512',1,1,NULL,NULL,'emaad980@gmail.com',NULL,2,9,NULL,11,NULL),(10,'Kathiana','Rodriguez','2003-01-03','TEMP0000010',2,2,1,1,'kathiana119@gmail.com',NULL,3,10,NULL,22,NULL),(11,'Bartholomew','Fitzgerald','1972-04-18','476-78-9012',1,1,1,1,'bart.fitz@email.com',NULL,1,11,NULL,12,'A+'),(12,'Guinevere','Pembroke','1985-11-03','565-89-0123',2,2,1,1,'g.pembroke@email.com',NULL,2,12,NULL,11,'B+'),(13,'Theodore','Montgomery','1968-07-22','670-90-1234',1,1,1,1,'ted.montgomery@email.com',NULL,3,13,NULL,14,'O+'),(14,'Seraphina','Whitaker','1991-02-14','719-01-2345',2,2,1,1,'sera.whitaker@email.com',NULL,4,14,NULL,22,'AB-'),(15,'Percival','Harrington','1979-09-08','870-12-3456',1,1,1,1,'percy.h@email.com',NULL,5,15,NULL,21,'A-'),(16,'Lysandra','Blackwood','1988-12-25','931-23-4567',2,2,1,1,'lysandra.b@email.com',NULL,6,16,NULL,24,'O-'),(17,'Alistair','Kensington','1965-05-30','212-34-5678',1,1,1,1,'alistair.k@email.com',NULL,7,17,NULL,19,'B+'),(18,'Gwendolyn','Ashworth','1993-08-11','128-45-6789',2,2,1,1,'gwen.ashworth@email.com',NULL,1,18,NULL,12,'A+'),(19,'Phineas','Worthington','1977-01-19','234-56-7890',1,1,1,1,'phineas.w@email.com',NULL,2,19,NULL,10,'O+'),(20,'Cordelia','Fairchild','1983-06-07','345-67-8901',2,2,1,1,'cordelia.f@email.com',NULL,3,20,NULL,15,'B-'),(21,'Benedict','Kingsley','1990-03-26','456-88-9012',1,1,1,1,'ben.kingsley@email.com',NULL,4,21,NULL,6,'AB+'),(22,'Octavia','Rutherford','1974-10-13','569-89-0123',2,2,1,1,'octavia.r@email.com',NULL,2,22,NULL,9,'A+'),(23,'Sebastian','Hawthorne','1986-12-09','688-90-1234',1,1,1,1,'seb.hawthorne@email.com',NULL,3,23,NULL,14,'O-'),(24,'Persephone','Vance','1995-07-04','799-01-2345',2,2,1,1,'persephone.v@email.com',NULL,4,24,NULL,13,'B+'),(25,'Atticus','Pemberton','1969-04-21','890-12-7456',1,1,1,1,'atticus.p@email.com',NULL,1,25,NULL,1,'A-'),(211,'Nin','Li','2002-06-05','123-45-8123',4,4,NULL,NULL,'niuli@gmail.com',NULL,NULL,NULL,NULL,NULL,NULL),(212,'Jennifer','Sanchez','1995-08-05','TEMP0000212',2,2,1,1,'jennifer.sanchez@email.com',4,1,45,NULL,22,NULL),(218,'Queen','Lincoln','1999-05-20','TEMP0000218',2,2,NULL,NULL,'queen.linc@email.com',NULL,NULL,NULL,NULL,NULL,NULL),(221,'jim','ash','2000-02-11','TEMP0000221',1,1,NULL,NULL,'jim.ash@email.com',NULL,NULL,NULL,NULL,NULL,NULL),(223,'Justin','Bieber','2001-08-24','TEMP0000223',1,1,NULL,NULL,'justin.bieber@email.com',NULL,NULL,NULL,NULL,NULL,NULL),(224,'Phat Thanh','Do','2004-10-13','TEMP0000224',1,1,NULL,NULL,'t.do@gmail.com',NULL,NULL,NULL,NULL,NULL,NULL),(225,'Jason','Stathem','1993-01-15','TEMP0000225',3,3,NULL,NULL,'jason.stathem@email.com',NULL,9,NULL,NULL,NULL,NULL),(226,'Elena','Orozco','2001-08-24','TEMP0000226',3,3,NULL,NULL,'elena.orozco@email.com',NULL,1,NULL,NULL,NULL,'A+'),(228,'Emaad','bozo','1999-08-11','TEMP0000228',3,3,NULL,NULL,'emaad980@email.com',NULL,1,NULL,NULL,NULL,NULL),(231,'Emaad','bozo','2000-08-24','TEMP0000231',3,3,NULL,NULL,'emaa@email.com',NULL,1,NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `patient` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -734,91 +734,6 @@ LOCK TABLES `patient_visit` WRITE;
 INSERT INTO `patient_visit` VALUES (1,1001,1,1,'2025-11-15 09:00:00','120/80',1,1,'Completed','Hypertension, Type 2 Diabetes','Annual physical examination','Internal Medicine',NULL,NULL,25.00,125.00,1,'Stable condition',98.6,'2024-01-15 09:00:00','2024-01-15 09:45:00',1,'2025-10-23 04:41:08','Dr. Emily Chen','2025-11-17 02:46:12','Dr. Emily Chen'),(2,1002,3,3,'2025-11-16 14:00:00','118/76',1,2,'Completed','Hyperlipidemia','Follow-up consultation','Internal Medicine',15.00,NULL,15.00,105.00,1,'Elevated cholesterol levels',98.4,'2024-01-16 14:00:00','2024-01-16 14:30:00',3,'2025-10-23 04:41:08','Dr. Emily Chen','2025-11-17 02:46:12','Dr. Emily Chen'),(5,1014,1,1,'2025-11-07 12:00:00','120/80',1,1,'Scheduled','flu',NULL,NULL,25.00,'cash',25.00,230.00,NULL,'cough',99.2,'2025-11-07 12:00:00',NULL,1,'2025-11-07 18:06:42',NULL,'2025-11-10 23:12:44','Daniel Thompson'),(6,1049,1,1,NULL,'100/90',1,6,'Scheduled',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Elevated cholesterol levels',100.0,NULL,NULL,4,'2025-11-14 09:00:00',NULL,'2025-11-15 22:26:39','tnguyen@medconnect.com'),(15,1013,5,1,'2025-11-03 10:30:00','120/80',1,1,'Scheduled','Mild Severity, Flu','Fever and cough','Internal Medicine',50.00,NULL,25.00,180.00,1,'Cough, fever',99.5,'2025-10-24 10:30:00','2025-10-24 11:00:00',5,'2025-10-25 04:21:57','nurse.jane','2025-11-17 02:46:12',NULL),(16,1004,5,1,'2025-11-04 01:15:00','130/80',1,2,'Scheduled',NULL,NULL,'Internal Medicine',NULL,NULL,NULL,NULL,NULL,'None',99.0,'2025-10-24 01:30:00',NULL,5,'2025-10-24 01:10:00',NULL,'2025-11-15 22:26:39',NULL),(17,NULL,2,3,'2025-11-25 02:15:00','120/80',3,1,'Scheduled','Migraine','Migraines','Internal Medicine',20.00,NULL,20.00,50.00,1,'Stable condition',NULL,NULL,NULL,2,'2025-11-06 06:17:07',NULL,'2025-11-17 02:50:28',NULL),(18,1002,3,1,'2025-11-12 14:00:00',NULL,NULL,6,'Scheduled',NULL,NULL,'General',NULL,NULL,25.00,NULL,NULL,'None',NULL,'2025-11-12 14:00:00',NULL,3,'2025-11-06 20:09:25',NULL,'2025-11-15 22:26:39',NULL),(19,1010,3,2,'2025-11-11 10:00:00',NULL,NULL,6,'Scheduled',NULL,NULL,'General',NULL,NULL,25.00,NULL,NULL,'Stable condition',NULL,'2025-11-11 10:00:00',NULL,3,'2025-11-06 20:09:25',NULL,'2025-11-15 22:26:39',NULL),(20,1020,1,1,'2025-10-29 09:00:00','118/76',1,1,'Completed','Hypertension controlled, overall health good','Annual physical examination','Internal Medicine',25.00,'card',25.00,150.00,1,'Routine checkup, no current complaints',98.6,'2025-10-29 09:00:00','2025-10-29 09:45:00',1,'2025-11-12 17:15:35','Nurse Sarah','2025-11-12 17:15:35','Dr. Smith'),(21,1021,2,2,'2025-10-29 10:30:00','132/84',1,2,'Completed','Hypertension stage 1, medication adjustment needed','Hypertension follow-up','Internal Medicine',20.00,'card',20.00,120.00,1,'Occasional headaches, fatigue',98.4,'2025-10-29 10:30:00','2025-10-29 11:15:00',2,'2025-11-12 17:15:35','Nurse Jane','2025-11-12 17:15:35','Dr. Smith'),(22,1022,3,1,'2025-10-29 14:00:00','122/78',2,6,'Completed','Type 2 Diabetes, glucose levels stable','Diabetes management','Endocrinology',15.00,'card',15.00,95.00,1,'Increased thirst, stable weight',98.2,'2025-10-29 14:00:00','2025-10-29 14:40:00',3,'2025-11-12 17:15:35','Nurse Sarah','2025-11-17 06:38:53','Dr. Johnson'),(23,1023,4,3,'2025-10-30 11:15:00','110/70',3,3,'Completed','Healthy pediatric development','Pediatric wellness check','Pediatrics',25.00,'card',25.00,180.00,1,'Routine wellness check, vaccinations up to date',99.1,'2025-10-30 11:15:00','2025-10-30 12:00:00',4,'2025-11-12 17:15:35','Nurse Mike','2025-11-12 17:15:35','Dr. Williams'),(24,1024,5,2,'2025-10-30 15:30:00','128/82',4,2,'Completed','Stable cardiac function, continue current medication','Cardiology follow-up','Cardiology',25.00,'card',25.00,200.00,1,'Mild chest discomfort with exertion',98.6,'2025-10-30 15:30:00','2025-10-30 16:20:00',5,'2025-11-12 17:15:35','Nurse Jane','2025-11-12 17:15:35','Dr. Brown'),(25,1025,6,1,'2025-10-31 08:45:00','116/74',5,1,'Completed','Benign skin lesion, no treatment required','Dermatology screening','Dermatology',20.00,'card',20.00,160.00,1,'Mole check, no changes noted',98.4,'2025-10-31 08:45:00','2025-10-31 09:30:00',6,'2025-11-12 17:15:35','Nurse Sarah','2025-11-12 17:15:35','Dr. Davis'),(26,1026,7,3,'2025-10-31 13:20:00','124/80',6,3,'Completed','Mild osteoarthritis, recommend physical therapy','Orthopedic consultation','Orthopedics',25.00,'card',25.00,220.00,1,'Knee pain with stairs and prolonged walking',98.8,'2025-10-31 13:20:00','2025-10-31 14:15:00',7,'2025-11-12 17:15:35','Nurse Mike','2025-11-12 17:15:35','Dr. Miller'),(27,1027,8,2,'2025-11-03 10:00:00','118/76',1,2,'Completed','Influenza vaccination administered','Vaccination','Primary Care',0.00,NULL,0.00,85.00,1,'Seasonal flu prevention',98.6,'2025-11-03 10:00:00','2025-11-03 10:25:00',8,'2025-11-12 17:15:35','Nurse Jane','2025-11-12 17:15:35','Dr. Smith'),(28,1028,9,1,'2025-11-03 16:15:00','130/82',2,1,'Completed','Generalized anxiety disorder, therapy session completed','Mental health therapy','Psychiatry',20.00,'card',20.00,150.00,1,'Anxiety symptoms improved with current treatment',98.4,'2025-11-03 16:15:00','2025-11-03 17:00:00',9,'2025-11-12 17:15:35','Nurse Sarah','2025-11-12 17:15:35','Dr. Wilson'),(29,1029,10,3,'2025-11-04 09:30:00','112/68',3,3,'Completed','Normal fetal development, 28 weeks gestation','Prenatal checkup','Obstetrics',25.00,'card',25.00,195.00,1,'Normal pregnancy, mild back pain',98.9,'2025-11-04 09:30:00','2025-11-04 10:20:00',10,'2025-11-12 17:15:35','Nurse Mike','2025-11-12 17:15:35','Dr. Garcia'),(30,1030,11,2,'2025-11-04 14:45:00','120/78',1,2,'Completed','Seasonal allergies confirmed, prescription provided','Allergy testing','Allergy/Immunology',15.00,'card',15.00,125.00,1,'Sneezing, itchy eyes during spring season',98.6,'2025-11-04 14:45:00','2025-11-04 15:30:00',11,'2025-11-12 17:15:35','Nurse Jane','2025-11-12 17:15:35','Dr. Smith'),(31,1031,12,1,'2025-11-05 11:30:00','126/80',2,1,'Completed','Cleared for sports participation','Sports physical','Primary Care',20.00,'cash',20.00,110.00,1,'Healthy adolescent, no limitations',98.7,'2025-11-05 11:30:00','2025-11-05 12:00:00',12,'2025-11-12 17:15:35','Nurse Sarah','2025-11-12 17:15:35','Dr. Wilson'),(32,1032,13,3,'2025-11-05 15:00:00','118/74',3,3,'Completed','Mild myopia, prescription updated','Eye examination','Ophthalmology',25.00,'card',25.00,185.00,1,'Blurry distance vision',98.4,'2025-11-05 15:00:00','2025-11-05 15:50:00',13,'2025-11-12 17:15:35','Nurse Mike','2025-11-12 17:15:35','Dr. Martinez'),(33,1033,14,2,'2025-11-06 10:45:00','122/78',4,2,'Completed','Nutritional assessment completed, diet plan provided','Nutrition counseling','Nutrition',20.00,'card',20.00,140.00,1,'Weight management goals',98.6,'2025-11-06 10:45:00','2025-11-06 11:30:00',14,'2025-11-12 17:15:35','Nurse Jane','2025-11-12 17:15:35','Dr. Taylor'),(34,1012,4,2,'2025-11-06 09:00:00','128/82',1,1,'Completed','Upper respiratory infection, antibiotics prescribed','Follow-up consultation','Internal Medicine',20.00,'card',20.00,120.00,1,'Cough, congestion, low-grade fever',99.2,'2025-11-06 09:00:00','2025-11-06 09:45:00',4,'2025-11-12 17:15:35','Nurse Sarah','2025-11-12 17:15:35','Dr. Smith'),(35,1013,5,1,'2025-11-06 13:00:00','118/76',1,2,'Completed','Tetanus booster administered','Vaccination','Primary Care',0.00,NULL,0.00,75.00,1,'Routine immunization update',98.8,'2025-11-06 13:00:00','2025-11-06 13:20:00',5,'2025-11-12 17:15:35','Nurse Jane','2025-11-12 17:15:35','Dr. Smith'),(36,1036,17,2,'2025-11-12 09:00:00','138/88',7,3,'Completed','Acute sinusitis, antibiotic treatment started','Urgent care','Urgent Care',25.00,'card',25.00,180.00,1,'Facial pain, nasal congestion, headache',100.2,'2025-11-12 09:00:00','2025-11-12 09:50:00',17,'2025-11-12 17:15:35','Nurse Mike','2025-11-12 17:15:35','Dr. Anderson'),(37,1037,18,1,'2025-11-12 09:15:00','120/78',1,1,'Completed','Blood work completed, results pending','Blood work','Laboratory',15.00,'card',15.00,95.00,1,'Routine blood panel ordered',98.6,'2025-11-12 09:15:00','2025-11-12 09:45:00',18,'2025-11-12 17:15:35','Nurse Sarah','2025-11-12 17:15:35','Dr. Smith'),(39,1059,8,1,NULL,'124/80',1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,245.00,NULL,'hurt',98.4,'2025-11-15 12:12:46',NULL,8,'2025-11-15 12:12:46',NULL,'2025-11-18 06:06:39',NULL),(41,1060,5,1,'2025-11-15 16:45:00','81/100',1,6,'Scheduled','alcohol poisoning',NULL,NULL,NULL,NULL,NULL,215.00,NULL,'dizziness',98.6,NULL,NULL,5,'2025-11-15 20:43:19',NULL,'2025-11-15 22:26:39','Emily Chen'),(45,1063,2,1,NULL,'81/100',1,6,'Scheduled',NULL,NULL,NULL,20.00,'card',20.00,NULL,NULL,NULL,98.6,'2025-11-17 02:49:32',NULL,2,'2025-11-15 22:26:54',NULL,'2025-11-21 20:19:02','d.thompson@medconnect.com'),(46,1065,212,1,NULL,'75/40',1,6,'Scheduled','Sick',NULL,NULL,20.00,NULL,NULL,215.00,NULL,'Checkup',95.0,'2025-11-15 23:58:12',NULL,45,'2025-11-15 23:58:12',NULL,'2025-11-17 22:29:40','Emily Chen'),(47,1066,212,1,NULL,NULL,1,6,'Scheduled',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2025-11-17 02:48:57',NULL,45,'2025-11-16 01:11:58',NULL,'2025-11-17 02:48:57',NULL),(48,1058,1,1,'2025-11-17 01:01:29','84/55',1,6,'Scheduled','flu',NULL,NULL,NULL,NULL,NULL,215.00,NULL,'Headache.',98.6,'2025-11-16 21:54:05',NULL,1,'2025-11-16 21:54:05',NULL,'2025-11-21 20:19:02',''),(49,1067,1,1,NULL,'100',8,6,'Canceled',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'nausea',100.0,'2025-11-17 06:17:33',NULL,1,'2025-11-17 06:17:33',NULL,'2025-11-18 00:44:11','tnguyen@medconnect.com'),(50,1068,2,1,NULL,'119/90',1,6,'Scheduled',NULL,NULL,NULL,20.00,'card',20.00,215.00,NULL,'nausea',100.6,'2025-11-17 13:29:33',NULL,2,'2025-11-17 13:29:33',NULL,'2025-11-19 19:44:03','tnguyen@medconnect.com'),(52,1006,8,2,NULL,'80/45',3,3,'Scheduled','sick',NULL,NULL,20.00,'card',20.00,215.00,NULL,'dizziness',96.1,'2025-11-18 21:18:08',NULL,8,'2025-11-18 21:18:08',NULL,'2025-11-18 22:16:36','s.rodriguez@medconnect.com'),(61,NULL,2,1,NULL,NULL,1,6,'Scheduled',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2025-11-18 23:16:15',NULL,2,'2025-11-18 23:16:15',NULL,'2025-11-18 23:16:15',NULL),(63,NULL,2,1,NULL,NULL,1,6,'Scheduled',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2025-11-19 02:03:34',NULL,2,'2025-11-19 02:03:34',NULL,'2025-11-19 02:03:34',NULL),(65,NULL,1,1,NULL,'120/89',1,6,'Scheduled','sick having flu',NULL,NULL,NULL,NULL,NULL,55.00,NULL,'nausea',100.0,'2025-11-19 22:42:32',NULL,1,'2025-11-19 22:42:32',NULL,'2025-11-19 23:08:54','tnguyen@medconnect.com'),(67,1092,1,1,NULL,'120/80',1,6,'Scheduled','flu',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'headache',100.0,'2025-11-19 23:42:41',NULL,1,'2025-11-19 23:42:41',NULL,'2025-11-21 19:59:54','Emily Chen');
 /*!40000 ALTER TABLE `patient_visit` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `trg_check_insurance_expiration_on_checkin` BEFORE INSERT ON `patient_visit` FOR EACH ROW BEGIN
-    DECLARE insurance_status VARCHAR(20);
-    DECLARE insurance_expiry_date DATE;
-    DECLARE primary_insurance_id INT;
-    DECLARE insurance_plan_name VARCHAR(100);
-    DECLARE payer_name VARCHAR(100);
-    DECLARE days_until_expiry INT;
-    
-    -- Get the patient's primary insurance information
-    SELECT 
-        pi.id,
-        pi.expiration_date,
-        CASE
-            WHEN pi.expiration_date IS NULL THEN 'ACTIVE'
-            WHEN pi.expiration_date < CURDATE() THEN 'EXPIRED'
-            WHEN pi.expiration_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'EXPIRING_SOON'
-            ELSE 'ACTIVE'
-        END AS status,
-        ip.plan_name,
-        ipy.name,
-        DATEDIFF(pi.expiration_date, CURDATE()) AS days_remaining
-    INTO 
-        primary_insurance_id,
-        insurance_expiry_date,
-        insurance_status,
-        insurance_plan_name,
-        payer_name,
-        days_until_expiry
-    FROM patient_insurance pi
-    LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
-    LEFT JOIN insurance_payer ipy ON ip.payer_id = ipy.payer_id
-    WHERE pi.patient_id = NEW.patient_id
-      AND pi.is_primary = 1
-      AND pi.effective_date <= CURDATE()
-    ORDER BY pi.effective_date DESC
-    LIMIT 1;
-    
-    -- Case 1: No insurance found at all
-    IF primary_insurance_id IS NULL THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'INSURANCE_WARNING: Patient has no active insurance on file. Please verify insurance information before proceeding with check-in.',
-            MYSQL_ERRNO = 9001;
-    END IF;
-    
-    -- Case 2: Insurance is expired
-    IF insurance_status = 'EXPIRED' THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'INSURANCE_EXPIRED: Patient insurance has expired. Please update insurance information before check-in. ', 
-            MYSQL_ERRNO = 9002;
-    END IF;
-    
-    -- Case 3: Insurance expiring within 30 days (warning, but allow check-in)
-	IF insurance_status = 'EXPIRING_SOON' THEN
-        SET @insurance_warning = CONCAT('INSURANCE_EXPIRING: Patient insurance will expire in ', 
-                                       days_until_expiry, 
-                                       ' days on ', 
-                                       DATE_FORMAT(insurance_expiry_date, '%m/%d/%Y'),
-                                       '. Plan: ', COALESCE(insurance_plan_name, 'Unknown'),
-                                       ' (', COALESCE(payer_name, 'Unknown Payer'), ')',
-                                       '. Please remind patient to renew.');
-    ELSE
-        -- Clear the warning variable if insurance is fine
-        SET @insurance_warning = NULL;
-    END IF;
-    
-    -- Store the insurance ID being used for this visit
-    IF NEW.insurance_policy_id_used IS NULL THEN
-        SET NEW.insurance_policy_id_used = primary_insurance_id;
-    END IF;
-    
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `prescription`
@@ -920,61 +835,9 @@ CREATE TABLE `sessions` (
 
 LOCK TABLES `sessions` WRITE;
 /*!40000 ALTER TABLE `sessions` DISABLE KEYS */;
-INSERT INTO `sessions` VALUES ('4057508b1d8f7bfa9f69d45ff654428f','uid|i:205;email|s:20:\"echen@medconnect.com\";role|s:6:\"DOCTOR\";username|s:4:\"d201\";first_name|s:5:\"Emily\";last_name|s:4:\"Chen\";',1763957886),('8abeeb5e03f5d97a988149af421381de','',1764015765),('8c3132983107d17157d0a3cb4d138a8e','uid|i:233;email|s:16:\"paul.b@email.com\";role|s:7:\"PATIENT\";username|s:10:\"paulbunion\";first_name|s:4:\"paul\";last_name|s:6:\"bunion\";patient_id|i:233;',1764031768),('8e2bf1b0b61a733740ff4c1a82dfc29b','uid|i:204;email|s:25:\"d.thompson@medconnect.com\";role|s:12:\"RECEPTIONIST\";username|s:4:\"r501\";first_name|s:6:\"Daniel\";last_name|s:8:\"Thompson\";',1764031776),('928e2289ac85f57d72810bfacec9c112','uid|i:106;email|s:22:\"tnguyen@medconnect.com\";role|s:5:\"NURSE\";username|s:4:\"n301\";first_name|s:4:\"Tina\";last_name|s:6:\"Nguyen\";',1764031749),('c75ab0907de664353cc87fc84245108b','',1764024756);
+INSERT INTO `sessions` VALUES ('4057508b1d8f7bfa9f69d45ff654428f','uid|i:205;email|s:20:\"echen@medconnect.com\";role|s:6:\"DOCTOR\";username|s:4:\"d201\";first_name|s:5:\"Emily\";last_name|s:4:\"Chen\";',1763957886),('8abeeb5e03f5d97a988149af421381de','uid|i:226;email|s:22:\"elena.orozco@email.com\";role|s:7:\"PATIENT\";username|s:11:\"elenaorozco\";first_name|s:5:\"Elena\";last_name|s:6:\"Orozco\";patient_id|i:226;',1764014851),('c75ab0907de664353cc87fc84245108b','',1764012398);
 /*!40000 ALTER TABLE `sessions` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `sessions_AFTER_INSERT` AFTER INSERT ON `sessions` FOR EACH ROW BEGIN
-    UPDATE appointment SET Status = 'Waiting'
-    WHERE Status = 'Scheduled' 
-      AND Appointment_date <= (NOW() - INTERVAL 6 HOUR)
-      AND Appointment_date >= (NOW() - INTERVAL 6 HOUR) - INTERVAL 30 DAY;
-    
-    -- Update Waiting -> No-Show if more than 15 minutes late (in local time)
-    UPDATE appointment SET Status = 'No-Show'
-    WHERE Status = 'Waiting' 
-      AND Appointment_date <= (NOW() - INTERVAL 6 HOUR) - INTERVAL 15 MINUTE
-      AND Appointment_date >= (NOW() - INTERVAL 6 HOUR) - INTERVAL 30 DAY;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `trg_session_update_update_appointments` AFTER UPDATE ON `sessions` FOR EACH ROW BEGIN
-    UPDATE appointment SET Status = 'Waiting'
-    WHERE Status = 'Scheduled' 
-      AND Appointment_date <= (NOW() - INTERVAL 6 HOUR)
-      AND Appointment_date >= (NOW() - INTERVAL 6 HOUR) - INTERVAL 30 DAY;
-    
-    -- Update Waiting -> No-Show if more than 15 minutes late (in local time)
-    UPDATE appointment SET Status = 'No-Show'
-    WHERE Status = 'Waiting' 
-      AND Appointment_date <= (NOW() - INTERVAL 6 HOUR) - INTERVAL 15 MINUTE
-      AND Appointment_date >= (NOW() - INTERVAL 6 HOUR) - INTERVAL 30 DAY;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `specialty`
@@ -1095,76 +958,6 @@ LOCK TABLES `treatment_per_visit` WRITE;
 INSERT INTO `treatment_per_visit` (`visit_treatment_id`, `visit_id`, `treatment_id`, `quantity`, `cost_each`, `notes`) VALUES (1,1,6,1,215.00,'Annual physical for established patient'),(2,1,16,1,35.00,'Routine A1c monitoring'),(3,1,17,1,15.00,'Fasting glucose check'),(4,2,1,1,125.00,'Follow-up for cholesterol management'),(5,2,18,1,65.00,'Lipid panel ordered'),(9,15,1,1,125.00,'Sick visit for flu symptoms'),(10,15,19,1,55.00,'Rapid influenza test'),(11,15,21,1,25.00,'Symptomatic relief'),(12,16,1,1,125.00,'Routine follow-up'),(31,5,7,1,215.00,''),(32,5,19,1,15.00,''),(33,6,19,1,15.00,''),(34,41,7,1,215.00,''),(35,46,7,1,215.00,''),(45,39,8,1,245.00,''),(48,48,7,1,215.00,''),(50,50,7,1,215.00,''),(52,65,17,1,55.00,'');
 /*!40000 ALTER TABLE `treatment_per_visit` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `set_treatment_cost_before_insert` BEFORE INSERT ON `treatment_per_visit` FOR EACH ROW BEGIN
-    -- If cost_each is not provided or is 0, fetch it from treatment_catalog
-    IF NEW.cost_each IS NULL OR NEW.cost_each = 0 THEN
-        SET NEW.cost_each = (
-            SELECT cost 
-            FROM treatment_catalog 
-            WHERE treatment_id = NEW.treatment_id
-        );
-    END IF;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `update_treatment_cost_after_insert` AFTER INSERT ON `treatment_per_visit` FOR EACH ROW BEGIN
-    UPDATE patient_visit
-    SET treatment_cost_due = (
-        SELECT COALESCE(SUM(total_cost), 0)
-        FROM treatment_per_visit
-        WHERE visit_id = NEW.visit_id
-    )
-    WHERE visit_id = NEW.visit_id;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`aad_mysql_medapp`@`%`*/ /*!50003 TRIGGER `update_treatment_cost_due` AFTER INSERT ON `treatment_per_visit` FOR EACH ROW BEGIN
-    UPDATE patient_visit 
-    SET treatment_cost_due = (
-        SELECT COALESCE(SUM(total_cost), 0) 
-        FROM treatment_per_visit 
-        WHERE visit_id = NEW.visit_id
-    ) - COALESCE(copay_amount_due, 0)
-    WHERE visit_id = NEW.visit_id;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `user_account`
@@ -1197,36 +990,9 @@ CREATE TABLE `user_account` (
 
 LOCK TABLES `user_account` WRITE;
 /*!40000 ALTER TABLE `user_account` DISABLE KEYS */;
-INSERT INTO `user_account` VALUES (1,'p101','john.smith@email.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','PATIENT',0,'2025-11-24 22:52:03',0,1,'2025-10-22 04:54:59','2025-11-24 22:52:03'),(2,'p102','maria.garcia@email.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','PATIENT',0,'2025-11-24 23:14:56',0,1,'2025-10-28 18:50:06','2025-11-24 23:14:56'),(3,'p3','david.johnson@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(4,'p4','sarah.williams@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(5,'p5','michael.brown@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(6,'p6','jennifer.davis@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(7,'p7','robert.miller@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(8,'p8','lisa.wilson@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(9,'emaad980','emaad980@gmail.com','$2y$12$Cs7Vap7sWXRfkbcjniOAU.P6I2oKa81asl1qPEYS0Ih8uEiz0o1s2','PATIENT',0,'2025-11-01 20:39:30',0,1,'2025-11-01 20:27:29','2025-11-08 22:34:42'),(10,'kathiana119','kathiana119@gmail.com','$2y$12$g34AFS8Sjji2SLi.EvTltevK991t6CfDs4QNMg0cevjgxWgHMy.cO','PATIENT',0,'2025-11-04 00:25:55',0,1,'2025-11-04 00:25:39','2025-11-08 22:34:42'),(11,'p11','bart.fitz@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(12,'p12','g.pembroke@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(13,'p13','ted.montgomery@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(14,'p14','sera.whitaker@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(15,'p15','percy.h@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(16,'p16','lysandra.b@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(17,'p17','alistair.k@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(18,'p18','gwen.ashworth@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(19,'p19','phineas.w@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(20,'p20','cordelia.f@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(21,'p21','ben.kingsley@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(22,'p22','octavia.r@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(23,'p23','seb.hawthorne@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(24,'p24','persephone.v@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(25,'p25','atticus.p@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(101,'n101','j.taylor@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','NURSE',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(102,'n102','m.chen@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','NURSE',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(103,'n103','s.rodriguez@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','NURSE',0,'2025-11-19 22:36:15',0,1,'2025-11-17 03:28:05','2025-11-19 22:36:15'),(104,'n104','d.anderson@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','NURSE',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(105,'n105','l.martinez@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','NURSE',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(106,'n301','tnguyen@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','NURSE',0,'2025-11-24 23:39:13',0,1,'2025-10-23 14:54:01','2025-11-24 23:39:13'),(201,'a305','a.wilson@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','ADMIN',0,'2025-11-22 15:32:36',0,1,'2025-10-25 14:54:01','2025-11-22 15:32:36'),(202,'r202','c.lee@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','RECEPTIONIST',0,'2025-11-18 22:03:09',0,1,'2025-11-17 03:28:05','2025-11-18 22:03:09'),(204,'r501','d.thompson@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','RECEPTIONIST',0,'2025-11-25 00:49:03',0,1,'2025-11-06 00:39:39','2025-11-25 00:49:03'),(205,'d201','echen@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-23 04:45:42',0,1,'2025-10-22 04:54:59','2025-11-23 04:45:42'),(206,'d202','jrodriguez@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-17 07:07:26',0,1,'2025-11-04 00:25:39','2025-11-17 07:07:26'),(207,'d207','slee@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-18 21:51:54',0,1,'2025-11-17 03:28:05','2025-11-18 21:51:54'),(208,'d208','rpatel@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','DOCTOR',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(209,'d209','mgarcia@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','DOCTOR',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(210,'d203','dkim@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-13 01:16:11',0,1,'2025-11-04 00:25:39','2025-11-13 01:16:11'),(211,'niuli','niuli@gmail.com','$2y$12$AnvqG02Ud6Jk33wyrXqlLe2VHHAXrA8WcOImdkIxN6F.4K.Nppwx.','PATIENT',0,'2025-11-15 21:20:23',0,1,'2025-11-15 21:17:43','2025-11-15 21:20:23'),(212,'jennifer.sanchez','jennifer.sanchez@email.com','$2y$12$xkkRT2Jnip7FKQ2HuT4hY.VTN2i/89QhPDwgHb3X7f4AlfNkAAK/q','PATIENT',0,'2025-11-21 20:02:43',0,1,'2025-11-15 22:37:20','2025-11-21 20:02:43'),(214,'d214','abe.linc@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-17 06:51:53',0,1,'2025-11-17 02:17:04','2025-11-19 17:41:37'),(216,'n216','ted.roos@medconnect.com','$2y$12$W6Xeyrd3gchNrF21ERzE0uOiBFdn3XYL.haTswuFIqULE2cYMOab.','NURSE',0,'2025-11-17 02:28:20',0,1,'2025-11-17 02:25:01','2025-11-17 02:28:20'),(217,'d217','lwong@medconnect.com','$2y$12$W6Xeyrd3gchNrF21ERzE0uOiBFdn3XYL.haTswuFIqULE2cYMOab.','DOCTOR',0,NULL,0,1,'2025-11-16 22:47:42','2025-11-16 22:47:50'),(218,'queen.linc','queen.linc@email.com','$2y$12$dddpaZaHvGTR81Axwy58SugVckc3suJDVVr88Q2i.chPb6Cf/C042','PATIENT',0,'2025-11-17 05:27:41',0,1,'2025-11-17 05:27:01','2025-11-17 05:27:41'),(219,'r219','kelvin.bozo@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','RECEPTIONIST',0,'2025-11-18 19:24:30',0,1,'2025-11-17 05:29:11','2025-11-18 19:24:30'),(220,'r220','ty.knox@medconnect.com','$2y$12$zF70lWRwVyQpywQZ71MVsenR5QknuWW6PWniQ4XLf5TrLNtUb4vCa','RECEPTIONIST',0,'2025-11-18 19:55:36',0,1,'2025-11-18 19:22:57','2025-11-18 19:55:36'),(221,'jim.ash','jim.ash@email.com','$2y$12$qrpX0qOIINBGIDvkFJnPWuiziD6LacMGreCjillSV1AtL67XGqi1u','PATIENT',0,'2025-11-18 20:51:15',0,1,'2025-11-18 20:51:02','2025-11-18 20:51:15'),(222,'d222','ty.me@medconnect.com','$2y$12$h.Y2rNSDAb4P8JLlWzP25ueZUXsACsLb95G4jtoXtU1NCGGjmR.Re','DOCTOR',0,'2025-11-18 21:08:31',0,1,'2025-11-18 20:53:04','2025-11-18 21:08:31'),(223,'justin.bieber','justin.bieber@email.com','$2y$12$SZAEnOqGUTVru90qY4aMQe...UpXXM8wjDSUpAciCyyIdNUO14RbC','PATIENT',0,'2025-11-19 06:08:08',0,1,'2025-11-19 06:07:19','2025-11-19 06:08:08'),(224,'t.do','t.do@gmail.com','$2y$12$2kWSzOUAPYHRIU.1XOGboO2PW0dJv7qcVBT7uJrVZbK41lh/3KnJK','PATIENT',0,'2025-11-19 18:48:28',0,1,'2025-11-19 06:08:41','2025-11-19 18:48:28'),(225,'jason.stathem','jason.stathem@email.com','$2y$12$gM.MO6nUJZbPS8FOQDYV1ulYnK5MYq9jP9qhLBNZFJHZJDbhdB/iO','PATIENT',0,'2025-11-19 08:14:31',0,1,'2025-11-19 08:11:24','2025-11-19 08:14:31'),(226,'elena.orozco','elena.orozco@email.com','$2y$12$XrC5jMiWyZfzyb4nIBqzEOLTqX0nbwm/fgbxYIp9zjo3B1Ow.tqza','PATIENT',0,'2025-11-24 20:07:11',0,1,'2025-11-19 22:32:44','2025-11-24 20:07:11'),(227,'d227','epluna@gmail.com','$2y$12$XFiVdrbWAclbqkaq.sQjPObjuFpsI5sxpadZt58YZXpAoiI6aZUza','DOCTOR',0,NULL,0,1,'2025-11-19 22:53:12','2025-11-19 22:53:12'),(228,'emaad9801','emaad980@email.com','$2y$12$Dy/ZMGOU0i.OA9Fi5PRO5OxM5crahDIhEnf1JbHJZ0KS3ZZT78hUW','PATIENT',0,'2025-11-19 22:57:44',0,1,'2025-11-19 22:57:24','2025-11-19 22:57:44'),(230,'d230','emaad.i@medconnect.com','$2y$12$fF8rezLu5Qg7t6yV3UDs5OTNUFkMeyN5gIf2QzV5vExTJpj5ygItG','DOCTOR',0,NULL,0,1,'2025-11-19 23:29:52','2025-11-19 23:29:52'),(231,'emaa','emaa@email.com','$2y$12$vofQf2TqwdduLGdak1K5HOM97tRDZtRaWLs4NeEdU6kLAS6z0T/ym','PATIENT',0,'2025-11-19 23:35:13',0,1,'2025-11-19 23:34:42','2025-11-19 23:35:13'),(232,'d232','kel@medconnect.com','$2y$12$BjviNCMOtuOCrxGoCICzm.IzR1ja2OjDbsI1hhbdAsPpfXjQDATzK','DOCTOR',0,NULL,0,1,'2025-11-21 18:19:30','2025-11-21 18:19:30'),(233,'paul.b','paul.b@email.com','$2y$12$Qq8zBJqo8CnAyFrlLbdGveo9Ig773odpJYpZjHDg3mZi10GNVuUyG','PATIENT',0,'2025-11-25 00:49:27',0,1,'2025-11-25 00:49:18','2025-11-25 00:49:27');
+INSERT INTO `user_account` VALUES (1,'p101','john.smith@email.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','PATIENT',0,'2025-11-21 20:34:43',0,1,'2025-10-22 04:54:59','2025-11-21 20:34:43'),(2,'p102','maria.garcia@email.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','PATIENT',0,'2025-11-21 20:33:06',0,1,'2025-10-28 18:50:06','2025-11-21 20:33:06'),(3,'p3','david.johnson@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(4,'p4','sarah.williams@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(5,'p5','michael.brown@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(6,'p6','jennifer.davis@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(7,'p7','robert.miller@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(8,'p8','lisa.wilson@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(9,'emaad980','emaad980@gmail.com','$2y$12$Cs7Vap7sWXRfkbcjniOAU.P6I2oKa81asl1qPEYS0Ih8uEiz0o1s2','PATIENT',0,'2025-11-01 20:39:30',0,1,'2025-11-01 20:27:29','2025-11-08 22:34:42'),(10,'kathiana119','kathiana119@gmail.com','$2y$12$g34AFS8Sjji2SLi.EvTltevK991t6CfDs4QNMg0cevjgxWgHMy.cO','PATIENT',0,'2025-11-04 00:25:55',0,1,'2025-11-04 00:25:39','2025-11-08 22:34:42'),(11,'p11','bart.fitz@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(12,'p12','g.pembroke@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(13,'p13','ted.montgomery@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(14,'p14','sera.whitaker@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(15,'p15','percy.h@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(16,'p16','lysandra.b@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(17,'p17','alistair.k@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(18,'p18','gwen.ashworth@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(19,'p19','phineas.w@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(20,'p20','cordelia.f@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(21,'p21','ben.kingsley@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(22,'p22','octavia.r@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(23,'p23','seb.hawthorne@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(24,'p24','persephone.v@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(25,'p25','atticus.p@email.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','PATIENT',0,NULL,0,0,'2025-11-17 03:30:36','2025-11-17 03:30:36'),(101,'n101','j.taylor@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','NURSE',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(102,'n102','m.chen@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','NURSE',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(103,'n103','s.rodriguez@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','NURSE',0,'2025-11-19 22:36:15',0,1,'2025-11-17 03:28:05','2025-11-19 22:36:15'),(104,'n104','d.anderson@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','NURSE',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(105,'n105','l.martinez@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','NURSE',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(106,'n301','tnguyen@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','NURSE',0,'2025-11-21 19:58:42',0,1,'2025-10-23 14:54:01','2025-11-21 19:58:42'),(201,'a305','a.wilson@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','ADMIN',0,'2025-11-22 15:32:36',0,1,'2025-10-25 14:54:01','2025-11-22 15:32:36'),(202,'r202','c.lee@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','RECEPTIONIST',0,'2025-11-18 22:03:09',0,1,'2025-11-17 03:28:05','2025-11-18 22:03:09'),(204,'r501','d.thompson@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','RECEPTIONIST',0,'2025-11-21 19:21:14',0,1,'2025-11-06 00:39:39','2025-11-21 19:21:14'),(205,'d201','echen@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-23 04:45:42',0,1,'2025-10-22 04:54:59','2025-11-23 04:45:42'),(206,'d202','jrodriguez@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-17 07:07:26',0,1,'2025-11-04 00:25:39','2025-11-17 07:07:26'),(207,'d207','slee@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-18 21:51:54',0,1,'2025-11-17 03:28:05','2025-11-18 21:51:54'),(208,'d208','rpatel@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','DOCTOR',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(209,'d209','mgarcia@medconnect.com','$2y$10$PLACEHOLDER_HASH_FOR_FORCED_RESET','DOCTOR',0,NULL,0,0,'2025-11-17 03:28:05','2025-11-17 03:28:05'),(210,'d203','dkim@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-13 01:16:11',0,1,'2025-11-04 00:25:39','2025-11-13 01:16:11'),(211,'niuli','niuli@gmail.com','$2y$12$AnvqG02Ud6Jk33wyrXqlLe2VHHAXrA8WcOImdkIxN6F.4K.Nppwx.','PATIENT',0,'2025-11-15 21:20:23',0,1,'2025-11-15 21:17:43','2025-11-15 21:20:23'),(212,'jennifer.sanchez','jennifer.sanchez@email.com','$2y$12$xkkRT2Jnip7FKQ2HuT4hY.VTN2i/89QhPDwgHb3X7f4AlfNkAAK/q','PATIENT',0,'2025-11-21 20:02:43',0,1,'2025-11-15 22:37:20','2025-11-21 20:02:43'),(214,'d214','abe.linc@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','DOCTOR',0,'2025-11-17 06:51:53',0,1,'2025-11-17 02:17:04','2025-11-19 17:41:37'),(216,'n216','ted.roos@medconnect.com','$2y$12$W6Xeyrd3gchNrF21ERzE0uOiBFdn3XYL.haTswuFIqULE2cYMOab.','NURSE',0,'2025-11-17 02:28:20',0,1,'2025-11-17 02:25:01','2025-11-17 02:28:20'),(217,'d217','lwong@medconnect.com','$2y$12$W6Xeyrd3gchNrF21ERzE0uOiBFdn3XYL.haTswuFIqULE2cYMOab.','DOCTOR',0,NULL,0,1,'2025-11-16 22:47:42','2025-11-16 22:47:50'),(218,'queen.linc','queen.linc@email.com','$2y$12$dddpaZaHvGTR81Axwy58SugVckc3suJDVVr88Q2i.chPb6Cf/C042','PATIENT',0,'2025-11-17 05:27:41',0,1,'2025-11-17 05:27:01','2025-11-17 05:27:41'),(219,'r219','kelvin.bozo@medconnect.com','$2y$12$mvBaL8ar53TL1LXEbqK4eeVOa8jPs922vF3dVcWRRR36uP0Dvhqx2','RECEPTIONIST',0,'2025-11-18 19:24:30',0,1,'2025-11-17 05:29:11','2025-11-18 19:24:30'),(220,'r220','ty.knox@medconnect.com','$2y$12$zF70lWRwVyQpywQZ71MVsenR5QknuWW6PWniQ4XLf5TrLNtUb4vCa','RECEPTIONIST',0,'2025-11-18 19:55:36',0,1,'2025-11-18 19:22:57','2025-11-18 19:55:36'),(221,'jim.ash','jim.ash@email.com','$2y$12$qrpX0qOIINBGIDvkFJnPWuiziD6LacMGreCjillSV1AtL67XGqi1u','PATIENT',0,'2025-11-18 20:51:15',0,1,'2025-11-18 20:51:02','2025-11-18 20:51:15'),(222,'d222','ty.me@medconnect.com','$2y$12$h.Y2rNSDAb4P8JLlWzP25ueZUXsACsLb95G4jtoXtU1NCGGjmR.Re','DOCTOR',0,'2025-11-18 21:08:31',0,1,'2025-11-18 20:53:04','2025-11-18 21:08:31'),(223,'justin.bieber','justin.bieber@email.com','$2y$12$SZAEnOqGUTVru90qY4aMQe...UpXXM8wjDSUpAciCyyIdNUO14RbC','PATIENT',0,'2025-11-19 06:08:08',0,1,'2025-11-19 06:07:19','2025-11-19 06:08:08'),(224,'t.do','t.do@gmail.com','$2y$12$2kWSzOUAPYHRIU.1XOGboO2PW0dJv7qcVBT7uJrVZbK41lh/3KnJK','PATIENT',0,'2025-11-19 18:48:28',0,1,'2025-11-19 06:08:41','2025-11-19 18:48:28'),(225,'jason.stathem','jason.stathem@email.com','$2y$12$gM.MO6nUJZbPS8FOQDYV1ulYnK5MYq9jP9qhLBNZFJHZJDbhdB/iO','PATIENT',0,'2025-11-19 08:14:31',0,1,'2025-11-19 08:11:24','2025-11-19 08:14:31'),(226,'elena.orozco','elena.orozco@email.com','$2y$12$XrC5jMiWyZfzyb4nIBqzEOLTqX0nbwm/fgbxYIp9zjo3B1Ow.tqza','PATIENT',0,'2025-11-24 20:07:11',0,1,'2025-11-19 22:32:44','2025-11-24 20:07:11'),(227,'d227','epluna@gmail.com','$2y$12$XFiVdrbWAclbqkaq.sQjPObjuFpsI5sxpadZt58YZXpAoiI6aZUza','DOCTOR',0,NULL,0,1,'2025-11-19 22:53:12','2025-11-19 22:53:12'),(228,'emaad9801','emaad980@email.com','$2y$12$Dy/ZMGOU0i.OA9Fi5PRO5OxM5crahDIhEnf1JbHJZ0KS3ZZT78hUW','PATIENT',0,'2025-11-19 22:57:44',0,1,'2025-11-19 22:57:24','2025-11-19 22:57:44'),(230,'d230','emaad.i@medconnect.com','$2y$12$fF8rezLu5Qg7t6yV3UDs5OTNUFkMeyN5gIf2QzV5vExTJpj5ygItG','DOCTOR',0,NULL,0,1,'2025-11-19 23:29:52','2025-11-19 23:29:52'),(231,'emaa','emaa@email.com','$2y$12$vofQf2TqwdduLGdak1K5HOM97tRDZtRaWLs4NeEdU6kLAS6z0T/ym','PATIENT',0,'2025-11-19 23:35:13',0,1,'2025-11-19 23:34:42','2025-11-19 23:35:13'),(232,'d232','kel@medconnect.com','$2y$12$BjviNCMOtuOCrxGoCICzm.IzR1ja2OjDbsI1hhbdAsPpfXjQDATzK','DOCTOR',0,NULL,0,1,'2025-11-21 18:19:30','2025-11-21 18:19:30');
 /*!40000 ALTER TABLE `user_account` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`medroot`@`%`*/ /*!50003 TRIGGER `trg_user_account_update` BEFORE UPDATE ON `user_account` FOR EACH ROW BEGIN
-IF NEW.user_id != OLD.user_id OR NEW.role != OLD.role THEN
-        IF NEW.role = 'PATIENT' THEN
-            IF NOT EXISTS (SELECT 1 FROM patient WHERE patient_id = NEW.user_id) THEN
-                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid patient_id for role PATIENT';
-            END IF;
-        ELSEIF NEW.role IN ('DOCTOR', 'NURSE', 'RECEPTIONIST', 'ADMIN') THEN
-            IF NOT EXISTS (SELECT 1 FROM staff WHERE staff_id = NEW.user_id) THEN
-                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Invalid staff_id for role';
-            END IF;
-        END IF;
-    END IF;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `user_account_backup`
@@ -1362,4 +1128,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-24 18:50:15
+-- Dump completed on 2025-11-24 14:17:30

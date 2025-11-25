@@ -15,7 +15,6 @@ if (empty($_SESSION['uid'])) {
 
 try {
     $conn = getDBConnection();
-    // $email = $_SESSION['email'] ?? '';
     $rows = executeQuery($conn, "SELECT n.nurse_id FROM nurse n WHERE n.staff_id =  ? LIMIT 1", 'i', [$_SESSION['uid']]);
     if (empty($rows)) {
         closeDBConnection($conn);
@@ -25,7 +24,6 @@ try {
     }
     $nurse_id = (int)$rows[0]['nurse_id'];
 
-    // Get work schedule for the nurse
     $sql = "SELECT 
                 ws.schedule_id,
                 ws.day_of_week,
@@ -48,7 +46,7 @@ try {
     $formattedSchedule = array_map(function ($row) {
         return [
             'day_of_week' => $row['day_of_week'],
-            'Day_of_week' => $row['day_of_week'], // Support both formats
+            'Day_of_week' => $row['day_of_week'], 
             'start_time' => $row['start_time'],
             'Start_time' => $row['start_time'],
             'end_time' => $row['end_time'],
@@ -69,7 +67,7 @@ try {
     echo json_encode([
         'success' => true,
         'data' => $formattedSchedule,
-        'schedule' => $formattedSchedule // Support both formats
+        'schedule' => $formattedSchedule
     ]);
 } catch (Exception $e) {
     if (isset($conn)) {

@@ -198,3 +198,14 @@
   color: #6b7280;
   font-size: 0.875rem;
 }
+
+.btn-icon-danger-confirm {
+  opacity: 1;
+  border-color: #ef4444;
+}
+
+.schedule-confirm-hint {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  color: #b91c1c;
+}

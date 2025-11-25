@@ -7,6 +7,7 @@ import OfficeSchedule from './OfficeSchedule';
 import PatientSearch from './PatientSearch';
 import AppointmentBooking from './AppointmentBooking';
 import PaymentProcessing from './PaymentProcessing';
+import ReceptionistProfile from './ReceptionistProfile';
 import './ReceptionistPortal.css';
 
 /**
@@ -31,6 +32,7 @@ function ReceptionistPortal() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [officeInfo, setOfficeInfo] = useState({ id: null, name: 'Loading...' });
+  
   
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -174,6 +176,7 @@ function ReceptionistPortal() {
           />
         )}
         
+        
         {currentPage === 'payment' && (
           <PaymentProcessing
             preSelectedAppointment={selectedAppointment}
@@ -185,6 +188,10 @@ function ReceptionistPortal() {
             officeId={officeInfo.id}
             officeName={officeInfo.name}
           />
+        )}
+
+        {currentPage === 'profile' && (
+          <ReceptionistProfile />
         )}
       </main>
     </div>

@@ -22,7 +22,7 @@ if (empty($rows)) {
 $nurse_id = (int)$rows[0]['nurse_id'];
 
 try {
-	$month = $_GET['month'] ?? date('Y-m'); // YYYY-MM
+	$month = $_GET['month'] ?? date('Y-m'); 
 	// get appointments within the month
 	$start = $month . '-01';
 	$end = date('Y-m-t', strtotime($start));

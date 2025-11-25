@@ -36,12 +36,34 @@ function PatientSearch({ onBookAppointment }) {
     emergencyPhone: ''
   });
   const [formErrors, setFormErrors] = useState({});
+  // Gender options loaded from server (codes_gender)
+  const [genderOptions, setGenderOptions] = useState([]);
 
   /**
    * Load initial patients on mount
    */
   useEffect(() => {
     handleSearch();
+  }, []);
+
+  // Load gender options for the create-patient form (uses admin endpoint already used by SignUp)
+  useEffect(() => {
+    let mounted = true;
+    const loadGenderOptions = async () => {
+      try {
+        const res = await fetch('/admin_api/users/get_form_options.php', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && Array.isArray(data.genders) && mounted) {
+          setGenderOptions(data.genders); // each item: { id, label }
+        }
+      } catch (err) {
+        console.error('Failed to load gender options:', err);
+      }
+    };
+
+    loadGenderOptions();
+    return () => { mounted = false; };
   }, []);
 
   /**
@@ -738,10 +760,18 @@ function PatientSearch({ onBookAppointment }) {
                         required
                       >
                         <option value="">Select gender</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                        <option value="prefer-not-to-say">Prefer not to say</option>
+                        {genderOptions.length > 0 ? (
+                          genderOptions.map(opt => (
+                            <option key={opt.id} value={String(opt.id)}>{opt.label}</option>
+                          ))
+                        ) : (
+                          // fallback to a few common options while the server options load
+                          <>
+                            <option value="1">Male</option>
+                            <option value="2">Female</option>
+                            <option value="5">Not Specified</option>
+                          </>
+                        )}
                       </select>
                       {formErrors.gender && (
                         <span className="error-text">{formErrors.gender}</span>

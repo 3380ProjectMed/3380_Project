@@ -5,39 +5,24 @@ import './PatientList.css';
 
 /**
  * PatientList Component
- * 
- * Displays a searchable list of all patients with detailed information
- * Features:
- * - Search by patient name or ID
- * - Patient details sidebar on row click
- * - Allergy highlighting (red for allergies, green for none)
- * - Recent activity and appointment history
- * - View Full Chart button navigates to clinical workspace
- * 
- * Props:
- * @param {Function} onPatientClick - Handler when patient is clicked (optional)
- * @param {Object} selectedPatient - Currently selected patient (optional)
- * @param {Function} setSelectedPatient - Set selected patient (optional)
- * @param {Function} setCurrentPage - Function to change page (from parent, e.g., DoctorPortal)
+ * @param {Function} onPatientClick 
+ * @param {Object} selectedPatient 
+ * @param {Function} setSelectedPatient
+ * @param {Function} setCurrentPage 
  */
 function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient, setSelectedPatient: externalSetSelectedPatient, setCurrentPage }) {
   const auth = useAuth();
-  // Local state for search and selected patient
   const [searchTerm, setSearchTerm] = useState('');
   const [localSelectedPatient, setLocalSelectedPatient] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  // Patients list comes from the API
   const [patients, setPatients] = useState([]);
 
-  // Use external state if provided, otherwise use local state
+
   const selectedPatient = externalSelectedPatient || localSelectedPatient;
   const setSelectedPatient = externalSetSelectedPatient || setLocalSelectedPatient;
 
-  /**
-   * Filter patients based on search term
-   * Searches in: name and patient ID
-   */
+
   const filteredPatients = useMemo(() => {
     const source = patients || [];
     if (!searchTerm.trim()) return source;
@@ -49,18 +34,13 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     );
   }, [searchTerm, patients]);
 
-  /**
-   * Load patients function - separated for reusability
-   * Uses the relative API path pattern consistent with other endpoints
-   */
+
   const loadPatients = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const staffId = auth.user.user_id; // staff_id = user_id in new schema
-      
-      // Using relative path to match your existing API pattern
+      const staffId = auth.user.user_id; 
       const response = await fetch(`/doctor_api/patients/get-all.php?staff_id=${staffId}`, {
         credentials: 'include'
       });
@@ -80,10 +60,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     }
   };
 
-  /**
-   * Load all patients when auth becomes available
-   * Follows the pattern from your appointments module
-   */
   useEffect(() => {
     if (auth.loading) return;
 
@@ -96,13 +72,12 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     loadPatients();
   }, [auth.user, auth.loading]);
 
-  // Search by ID using the API (if the input looks like an ID)
+
   const handleSearchKeyPress = async (e) => {
     if (e.key !== 'Enter') return;
     const q = searchTerm.trim();
     if (!q) return;
 
-    // If user typed an ID (P### or numeric), query the API get-by-id.php
     const isId = /^P?\d+$/i.test(q);
     if (isId) {
       setLoading(true);
@@ -125,12 +100,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     }
   };
 
-  /**
-   * Handle patient row click
-   * Opens patient details sidebar
-   */
   const handlePatientClick = async (patient) => {
-    // If the patient already has rich details, use it. Otherwise fetch by id.
     const hasDetails = patient && (Array.isArray(patient.medicalHistory) || patient.notes || patient.currentMedications);
     if (hasDetails) {
       setSelectedPatient(patient);
@@ -138,16 +108,15 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
       return;
     }
 
-    // Fetch full patient details from API
     setLoading(true);
     setError(null);
     try {
-      // Prefer the clinical detail endpoint which returns medicalHistory, medicationHistory, chronicConditions and currentMedications
-      // The clinical endpoint expects a numeric patient_id. Convert 'P001' -> 1
-      const numericId = parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
-      const res = await fetch(`/doctor_api/clinical/get-patient-details.php?patient_id=${numericId}`, { credentials: 'include' });
-      const payload = await res.json();
-      if (payload.success && payload.patient) {
+      const numericId = patient.patient_id || parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
+
+      if (numericId > 0) {
+        const res = await fetch(`/doctor_api/clinical/get-patient-details.php?patient_id=${numericId}`, { credentials: 'include' });
+        const payload = await res.json();
+        if (payload.success && payload.patient) {
         // Merge the lightweight row data we already have with the enriched details returned by the clinical endpoint
         const p = payload.patient;
         const visit = payload.visit || {};
@@ -174,18 +143,21 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
 
         setSelectedPatient(merged);
         if (onPatientClick) onPatientClick(merged);
+          } else {
+           
+          }
       } else {
-        // Fallback: try the patients get-by-id if clinical endpoint didn't return details
-        const fallback = await fetch(`/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id)}`, { credentials: 'include' });
+
+        const fallback = await fetch(`/doctor_api/patients/get-by-id.php?id=${encodeURIComponent(patient.id || '')}`, { credentials: 'include' });
         const fbPayload = await fallback.json();
         if (fbPayload.success && fbPayload.patient) {
-          // Add numeric patient_id
-          const numericId = parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
-          fbPayload.patient.patient_id = numericId;
+
+          const derivedNumericId = parseInt((patient.id || '').replace(/\D/g, ''), 10) || 0;
+          fbPayload.patient.patient_id = fbPayload.patient.patient_id || derivedNumericId;
           setSelectedPatient(fbPayload.patient);
           if (onPatientClick) onPatientClick(fbPayload.patient);
         } else {
-          setError(payload.error || fbPayload.error || 'Failed to load patient details');
+          setError(fbPayload.error || 'Failed to load patient details');
         }
       }
     } catch (err) {
@@ -196,39 +168,26 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
     }
   };
 
-  /**
-   * Handle View Full Chart button click
-   * Navigates to clinical workspace with patient data
-   */
   const handleViewFullChart = () => {
     if (!selectedPatient) return;
     
-    // If setCurrentPage is provided (from parent DoctorPortal), use it to navigate
     if (setCurrentPage && onPatientClick) {
-      // Pass patient to parent to set up clinical workspace
       onPatientClick(selectedPatient);
-      // Navigate to clinical page
       setCurrentPage('clinical');
     } else {
-      // Fallback: alert user (shouldn't happen if properly integrated)
       console.log('View Full Chart clicked for patient:', selectedPatient);
       alert('Clinical workspace navigation not configured. Please ensure setCurrentPage is passed as a prop.');
     }
   };
 
-  /**
-   * Close patient details sidebar
-   */
+
   const handleCloseSidebar = () => {
     setSelectedPatient(null);
   };
 
-  /**
-   * Format date for display
-   */
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    // if already a human-readable placeholder like 'No visits yet' return it
     if (isNaN(Date.parse(dateString))) return dateString;
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -239,10 +198,8 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
 
   return (
     <div className="patient-list">
-      {/* ===== HEADER ===== */}
       <h1 className="patient-list__title">My Patients</h1>
 
-      {/* ===== SEARCH BAR ===== */}
       <div className="patient-list__search">
         <Search className="patient-list__search-icon" />
         <input
@@ -265,7 +222,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
         )}
       </div>
 
-      {/* ===== PATIENTS TABLE ===== */}
       {loading && (
         <div className="patient-list__loading">Loading patients...</div>
       )}
@@ -298,7 +254,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
         {/* Table Body */}
         <div className="table-body">
           {filteredPatients.length === 0 ? (
-            // Empty state
             <div className="patient-list__empty">
               <Search size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
               <p>No patients found matching "{searchTerm}"</p>
@@ -310,7 +265,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
               </button>
             </div>
           ) : (
-            // Patient rows
             filteredPatients.map(patient => (
               <div 
                 key={patient.id}
@@ -345,10 +299,8 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
         </div>
       </div>
 
-      {/* ===== PATIENT DETAILS SIDEBAR ===== */}
       {selectedPatient && (
         <div className="patient-summary">
-          {/* Sidebar Header */}
           <div className="patient-summary__header">
             <h2 className="patient-summary__title">Patient Details</h2>
             <button 
@@ -360,9 +312,7 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
             </button>
           </div>
 
-          {/* Sidebar Content */}
           <div className="patient-summary__content">
-            {/* Basic Information */}
             <div className="patient-summary__section">
               <div className="patient-summary__field">
                 <span className="patient-summary__field-label">Patient ID:</span>
@@ -382,7 +332,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
               </div>
             </div>
 
-            {/* Contact Information */}
             <h3 className="patient-summary__section-title">
               <Mail size={20} style={{ display: 'inline', marginRight: '8px' }} />
               Contact Information
@@ -394,15 +343,8 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
                   {selectedPatient.email}
                 </a>
               </div>
-              {/* <div className="patient-summary__field">
-                <span className="patient-summary__field-label">Phone:</span>
-                <a href={`tel:${selectedPatient.phone}`} className="patient-summary__link">
-                  {selectedPatient.phone}
-                </a>
-              </div> */}
             </div>
 
-            {/* Allergies */}
             <h3 className="patient-summary__section-title">
               <AlertCircle size={20} style={{ display: 'inline', marginRight: '8px' }} />
               Allergies
@@ -417,7 +359,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
               )}
             </div>
 
-            {/* Chronic Conditions */}
             {selectedPatient.chronicConditions && selectedPatient.chronicConditions.length > 0 && (
               <>
                 <h3 className="patient-summary__section-title">
@@ -434,7 +375,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
               </>
             )}
 
-            {/* Current Medications */}
             {selectedPatient.currentMedications && selectedPatient.currentMedications.length > 0 && (
               <>
                 <h3 className="patient-summary__section-title">
@@ -452,7 +392,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
               </>
             )}
 
-            {/* Medical History */}
             {selectedPatient.medicalHistory && selectedPatient.medicalHistory.length > 0 && (
               <>
                 <h3 className="patient-summary__section-title">
@@ -473,8 +412,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
                 </div>
               </>
             )}
-
-            {/* Recent Activity */}
             <h3 className="patient-summary__section-title">
               <Calendar size={20} style={{ display: 'inline', marginRight: '8px' }} />
               Recent Activity
@@ -497,7 +434,6 @@ function PatientList({ onPatientClick, selectedPatient: externalSelectedPatient,
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="patient-summary__actions">
               <button 
                 className="btn-action btn-primary"

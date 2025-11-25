@@ -3,7 +3,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    //session_start();
 
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
@@ -12,13 +11,10 @@ try {
     }
 
     $conn = getDBConnection();
-
-    // Determine doctor_id: query param overrides, otherwise resolve from logged-in user
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
     } else {
-        $user_id = (int)$_SESSION['uid'];
-        // Azure: lowercase tables, lowercase columns in doctor
+        $user_id = (int) $_SESSION['uid'];
         $rows = executeQuery($conn, 'SELECT d.doctor_id 
                         FROM user_account ua
                         JOIN staff s ON ua.user_id = s.staff_id
@@ -31,7 +27,7 @@ try {
             echo json_encode(['success' => false, 'error' => 'No doctor associated with the logged-in user']);
             exit;
         }
-        $doctor_id = (int)$rows[0]['doctor_id'];
+        $doctor_id = (int) $rows[0]['doctor_id'];
     }
 
     $month = isset($_GET['month']) ? intval($_GET['month']) : intval(date('m'));
@@ -48,9 +44,6 @@ try {
         exit;
     }
 
-    // Get all appointments for the month
-    // appointment table has mixed case: Appointment_id, Patient_id, Doctor_id, Appointment_date
-    // patient, office, codes_allergies are all lowercase
     $sql = "SELECT 
                 a.Appointment_id,
                 a.Appointment_date,
@@ -59,11 +52,16 @@ try {
                 a.Reason_for_visit,
                 o.office_id,
                 o.name as office_name,
-                ca.allergies_text as allergies
+                (
+                    SELECT GROUP_CONCAT(ca2.allergies_text SEPARATOR ', ')
+                    FROM allergies_per_patient app2
+                    JOIN codes_allergies ca2 ON app2.allergy_id = ca2.allergies_code
+                    WHERE app2.patient_id = p.patient_id
+                ) as allergies
             FROM appointment a
             INNER JOIN patient p ON a.Patient_id = p.patient_id
             LEFT JOIN office o ON a.Office_id = o.office_id
-            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            
             WHERE a.Doctor_id = ?
             AND MONTH(a.Appointment_date) = ?
             AND YEAR(a.Appointment_date) = ?
@@ -76,6 +74,13 @@ try {
     $grouped = [];
     foreach ($appointments as $apt) {
         $date = date('Y-m-d', strtotime($apt['Appointment_date']));
+        try {
+            $dt = new DateTime($apt['Appointment_date']);
+            $dt->setTimezone(new DateTimeZone('America/Chicago'));
+            $date_chicago = $dt->format('Y-m-d');
+        } catch (Exception $e) {
+            $date_chicago = $date;
+        }
         if (!isset($grouped[$date])) {
             $grouped[$date] = [];
         }
@@ -90,7 +95,8 @@ try {
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
             'location' => $apt['office_name'],
             'office_id' => isset($apt['office_id']) ? intval($apt['office_id']) : null,
-            'allergies' => $apt['allergies'] ?: 'No Known Allergies'
+            'allergies' => $apt['allergies'] ?: 'No Known Allergies',
+            'date_only_chicago' => $date_chicago
         ];
     }
 

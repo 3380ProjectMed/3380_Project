@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Clock, User, Check, X, Edit, AlertCircle } from 'lucide-react';
 // Removed API import as we'll use fetch directly
 import './OfficeSchedule.css';
+import AddInsuranceModal from './AddInsuranceModal';
 
 /**
  * Helper function to format date as YYYY-MM-DD in local timezone
@@ -38,6 +39,11 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [loadingNurses, setLoadingNurses] = useState(false);
   
+  // Insurance modal state
+  const [showInsuranceModal, setShowInsuranceModal] = useState(false);
+  const [insurancePatient, setInsurancePatient] = useState(null);
+  const [validationToken, setValidationToken] = useState(null);
+  
   // Alert/notification state
   const [alertModal, setAlertModal] = useState({
     show: false,
@@ -54,44 +60,9 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     loadScheduleData();
   }, [selectedDate, officeId]);
 
-  /**
-   * Automatic status updates - runs instantly on load and every 30 seconds
-   * Updates Scheduled → Waiting → No-Show based on appointment time
-   */
-  useEffect(() => {
-    checkForStatusUpdates();
-    const statusUpdateInterval = setInterval(() => {
-      checkForStatusUpdates();
-    }, 30000); // Check every 30 seconds for near-instant updates
-    return () => clearInterval(statusUpdateInterval);
-  }, []);
-
-  /**
-   * Check for appointments that should be marked as Waiting or No-Show
-   */
-  const checkForStatusUpdates = async () => {
-    try {
-      const response = await fetch('/receptionist_api/appointments/update-no-shows.php', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      const data = await response.json();
-      
-      if (data.success && data.updated_count > 0) {
-        console.log(`Status updates: ${data.waiting_count} appointment(s) → Waiting, ${data.no_show_count} appointment(s) → No-Show`);
-        loadScheduleData();
-      }
-    } catch (err) {
-      console.error('Failed to check for status updates:', err);
-    }
-  };
-
   const loadScheduleData = async () => {
     try {
       setLoading(true);
-      
-      // Update appointment statuses first (non-blocking)
-      checkForStatusUpdates().catch(err => console.error('Status update failed:', err));
       
       // Get doctors for this office
       const doctorsResponse = await fetch(
@@ -158,11 +129,11 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       
       if (appointmentsResult.success) {
         // Convert appointments to booked slots lookup
-        // Filter out cancelled appointments so those slots become available
+        // Filter out cancelled and no-show appointments so those slots become available
         const slots = {};
         (appointmentsResult.appointments || []).forEach(apt => {
-          // Skip cancelled appointments - they don't block slots
-          if (apt.status === 'Cancelled' || apt.status === 'Canceled') {
+          // Skip cancelled and no-show appointments - they don't block slots
+          if (apt.status === 'Cancelled' || apt.status === 'Canceled' || apt.status === 'No-Show') {
             return;
           }
           
@@ -583,12 +554,27 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       // If insurance validation fails, stop here
       if (!result.success) {
         if (result.error_type === 'INSURANCE_WARNING' || result.error_type === 'INSURANCE_EXPIRED') {
+          // Show alert modal with option to add/edit insurance
+          const isExpired = result.error_type === 'INSURANCE_EXPIRED';
+          // Normalize patient fields from the appointment object (different endpoints use different casing)
+          const patientIdVal = selectedAppointment.Patient_id || selectedAppointment.patient_id || selectedAppointment.patientId || selectedAppointment.id || null;
+          const patientFirstVal = selectedAppointment.Patient_First || selectedAppointment.patient_first || selectedAppointment.first_name || (selectedAppointment.patient_name ? selectedAppointment.patient_name.split(' ')[0] : '') || '';
+          const patientLastVal = selectedAppointment.Patient_Last || selectedAppointment.patient_last || selectedAppointment.last_name || (selectedAppointment.patient_name ? selectedAppointment.patient_name.split(' ').slice(1).join(' ') : '') || '';
+
           setAlertModal({
             show: true,
             type: 'error',
             title: 'Cannot Check In - Insurance Issue',
-            message: result.message || result.error
+            message: result.message || result.error,
+            showAddInsurance: true,
+            insuranceButtonText: isExpired ? 'Edit Insurance' : 'Add Insurance',
+            insurancePatientData: {
+              Patient_id: patientIdVal,
+              Patient_First: patientFirstVal,
+              Patient_Last: patientLastVal
+            }
           });
+          if (result.validation_token) setValidationToken(result.validation_token);
         } else {
           setAlertModal({
             show: true,
@@ -609,6 +595,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
           title: 'Insurance Warning',
           message: result.insurance_warning
         });
+        if (result.validation_token) setValidationToken(result.validation_token);
       }
       
       // Insurance validation passed, now load nurses and show selection modal
@@ -666,7 +653,8 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         credentials: 'include',
         body: JSON.stringify({
           Appointment_id: selectedAppointment.appointment_id,
-          nurse_id: selectedNurse
+          nurse_id: selectedNurse,
+          validation_token: validationToken
         })
       });
       
@@ -692,6 +680,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         setShowNurseModal(false);
         setSelectedAppointment(null);
         setSelectedNurse(null);
+        setValidationToken(null);
         loadScheduleData();
       } else {
         setAlertModal({
@@ -903,6 +892,9 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
                     const status = getSlotStatus(doctor, hour, minute);
                     const isSelected = isSlotSelected(doctor.Doctor_id, hour, minute);
                     
+                    // Get appointment (if any) tied to this slot so we can render details
+                    const appointmentForThisSlot = getAppointmentForSlot(doctor.Doctor_id, hour, minute);
+
                     return (
                       <div
                         key={`${doctor.Doctor_id}-${hour}-${minute}`}
@@ -910,6 +902,8 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
                         onClick={() => handleSlotClick(doctor, hour, minute, status)}
                         title={
                           status === 'available' ? 'Click to select this time slot' :
+                          status === 'booked' && appointmentForThisSlot ?
+                            `${appointmentForThisSlot.patient_name} — Dr. ${appointmentForThisSlot.doctor_name} — ID: ${appointmentForThisSlot.appointment_id}` :
                           status === 'booked' ? 'This time slot is already booked' :
                           status === 'past' ? 'This time has passed' :
                           'Doctor not available at this time'
@@ -920,11 +914,21 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
                             <Check size={20} />
                           </div>
                         )}
-                        {status === 'available' && !isSelected && (
+
+                        {status === 'booked' && appointmentForThisSlot ? (
+                          <div className="booked-content">
+                            <div className="booked-patient" title={appointmentForThisSlot.patient_name}>
+                              {appointmentForThisSlot.patient_name}
+                            </div>
+                            <div className="booked-meta">
+                              Dr. {appointmentForThisSlot.doctor_name} • #{appointmentForThisSlot.appointment_id}
+                            </div>
+                          </div>
+                        ) : (status === 'available' && !isSelected && (
                           <div className="hover-indicator">
                             Click to select
                           </div>
-                        )}
+                        ))}
                       </div>
                     );
                   })}
@@ -1176,7 +1180,26 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             </div>
 
             <div className="modal-footer">
-              {alertModal.confirmAction ? (
+              {alertModal.showAddInsurance ? (
+                <>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setInsurancePatient(alertModal.insurancePatientData);
+                      setShowInsuranceModal(true);
+                      setAlertModal({ ...alertModal, show: false });
+                    }}
+                  >
+                    {alertModal.insuranceButtonText || 'Add Insurance'}
+                  </button>
+                  <button 
+                    className="btn btn-ghost"
+                    onClick={() => setAlertModal({ ...alertModal, show: false })}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : alertModal.confirmAction ? (
                 <>
                   <button 
                     className="btn btn-ghost" 
@@ -1209,6 +1232,22 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             </div>
           </div>
         </div>
+      )}
+
+      {/* ===== ADD INSURANCE MODAL ===== */}
+      {showInsuranceModal && insurancePatient && (
+        <AddInsuranceModal
+          patient={insurancePatient}
+          onClose={() => {
+            setShowInsuranceModal(false);
+            setInsurancePatient(null);
+          }}
+          onSuccess={() => {
+            setShowInsuranceModal(false);
+            setInsurancePatient(null);
+            loadSchedule(); // Refresh schedule to reflect updated insurance
+          }}
+        />
       )}
     </div>
   );

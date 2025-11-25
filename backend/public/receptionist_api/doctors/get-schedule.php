@@ -27,10 +27,8 @@ try {
 
     $conn = getDBConnection();
 
-    // Get the day of week for the given date
-    $dayOfWeek = date('l', strtotime($date)); // Monday, Tuesday, etc.
+    $dayOfWeek = date('l', strtotime($date));
 
-    // Get doctors and their schedules for this office on this day
     $sql = "SELECT DISTINCT 
                 d.doctor_id, 
                 s.first_name, 
@@ -54,18 +52,17 @@ try {
     $rows = executeQuery($conn, $sql, 'iss', [$officeId, $dayOfWeek, $date]);
 
     $schedules = array_map(function ($r) {
-        // Parse start and end times
         $startTime = null;
         $endTime = null;
         $startHour = 9;
         $endHour = 17;
-        
+
         if (!empty($r['start_time'])) {
             $startParts = explode(':', $r['start_time']);
             $startHour = (int)$startParts[0];
             $startTime = $r['start_time'];
         }
-        
+
         if (!empty($r['end_time'])) {
             $endParts = explode(':', $r['end_time']);
             $endHour = (int)$endParts[0];

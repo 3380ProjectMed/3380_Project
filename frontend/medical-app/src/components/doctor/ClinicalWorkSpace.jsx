@@ -6,14 +6,6 @@ import {
 } from 'lucide-react';
 import './ClinicalWorkSpace.css';
 
-/**
- * ClinicalWorkSpace Component
- * 
- * Can be initialized with either:
- * - appointmentId: For viewing/editing a specific appointment
- * - patientId: For viewing patient chart without specific appointment
- * - patient: Patient object with full details (from PatientList)
- */
 export default function ClinicalWorkSpace({ appointmentId, patientId, patient, onClose }) {
   const [patientData, setPatientData] = useState(null);
   const [notes, setNotes] = useState([]);
@@ -24,7 +16,13 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
   const [error, setError] = useState(null);
   const [alert, setAlert] = useState(null);
   const alertTimer = useRef(null);
-  
+  // Medical Condition management
+const [showConditionForm, setShowConditionForm] = useState(false);
+const [editingCondition, setEditingCondition] = useState(null);
+const [conditionForm, setConditionForm] = useState({
+  condition_name: '',
+  diagnosis_date: new Date().toISOString().split('T')[0]
+});
   // Treatment management
   const [treatmentCatalog, setTreatmentCatalog] = useState([]);
   const [selectedTreatments, setSelectedTreatments] = useState([]);
@@ -55,7 +53,6 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
   });
 
   useEffect(() => {
-    // If patient object is provided directly (from PatientList), use it
     if (patient) {
       setPatientData({
         success: true,
@@ -76,12 +73,16 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       });
       setLoading(false);
       fetchTreatmentCatalog();
+      const pid = patient.patient_id || patient.id;
+      if (pid) {fetchPrescriptions(pid, 0)
+        fetchMedicalConditions(pid);
+      };
       if (patient.patient_id || patient.id) {
         fetchNotesByPatientId(patient.patient_id || patient.id);
       }
     } 
     // If appointmentId is provided, fetch by appointment
-    else if (appointmentId) {
+    if (appointmentId) {
       fetchPatientDetails();
       fetchNotes();
       fetchTreatmentCatalog();
@@ -92,9 +93,9 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       fetchNotesByPatientId(patientId);
       fetchTreatmentCatalog();
     }
+   
   }, [appointmentId, patientId, patient]);
 
-  // Alert helper: { message, type }
   const showAlert = (message, type = 'success', timeout = 4000) => {
     setAlert({ message, type });
     if (alertTimer.current) clearTimeout(alertTimer.current);
@@ -144,9 +145,14 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
           setPresentIllnesses(data.visit.present_illnesses);
         }
         
-        if (data.treatments && Array.isArray(data.treatments)) {
+        if (data.treatments && Array.isArray(data.treatments) && data.treatments.length > 0) {
           setSelectedTreatments(data.treatments);
+        } else {
+          setSelectedTreatments([]);
         }
+        const pid = data.patient?.patient_id || data.patient?.id;
+        const aid = data.visit?.appointment_id || appointmentId || 0;
+        if (pid) fetchPrescriptions(pid, aid);
       } else if (data.has_visit === false) {
         await fetchBasicPatientInfo();
       } else {
@@ -190,9 +196,13 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
           setPresentIllnesses(data.visit.present_illnesses);
         }
         
-        if (data.treatments && Array.isArray(data.treatments)) {
+        if (data.treatments && Array.isArray(data.treatments) && data.treatments.length > 0) {
           setSelectedTreatments(data.treatments);
+        } else {
+          setSelectedTreatments([]);
         }
+        const pid = data.patient?.patient_id || data.patient?.id || patientId;
+        if (pid) fetchPrescriptions(pid, 0);
       } else {
         throw new Error(data.error || 'Failed to load patient data');
       }
@@ -289,7 +299,16 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        setNotes(data.notes || []);
+        const incoming = data.notes || [];
+        const sorted = [...incoming].sort((a, b) => {
+          const getTime = (n) => {
+            const d = n?.visit_date || n?.date || n?.created_at || n?.note_date || null;
+            const t = d ? Date.parse(d) : NaN;
+            return isNaN(t) ? 0 : t;
+          };
+          return getTime(b) - getTime(a);
+        });
+        setNotes(sorted);
       }
     } catch (err) {
       console.error('Error fetching notes:', err);
@@ -310,7 +329,16 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        setNotes(data.notes || []);
+        const incoming = data.notes || [];
+        const sorted = [...incoming].sort((a, b) => {
+          const getTime = (n) => {
+            const d = n?.visit_date || n?.date || n?.created_at || n?.note_date || null;
+            const t = d ? Date.parse(d) : NaN;
+            return isNaN(t) ? 0 : t;
+          };
+          return getTime(b) - getTime(a);
+        });
+        setNotes(sorted);
       }
     } catch (err) {
       console.error('Error fetching notes:', err);
@@ -337,6 +365,89 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       console.error('Error fetching treatment catalog:', err);
     }
   };
+
+  // Fetch prescriptions for patient (and optional appointment) and attach to patientData.patient.currentMedications
+  const fetchPrescriptions = async (pid, aid = 0) => {
+    try {
+      if (!pid) return;
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) ? import.meta.env.VITE_API_BASE : '';
+      let url = `${API_BASE}/doctor_api/clinical/get-prescription.php?patient_id=${pid}`;
+      if (aid) url += `&appointment_id=${aid}`;
+
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) {
+        console.error('Failed to fetch prescriptions:', response.status);
+        return;
+      }
+
+      const data = await response.json();
+      if (!data.success) return;
+
+      const mapped = (data.prescriptions || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        dosage: p.dosage,
+        frequency: p.frequency,
+        route: p.route,
+        start_date: p.start_date,
+        end_date: p.end_date,
+        refills_allowed: p.refills_allowed,
+        instructions: p.instructions,
+        prescribed_by: p.prescribed_by
+      }));
+
+      setPatientData(prev => {
+        if (!prev) return prev;
+        const patientObj = { ...(prev.patient || {}) };
+        patientObj.currentMedications = mapped;
+        return { ...prev, patient: patientObj };
+      });
+    } catch (err) {
+      console.error('Error fetching prescriptions:', err);
+    }
+  };
+
+  const fetchMedicalConditions = async (pid) => {
+  try {
+    if (!pid) return;
+    const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+      ? import.meta.env.VITE_API_BASE 
+      : '';
+    
+    const response = await fetch(
+      `${API_BASE}/doctor_api/clinical/get-medical-conditions.php?patient_id=${pid}`,
+      { credentials: 'include' }
+    );
+    
+    if (!response.ok) {
+      console.error('Failed to fetch medical conditions:', response.status);
+      return;
+    }
+
+    const data = await response.json();
+    if (!data.success) return;
+
+    const mapped = (data.conditions || []).map(c => ({
+      condition_id: c.condition_id,
+      condition_name: c.condition_name,
+      diagnosis_date: c.diagnosis_date
+    }));
+
+    setPatientData(prev => {
+      if (!prev) return prev;
+      const patientObj = { ...(prev.patient || {}) };
+      patientObj.medicalHistory = mapped.map(c => ({
+        condition: c.condition_name,
+        diagnosis_date: c.diagnosis_date,
+        condition_id: c.condition_id
+      }));
+      patientObj.chronicConditions = mapped.map(c => c.condition_name);
+      return { ...prev, patient: patientObj };
+    });
+  } catch (err) {
+    console.error('Error fetching medical conditions:', err);
+  }
+};
 
   const handleSaveDiagnosis = async () => {
     if (!diagnosis.trim()) {
@@ -380,7 +491,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        // show a short, friendly notification and clear the input fields
+        // show a notification and clear the input fields
         showAlert('Save successfully', 'success');
         setDiagnosis('');
         setPresentIllnesses('');
@@ -430,14 +541,16 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
 
   const handleSaveTreatments = async () => {
     if (!patientData?.visit?.visit_id) {
-      showAlert('Patient must check in before adding treatments', 'error');
+      showAlert('Patient must check in before managing treatments', 'error');
       return;
     }
 
-    if (selectedTreatments.length === 0) {
-      showAlert('Please add at least one treatment', 'error');
-      return;
-    }
+    // Allow saving even with 0 treatments (to delete all)
+    const confirmMessage = selectedTreatments.length === 0
+      ? 'This will remove all treatments from this visit. Continue?'
+      : null;
+    
+    // proceed without blocking browser confirmation dialog
 
     try {
       setSaving(true);
@@ -461,14 +574,9 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       const data = await response.json();
       
       if (data.success) {
-        // Clear the selected treatments after successful save
-        setSelectedTreatments([]);
-        
-        // Show success message with details if available
-        const message = data.message || 'Treatments saved successfully!';
+        const message = data.message || 'Treatments updated successfully!';
         showAlert(message, 'success');
         
-        // Refresh patient data to show treatments in previous notes
         if (appointmentId) {
           fetchPatientDetails();
           fetchNotes();
@@ -484,6 +592,47 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
       showAlert('Error saving treatments: ' + err.message, 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteTreatment = async (tpv_id, treatmentName) => {
+    // proceed without blocking browser confirmation dialog
+
+    try {
+      const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+        ? import.meta.env.VITE_API_BASE 
+        : '';
+      
+      const response = await fetch(
+        `${API_BASE}/doctor_api/clinical/delete-treatment.php`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tpv_id: tpv_id })
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.success) {
+        showAlert(data.message || 'Treatment removed successfully', 'success');
+        
+        if (appointmentId) {
+          fetchNotes();
+          fetchPatientDetails();
+        } else if (patientId) {
+          fetchNotesByPatientId(patientId);
+          fetchPatientDetailsByPatientId();
+        } else if (patient) {
+          fetchNotesByPatientId(patient.patient_id || patient.id);
+        }
+      } else {
+        throw new Error(data.error || 'Failed to delete treatment');
+      }
+    } catch (err) {
+      console.error('Error deleting treatment:', err);
+      showAlert('Error deleting treatment: ' + err.message, 'error');
     }
   };
 
@@ -558,9 +707,7 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
   };
 
   const handleDeletePrescription = async (prescriptionId) => {
-    if (!confirm('Are you sure you want to delete this prescription?')) {
-      return;
-    }
+    // proceed without blocking browser confirmation dialog
 
     try {
       const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
@@ -611,6 +758,111 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
     });
     setShowPrescriptionForm(true);
   };
+  const handleSaveCondition = async () => {
+  if (!conditionForm.condition_name.trim()) {
+    showAlert('Please enter condition name', 'error');
+    return;
+  }
+
+  const currentPatientId = patientData?.patient?.id || patientData?.visit?.patient_id || patientId;
+  if (!currentPatientId) {
+    showAlert('Cannot save condition: No patient ID available', 'error');
+    return;
+  }
+
+  try {
+    setSaving(true);
+    const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+      ? import.meta.env.VITE_API_BASE 
+      : '';
+    
+    const payload = {
+      ...conditionForm,
+      patient_id: currentPatientId,
+      condition_id: editingCondition?.condition_id || 0
+    };
+
+    const response = await fetch(
+      `${API_BASE}/doctor_api/clinical/save-medical-condition.php`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showAlert(editingCondition ? 'Condition updated successfully!' : 'Condition added successfully!', 'success');
+      setShowConditionForm(false);
+      setEditingCondition(null);
+      setConditionForm({
+        condition_name: '',
+        diagnosis_date: new Date().toISOString().split('T')[0]
+      });
+      
+      // Reload medical conditions
+      fetchMedicalConditions(currentPatientId);
+    } else {
+      throw new Error(data.error || 'Failed to save condition');
+    }
+  } catch (err) {
+    console.error('Error saving condition:', err);
+    showAlert('Error saving condition: ' + err.message, 'error');
+  } finally {
+    setSaving(false);
+  }
+};
+
+const handleDeleteCondition = async (conditionId) => {
+  // proceed without blocking browser confirmation dialog
+
+  const currentPatientId = patientData?.patient?.id || patientData?.visit?.patient_id || patientId;
+
+  console.log('Deleting condition:', { conditionId, currentPatientId }); // DEBUG
+
+  try {
+    const API_BASE = (import.meta.env && import.meta.env.VITE_API_BASE) 
+      ? import.meta.env.VITE_API_BASE 
+      : '';
+    
+    const response = await fetch(
+      `${API_BASE}/doctor_api/clinical/delete-medical-condition.php`,
+      {
+        method: 'POST', // Keep as POST for consistency
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          condition_id: conditionId,
+          patient_id: currentPatientId
+        })
+      }
+    );
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showAlert('Condition deleted successfully!', 'success');
+      fetchMedicalConditions(currentPatientId);
+    } else {
+      throw new Error(data.error || 'Failed to delete condition');
+    }
+  } catch (err) {
+    console.error('Error deleting condition:', err);
+    showAlert('Error deleting condition: ' + err.message, 'error');
+  }
+};
+
+const handleEditCondition = (item) => {
+  setEditingCondition(item);
+  setConditionForm({
+    condition_name: item.condition,
+    diagnosis_date: item.diagnosis_date || new Date().toISOString().split('T')[0]
+  });
+  setShowConditionForm(true);
+};
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
@@ -795,27 +1047,46 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
             )}
           </div>
 
-          {/* Medical History */}
-          <div className="info-card collapsible">
-            <div className="card-header" onClick={() => toggleSection('medicalHistory')}>
-              <h3><History size={20} /> Medical History</h3>
-              {expandedSections.medicalHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-            </div>
-            {expandedSections.medicalHistory && (
-              <div className="history-list">
-                {patientInfo?.medicalHistory && patientInfo.medicalHistory.length > 0 ? (
-                  patientInfo.medicalHistory.map((item, idx) => (
-                    <div key={idx} className="history-item">
-                      <div className="history-condition">{item.condition}</div>
-                      <div className="history-date">{item.diagnosis_date || 'Date unknown'}</div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="empty-state">No medical history available</p>
-                )}
+{/* Medical History */}
+<div className="info-card collapsible">
+  <div className="card-header" onClick={() => toggleSection('medicalHistory')}>
+    <h3><History size={20} /> Medical History</h3>
+    {expandedSections.medicalHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+  </div>
+  {expandedSections.medicalHistory && (
+    <div>
+      <button 
+        onClick={() => setShowConditionForm(true)} 
+        className="btn-add-small"
+        style={{ marginBottom: '10px' }}
+      >
+        <Plus size={16} /> Add Condition
+      </button>
+      <div className="history-list">
+        {patientInfo?.medicalHistory && patientInfo.medicalHistory.length > 0 ? (
+          patientInfo.medicalHistory.map((item, idx) => (
+            <div key={idx} className="history-item">
+              <div>
+                <div className="history-condition">{item.condition}</div>
+                <div className="history-date">{item.diagnosis_date || 'Date unknown'}</div>
               </div>
-            )}
-          </div>
+              <div className="med-actions">
+                <button onClick={() => handleEditCondition(item)} className="btn-icon">
+                  <Edit2 size={14} />
+                </button>
+                <button onClick={() => handleDeleteCondition(item.condition_id)} className="btn-icon-danger">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="empty-state">No medical history available</p>
+        )}
+      </div>
+    </div>
+  )}
+</div>
 
           {/* Medication History */}
           <div className="info-card collapsible">
@@ -940,18 +1211,17 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                 )}
               </div>
               
-              {selectedTreatments.length > 0 && (
-                <div className="notes-actions">
-                  <button 
-                    onClick={handleSaveTreatments} 
-                    className="btn-save"
-                    disabled={saving}
-                  >
-                    <Save size={18} />
-                    {saving ? 'Saving...' : 'Save Treatments'}
-                  </button>
-                </div>
-              )}
+              {/* Always show Save button */}
+              <div className="notes-actions">
+                <button 
+                  onClick={handleSaveTreatments} 
+                  className="btn-save"
+                  disabled={saving}
+                >
+                  <Save size={18} />
+                  {saving ? 'Saving...' : 'Save Treatments'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -1066,6 +1336,54 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
             </div>
           )}
 
+          {/* Medical Condition Form Modal */}
+{showConditionForm && (
+  <div className="modal-overlay" onClick={() => setShowConditionForm(false)}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <h3>{editingCondition ? 'Edit Medical Condition' : 'New Medical Condition'}</h3>
+        <button onClick={() => {
+          setShowConditionForm(false);
+          setEditingCondition(null);
+        }} className="btn-close">
+          <X size={20} />
+        </button>
+      </div>
+      <div className="modal-body">
+        <div className="form-group">
+          <label>Condition Name *</label>
+          <input 
+            type="text"
+            value={conditionForm.condition_name}
+            onChange={(e) => setConditionForm({...conditionForm, condition_name: e.target.value})}
+            placeholder="e.g., Type 2 Diabetes, Hypertension"
+          />
+        </div>
+        <div className="form-group">
+          <label>Diagnosis Date</label>
+          <input 
+            type="date"
+            value={conditionForm.diagnosis_date}
+            onChange={(e) => setConditionForm({...conditionForm, diagnosis_date: e.target.value})}
+          />
+        </div>
+      </div>
+      <div className="modal-footer">
+        <button onClick={() => {
+          setShowConditionForm(false);
+          setEditingCondition(null);
+        }} className="btn-secondary">
+          Cancel
+        </button>
+        <button onClick={handleSaveCondition} className="btn-save" disabled={saving}>
+          <Save size={18} />
+          {saving ? 'Saving...' : 'Save Condition'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
           {/* Previous Notes */}
           <div className="notes-card collapsible">
             <div className="card-header" onClick={() => toggleSection('previousNotes')}>
@@ -1099,13 +1417,15 @@ export default function ClinicalWorkSpace({ appointmentId, patientId, patient, o
                           <ul className="treatment-list">
                             {note.treatments.map((treatment, tIdx) => (
                               <li key={tIdx} className="treatment-list-item">
-                                <span className="treatment-name">{treatment.treatment_name}</span>
-                                {treatment.quantity > 1 && (
-                                  <span className="treatment-quantity">×{treatment.quantity}</span>
-                                )}
-                                {treatment.notes && (
-                                  <span className="treatment-notes"> - {treatment.notes}</span>
-                                )}
+                                <div className="treatment-info">
+                                  <span className="treatment-name">{treatment.treatment_name}</span>
+                                  {treatment.quantity > 1 && (
+                                    <span className="treatment-quantity">×{treatment.quantity}</span>
+                                  )}
+                                  {treatment.notes && (
+                                    <span className="treatment-notes"> - {treatment.notes}</span>
+                                  )}
+                                </div>
                               </li>
                             ))}
                           </ul>

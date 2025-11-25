@@ -47,11 +47,6 @@ register_shutdown_function(function () {
 });
 
 debug_log('Starting session');
-// session_start([
-//   'cookie_httponly' => true,
-//   'cookie_secure' => !empty($_SERVER['HTTPS']),
-//   'cookie_samesite' => 'Lax',
-// ]);
 header('Content-Type: application/json');
 
 debug_log('Session UID: ' . ($_SESSION['uid'] ?? 'NOT SET'));

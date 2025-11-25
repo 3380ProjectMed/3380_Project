@@ -8,8 +8,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    // Start session and require that the user is logged in
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -18,7 +16,6 @@ try {
 
     $user_id = (int) $_SESSION['uid'];
 
-    // Validate year and month parameters
     if (!isset($_GET['year']) || !isset($_GET['month'])) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'year and month parameters are required']);
@@ -28,23 +25,19 @@ try {
     $year = (int) $_GET['year'];
     $month = (int) $_GET['month'];
 
-    // Validate month range
     if ($month < 1 || $month > 12) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid month. Must be between 1 and 12']);
         exit;
     }
 
-    // Calculate start and end dates for the month
     $start_date = sprintf('%04d-%02d-01', $year, $month);
 
-    // Get last day of month
-    $last_day = date('t', strtotime($start_date)); // 't' gives number of days in month
+    $last_day = date('t', strtotime($start_date));
     $end_date = sprintf('%04d-%02d-%02d', $year, $month, $last_day);
 
     $conn = getDBConnection();
 
-    // Get receptionist's office from work_schedule
     try {
         $rows = executeQuery($conn, '
             SELECT ws.office_id
@@ -67,8 +60,6 @@ try {
 
     $office_id = (int) $rows[0]['office_id'];
 
-    // Fetch appointments for the entire month
-    // Only show appointments where the doctor has a work schedule at this office
     $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
@@ -102,7 +93,6 @@ try {
 
     closeDBConnection($conn);
 
-    // Return appointment data
     echo json_encode([
         'success' => true,
         'appointments' => $appointments,

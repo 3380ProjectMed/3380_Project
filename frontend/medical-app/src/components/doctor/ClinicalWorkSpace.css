@@ -1,4 +1,4 @@
-/* ========== CLINICAL WORKSPACE - UPDATED DESIGN ========== */
+
 
 /* Root Variables */
 :root {
@@ -22,7 +22,7 @@
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
-/* ===== HEADER ===== */
+/* HEADER */
 .workspace-header {
   background: white;
   border-bottom: 2px solid var(--border);
@@ -81,17 +81,17 @@
   transform: scale(1.05);
 }
 
-/* ===== MAIN CONTENT LAYOUT ===== */
+/* MAIN CONTENT LAYOUT */
 .workspace-content {
   display: grid;
-  grid-template-columns: 450px 1fr;
+  grid-template-columns: 500px 1fr;
   gap: 1.5rem;
   padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
 }
 
-/* ===== COLUMNS ===== */
+/* COLUMNS */
 .workspace-column {
   display: flex;
   flex-direction: column;
@@ -133,7 +133,7 @@
   background: var(--third-color);
 }
 
-/* ===== INFO CARDS ===== */
+/* INFO CARDS */
 .info-card {
   background: white;
   border-radius: 0.75rem;
@@ -203,7 +203,7 @@
   font-size: 0.95rem;
 }
 
-/* ===== INFO GRID ===== */
+/* INFO GRID */
 .info-grid {
   display: flex;
   flex-direction: column;
@@ -254,7 +254,7 @@
   color: white;
 }
 
-/* ===== VITALS ===== */
+/* VITALS */
 .vitals-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -308,7 +308,7 @@
   margin-top: 0.5rem;
 }
 
-/* ===== MEDICATIONS ===== */
+/*  MEDICATIONS */
 .medications-list {
   display: flex;
   flex-direction: column;
@@ -386,7 +386,7 @@
   border-color: var(--error);
 }
 
-/* ===== CONDITIONS & HISTORY ===== */
+/* CONDITIONS & HISTORY */
 .conditions-list ul {
   list-style: none;
   padding: 0;
@@ -454,7 +454,7 @@
   color: var(--gray);
 }
 
-/* ===== NOTES CARDS (RIGHT COLUMN) ===== */
+/*NOTES CARDS (RIGHT COLUMN)*/
 .notes-card {
   background: white;
   border-radius: 0.75rem;
@@ -504,7 +504,7 @@
   opacity: 0.6;
 }
 
-/* ===== TREATMENTS SECTION ===== */
+/*  TREATMENTS SECTION  */
 .card-header-with-action {
   display: flex;
   justify-content: space-between;

@@ -1,24 +1,15 @@
 <?php
-
-/**
- * Get patient visit details - DATE-SPECIFIC VERSION
- * Now includes treatments from treatment_per_visit and treatment_catalog
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 header('Content-Type: application/json');
-
 try {
-    //session_start();
-
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
         exit;
     }
 
-    // Handle IDs - strip "A" prefix from appointment IDs
     $visit_id = isset($_GET['visit_id']) ? intval($_GET['visit_id']) : 0;
 
     $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
@@ -41,7 +32,6 @@ try {
 
     $conn = getDBConnection();
 
-    // BASE QUERY for patient_visit data
     $baseSelect = "SELECT 
                 pv.visit_id,
                 pv.appointment_id,
@@ -66,7 +56,12 @@ try {
                 CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                 p.dob,
                 p.blood_type,
-                ca.allergies_text as allergies,
+                (
+                    SELECT GROUP_CONCAT(ca2.allergies_text SEPARATOR ', ')
+                    FROM allergies_per_patient app2
+                    JOIN codes_allergies ca2 ON app2.allergy_id = ca2.allergies_code
+                    WHERE app2.patient_id = p.patient_id
+                ) as allergies,
                 cg.gender_text as gender,
                 CONCAT(s.first_name, ' ', s.last_name) as doctor_name,
                 CONCAT(s.first_name, ' ', s.last_name) as nurse_name,
@@ -74,7 +69,7 @@ try {
 
     $baseFrom = " FROM patient_visit pv
                 LEFT JOIN patient p ON pv.patient_id = p.patient_id
-                LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+                
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
                 LEFT JOIN staff d ON pv.doctor_id = d.staff_id
                 LEFT JOIN nurse n ON pv.nurse_id = n.nurse_id
@@ -83,9 +78,7 @@ try {
 
     $rows = [];
 
-    // MAIN LOGIC: If appointment_id provided, match by BOTH appointment_id AND date
     if ($appointment_id > 0) {
-        // Step 1: Get appointment details first
         $apptSql = "SELECT 
                     a.Appointment_id,
                     a.Patient_id,
@@ -93,6 +86,7 @@ try {
                     a.Doctor_id,
                     a.Reason_for_visit,
                     a.Office_id,
+                    a.Status,
                     CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                     p.dob,
                     p.blood_type,
@@ -101,8 +95,9 @@ try {
                     CONCAT(s.first_name, ' ', s.last_name) as doctor_name,
                     o.name as office_name
                 FROM appointment a
+                LEFT JOIN allergies_per_patient app ON a.Patient_id = app.patient_id
                 LEFT JOIN patient p ON a.Patient_id = p.patient_id
-                LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+                LEFT JOIN codes_allergies ca ON app.allergy_id = ca.allergies_code
                 LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
                 LEFT JOIN staff s ON a.Doctor_id = s.staff_id
                 LEFT JOIN office o ON a.Office_id = o.office_id
@@ -124,20 +119,32 @@ try {
         $patient_id = $appt['Patient_id'];
         $appointment_date = $appt['Appointment_date'];
 
-        // Step 2: Look for patient_visit that matches appointment_id
-        // Note: We search by appointment_id only, not date, because the nurse may have
-        // created the visit record and we want to find it regardless of exact date/time match
         $visitSql = $baseSelect . ", a.Appointment_date, a.Reason_for_visit as appointment_reason"
             . $baseFrom
             . " LEFT JOIN appointment a ON pv.appointment_id = a.Appointment_id
-                    WHERE pv.appointment_id = ?
-                    ORDER BY pv.date DESC
-                    LIMIT 1";
+            WHERE pv.appointment_id = ?
+            ORDER BY pv.visit_id DESC
+            LIMIT 1";
         $rows = executeQuery($conn, $visitSql, 'i', [$appointment_id]);
 
-        // Step 3: If no patient_visit found for this appointment date
+        if (!empty($rows)) {
+            error_log('[get-patient-details] Found visit: visit_id=' . $rows[0]['visit_id'] .
+                ', patient_id=' . $rows[0]['patient_id'] .
+                ', nurse_id=' . $rows[0]['nurse_id'] .
+                ', bp=' . ($rows[0]['blood_pressure'] ?? 'null'));
+        } else {
+            error_log('[get-patient-details] No visit found for appointment_id=' . $appointment_id);
+
+            $debugSql = "SELECT visit_id, appointment_id, patient_id, nurse_id, blood_pressure 
+                 FROM patient_visit 
+                 WHERE appointment_id = ?";
+            $debugRows = executeQuery($conn, $debugSql, 'i', [$appointment_id]);
+            error_log('[get-patient-details] Direct query found ' . count($debugRows) . ' visits');
+            if (!empty($debugRows)) {
+                error_log('[get-patient-details] First visit: ' . json_encode($debugRows[0]));
+            }
+        }
         if (empty($rows)) {
-            // Calculate age
             $age = null;
             if (!empty($appt['dob'])) {
                 try {
@@ -145,11 +152,12 @@ try {
                     $now = new DateTime();
                     $age = $now->diff($dob)->y;
                 } catch (Exception $e) {
-                    // Keep age as null
+
                 }
             }
 
-            // Return appointment data WITHOUT patient_visit
+            $appointmentStatus = $appt['Status'] ?? 'Unknown Status';
+
             $response = [
                 'success' => true,
                 'has_visit' => false,
@@ -161,14 +169,15 @@ try {
                     'date' => $appt['Appointment_date'],
                     'reason' => $appt['Reason_for_visit'] ?? '',
                     'office_name' => $appt['office_name'],
-                    'doctor_name' => $appt['doctor_name']
+                    'doctor_name' => $appt['doctor_name'],
+                    'status' => $appointmentStatus
                 ],
                 'visit' => [
                     'visit_id' => null,
                     'appointment_id' => $appt['Appointment_id'],
                     'patient_id' => $patient_id,
                     'date' => $appt['Appointment_date'],
-                    'status' => 'Scheduled',
+                    'status' => $appointmentStatus,
                     'reason' => $appt['Reason_for_visit'] ?? '',
                     'department' => null,
                     'diagnosis' => null,
@@ -212,11 +221,9 @@ try {
             exit;
         }
     } elseif ($visit_id > 0) {
-        // Direct visit_id lookup
         $sql = $baseSelect . $baseFrom . " WHERE pv.visit_id = ?";
         $rows = executeQuery($conn, $sql, 'i', [$visit_id]);
     } else {
-        // Patient_id only - get most recent visit
         $sql = $baseSelect . $baseFrom
             . " WHERE pv.patient_id = ?
                 ORDER BY pv.date DESC
@@ -224,7 +231,6 @@ try {
         $rows = executeQuery($conn, $sql, 'i', [$patient_id]);
     }
 
-    // No visit found
     if (empty($rows)) {
         http_response_code(404);
         echo json_encode([
@@ -235,11 +241,20 @@ try {
         closeDBConnection($conn);
         exit;
     }
-
-    // Patient visit EXISTS - return full data
     $visit = $rows[0];
 
-    // Calculate age
+    try {
+        $apptStatusRows = executeQuery($conn, 'SELECT Status FROM appointment WHERE Appointment_id = ? LIMIT 1', 'i', [$visit['appointment_id']]);
+        $appointment_status = !empty($apptStatusRows) ? $apptStatusRows[0]['Status'] : null;
+    } catch (Exception $e) {
+        $appointment_status = null;
+    }
+
+    $computed_visit_status = $visit['status'] ?? null;
+    if (empty($computed_visit_status) && !empty($appointment_status)) {
+        $computed_visit_status = $appointment_status;
+    }
+
     $age = null;
     if (!empty($visit['dob'])) {
         try {
@@ -247,7 +262,6 @@ try {
             $now = new DateTime();
             $age = $now->diff($dob)->y;
         } catch (Exception $e) {
-            // Keep age as null
         }
     }
 
@@ -258,8 +272,8 @@ try {
             'visit_id' => $visit['visit_id'],
             'appointment_id' => $visit['appointment_id'],
             'patient_id' => $visit['patient_id'],
-            'date' => $visit['date'],
-            'status' => $visit['status'],
+            'date' => $appt['Appointment_date'],
+            'status' => $appointment_status,
             'reason' => $visit['reason_for_visit'] ?? $visit['appointment_reason'] ?? '',
             'department' => $visit['department'],
             'diagnosis' => $visit['diagnosis'],
@@ -295,10 +309,8 @@ try {
         ]
     ];
 
-    // Fetch treatments for this visit
     fetchVisitTreatments($conn, $visit['visit_id'], $response);
 
-    // Fetch additional patient data
     fetchPatientData($conn, $visit['patient_id'], $response);
 
     closeDBConnection($conn);
@@ -313,9 +325,7 @@ try {
     ]);
 }
 
-/**
- * Fetch treatments for a specific visit
- */
+
 function fetchVisitTreatments($conn, $visit_id, &$response)
 {
     try {
@@ -353,12 +363,8 @@ function fetchVisitTreatments($conn, $visit_id, &$response)
     }
 }
 
-/**
- * Helper function to fetch patient medical data
- */
 function fetchPatientData($conn, $patient_id, &$response)
 {
-    // Fetch medical conditions (chronic conditions)
     try {
         $mc_sql = "SELECT condition_name, diagnosis_date FROM medical_condition WHERE patient_id = ? ORDER BY diagnosis_date DESC";
         $mcs = executeQuery($conn, $mc_sql, 'i', [$patient_id]);
@@ -377,7 +383,6 @@ function fetchPatientData($conn, $patient_id, &$response)
         error_log("Error fetching conditions: " . $e->getMessage());
     }
 
-    // Fetch medication history
     try {
         $medhist_sql = "SELECT drug_name, duration_and_frequency_of_drug_use FROM medication_history WHERE patient_id = ?";
         $meds_h = executeQuery($conn, $medhist_sql, 'i', [$patient_id]);
@@ -393,7 +398,6 @@ function fetchPatientData($conn, $patient_id, &$response)
         error_log("Error fetching medication history: " . $e->getMessage());
     }
 
-    // Fetch current prescriptions
     try {
         $rx_sql = "SELECT 
                    p.prescription_id, 

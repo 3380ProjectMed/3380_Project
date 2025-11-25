@@ -36,7 +36,7 @@ try {
     $stats['appointments_this_month'] = $result[0]['count'];
 
     // Active users
-    $result = executeQuery($conn, 'SELECT COUNT(*) as count FROM user_account WHERE is_active = 1');
+    $result = executeQuery($conn, "SELECT COUNT(*) as count FROM user_account WHERE user_account.`role` <> 'Patient' AND user_account.is_active = 1");
     $stats['active_users'] = $result[0]['count'];
 
     // Pending appointments (today)
@@ -56,7 +56,7 @@ try {
     // Revenue today (from PatientVisit)
     $result = executeQuery(
         $conn,
-        'SELECT COALESCE(SUM(payment), 0) as total FROM patient_visit WHERE DATE(Date) = CURRENT_DATE'
+        'SELECT COALESCE(SUM(payment), 0) as total FROM patient_visit WHERE DATE(start_at) = CURRENT_DATE'
     );
     $stats['revenue_today'] = floatval($result[0]['total']);
 

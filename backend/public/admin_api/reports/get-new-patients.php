@@ -19,7 +19,7 @@ function bindParams(mysqli_stmt $stmt, string $types, array $params): void
 }
 
 try {
-    // ── Auth check ─────────────────────────────────────────────────────────────
+    // Auth check 
     if (empty($_SESSION['uid']) || $_SESSION['role'] !== 'ADMIN') {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Admin access required']);
@@ -28,7 +28,7 @@ try {
 
     $conn = getDBConnection();
 
-    // ── Params ────────────────────────────────────────────────────────────────
+    // Params
     $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-d', strtotime('-30 days'));
     $end_date   = isset($_GET['end_date'])   ? $_GET['end_date']   : date('Y-m-d');
     $group_by   = isset($_GET['group_by'])   ? $_GET['group_by']   : 'week';
@@ -41,7 +41,6 @@ try {
     $office_id = !empty($_GET['office_id']) && $_GET['office_id'] !== 'all' ? (int)$_GET['office_id'] : null;
     $doctor_id = !empty($_GET['doctor_id']) && $_GET['doctor_id'] !== 'all' ? (int)$_GET['doctor_id'] : null;
 
-    // ── Period expression for trend grouping ──────────────────────────────────
     switch ($group_by) {
         case 'month':
             $periodExpr = "DATE_FORMAT(a.Appointment_date, '%Y-%m-01')";
@@ -55,7 +54,6 @@ try {
             break;
     }
 
-    // Base types/params used for date/office/doctor filters
     $types  = 'ss';
     $params = [$start_date . ' 00:00:00', $end_date . ' 23:59:59'];
 
@@ -68,58 +66,99 @@ try {
         $params[] = $doctor_id;
     }
 
-    // =========================================================================
     // 1. DOCTOR PERFORMANCE SUMMARY
-    // =========================================================================
     $doctorSql = "SELECT
-                        d.doctor_id,
-                        CONCAT(s.first_name, ' ', s.last_name) AS doctor_name,
-                        COUNT(DISTINCT CASE 
-                            WHEN a.Appointment_date = (
-                                SELECT MIN(a2.Appointment_date)
-                                FROM appointment a2
-                                WHERE a2.Patient_id = a.Patient_id
-                                AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                            )
-                            AND a.Status NOT IN ('Cancelled', 'No-Show')
-                            THEN a.Patient_id 
-                        END) AS new_patients_acquired,
+            d.doctor_id,
+            CONCAT(s.first_name, ' ', s.last_name) AS doctor_name,
+            d.specialty,
 
-                        COUNT(DISTINCT a.Patient_id) AS total_patients_seen,
-                        
-                        SUM(CASE 
-                            WHEN a.Appointment_date = (
-                                SELECT MIN(a2.Appointment_date)
-                                FROM appointment a2
-                                WHERE a2.Patient_id = a.Patient_id
-                                AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                            )
-                            AND a.Status NOT IN ('Cancelled', 'No-Show')
-                            THEN 1 ELSE 0 
-                        END) AS new_patient_appointments,
-                        
-                        COUNT(DISTINCT CASE
-                            WHEN a.Appointment_date = (
-                                SELECT MIN(a2.Appointment_date)
-                                FROM appointment a2
-                                WHERE a2.Patient_id = a.Patient_id
-                                AND a2.Status NOT IN ('Cancelled', 'No-Show')
-                            )
-                            AND (
-                                SELECT COUNT(*)
-                                FROM appointment a3
-                                WHERE a3.Patient_id = a.Patient_id
-                                AND a3.Status NOT IN ('Cancelled', 'No-Show')
-                            ) >= 2
-                            THEN a.Patient_id
-                        END) AS retained_patients,
-                        
-                        SUM(CASE WHEN a.Status = 'Completed' THEN 1 ELSE 0 END) AS total_completed
-                        
-                    FROM appointment a
-                    JOIN doctor d ON d.doctor_id = a.Doctor_id
-                    JOIN staff s ON s.staff_id = d.staff_id
-                    WHERE a.Appointment_date BETWEEN ? AND ?";
+            -- 1) NEW TO PRACTICE (credit ONLY primary care docs)
+            COUNT(
+            DISTINCT CASE 
+                WHEN d.specialty IN (1,2,3,4) -- family, GP, internal, peds
+                AND a.Appointment_date = (
+                    SELECT MIN(a2.Appointment_date)
+                    FROM appointment a2
+                    WHERE a2.Patient_id = a.Patient_id
+                    AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                )
+                AND a.Status NOT IN ('Cancelled', 'No-Show')
+                THEN a.Patient_id 
+            END
+            ) AS new_patients_acquired,
+
+            -- total unique patients this doctor actually saw in this period
+            COUNT(DISTINCT CASE  
+                WHEN a.Status NOT IN ('Cancelled', 'No-Show') 
+                THEN a.Patient_id 
+            END) AS total_patients_seen,
+
+            SUM(CASE 
+                WHEN a.Appointment_date = (
+                    SELECT MIN(a2.Appointment_date)
+                    FROM appointment a2
+                    WHERE a2.Patient_id = a.Patient_id
+                    AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                )
+                AND a.Status NOT IN ('Cancelled', 'No-Show')
+                THEN 1 ELSE 0 
+            END) AS new_patient_appointments,
+            
+            COUNT(
+            DISTINCT CASE
+                WHEN d.specialty IN (1,2,3,4)
+                AND a.Appointment_date = (
+                    SELECT MIN(a2.Appointment_date)
+                    FROM appointment a2
+                    WHERE a2.Patient_id = a.Patient_id
+                    AND a2.Status NOT IN ('Cancelled', 'No-Show')
+                )
+                AND (
+                    SELECT COUNT(*)
+                    FROM appointment a3
+                    WHERE a3.Patient_id = a.Patient_id
+                    AND a3.Status NOT IN ('Cancelled', 'No-Show')
+                ) >= 2
+                THEN a.Patient_id
+            END
+            ) AS retained_patients,
+
+        SUM(CASE WHEN a.Status = 'Completed' THEN 1 ELSE 0 END) AS total_completed,
+
+        -- 3) NEW TO THIS DOCTOR (works for ALL docs, including specialties)
+        COUNT(
+        DISTINCT CASE 
+            WHEN a.Appointment_date = (
+                SELECT MIN(a2.Appointment_date)
+                FROM appointment a2
+                WHERE a2.Patient_id = a.Patient_id
+                  AND a2.Doctor_id  = a.Doctor_id  
+                  AND a2.Status NOT IN ('Cancelled', 'No-Show')
+            )
+            AND a.Status NOT IN ('Cancelled', 'No-Show')
+            THEN a.Patient_id
+        END
+        ) AS new_patients_for_doctor,
+
+        -- 4) RETAINED WITH THIS DOCTOR
+        COUNT(
+        DISTINCT CASE 
+            WHEN (
+                SELECT COUNT(*)
+                FROM appointment a3
+                WHERE a3.Patient_id = a.Patient_id
+                  AND a3.Doctor_id  = a.Doctor_id
+                  AND a3.Status NOT IN ('Cancelled', 'No-Show')
+            ) >= 2
+            THEN a.Patient_id
+        END
+        ) AS retained_patients_for_doctor
+
+        FROM appointment a
+        JOIN doctor d ON d.doctor_id = a.Doctor_id
+        JOIN staff  s ON s.staff_id   = d.staff_id
+        WHERE a.Appointment_date BETWEEN ? AND ?";
+
 
     if ($office_id !== null) {
         $doctorSql .= " AND a.Office_id = ?";
@@ -128,7 +167,7 @@ try {
         $doctorSql .= " AND a.Doctor_id = ?";
     }
 
-    $doctorSql .= " GROUP BY d.doctor_id, doctor_name
+    $doctorSql .= " GROUP BY d.doctor_id, doctor_name, d.specialty
                     ORDER BY new_patients_acquired DESC";
 
     $stmt = $conn->prepare($doctorSql);
@@ -140,25 +179,20 @@ try {
     $result            = $stmt->get_result();
     $doctorPerformance = $result->fetch_all(MYSQLI_ASSOC);
 
-    // Calculate retention and avg visits
     foreach ($doctorPerformance as &$doc) {
-        $newPatients = (int)$doc['new_patients_acquired'];
-        $retained    = (int)$doc['retained_patients'];
-
-        $doc['retention_rate'] = $newPatients > 0
-            ? round(($retained / $newPatients) * 100, 1)
+        $panelSize = (int)$doc['total_patients_seen'];
+        $retainedForDoctor = (int)$doc['retained_patients_for_doctor'];
+        $doc['retention_rate'] = $panelSize > 0
+            ? round(($retainedForDoctor / $panelSize) * 100, 1)
             : 0;
 
-        $totalSeen = (int)$doc['total_patients_seen'];
-        $doc['avg_visits_per_patient'] = $totalSeen > 0
-            ? round((int)$doc['total_completed'] / $totalSeen, 1)
+        $doc['avg_visits_per_patient'] = $panelSize > 0
+            ? round((int)$doc['total_completed'] / $panelSize, 1)
             : 0;
     }
     unset($doc);
 
-    // =========================================================================
     // 2. TREND DATA (New Patients Over Time by Doctor)
-    // =========================================================================
     $trendSql = "SELECT
                     $periodExpr AS period_start,
                     d.doctor_id,
@@ -210,9 +244,7 @@ try {
     }
     unset($row);
 
-    // =========================================================================
     // 3. OFFICE BREAKDOWN
-    // =========================================================================
     $officeSql = "SELECT
                         o.office_id,
                         o.name AS office_name,
@@ -250,9 +282,7 @@ try {
     $result3        = $stmt3->get_result();
     $officeBreakdown = $result3->fetch_all(MYSQLI_ASSOC);
 
-    // =========================================================================
-    // 3b. BOOKING METHOD BREAKDOWN
-    // =========================================================================
+    // BOOKING METHOD BREAKDOWN
     $bookingSql = "SELECT
                         a.method,
                         COUNT(DISTINCT CASE 
@@ -300,9 +330,7 @@ try {
         }
     }
 
-    // =========================================================================
     // 4. SUMMARY METRICS
-    // =========================================================================
     $totalNewPatients      = array_sum(array_column($doctorPerformance, 'new_patients_acquired'));
     $totalRetained         = array_sum(array_column($doctorPerformance, 'retained_patients'));
     $avgRetentionRate      = $totalNewPatients > 0 ? round(($totalRetained / $totalNewPatients) * 100, 1) : 0;

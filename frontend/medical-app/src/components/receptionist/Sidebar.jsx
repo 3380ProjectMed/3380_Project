@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Calendar, Users, CreditCard, LogOut, Clipboard } from 'lucide-react';
+import { Home, Calendar, Users, CreditCard, LogOut, Clipboard, UserCircle } from 'lucide-react';
 import './Sidebar.css';
 
 /**
@@ -48,6 +48,12 @@ function Sidebar({ currentPage, setCurrentPage, onLogout, officeName, officeId }
       label: 'Payments', 
       icon: CreditCard,
       description: 'Record Copayments'
+    },
+    { 
+      id: 'profile', 
+      label: 'My Profile', 
+      icon: UserCircle,
+      description: 'View Account Info'
     },
   ];
 

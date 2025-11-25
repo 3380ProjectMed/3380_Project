@@ -9,8 +9,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    // Start session and require that the user is logged in
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -41,17 +39,19 @@ try {
     $nurse_id = (int)$input['nurse_id'];
     $user_id = (int)$_SESSION['uid'];
     
-    // Check if this is validation-only mode
     $validate_only = isset($input['validate_only']) && $input['validate_only'] === true;
 
-    // Optional: allow forcing check-in despite warnings (not errors)
     $force_checkin = isset($input['force']) && $input['force'] === true;
+
+    $validation_token = isset($input['validation_token']) ? $input['validation_token'] : null;
+    $acknowledged_validation = false;
 
     $conn = getDBConnection();
 
-    // Verify receptionist has access to this appointment (same office)
-    $verifySql = "SELECT a.Appointment_id, a.Office_id, a.Patient_id, a.Doctor_id
+    $verifySql = "SELECT a.Appointment_id, a.Office_id, a.Patient_id, a.Doctor_id,
+                         p.first_name, p.last_name
                   FROM appointment a
+                  JOIN patient p ON a.Patient_id = p.patient_id
                   JOIN user_account ua ON ua.user_id = ?
                   JOIN staff s ON ua.email = s.staff_email
                   JOIN work_schedule ws ON ws.staff_id = s.staff_id AND ws.office_id = a.Office_id
@@ -69,85 +69,114 @@ try {
     $patient_id = $verifyResult[0]['Patient_id'];
     $office_id = $verifyResult[0]['Office_id'];
     $doctor_id = $verifyResult[0]['Doctor_id'];
+    $patient_first = $verifyResult[0]['first_name'];
+    $patient_last = $verifyResult[0]['last_name'];
     
-    // If validate_only mode, check insurance directly without creating patient_visit
     if ($validate_only) {
+        $conn->begin_transaction();
         try {
-            // Query to check patient insurance status (same logic as trigger)
-            $insuranceCheckSql = "
-                SELECT 
-                    pi.id,
-                    pi.expiration_date,
-                    CASE
-                        WHEN pi.expiration_date IS NULL THEN 'ACTIVE'
-                        WHEN pi.expiration_date < CURDATE() THEN 'EXPIRED'
-                        WHEN pi.expiration_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'EXPIRING_SOON'
-                        ELSE 'ACTIVE'
-                    END AS status,
-                    ip.plan_name,
-                    ipy.name AS payer_name,
-                    DATEDIFF(pi.expiration_date, CURDATE()) AS days_remaining
-                FROM patient_insurance pi
-                LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
-                LEFT JOIN insurance_payer ipy ON ip.payer_id = ipy.payer_id
-                WHERE pi.patient_id = ?
-                  AND pi.is_primary = 1
-                  AND pi.effective_date <= CURDATE()
-                ORDER BY pi.effective_date DESC
-                LIMIT 1
-            ";
-            
-            $insuranceResult = executeQuery($conn, $insuranceCheckSql, 'i', [$patient_id]);
-            
-            // Case 1: No insurance found
-            if (empty($insuranceResult)) {
-                closeDBConnection($conn);
-                http_response_code(422);
-                echo json_encode([
-                    'success' => false,
-                    'error_type' => 'INSURANCE_WARNING',
-                    'error_code' => 'NO_INSURANCE',
-                    'error' => 'Patient has no active insurance on file',
-                    'message' => 'Patient has no active insurance on file. Please verify insurance information before proceeding with check-in.',
-                    'patient_id' => $patient_id,
-                    'requires_update' => true
-                ]);
-                exit;
+            $conn->query("SET @insurance_warning = NULL");
+
+            if (!empty($validation_token) && isset($_SESSION['checkin_validation'][$appointment_id])) {
+                $stored = $_SESSION['checkin_validation'][$appointment_id];
+                if ($stored['token'] === $validation_token && (time() - ($stored['time'] ?? 0) <= 600)) {
+                    $acknowledged_validation = true;
+                    unset($_SESSION['checkin_validation'][$appointment_id]);
+                }
             }
-            
-            $insuranceStatus = $insuranceResult[0]['status'];
-            
-            // Case 2: Insurance is expired
-            if ($insuranceStatus === 'EXPIRED') {
-                closeDBConnection($conn);
-                http_response_code(422);
-                echo json_encode([
-                    'success' => false,
-                    'error_type' => 'INSURANCE_EXPIRED',
-                    'error_code' => 'EXPIRED_INSURANCE',
-                    'error' => 'Patient insurance has expired',
-                    'message' => 'Patient insurance has expired. Please update insurance information before check-in.',
-                    'patient_id' => $patient_id,
-                    'requires_update' => true
-                ]);
-                exit;
-            }
-            
-            // Insurance validation passed
+
+            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, nurse_id, office_id, start_at, insurance_policy_id_used)
+                              VALUES (?, ?, ?, NULL, ?, NOW(), NULL)";
+            executeQuery($conn, $insertVisitSql, 'iiii', [$appointment_id, $patient_id, $doctor_id, $office_id]);
+
+            $warningResult = $conn->query("SELECT @insurance_warning AS warning");
+            $warningRow = $warningResult->fetch_assoc();
+            $insuranceWarning = $warningRow['warning'] ?? null;
+
+            $conn->rollback();
             closeDBConnection($conn);
-            echo json_encode([
+
+            $response = [
                 'success' => true,
                 'message' => 'Insurance validation passed',
                 'validation_only' => true
-            ]);
+            ];
+
+            if (!empty($insuranceWarning)) {
+                try {
+                    $token = bin2hex(random_bytes(16));
+                } catch (Exception $e) {
+                    $token = uniqid('val_', true);
+                }
+
+                if (!isset($_SESSION['checkin_validation'])) {
+                    $_SESSION['checkin_validation'] = [];
+                }
+                $_SESSION['checkin_validation'][$appointment_id] = [
+                    'token' => $token,
+                    'warning' => $insuranceWarning,
+                    'time' => time()
+                ];
+
+                $response['insurance_warning'] = $insuranceWarning;
+                $response['warning_type'] = 'INSURANCE_EXPIRING_SOON';
+                $response['validation_token'] = $token;
+            }
+
+            echo json_encode($response);
             exit;
             
         } catch (Exception $validateEx) {
+            $conn->rollback();
             closeDBConnection($conn);
+            
+            $errorMsg = $validateEx->getMessage();
+            $mysqlError = isset($validateEx->errorCode) ? $validateEx->errorCode : null;
+            
+            if ($mysqlError === 1644 || strpos($errorMsg, 'INSURANCE_WARNING') !== false || strpos($errorMsg, 'INSURANCE_EXPIRED') !== false) {
+                if (strpos($errorMsg, 'INSURANCE_WARNING') !== false) {
+                    http_response_code(422);
+                    echo json_encode([
+                        'success' => false,
+                        'error_type' => 'INSURANCE_WARNING',
+                        'error_code' => 'NO_INSURANCE',
+                        'error' => 'Patient has no active insurance on file',
+                        'message' => $errorMsg,
+                        'patient' => [
+                            'Patient_id' => $patient_id,
+                            'Patient_First' => $patient_first,
+                            'Patient_Last' => $patient_last
+                        ],
+                        'requires_update' => true,
+                        'validation_only' => true
+                    ]);
+                    exit;
+                } elseif (strpos($errorMsg, 'INSURANCE_EXPIRED') !== false) {
+                    http_response_code(422);
+                    echo json_encode([
+                        'success' => false,
+                        'error_type' => 'INSURANCE_EXPIRED',
+                        'error_code' => 'EXPIRED_INSURANCE',
+                        'error' => 'Patient insurance has expired',
+                        'message' => $errorMsg,
+                        'patient' => [
+                            'Patient_id' => $patient_id,
+                            'Patient_First' => $patient_first,
+                            'Patient_Last' => $patient_last
+                        ],
+                        'requires_update' => true,
+                        'validation_only' => true
+                    ]);
+                    exit;
+                }
+            }
+            
+            
             http_response_code(500);
             echo json_encode([
                 'success' => false,
-                'error' => 'Failed to validate insurance: ' . $validateEx->getMessage()
+                'error' => 'Failed to validate insurance: ' . $errorMsg,
+                'validation_only' => true
             ]);
             exit;
         }
@@ -156,82 +185,103 @@ try {
     $conn->begin_transaction();
 
     try {
-        // Clear any previous insurance warning
         $conn->query("SET @insurance_warning = NULL");
 
-        // Check if patient_visit record exists
+        if (!empty($validation_token) && isset($_SESSION['checkin_validation'][$appointment_id])) {
+            $stored = $_SESSION['checkin_validation'][$appointment_id];
+            if ($stored['token'] === $validation_token && (time() - ($stored['time'] ?? 0) <= 600)) {
+                $acknowledged_validation = true;
+                unset($_SESSION['checkin_validation'][$appointment_id]);
+            }
+        }
+
+        
+    $checkVisitSql = "SELECT visit_id FROM patient_visit WHERE appointment_id = ?";
         $checkVisitSql = "SELECT visit_id FROM patient_visit WHERE appointment_id = ?";
         $existingVisit = executeQuery($conn, $checkVisitSql, 'i', [$appointment_id]);
 
         if (empty($existingVisit)) {
-            // Create new patient_visit record
-            // The trigger will validate insurance automatically
-            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, nurse_id, office_id, start_at)
-                              VALUES (?, ?, ?, ?, ?, NOW())";
+            $insertVisitSql = "INSERT INTO patient_visit (appointment_id, patient_id, doctor_id, nurse_id, office_id, start_at, insurance_policy_id_used)
+                              VALUES (?, ?, ?, ?, ?, NOW(), NULL)";
 
             try {
-                executeQuery($conn, $insertVisitSql, 'iiiii', [$appointment_id, $patient_id, $doctor_id, $nurse_id, $office_id]);
                 
-            } catch (Exception $insertEx) {
-                // Check if this is an insurance-related error from the trigger
-                $errorMsg = $insertEx->getMessage();
-                $mysqlError = $conn->errno;
-
-                // Parse insurance errors from trigger
-                if ($mysqlError === 1644) { // SIGNAL SQLSTATE error
-                    // Check for specific insurance error codes
-                    if (strpos($errorMsg, 'INSURANCE_WARNING') !== false) {
-                        // Error code 9001: No insurance found
+                $nurseToUse = null;
+                if ($nurse_id > 0) {
+                    $nurseCheck = executeQuery($conn, 'SELECT nurse_id FROM nurse WHERE nurse_id = ? LIMIT 1', 'i', [$nurse_id]);
+                    if (empty($nurseCheck)) {
+                        
                         $conn->rollback();
                         closeDBConnection($conn);
-                        http_response_code(422); // Unprocessable Entity
+                        http_response_code(400);
+                        echo json_encode([
+                            'success' => false,
+                            'error' => 'Invalid nurse_id provided',
+                            'nurse_id' => $nurse_id
+                        ]);
+                        exit;
+                    }
+                    $nurseToUse = $nurse_id;
+                }
+                
+                executeQuery($conn, $insertVisitSql, 'iiiii', [$appointment_id, $patient_id, $doctor_id, $nurseToUse, $office_id]);
+
+            } catch (Exception $insertEx) {
+                
+                $errorMsg = $insertEx->getMessage();
+                $mysqlError = isset($insertEx->errorCode) ? $insertEx->errorCode : null;
+
+                    if ($mysqlError === 1644 || strpos($errorMsg, 'INSURANCE_WARNING') !== false || strpos($errorMsg, 'INSURANCE_EXPIRED') !== false) {
+                    $conn->rollback();
+                    closeDBConnection($conn);
+                    
+                    if (strpos($errorMsg, 'INSURANCE_WARNING') !== false) {
+                        
+                        http_response_code(422);
                         echo json_encode([
                             'success' => false,
                             'error_type' => 'INSURANCE_WARNING',
                             'error_code' => 'NO_INSURANCE',
-                            'error' => 'Patient has no active insurance on file',
-                            'message' => 'Patient has no active insurance on file. Please verify insurance information before proceeding with check-in.',
-                            'patient_id' => $patient_id,
+                            'message' => $errorMsg,
+                            'patient' => [
+                                'Patient_id' => $patient_id,
+                                'Patient_First' => $patient_first,
+                                'Patient_Last' => $patient_last
+                            ],
                             'requires_update' => true
                         ]);
                         exit;
                     } elseif (strpos($errorMsg, 'INSURANCE_EXPIRED') !== false) {
-                        // Error code 9002: Insurance expired
-                        $conn->rollback();
-                        closeDBConnection($conn);
-                        http_response_code(422); // Unprocessable Entity
+                        
+                        http_response_code(422);
                         echo json_encode([
                             'success' => false,
                             'error_type' => 'INSURANCE_EXPIRED',
                             'error_code' => 'EXPIRED_INSURANCE',
-                            'error' => 'Patient insurance has expired',
-                            'message' => 'Patient insurance has expired. Please update insurance information before check-in.',
-                            'patient_id' => $patient_id,
+                            'message' => $errorMsg,
+                            'patient' => [
+                                'Patient_id' => $patient_id,
+                                'Patient_First' => $patient_first,
+                                'Patient_Last' => $patient_last
+                            ],
                             'requires_update' => true
                         ]);
                         exit;
                     }
                 }
 
-                // If it's not an insurance error, re-throw
                 throw $insertEx;
             }
         } else {
-            // Update existing record
-            // Note: The trigger only fires on INSERT, not UPDATE
-            // So we need to manually check insurance for updates
             $updateVisitSql = "UPDATE patient_visit 
                               SET start_at = NOW()
                               WHERE appointment_id = ?";
             executeQuery($conn, $updateVisitSql, 'i', [$appointment_id]);
         }
 
-        // Check for insurance warnings (expiring soon)
         $warningResult = $conn->query("SELECT @insurance_warning AS warning");
         $warningRow = $warningResult->fetch_assoc();
         $insuranceWarning = $warningRow['warning'] ?? null;
-
-        // Update appointment status to Checked-in
         $updateApptSql = "UPDATE appointment 
                          SET Status = 'Checked-in'
                          WHERE Appointment_id = ? AND Status NOT IN ('Completed', 'Cancelled', 'No-Show')";
@@ -240,19 +290,16 @@ try {
         $conn->commit();
         closeDBConnection($conn);
 
-        // Prepare response
         $response = [
             'success' => true,
             'message' => 'Patient checked in successfully',
             'check_in_time' => date('Y-m-d H:i:s')
         ];
 
-        // Add insurance warning if present
-        if (!empty($insuranceWarning)) {
+        if (!empty($insuranceWarning) && !$acknowledged_validation && !$force_checkin) {
             $response['insurance_warning'] = $insuranceWarning;
             $response['warning_type'] = 'INSURANCE_EXPIRING_SOON';
 
-            // Parse the warning message for structured data
             if (preg_match('/expire in (\d+) days/', $insuranceWarning, $matches)) {
                 $response['days_until_expiry'] = (int)$matches[1];
             }

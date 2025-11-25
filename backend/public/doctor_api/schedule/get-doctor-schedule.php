@@ -1,9 +1,4 @@
 <?php
-
-/**
- * Get doctor's work schedule
- */
-
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
@@ -14,7 +9,6 @@ try {
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
     } else {
-        //session_start();
         if (!isset($_SESSION['uid'])) {
             http_response_code(401);
             echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -39,8 +33,6 @@ try {
         $doctor_id = (int) $rows[0]['doctor_id'];
     }
 
-    // Get doctor's work schedule with office locations
-    // work_schedule now stores staff_id (not doctor_id). join through doctor table
     $sql = "SELECT 
                 ws.days AS day_date,
                 ws.day_of_week,

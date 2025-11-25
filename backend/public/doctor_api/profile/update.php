@@ -1,11 +1,4 @@
 <?php
-
-/**
- * Update doctor profile
- * Accepts JSON body with optional fields: firstName, lastName, email, phone, licenseNumber
- * Updates `staff` for identity fields and `doctor` for phone.
- */
-
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
@@ -25,8 +18,6 @@ try {
     }
 
     $conn = getDBConnection();
-
-    // Resolve requested doctor_id and enforce role-based restrictions
     $requested_doctor_id = null;
     if (isset($input['doctor_id']))
         $requested_doctor_id = intval($input['doctor_id']);
@@ -42,17 +33,14 @@ try {
     }
 
     if ($requested_doctor_id !== null) {
-        // If a doctor requests, they may only update their own profile
         if ($_SESSION['role'] === 'DOCTOR' && $logged_in_doctor_id !== $requested_doctor_id) {
             closeDBConnection($conn);
             http_response_code(403);
             echo json_encode(['success' => false, 'error' => 'Doctors may only update their own profile']);
             exit;
         }
-        // Admins/receptionists are allowed to update other doctors
         $doctor_id = $requested_doctor_id;
     } else {
-        // No doctor_id provided: if logged-in doctor, use their id; otherwise require doctor_id
         if ($_SESSION['role'] === 'DOCTOR') {
             if (!$logged_in_doctor_id) {
                 closeDBConnection($conn);
@@ -69,7 +57,6 @@ try {
         }
     }
 
-    // Fetch staff_id for this doctor
     $rows = executeQuery($conn, 'SELECT staff_id FROM doctor WHERE doctor_id = ? LIMIT 1', 'i', [$doctor_id]);
     if (empty($rows)) {
         closeDBConnection($conn);
@@ -79,7 +66,6 @@ try {
     }
     $staff_id = (int) $rows[0]['staff_id'];
 
-    // Prepare updates: staff fields and doctor fields separately
     $staffUpdates = [];
     $staffParams = [];
     $staffTypes = '';
@@ -114,7 +100,6 @@ try {
         $doctorTypes .= 's';
     }
 
-    // Execute staff update if needed
     if (!empty($staffUpdates)) {
         $sql = 'UPDATE staff SET ' . implode(', ', $staffUpdates) . ' WHERE staff_id = ?';
         $staffParams[] = $staff_id;
@@ -128,7 +113,6 @@ try {
         $stmt->close();
     }
 
-    // Execute doctor update if needed
     if (!empty($doctorUpdates)) {
         $sql = 'UPDATE doctor SET ' . implode(', ', $doctorUpdates) . ' WHERE doctor_id = ?';
         $doctorParams[] = $doctor_id;
@@ -142,7 +126,6 @@ try {
         $stmt->close();
     }
 
-    // Return updated profile (reuse same shape as get.php)
     $sql = "SELECT 
                 d.doctor_id,
                 d.staff_id,

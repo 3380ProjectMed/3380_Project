@@ -1,8 +1,5 @@
 <?php
 
-/**
- * Get all patients for a doctor
- */
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -13,13 +10,12 @@ try {
 
     $conn = getDBConnection();
 
-    // Determine doctor_id: query param overrides, otherwise resolve from logged-in user
+
     $doctor_id = null;
     if (isset($_GET['doctor_id'])) {
         $doctor_id = intval($_GET['doctor_id']);
         error_log("Using doctor_id from query param: " . $doctor_id);
     } else {
-        //session_start();
         if (!isset($_SESSION['uid'])) {
             http_response_code(401);
             echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -28,7 +24,6 @@ try {
         }
 
         $user_id = intval($_SESSION['uid']);
-        // Note: doctor table is lowercase, but columns are lowercase too
         $rows = executeQuery($conn, 'SELECT d.doctor_id 
             FROM user_account ua
             JOIN staff s ON ua.user_id = s.staff_id
@@ -55,27 +50,30 @@ try {
                 p.email,
                 p.emergency_contact_id,
                 p.blood_type,
-                ca.allergies_text as allergies,
+                (
+                    SELECT GROUP_CONCAT(ca2.allergies_text SEPARATOR ', ')
+                    FROM allergies_per_patient app2
+                    JOIN codes_allergies ca2 ON app2.allergy_id = ca2.allergies_code
+                    WHERE app2.patient_id = p.patient_id
+                ) as allergies,
                 cg.gender_text as gender,
                 MAX(a.Appointment_date) as last_visit,
                 MIN(CASE WHEN a.Appointment_date > NOW() THEN a.Appointment_date END) as next_appointment
             FROM patient p
-            LEFT JOIN codes_allergies ca ON p.allergies = ca.allergies_code
+            
             LEFT JOIN codes_gender cg ON p.gender = cg.gender_code
             LEFT JOIN appointment a ON p.patient_id = a.Patient_id
             WHERE p.primary_doctor = ?
             GROUP BY p.patient_id, p.first_name, p.last_name, p.dob, p.email, 
-                     p.emergency_contact_id, p.blood_type, ca.allergies_text, cg.gender_text
+                     p.emergency_contact_id, p.blood_type, cg.gender_text
             ORDER BY p.last_name, p.first_name";
 
     $patients = executeQuery($conn, $sql, 'i', [$doctor_id]);
 
     error_log("Found " . count($patients) . " patients");
 
-    // Format response
     $formatted_patients = [];
     foreach ($patients as $patient) {
-        // Calculate age
         $age = 0;
         if ($patient['dob']) {
             try {
@@ -94,7 +92,6 @@ try {
             'age' => $age,
             'gender' => $patient['gender'] ?: 'Not Specified',
             'email' => $patient['email'] ?: 'No email',
-            // 'phone' => $patient['emergency_contact'] ?: 'No phone',
             'allergies' => $patient['allergies'] ?: 'No Known Allergies',
             'bloodType' => $patient['blood_type'] ?: 'Unknown',
             'lastVisit' => $patient['last_visit'] ? date('Y-m-d', strtotime($patient['last_visit'])) : 'No visits yet',
@@ -104,13 +101,11 @@ try {
         ];
     }
 
-    // Enrich each patient with chronic conditions and current medications
     foreach ($formatted_patients as $idx => $fp) {
         $rawId = isset($fp['id']) ? intval(preg_replace('/[^0-9]/', '', $fp['id'])) : 0;
         if ($rawId <= 0)
             continue;
 
-        // Fetch medical conditions
         try {
             $mc_sql = "SELECT condition_name FROM medical_condition WHERE patient_id = ? ORDER BY diagnosis_date DESC";
             $mcs = executeQuery($conn, $mc_sql, 'i', [$rawId]);
@@ -123,7 +118,6 @@ try {
             error_log("Error fetching conditions for patient $rawId: " . $e->getMessage());
         }
 
-        // Fetch current prescriptions
         try {
             $rx_sql = "SELECT 
                        p.prescription_id, 

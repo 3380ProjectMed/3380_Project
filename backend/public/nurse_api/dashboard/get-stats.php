@@ -48,44 +48,57 @@ try {
 
     $date = $_GET['date'] ?? date('Y-m-d');
 
-    $sql = "SELECT a.Status
-              FROM appointment a
-              JOIN patient_visit pv
-                ON a.Appointment_id = pv.appointment_id
-             WHERE DATE(a.Appointment_date) = ?
-               AND pv.nurse_id = ?";
+    $totalSql = "SELECT COUNT(*) as count FROM appointment WHERE DATE(Appointment_date) = ?";
+    $totalResult = executeQuery($conn, $totalSql, 's', [$date]);
+    $total = $totalResult ? (int)$totalResult[0]['count'] : 0;
 
-    $appointments = executeQuery($conn, $sql, 'si', [$date, $nurse_id]);
+    // Get appointments by status for the date
+    $statusSql = "SELECT Status, COUNT(*) as count 
+                  FROM appointment 
+                  WHERE DATE(Appointment_date) = ? 
+                  GROUP BY Status";
+    $statusResults = executeQuery($conn, $statusSql, 's', [$date]);
 
-    $total = is_array($appointments) ? count($appointments) : 0;
     $waiting = 0;
     $upcoming = 0;
     $completed = 0;
 
-    foreach ($appointments as $r) {
-        $s = strtolower($r['Status'] ?? '');
-        if ($s === 'waiting' || $s === 'in waiting') {
-            $waiting++;
-        }
-        if (in_array($s, ['scheduled', 'pending', 'in progress', 'upcoming'], true)) {
-            $upcoming++;
-        }
-        if ($s === 'completed') {
-            $completed++;
+    if ($statusResults) {
+        foreach ($statusResults as $row) {
+            $status = strtolower($row['Status'] ?? '');
+            $count = (int)$row['count'];
+            
+            if (in_array($status, ['waiting', 'checked-in'])) {
+                $waiting += $count;
+            }
+            if (in_array($status, ['scheduled', 'pending', 'ready', 'in progress'])) {
+                $upcoming += $count;
+            }
+            if ($status === 'completed') {
+                $completed += $count;
+            }
         }
     }
+
+    $nurseSql = "SELECT COUNT(DISTINCT a.Appointment_id) as count
+                 FROM appointment a
+                 LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
+                 WHERE DATE(a.Appointment_date) = ? AND pv.nurse_id = ?";
+    $nurseResult = executeQuery($conn, $nurseSql, 'si', [$date, $nurse_id]);
+    $nurseAppointments = $nurseResult ? (int)$nurseResult[0]['count'] : 0;
 
     closeDBConnection($conn);
 
     // Optional logging
     error_log(sprintf(
-        '[nurse_api] get-stats.php nurse_id=%d date=%s total=%d waiting=%d upcoming=%d completed=%d',
+        '[nurse_api] get-stats.php nurse_id=%d date=%s total=%d waiting=%d upcoming=%d completed=%d nurse_specific=%d',
         $nurse_id,
         $date,
         $total,
         $waiting,
         $upcoming,
-        $completed
+        $completed,
+        $nurseAppointments
     ));
 
     echo json_encode([
@@ -95,6 +108,7 @@ try {
         'waitingCount'     => $waiting,
         'upcomingCount'    => $upcoming,
         'completedCount'   => $completed,
+        'nurseAppointments' => $nurseAppointments,
     ]);
 } catch (Throwable $e) {
     http_response_code(500);

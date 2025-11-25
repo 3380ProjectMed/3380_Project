@@ -2,17 +2,13 @@
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
-// Set JSON content type header  
 header('Content-Type: application/json');
 
-/**
- * get-notes.php - Updated to use treatment_per_visit table
- */
+
 
 try {
     $patient_id = isset($_GET['patient_id']) ? intval($_GET['patient_id']) : 0;
 
-    // Handle appointment IDs - strip "A" prefix if present
     $appointment_id_raw = isset($_GET['appointment_id']) ? trim($_GET['appointment_id']) : '';
     $appointment_id = 0;
     if (!empty($appointment_id_raw)) {
@@ -28,8 +24,6 @@ try {
         echo json_encode(['success' => false, 'error' => 'patient_id or appointment_id is required']);
         exit;
     }
-
-    //session_start();
     if (!isset($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -38,7 +32,6 @@ try {
 
     $conn = getDBConnection();
 
-    // If appointment_id provided, get patient_id
     if ($appointment_id > 0) {
         $apptSql = "SELECT Patient_id FROM appointment WHERE Appointment_id = ?";
         $apptRows = executeQuery($conn, $apptSql, 'i', [$appointment_id]);
@@ -48,14 +41,13 @@ try {
         }
     }
 
-    // Get all visits for this patient
     $sql = "SELECT 
                 pv.visit_id,
                 pv.appointment_id,
                 pv.patient_id,
                 pv.doctor_id,
-                pv.date,
-                a.status,
+                a.Appointment_date,
+                a.Status,
                 pv.diagnosis,
                 pv.reason_for_visit,
                 pv.blood_pressure,
@@ -80,7 +72,6 @@ try {
     $notes = array_map(function ($r) use ($conn) {
         $visit_id = $r['visit_id'] ?? null;
 
-        // Fetch treatments for this visit
         $treatments = [];
         if ($visit_id) {
             $treatSql = "SELECT 
@@ -96,7 +87,6 @@ try {
             }
         }
 
-        // Build treatment summary for note_text
         $treatmentText = '';
         if (!empty($treatments)) {
             $treatmentLines = array_map(function ($t) {
@@ -119,9 +109,9 @@ try {
             'patient_id' => $r['patient_id'] ?? null,
             'doctor_id' => $r['doctor_id'] ?? null,
             'doctor_name' => trim((($r['doctor_first'] ?? '') . ' ' . ($r['doctor_last'] ?? ''))),
-            'date' => $r['date'] ?? null,
-            'visit_date' => $r['date'] ?? null,
-            'status' => $r['status'] ?? null,
+            'date' => $r['Appointment_date'] ?? null,
+'visit_date' => $r['Appointment_date'] ?? null,
+            'status' => $r['Status'] ?? null,
             'diagnosis' => $r['diagnosis'] ?? null,
             'note_text' => $treatmentText,
             'treatments' => $treatments,

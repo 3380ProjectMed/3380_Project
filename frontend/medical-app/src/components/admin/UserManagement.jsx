@@ -14,8 +14,9 @@ import {
 } from 'lucide-react';
 import './UserManagement.css';
 import UserDetails from './UserDetails';
+import EditUserModal from './EditUserModal';
 
-function UserManagement() {
+function UserManagement({ initialFilter, onFilterApplied }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,12 +24,12 @@ function UserManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalType, setModalType] = useState('doctor');
   
-
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
 
-  // Filter states
   const [filters, setFilters] = useState({
     role: 'all',
     activeStatus: 'all',
@@ -36,9 +37,17 @@ function UserManagement() {
     department: 'all'
   });
   
-  // Filter options
   const [locations, setLocations] = useState([]);
   const [departments, setDepartments] = useState([]);
+
+  useEffect(() => {
+    if (initialFilter) {
+      setFilters(prev => ({ ...prev, role: initialFilter })); 
+      if (onFilterApplied) {
+        onFilterApplied();  
+      }
+    }
+  }, [initialFilter, onFilterApplied]);
 
   useEffect(() => {
     loadUsers();
@@ -82,12 +91,24 @@ function UserManagement() {
     }
   };
 
-  const handleFilterChange = (filterName, value) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterName]: value
-    }));
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setShowEditModal(true);
   };
+
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prev => {
+      const next = { ...prev, [filterName]: value };
+
+      // When role changes, reset department filter
+      if (filterName === 'role') {
+        next.department = 'all';
+      }
+
+      return next;
+    });
+  };
+
 
   const handleAddUser = () => {
     // Pass 'all' if no filter is set, otherwise pass the filtered role
@@ -96,25 +117,64 @@ function UserManagement() {
     setShowAddModal(true);
   };
 
-  // MOVED INSIDE THE COMPONENT
   const handleViewDetails = (user) => {
     setSelectedUser(user);
     setShowDetailsModal(true);
   };
 
-  // Simplified filtering - only filter by name and email since backend handles other filters
+  const handleToggleStatus = async (user) => {
+    try {
+      const nextActive = user.is_active ? 0 : 1;
+
+      const res = await fetch('/admin_api/users/toggle-active.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.user_id,
+          user_type: user.user_type, // already uppercase
+          is_active: nextActive,
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Toggle failed');
+
+      // update the local users array so we don't have to refetch everything
+      setUsers(prev =>
+        prev.map(u =>
+          u.user_id === user.user_id && u.user_type === user.user_type
+            ? { ...u, is_active: !!nextActive }
+            : u
+        )
+      );
+    } catch (err) {
+      console.error('Toggle status error:', err);
+      setError(err.message || 'Failed to toggle user status');
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const searchLower = searchTerm.toLowerCase();
     const name = (user.name || '').toLowerCase();
     const email = (user.email || '').toLowerCase();
-    const specialtyDept = (user.specialty || '').toLowerCase();
+    const specialtyDept = (user.specialization_dept || '').toLowerCase();
     const workLocation = (user.work_location || '').toLowerCase();
-    
-    return name.includes(searchLower) || 
-           email.includes(searchLower) || 
-           specialtyDept.includes(searchLower) ||
-           workLocation.includes(searchLower);
+
+    const matchesSearch =
+      name.includes(searchLower) ||
+      email.includes(searchLower) ||
+      specialtyDept.includes(searchLower) ||
+      workLocation.includes(searchLower);
+
+    let matchesDepartment = true;
+    if (filters.department !== 'all') {
+      matchesDepartment = user.specialization_dept === filters.department;
+    }
+
+    return matchesSearch && matchesDepartment;
   });
+
 
   const getRoleLabel = (userType) => {
     const labels = {
@@ -137,6 +197,47 @@ function UserManagement() {
     }
     return fullName.substring(0, 2).toUpperCase();
   };
+
+  const getDepartmentOptions = () => {
+    const doctorSpecialties = new Set();
+    const nurseDepartments = new Set();
+
+    users.forEach(u => {
+      const label = u.specialization_dept;
+      if (!label) return;
+
+      // Only consider users that actually have an account
+      if (u.no_account && Number(u.no_account) !== 0) return;
+
+      if (u.user_type === 'DOCTOR') {
+        doctorSpecialties.add(label);
+      } else if (u.user_type === 'NURSE') {
+        nurseDepartments.add(label);
+      }
+    });
+
+    if (filters.role === 'doctor') {
+      return Array.from(doctorSpecialties).sort();
+    }
+
+    if (filters.role === 'nurse') {
+      return Array.from(nurseDepartments).sort();
+    }
+
+    if (filters.role === 'all') {
+      return Array.from(new Set([...doctorSpecialties, ...nurseDepartments])).sort();
+    }
+
+    // receptionist / patient → no department filter
+    return [];
+  };
+
+  const departmentOptions = getDepartmentOptions();
+  const showDepartmentFilter =
+    filters.role === 'doctor' ||
+    filters.role === 'nurse' ||
+    filters.role === 'all';
+
 
   const clearFilters = () => {
     setFilters({
@@ -162,6 +263,43 @@ function UserManagement() {
 
     return count;
   };
+
+  const toggleUserStatus = async (user) => {
+    const newStatus = user.is_active ? 0 : 1;
+    try {
+      const response = await fetch('/admin_api/users/toggle-active.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user.user_id,
+          user_type: user.user_type,
+          is_active: newStatus,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || `Failed to update status (HTTP ${response.status})`);
+      }
+
+      // Update local state so UI reflects change without full reload
+      setUsers(prev =>
+        prev.map(u =>
+          u.user_id === user.user_id && u.user_type === user.user_type
+            ? { ...u, is_active: newStatus }
+            : u
+        )
+      );
+    } catch (err) {
+      console.error('Error toggling user status:', err);
+      setError(err.message || 'Failed to update status');
+    }
+  };
+
 
   return (
     <div className="user-management">
@@ -242,19 +380,31 @@ function UserManagement() {
             </div>
           )}
 
-          {(filters.role === 'nurse' || filters.role === 'all') && (
+          {showDepartmentFilter && (
             <div className="filter-group">
-              <label htmlFor="departmentFilter">Department</label>
+              <label htmlFor="departmentFilter">
+                {filters.role === 'doctor'
+                  ? 'Specialty'
+                  : filters.role === 'nurse'
+                  ? 'Department'
+                  : 'Specialty / Department'}
+              </label>
               <select
                 id="departmentFilter"
                 value={filters.department}
                 onChange={(e) => handleFilterChange('department', e.target.value)}
                 className="filter-select"
               >
-                <option value="all">All Departments</option>
-                {departments.map(dept => (
-                  <option key={dept.department} value={dept.department}>
-                    {dept.department}
+                <option value="all">
+                  {filters.role === 'doctor'
+                    ? 'All Specialties'
+                    : filters.role === 'nurse'
+                    ? 'All Departments'
+                    : 'All Specialties/Departments'}
+                </option>
+                {departmentOptions.map(dep => (
+                  <option key={dep} value={dep}>
+                    {dep}
                   </option>
                 ))}
               </select>
@@ -338,31 +488,38 @@ function UserManagement() {
                       
                       {/* Specialization/Department column */}
                       {(filters.role === 'all' || filters.role === 'doctor' || filters.role === 'nurse') && (
-                        <td>{user.specialty || 'N/A'}</td>
+                        <td>{user.specialization_dept || 'N/A'}</td>
                       )}
                       
                       {/* Work Location - not shown for patients */}
                       {filters.role !== 'patient' && (
                         <td>{user.work_location || 'N/A'}</td>
                       )}
-                      
                       <td>
-                        <span className={`status-badge ${user.is_active ? 'active' : 'inactive'}`}>
-                          {user.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td>
-                        <button 
-                          className="btn-icon" 
-                          title="View Details"
-                          onClick={() => handleViewDetails(user)}
+                        <button
+                          type="button"
+                          className={`status-badge ${user.is_active ? 'active' : 'inactive'}`}
+                          onClick={() => handleToggleStatus(user)}
                         >
-                          👁️
-                        </button>
-                        <button className="btn-icon" title="Edit">
-                          ✏️
+                          {user.is_active ? 'Active' : 'Inactive'}
                         </button>
                       </td>
+                    <td>
+                      <button 
+                        className="btn-icon" 
+                        title="View Details"
+                        onClick={() => handleViewDetails(user)}
+                      >
+                        👁️
+                      </button>
+                      <button 
+                        className="btn-icon" 
+                        title="Edit"
+                        onClick={() => handleEditUser(user)}
+                      >
+                        ✏️
+                      </button>
+                    </td>
                     </tr>
                   ))
                 )}
@@ -419,6 +576,21 @@ function UserManagement() {
           }}
           onUpdate={() => {
             loadUsers();
+          }}
+        />
+      )}
+
+      {showEditModal && editingUser && (
+        <EditUserModal
+          user={editingUser}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingUser(null);
+          }}
+          onSuccess={() => {
+            setShowEditModal(false);
+            setEditingUser(null);
+            loadUsers(); // refresh table
           }}
         />
       )}

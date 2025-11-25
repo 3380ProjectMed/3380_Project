@@ -18,6 +18,26 @@
   box-shadow: 0 8px 16px rgba(0, 119, 182, 0.2);
 }
 
+/* Edit banner displayed when editing an existing appointment */
+.edit-banner {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(90deg, #fff7ed, #fff1f2);
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  color: #7f1d1d;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-weight: 600;
+}
+
+.edit-banner span {
+  font-weight: 500;
+  color: #7f1d1d;
+}
+
 .btn-back {
   display: flex;
   align-items: center;
@@ -399,6 +419,17 @@
   border-color: #0077b6;
   background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
   box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
+}
+
+.doctor-card.unavailable {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: auto; /* allow click handler to show warning */
+}
+
+.doctor-card.unavailable:hover {
+  background: white;
+  border-color: #e5e7eb;
 }
 
 .doctor-avatar {

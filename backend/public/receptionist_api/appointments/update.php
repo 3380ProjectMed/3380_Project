@@ -8,8 +8,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    // Start session and require that the user is logged in
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -33,10 +31,14 @@ try {
     $appointment_id = (int)$input['Appointment_id'];
     $user_id = (int)$_SESSION['uid'];
 
+    if (isset($input['Appointment_id'])) unset($input['Appointment_id']);
+    if (isset($input['appointment_id'])) unset($input['appointment_id']);
+    if (isset($input['Appointment_id'])) unset($input['Appointment_id']);
+    if (isset($input['appointment_id'])) unset($input['appointment_id']);
+
     $conn = getDBConnection();
 
-    // Verify receptionist has access to this appointment's office
-    $verifySql = "SELECT a.Appointment_id, a.Office_id
+    $verifySql = "SELECT a.Appointment_id, a.Office_id, a.Patient_id, a.Status
                   FROM appointment a
                   JOIN user_account ua ON ua.user_id = ?
                   JOIN staff s ON ua.email = s.staff_email
@@ -45,14 +47,29 @@ try {
 
     $verifyResult = executeQuery($conn, $verifySql, 'ii', [$user_id, $appointment_id]);
 
+    $isPatientOwner = false;
+    $isReceptionist = !empty($verifyResult);
+
     if (empty($verifyResult)) {
+        $patientCheckSql = "SELECT Appointment_id, Patient_id, Status FROM appointment WHERE Appointment_id = ? AND Patient_id = ?";
+        $patientResult = executeQuery($conn, $patientCheckSql, 'ii', [$appointment_id, $user_id]);
+
+        if (!empty($patientResult)) {
+            $isPatientOwner = true;
+            $appointmentStatus = $patientResult[0]['Status'] ?? null;
+        }
+    } else {
+        $appointmentStatus = $verifyResult[0]['Status'] ?? null;
+    }
+
+    if (!$isReceptionist && !$isPatientOwner) {
         closeDBConnection($conn);
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Access denied or appointment not found']);
         exit;
     }
 
-    // Build dynamic update query based on provided fields
+    
     $updateFields = [];
     $types = '';
     $values = [];
@@ -75,7 +92,8 @@ try {
         $values[] = $input['Doctor_id'];
     }
 
-    if (isset($input['Status'])) {
+    
+    if (isset($input['Status']) && $isReceptionist) {
         $validStatuses = ['Scheduled', 'Pending', 'Waiting', 'Checked-in', 'In Progress', 'Completed', 'Cancelled', 'No-Show'];
         if (in_array($input['Status'], $validStatuses)) {
             $updateFields[] = 'Status = ?';
@@ -85,7 +103,6 @@ try {
     }
 
     if (isset($input['booking_channel'])) {
-        // Map booking_channel to method (database column)
         $channel = strtolower($input['booking_channel']);
         $bookingMethod = null;
         if ($channel === 'phone') {
@@ -103,6 +120,23 @@ try {
         }
     }
 
+    if ($isPatientOwner) {
+        $forbiddenStatuses = ['Checked-in', 'Checked in', 'Cancelled', 'Canceled', 'No-Show', 'No-Show'];
+        if (in_array($appointmentStatus, $forbiddenStatuses)) {
+            closeDBConnection($conn);
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Cannot edit appointment in its current status']);
+            exit;
+        }
+        $allowedForPatient = ['Appointment_date', 'Reason_for_visit', 'Doctor_id', 'method', 'booking_channel'];
+        $updateFields = array_values(array_filter($updateFields, function($f) use ($allowedForPatient) {
+            foreach ($allowedForPatient as $allowed) {
+                if (stripos($f, $allowed) !== false) return true;
+            }
+            return false;
+        }));
+    }
+
     if (empty($updateFields)) {
         closeDBConnection($conn);
         http_response_code(400);
@@ -113,8 +147,7 @@ try {
     $conn->begin_transaction();
 
     try {
-        // Add appointment_id to values
-        $values[] = $appointment_id;
+    $values[] = $appointment_id;
         $types .= 'i';
 
         $updateSql = "UPDATE appointment SET " . implode(', ', $updateFields) . " WHERE Appointment_id = ?";
