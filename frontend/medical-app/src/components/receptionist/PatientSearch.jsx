@@ -108,15 +108,11 @@ function PatientSearch() {
       const data = await response.json();
       
       if (data.success) {
-        // Preserve the EmergencyContact phone we got from the list (get-all)
-        // because get-by-id currently returns only emergency_contact_id.
         const fallbackEmergency = patient.EmergencyContact || '';
 
         setSelectedPatient({
           ...data.patient,
-          // normalize to EmergencyContact (phone) for UI use
           EmergencyContact: data.patient.EmergencyContact || data.patient.emergency_contact || data.patient.emergency_contact_id || fallbackEmergency,
-          // normalize relationship from detailed response or fall back to list-level patient info
           EmergencyContactRelationship: data.patient.EmergencyContactRelationship || data.patient.emergency_relationship || patient.EmergencyContactRelationship || patient.emergency_relationship || null,
           insurance: data.insurance,
           recent_appointments: data.recent_appointments
@@ -202,8 +198,6 @@ function PatientSearch() {
     return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
   };
 
-  // Simplified: read normalized datetime provided by backend (appointment_datetime)
-  // Fallbacks: visit_start_at, Appointment_date
   const formatAppointmentTime = (apt) => {
     if (!apt) return null;
     const dt = apt.appointment_datetime || apt.visit_start_at || apt.Appointment_date || apt.appointment_date;
@@ -302,8 +296,7 @@ function PatientSearch() {
       </div>
 
               {}
-              {/* Emergency Contact section - placed below Personal Information and above Insurance */}
-              {(selectedPatient.ec_first_name || selectedPatient.ec_last_name || selectedPatient.EmergencyContact) && (
+              {selectedPatient && (selectedPatient.ec_first_name || selectedPatient.ec_last_name || selectedPatient.EmergencyContact) && (
                 <div className="info-section">
                   <h3 className="section-heading">
                     <Phone size={20} />
