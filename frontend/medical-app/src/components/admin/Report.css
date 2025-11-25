@@ -8,7 +8,6 @@
 	-moz-osx-font-smoothing: grayscale;
 }
 
-/* Remove left margin on small screens where sidebar collapses */
 @media (max-width: 900px) {
 	.report-container {
 		margin-left: 0;
@@ -313,7 +312,6 @@
 	border-top: 1px solid rgba(226, 238, 248, 0.6);
 }
 
-/* Legacy compact filters (kept for backward compatibility) */
 .compact-filters {
 	display: flex;
 	justify-content: flex-start;
@@ -481,15 +479,13 @@
 	border: 1px solid rgba(226, 238, 248, 0.6);
 	margin-bottom: 1.5rem;
 	position: relative;
-	z-index: 1; /* Base z-index for all report sections */
+	z-index: 1; 
 }
 
-/* Ensure pie chart section can overlay other sections when detail card is open */
 .report-section:has(.office-detail-card) {
-	z-index: 100; /* Higher when detail card is present */
+	z-index: 100; 
 }
 
-/* Fallback for browsers without :has() support - add this class via JavaScript */
 .report-section.has-active-detail {
 	z-index: 100;
 }
@@ -524,7 +520,7 @@
 	border-radius: 0.5rem;
 	border: 1px solid rgba(226, 238, 248, 0.6);
 	position: relative;
-	z-index: 1; /* Keep tables below detail cards */
+	z-index: 1; 
 }
 
 .report-table {
@@ -561,7 +557,6 @@
 	border-bottom: none;
 }
 
-/* Sortable tables */
 .sortable-table th {
 	cursor: pointer;
 	user-select: none;
@@ -572,7 +567,6 @@
 	background: linear-gradient(135deg, #90e0ef, #caf0f8);
 }
 
-/* Text styling utilities */
 .text-bold {
 	font-weight: 600;
 	color: #03045e;
@@ -746,7 +740,7 @@
 }
 
 /* ============================================================================
-   DEMOGRAPHICS GRID LAYOUT (NEW)
+   DEMOGRAPHICS GRID LAYOUT 
    ============================================================================ */
 
 .demographics-grid {
@@ -762,7 +756,7 @@
 }
 
 /* ============================================================================
-   CHART VISUALIZATION - ENHANCED WITH AXIS, GRIDLINES & TOOLTIPS
+   CHART VISUALIZATION
    ============================================================================ */
 
 .chart-section {
@@ -800,15 +794,13 @@
 	line-height: 1;
 }
 
-/* Chart Area */
 .chart-area {
 	flex: 1;
 	position: relative;
 	min-height: 280px;
-	height: 280px; /* Explicit height for percentage calculations */
+	height: 280px; 
 }
 
-/* Gridlines */
 .chart-gridlines {
 	position: absolute;
 	top: 0;
@@ -857,15 +849,15 @@
 	max-width: 90px;
 	cursor: pointer;
 	position: relative;
-	height: 280px; /* CRITICAL: Explicit height for percentage calculations */
-	padding-bottom: 30px; /* Space for label */
+	height: 280px; 
+	padding-bottom: 30px; 
 }
 
 .chart-bar-container {
 	width: 100%;
 	position: absolute;
-	top: 0; /* CRITICAL: Define both top and bottom */
-	bottom: 30px; /* Above the label */
+	top: 0; 
+	bottom: 30px; 
 	left: 0;
 	right: 0;
 	display: flex;
@@ -1195,13 +1187,13 @@
 
 	.chart-bar-group {
 		min-width: 40px;
-		height: 240px; /* Smaller height for mobile */
-		padding-bottom: 35px; /* More space for wrapped labels */
+		height: 240px; 
+		padding-bottom: 35px; 
 	}
 
 	.chart-bar-container {
-		top: 0; /* CRITICAL: Define both top and bottom */
-		bottom: 35px; /* Match padding-bottom */
+		top: 0; 
+		bottom: 35px; 
 	}
 
 	.chart-label {
@@ -1297,7 +1289,7 @@
 }
 
 /* ============================================================================
-   ENHANCED PIE CHART - Premium Modern Design
+   PIE CHART 
    ============================================================================ */
 
 .office-pie-card {
@@ -1498,7 +1490,6 @@
   font-size: 1rem;
 }
 
-/* Enhanced Pie Legend */
 .pie-legend {
   display: flex;
   flex-direction: column;
@@ -1626,7 +1617,6 @@
   gap: 0.25rem;
 }
 
-/* Premium Office Detail Card */
 .office-detail-card {
   position: absolute;
   top: 100%;
@@ -1831,7 +1821,6 @@
     margin: 0 auto;
   }
 
-  /* Move tooltip to top on mobile since there's no room on the side */
   .pie-tooltip {
     top: -20px;
     left: 50%;
@@ -1924,13 +1913,6 @@
   }
 }
 
-
-/* ============================================================================
-   ADD THESE STYLES TO THE BOTTOM OF YOUR Report.css FILE
-   NEW PATIENTS REPORT ENHANCEMENTS
-   ============================================================================ */
-
-/* Retention Cell Styling */
 .retention-cell {
   display: flex;
   flex-direction: column;
@@ -2172,39 +2154,35 @@
   margin-bottom: 0.5rem;
 }
 
-
-/* Add these rules to fix the overlapping filters */
-
 .filter-inputs {
 	display: flex;
 	gap: 0.75rem;
 	align-items: center;
 	flex-wrap: wrap;
-	width: 100%; /* Ensure full width */
+	width: 100%; 
 }
 
 .date-range-group {
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
-	flex-shrink: 1; /* Allow shrinking if needed */
-	min-width: 0; /* Allow flex items to shrink below content size */
+	flex-shrink: 1; 
+	min-width: 0; 
 }
 
 .date-range-group input {
-	min-width: 130px; /* Prevent inputs from being too narrow */
-	max-width: 150px; /* Prevent inputs from being too wide */
+	min-width: 130px; 
+	max-width: 150px; 
 }
 
 .filter-group {
 	display: flex;
 	flex-direction: column;
 	gap: 0.5rem;
-	flex-shrink: 0; /* Prevent group by from shrinking */
-	min-width: 150px; /* Ensure minimum width for dropdown */
+	flex-shrink: 0; 
+	min-width: 150px; 
 }
 
-/* Better responsive behavior for filter sections */
 @media (max-width: 768px) {
 	.filter-inputs {
 		flex-direction: column;
@@ -2229,14 +2207,171 @@
 
 .filters-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Reduced from 250px */
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
 	gap: 1.25rem;
 	margin-bottom: 1.25rem;
 }
 
-/* Ensure filter groups don't overflow */
 .filter-group input,
 .filter-group select {
 	width: 100%;
 	box-sizing: border-box;
+}
+
+
+.filters-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 1rem;
+	margin-bottom: 1.25rem;
+}
+
+.filter-group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	min-width: 0;
+}
+
+.filter-group label {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: #03045e;
+	text-transform: uppercase;
+	letter-spacing: 0.025em;
+	white-space: nowrap;
+}
+
+.filter-group:has(.date-range-group) {
+	min-width: 280px;
+}
+
+.date-range-group {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+}
+
+.date-range-group input {
+	flex: 1;
+	min-width: 0;
+	width: 100%;
+	padding: 0.625rem 0.5rem;
+	border: 1px solid rgba(226, 238, 248, 0.8);
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+	background: white;
+	transition: all 0.2s ease;
+	color: #374151;
+}
+
+.date-range-group span {
+	color: #6b7280;
+	font-weight: 500;
+	font-size: 0.875rem;
+	flex-shrink: 0;
+	padding: 0 0.25rem;
+}
+
+.filter-group input,
+.filter-group select {
+	width: 100%;
+	min-width: 0;
+	padding: 0.625rem 0.75rem;
+	border: 1px solid rgba(226, 238, 248, 0.8);
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+	background: white;
+	transition: all 0.2s ease;
+	color: #374151;
+	box-sizing: border-box;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+	outline: none;
+	border-color: #0077b6;
+	box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
+}
+
+.date-presets {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.btn-preset {
+	padding: 0.375rem 0.75rem;
+	background: rgba(144, 224, 239, 0.2);
+	border: 1px solid rgba(144, 224, 239, 0.4);
+	border-radius: 0.375rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	color: #023e8a;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.filter-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.75rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid rgba(226, 238, 248, 0.6);
+	flex-wrap: wrap;
+}
+
+@media (max-width: 1400px) {
+	.filters-grid {
+		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	}
+}
+
+@media (max-width: 1024px) {
+	.filters-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+	
+	.filter-group:has(.date-range-group) {
+		grid-column: 1 / -1;
+		min-width: auto;
+	}
+}
+
+@media (max-width: 768px) {
+	.filters-grid {
+		grid-template-columns: 1fr;
+	}
+	
+	.filter-group:has(.date-range-group) {
+		grid-column: 1;
+	}
+	
+	.date-range-group {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.5rem;
+	}
+	
+	.date-range-group input {
+		width: 100%;
+		max-width: 100%;
+	}
+	
+	.date-range-group span {
+		text-align: center;
+	}
+	
+	.filter-actions {
+		flex-direction: column;
+	}
+	
+	.filter-actions .btn {
+		width: 100%;
+		justify-content: center;
+	}
 }
