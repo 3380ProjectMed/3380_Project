@@ -33,35 +33,41 @@ try {
     $q = isset($_GET['q']) ? trim($_GET['q']) : '';
 
     if ($q !== '') {
-        // Search by name, phone or dob (supports partial matches for all fields)
-        $like = '%' . $q . '%';
-        $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact_id,
-                       p.primary_doctor,
-                       pcp_staff.first_name as pcp_first_name, pcp_staff.last_name as pcp_last_name,
-                       pi.expiration_date,
-                       ip.copay, ip.plan_name, ip.plan_type
-                FROM patient p
-                LEFT JOIN doctor pcp ON p.primary_doctor = pcp.doctor_id
-                LEFT JOIN staff pcp_staff ON pcp.staff_id = pcp_staff.staff_id
-                LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
-                LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
-                WHERE p.first_name LIKE ? OR p.last_name LIKE ? OR p.emergency_contact_id LIKE ? OR p.dob LIKE ?
-                ORDER BY p.last_name, p.first_name";
+    // Search by name, phone or dob (supports partial matches for all fields)
+    $like = '%' . $q . '%';
+    $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact_id,
+               ec.ec_phone AS emergency_phone,
+               ec.relationship AS emergency_relationship,
+               p.primary_doctor,
+               pcp_staff.first_name as pcp_first_name, pcp_staff.last_name as pcp_last_name,
+               pi.expiration_date,
+               ip.copay, ip.plan_name, ip.plan_type
+        FROM patient p
+        LEFT JOIN emergency_contact ec ON p.emergency_contact_id = ec.emergency_contact_id
+        LEFT JOIN doctor pcp ON p.primary_doctor = pcp.doctor_id
+        LEFT JOIN staff pcp_staff ON pcp.staff_id = pcp_staff.staff_id
+        LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
+        LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
+        WHERE p.first_name LIKE ? OR p.last_name LIKE ? OR ec.ec_phone LIKE ? OR p.dob LIKE ?
+        ORDER BY p.last_name, p.first_name";
         $rows = executeQuery($conn, $sql, 'ssss', [$like, $like, $like, $like]);
     } else {
         // Return a limited list to avoid huge payloads (pagination could be added later)
-        $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact_id,
-                       p.primary_doctor,
-                       pcp_staff.first_name as pcp_first_name, pcp_staff.last_name as pcp_last_name,
-                       pi.expiration_date,
-                       ip.copay, ip.plan_name, ip.plan_type
-                FROM patient p
-                LEFT JOIN doctor pcp ON p.primary_doctor = pcp.doctor_id
-                LEFT JOIN staff pcp_staff ON pcp.staff_id = pcp_staff.staff_id
-                LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
-                LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
-                ORDER BY p.last_name, p.first_name
-                LIMIT 200";
+    $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob, p.email, p.emergency_contact_id,
+               ec.ec_phone AS emergency_phone,
+               ec.relationship AS emergency_relationship,
+               p.primary_doctor,
+               pcp_staff.first_name as pcp_first_name, pcp_staff.last_name as pcp_last_name,
+               pi.expiration_date,
+               ip.copay, ip.plan_name, ip.plan_type
+        FROM patient p
+        LEFT JOIN emergency_contact ec ON p.emergency_contact_id = ec.emergency_contact_id
+        LEFT JOIN doctor pcp ON p.primary_doctor = pcp.doctor_id
+        LEFT JOIN staff pcp_staff ON pcp.staff_id = pcp_staff.staff_id
+        LEFT JOIN patient_insurance pi ON p.insurance_id = pi.id AND pi.is_primary = 1
+        LEFT JOIN insurance_plan ip ON pi.plan_id = ip.plan_id
+        ORDER BY p.last_name, p.first_name
+        LIMIT 200";
         $rows = executeQuery($conn, $sql);
     }
 
@@ -78,7 +84,9 @@ try {
             'Last_Name' => $r['last_name'] ?? '',
             'dob' => $r['dob'] ?? '',
             'Email' => $r['email'] ?? '',
-            'EmergencyContact' => $r['emergency_contact_id'] ?? '',
+            // Return the emergency contact phone (if available) rather than the raw id.
+            'EmergencyContact' => $r['emergency_phone'] ?? ($r['emergency_contact_id'] ?? ''),
+            'EmergencyContactRelationship' => $r['emergency_relationship'] ?? null,
             'primary_doctor' => isset($r['primary_doctor']) ? (int)$r['primary_doctor'] : null,
             'pcp_name' => $pcpName,
             'insurance_expiration' => $r['expiration_date'] ?? null,

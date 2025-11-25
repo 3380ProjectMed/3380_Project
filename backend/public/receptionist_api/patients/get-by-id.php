@@ -66,12 +66,15 @@ try {
 
     // Get recent appointments
     $apptSql = "SELECT a.Appointment_id, a.Appointment_date, a.Reason_for_visit, a.Status,
-                       doc_staff.first_name as Doctor_First, doc_staff.last_name as Doctor_Last,
-                       pv.status as visit_status
+              -- Prefer the patient_visit start_at if available, otherwise appointment date/time
+              COALESCE(pv.start_at, a.Appointment_date) AS appointment_datetime,
+              pv.start_at AS visit_start_at, pv.end_at AS visit_end_at,
+              doc_staff.first_name as Doctor_First, doc_staff.last_name as Doctor_Last,
+              pv.status as visit_status
                 FROM appointment a
                 JOIN doctor d ON a.Doctor_id = d.doctor_id
                 LEFT JOIN staff doc_staff ON d.staff_id = doc_staff.staff_id
-                LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
+          LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id
                 WHERE a.Patient_id = ?
                 ORDER BY a.Appointment_date DESC
                 LIMIT 5";

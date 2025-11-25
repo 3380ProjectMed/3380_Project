@@ -112,7 +112,6 @@ function ReceptionistPortal() {
         
         {currentPage === 'patients' && (
           <PatientSearch
-            onBookAppointment={handleBookAppointment}
             selectedPatient={selectedPatient}
             setSelectedPatient={setSelectedPatient}
           />
