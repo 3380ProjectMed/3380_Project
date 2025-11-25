@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, Phone, Calendar, MapPin, UserPlus } from 'lucide-react';
+import { Mail, Lock, User, Phone, Calendar, MapPin, UserPlus, CreditCard } from 'lucide-react';
 import './SignUp.css';
 
 export default function SignUp() {
@@ -12,7 +12,8 @@ export default function SignUp() {
     confirmPassword: '',
     dateOfBirth: '',
     phone: '',
-    gender: '',              // will hold gender_code (e.g. "1", "2", etc.)
+    gender: '',             
+    ssn: '',
     address: '',
     city: '',
     state: '',
@@ -27,16 +28,13 @@ export default function SignUp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [flash, setFlash] = useState({ type: null, message: '' });
 
-  // NEW: gender options from get_form_options
   const [genderOptions, setGenderOptions] = useState([]);
   const navigate = useNavigate();
 
-  // Load gender options on mount
   useEffect(() => {
     const loadOptions = async () => {
       try {
         const res = await fetch('/admin_api/users/get_form_options.php', {
-          // if you later create a public version, change this URL
           credentials: 'include',
         });
 
@@ -47,7 +45,7 @@ export default function SignUp() {
 
         const data = await res.json();
         if (data.success && Array.isArray(data.genders)) {
-          setGenderOptions(data.genders); // each: { id, label }
+          setGenderOptions(data.genders); 
         }
       } catch (err) {
         console.error('Error loading gender options:', err);
@@ -82,6 +80,15 @@ export default function SignUp() {
     if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
     if (!formData.gender) newErrors.gender = 'Gender is required';
+    
+    if (!formData.ssn.trim()) {
+      newErrors.ssn = 'SSN is required';
+    } else {
+      const ssnDigits = formData.ssn.replace(/\D/g, '');
+      if (ssnDigits.length !== 9) {
+        newErrors.ssn = 'SSN must be 9 digits';
+      }
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -90,24 +97,39 @@ export default function SignUp() {
   const formatPhone = (value) => {
     if (!value) return '';
 
-    // keep only digits, max 10
     const digits = value.replace(/\D/g, '').slice(0, 10);
     const len = digits.length;
 
     if (len === 0) return '';
 
     if (len < 4) {
-      // 1–3: "555"
       return digits;
     }
 
     if (len < 7) {
-      // 4–6: "(555) 1", "(555) 12", "(555) 123"
       return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
     }
 
-    // 7–10: "(555) 123-4", "(555) 123-45", ...
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
+  const formatSSN = (value) => {
+    if (!value) return '';
+
+    const digits = value.replace(/\D/g, '').slice(0, 9);
+    const len = digits.length;
+
+    if (len === 0) return '';
+
+    if (len < 4) {
+      return digits;
+    }
+
+    if (len < 6) {
+      return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    }
+
+    return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
   };
 
   const handleChange = (e) => {
@@ -116,6 +138,8 @@ export default function SignUp() {
 
     if (name === 'phone' || name === 'emergencyPhone') {
       newValue = formatPhone(value);
+    } else if (name === 'ssn') {
+      newValue = formatSSN(value);
     }
 
     setFormData(prev => ({
@@ -135,13 +159,12 @@ export default function SignUp() {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    setFlash({ type: null, message: '' }); // clear old message
+    setFlash({ type: null, message: '' }); 
 
     try {
       const response = await fetch('/api/signup.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // If your PHP expects number for gender_code you can cast there: (int)$_POST['gender']
         body: JSON.stringify(formData),
       });
 
@@ -290,6 +313,27 @@ export default function SignUp() {
                     <span className="signup-error-message">{errors.gender}</span>
                   )}
                 </div>
+              </div>
+
+              <div className="signup-field">
+                <label htmlFor="ssn" className="signup-label">
+                  Social Security Number *
+                </label>
+                <div className="signup-input-wrapper">
+                  <CreditCard className="signup-input-icon" />
+                  <input
+                    type="text"
+                    id="ssn"
+                    name="ssn"
+                    value={formData.ssn}
+                    onChange={handleChange}
+                    placeholder="123-45-6789"
+                    className={`signup-input signup-input-with-icon ${errors.ssn ? 'signup-input-error' : ''}`}
+                  />
+                </div>
+                {errors.ssn && (
+                  <span className="signup-error-message">{errors.ssn}</span>
+                )}
               </div>
             </div>
 

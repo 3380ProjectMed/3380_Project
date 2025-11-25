@@ -2,46 +2,39 @@
 // signup.php
 header('Content-Type: application/json');
 
-// Database configuration
 $host = getenv('AZURE_MYSQL_HOST') ?: '';
 $user = getenv('AZURE_MYSQL_USERNAME') ?: '';
 $pass = getenv('AZURE_MYSQL_PASSWORD') ?: '';
 $db   = getenv('AZURE_MYSQL_DBNAME') ?: '';
 $port = getenv('AZURE_MYSQL_PORT') ?: '3306';
 
-// Initialize response array
 $response = [
     'success' => false,
     'message' => '',
     'errors' => []
 ];
 
-// Only accept POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $response['message'] = 'Invalid request method';
     echo json_encode($response);
     exit;
 }
 
-// Get JSON input
 $input = json_decode(file_get_contents('php://input'), true);
 
-// Validate required fields
-$required_fields = ['firstName', 'lastName', 'email', 'password', 'confirmPassword', 'dateOfBirth', 'phone', 'gender'];
+$required_fields = ['firstName', 'lastName', 'email', 'password', 'confirmPassword', 'dateOfBirth', 'phone', 'gender', 'ssn'];
 foreach ($required_fields as $field) {
     if (empty($input[$field])) {
         $response['errors'][$field] = ucfirst(str_replace('_', ' ', $field)) . ' is required';
     }
 }
 
-// If there are validation errors, return them
 if (!empty($response['errors'])) {
     $response['message'] = 'Please fill in all required fields';
     echo json_encode($response);
     exit;
 }
 
-// Additional validation
 if (!filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
     $response['errors']['email'] = 'Invalid email format';
 }
@@ -50,9 +43,13 @@ if (strlen($input['password']) < 8) {
     $response['errors']['password'] = 'Password must be at least 8 characters';
 }
 
-// Add password confirmation validation
 if ($input['password'] !== $input['confirmPassword']) {
     $response['errors']['confirmPassword'] = 'Passwords do not match';
+}
+
+$ssn_digits = preg_replace('/\D/', '', $input['ssn']);
+if (strlen($ssn_digits) !== 9) {
+    $response['errors']['ssn'] = 'SSN must be exactly 9 digits';
 }
 
 if (!empty($response['errors'])) {
@@ -61,7 +58,6 @@ if (!empty($response['errors'])) {
     exit;
 }
 
-// Initialize mysqli with SSL support
 $mysqli = mysqli_init();
 if (!$mysqli) {
     $response['message'] = 'mysqli_init failed';
@@ -69,7 +65,6 @@ if (!$mysqli) {
     exit;
 }
 
-// Set SSL options BEFORE connecting
 $sslCertPath = '/home/site/wwwroot/certs/DigiCertGlobalRootG2.crt';
 
 if (file_exists($sslCertPath)) {
@@ -80,7 +75,6 @@ if (file_exists($sslCertPath)) {
     $mysqli->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, 0);
 }
 
-// NOW connect with SSL
 if (!@$mysqli->real_connect($host, $user, $pass, $db, (int)$port, NULL, MYSQLI_CLIENT_SSL)) {
     $response['message'] = 'Database connection failed: ' . $mysqli->connect_error;
     echo json_encode($response);
@@ -89,16 +83,13 @@ if (!@$mysqli->real_connect($host, $user, $pass, $db, (int)$port, NULL, MYSQLI_C
 
 $mysqli->set_charset('utf8mb4');
 
-// Start transaction
 $mysqli->begin_transaction();
 
 try {
-    // Generate username from email 
     $username = substr($input['email'], 0, strpos($input['email'], '@'));
     $base_username = $username;
     $counter = 1;
 
-    // Check if username exists and make it unique
     $stmt = $mysqli->prepare("SELECT user_id FROM user_account WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
@@ -113,7 +104,6 @@ try {
     }
     $stmt->close();
 
-    // Check if email already exists
     $stmt = $mysqli->prepare("SELECT user_id FROM user_account WHERE email = ?");
     $stmt->bind_param("s", $input['email']);
     $stmt->execute();
@@ -124,10 +114,8 @@ try {
     }
     $stmt->close();
 
-    // Hash password
     $password_hash = password_hash($input['password'], PASSWORD_DEFAULT);
 
-    // Insert into user_account table
     $stmt = $mysqli->prepare(
         "INSERT INTO user_account (username, email, password_hash, role, is_active) 
          VALUES (?, ?, ?, 'PATIENT', 1)"
@@ -141,27 +129,9 @@ try {
     $user_id = $mysqli->insert_id;
     $stmt->close();
 
-    $gender_map = [
-        'male' => 1,
-        'female' => 2,
-        'other' => 3,
-        'prefer-not-to-say' => 4
-    ];
-    $assigned_gender = $gender_map[strtolower($input['gender'])] ?? 3;
-
-    $ssn = 'TEMP' . str_pad($user_id, 7, '0', STR_PAD_LEFT);
-
-    $phone = preg_replace('/[^0-9]/', '', $input['phone']);
-
-    // Format emergency contact
-    $emergency_contact = null;
-    if (!empty($input['emergencyContact']) && !empty($input['emergencyPhone'])) {
-        $emergency_phone = preg_replace('/[^0-9]/', '', $input['emergencyPhone']);
-        $emergency_contact = $input['emergencyContact'] . ':' . $emergency_phone;
-    }
-
     $first_name = trim($input['firstName']);
     $last_name  = trim($input['lastName']);
+    $email = $input['email'];
 
     try {
         $dob = (new DateTime($input['dateOfBirth']))->format('Y-m-d');
@@ -169,25 +139,16 @@ try {
         throw new Exception('Invalid date of birth format');
     }
 
-    $ec_fn  = isset($input['emergencyContactfn']) && trim($input['emergencyContactfn']) !== '' ? trim($input['emergencyContactfn']) : null;
-    $ec_ln  = isset($input['emergencyContactln']) && trim($input['emergencyContactln']) !== '' ? trim($input['emergencyContactln']) : null;
-    $ec_rel = isset($input['emergencyContactrl']) && trim($input['emergencyContactrl']) !== '' ? trim($input['emergencyContactrl']) : null;
-    $ec_ph  = isset($input['emergencyPhone'])     && trim($input['emergencyPhone'])     !== '' ? substr(preg_replace('/\D+/', '', $input['emergencyPhone']), 0, 15) : null;
+    $ssn = preg_replace('/\D/', '', $input['ssn']);
 
     $gender_map = ['male' => 1, 'female' => 2, 'other' => 3, 'prefer-not-to-say' => 4];
     $assigned_at_birth_gender = $gender_map[strtolower($input['gender'])] ?? 3;
     $gender = $assigned_at_birth_gender;
 
-    $ethnicity = (isset($input['ethnicity']) && $input['ethnicity'] !== '') ? (int)$input['ethnicity'] : null;
-    $race      = (isset($input['race'])      && $input['race']      !== '') ? (int)$input['race']      : null;
-
-    $email = $input['email'];
-
-    $primary_doctor     = (isset($input['primaryDoctor'])     && $input['primaryDoctor']     !== '') ? (int)$input['primaryDoctor']     : null;
-    $insurance_id       = (isset($input['insuranceId'])       && $input['insuranceId']       !== '') ? (int)$input['insuranceId']       : null;
-    $prescription       = (isset($input['prescriptionId'])    && $input['prescriptionId']    !== '') ? (int)$input['prescriptionId']    : null;
-    $allergies          = (isset($input['allergiesCode'])     && $input['allergiesCode']     !== '') ? (int)$input['allergiesCode']     : null;
-    $blood_type         = (isset($input['bloodType'])         && $input['bloodType']         !== '') ? $input['bloodType']              : null;
+    $ec_fn  = isset($input['emergencyContactfn']) && trim($input['emergencyContactfn']) !== '' ? trim($input['emergencyContactfn']) : null;
+    $ec_ln  = isset($input['emergencyContactln']) && trim($input['emergencyContactln']) !== '' ? trim($input['emergencyContactln']) : null;
+    $ec_rel = isset($input['emergencyContactrl']) && trim($input['emergencyContactrl']) !== '' ? trim($input['emergencyContactrl']) : null;
+    $ec_ph  = isset($input['emergencyPhone'])     && trim($input['emergencyPhone'])     !== '' ? substr(preg_replace('/\D+/', '', $input['emergencyPhone']), 0, 15) : null;
 
     $stmt = $mysqli->prepare(
         "INSERT INTO patient (
@@ -198,34 +159,20 @@ try {
                 ssn,
                 assigned_at_birth_gender,
                 gender,
-                ethnicity,
-                race,
-                email,
-                primary_doctor,
-                insurance_id,
-                prescription,
-                allergies,
-                blood_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                email
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
 
     $stmt->bind_param(
-        'issssiiiisiiiis',
-        $user_id,          // patient_id == user_id
+        'issssiis',
+        $user_id,          
         $first_name,
         $last_name,
         $dob,
         $ssn,
         $assigned_at_birth_gender,
         $gender,
-        $ethnicity,
-        $race,
-        $email,
-        $primary_doctor,
-        $insurance_id,
-        $prescription,
-        $allergies,
-        $blood_type
+        $email
     );
 
     if (!$stmt->execute()) {
@@ -270,19 +217,15 @@ try {
         }
     }
 
-    // Commit transaction
     $mysqli->commit();
 
     $response['success'] = true;
     $response['message'] = 'Account created successfully';
 } catch (Exception $e) {
-    // Rollback transaction on error
     $mysqli->rollback();
     $response['message'] = $e->getMessage();
 } finally {
-    // Close connection
     $mysqli->close();
 }
 
-// Return response
 echo json_encode($response);
