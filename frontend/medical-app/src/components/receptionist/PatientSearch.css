@@ -217,6 +217,12 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: #1f2937;
+  word-break: break-all;
+  white-space: pre-line;
+  max-width: 120px;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .detail-email {

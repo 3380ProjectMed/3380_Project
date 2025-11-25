@@ -475,56 +475,80 @@ function PatientSearch() {
               </button>
             </div>
 
-            <div className="modal-body">
-              {}
-              <div className="info-section">
-                <h3 className="section-heading">
-                  <User size={20} />
-                  Personal Information
-                </h3>
-                <div className="info-grid">
-                  <div className="info-field">
-                    <span className="field-label">Patient ID</span>
-                    <span className="field-value">
-                      {selectedPatient.Patient_ID || selectedPatient.patient_id || 'N/A'}
-                    </span>
-                  </div>
-
-                  <div className="info-field">
-                    <span className="field-label">Full Name</span>
-                    <span className="field-value">
-                      {selectedPatient.First_Name || selectedPatient.first_name || ''} {selectedPatient.Last_Name || selectedPatient.last_name || ''}
-                    </span>
-                  </div>
-                  
-                  {selectedPatient.dob && (
+              <div className="modal-body">
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <User size={20} />
+                    Personal Information
+                  </h3>
+                  <div className="info-grid">
                     <div className="info-field">
-                      <span className="field-label">Date of Birth</span>
-                      <span className="field-value">{selectedPatient.dob}</span>
-                    </div>
-                  )}
-                  
-                  {(selectedPatient.Email || selectedPatient.email) && (
-                    <div className="info-field">
-                      <span className="field-label">Email</span>
-                      <a href={`mailto:${selectedPatient.Email || selectedPatient.email}`} className="field-value link-email">
-                        {selectedPatient.Email || selectedPatient.email}
-                      </a>
-                    </div>
-                  )}
-                  
-                  
-                  
-                  {selectedPatient.pcp_first_name && selectedPatient.pcp_last_name && (
-                    <div className="info-field">
-                      <span className="field-label">Primary Care Physician</span>
+                      <span className="field-label">Patient ID</span>
                       <span className="field-value">
-                        Dr. {selectedPatient.pcp_first_name} {selectedPatient.pcp_last_name}
+                        {selectedPatient.Patient_ID || selectedPatient.patient_id || 'N/A'}
                       </span>
                     </div>
-                  )}
+                    <div className="info-field">
+                      <span className="field-label">Full Name</span>
+                      <span className="field-value">
+                        {selectedPatient.First_Name || selectedPatient.first_name || ''} {selectedPatient.Last_Name || selectedPatient.last_name || ''}
+                      </span>
+                    </div>
+                    {selectedPatient.dob && (
+                      <div className="info-field">
+                        <span className="field-label">Date of Birth</span>
+                        <span className="field-value">{selectedPatient.dob}</span>
+                      </div>
+                    )}
+                    {(selectedPatient.Email || selectedPatient.email) && (
+                      <div className="info-field">
+                        <span className="field-label">Email</span>
+                        <a href={`mailto:${selectedPatient.Email || selectedPatient.email}`} className="field-value link-email">
+                          {selectedPatient.Email || selectedPatient.email}
+                        </a>
+                      </div>
+                    )}
+                    {selectedPatient.pcp_first_name && selectedPatient.pcp_last_name && (
+                      <div className="info-field">
+                        <span className="field-label">Primary Care Physician</span>
+                        <span className="field-value">
+                          Dr. {selectedPatient.pcp_first_name} {selectedPatient.pcp_last_name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+
+                {(selectedPatient.ec_first_name || selectedPatient.ec_last_name || selectedPatient.EmergencyContact || selectedPatient.EmergencyContactRelationship) && (
+                  <div className="info-section">
+                    <h3 className="section-heading">
+                      <User size={20} />
+                      Emergency Contact
+                    </h3>
+                    <div className="info-grid">
+                      {(selectedPatient.ec_first_name || selectedPatient.ec_last_name) && (
+                        <div className="info-field">
+                          <span className="field-label">Name</span>
+                          <span className="field-value">{`${selectedPatient.ec_first_name || ''} ${selectedPatient.ec_last_name || ''}`.trim()}</span>
+                        </div>
+                      )}
+                      {selectedPatient.EmergencyContact && (
+                        <div className="info-field">
+                          <span className="field-label">Phone</span>
+                          <a href={`tel:${selectedPatient.EmergencyContact}`} className="field-value link-phone">
+                            {selectedPatient.EmergencyContact}
+                          </a>
+                        </div>
+                      )}
+                      {selectedPatient.EmergencyContactRelationship && (
+                        <div className="info-field">
+                          <span className="field-label">Relation</span>
+                          <span className="field-value">{selectedPatient.EmergencyContactRelationship}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
               {}
               {selectedPatient.insurance && (
