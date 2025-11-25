@@ -1,17 +1,12 @@
 <?php
 header('Content-Type: application/json');
-/**
- * Search for visits with payment filter option
- * filter=unpaid (default) - only show visits needing payment
- * filter=all - show all visits (including paid)
- */
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
-
 try {
-    //session_start();
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -19,7 +14,7 @@ try {
     }
 
     $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-    $filter = isset($_GET['filter']) ? $_GET['filter'] : 'unpaid'; // 'unpaid' or 'all'
+    $filter = isset($_GET['filter']) ? $_GET['filter'] : 'unpaid';
 
     if (strlen($search) < 1) {
         echo json_encode(['success' => true, 'visits' => [], 'count' => 0]);
@@ -28,7 +23,6 @@ try {
 
     $conn = getDBConnection();
 
-    // Get receptionist's office
     $staffRows = executeQuery($conn, '
         SELECT ws.office_id
         FROM staff s
@@ -46,8 +40,7 @@ try {
 
     $office_id = (int)$staffRows[0]['office_id'];
 
-    // Build query based on filter
-    $sql = "SELECT 
+    $sql = "SELECT
                 pv.visit_id,
                 pv.patient_id,
                 pv.appointment_id,
@@ -66,11 +59,9 @@ try {
             WHERE pv.office_id = ?
             AND pv.status IN ('Checked In', 'Scheduled', 'Completed')";
 
-    // Add payment filter
     if ($filter === 'unpaid') {
         $sql .= " AND (pv.payment IS NULL OR pv.payment = 0)";
     }
-    // If filter is 'all', don't add payment condition
 
     $sql .= " AND (
                 CONCAT(p.first_name, ' ', p.last_name) LIKE ?

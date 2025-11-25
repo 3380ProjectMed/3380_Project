@@ -1,15 +1,11 @@
 <?php
 
-/**
- * Get all offices with their assigned doctors based on work_schedule
- * Returns offices and the doctors working at each office
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
 try {
-    // Require authentication
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -24,7 +20,6 @@ try {
 
     $conn = getDBConnection();
 
-    // Get all offices with their doctor assignments from work_schedule
     $sql = "SELECT DISTINCT
                 o.office_id,
                 o.office_name,
@@ -40,7 +35,6 @@ try {
 
     $result = executeQuery($conn, $sql, '', []);
 
-    // For each office, get the list of doctors
     $offices = [];
     foreach ($result as $office) {
         $doctorsSql = "SELECT DISTINCT

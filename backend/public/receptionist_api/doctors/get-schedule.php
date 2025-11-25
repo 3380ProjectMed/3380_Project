@@ -1,11 +1,5 @@
 <?php
-/**
- * ==========================================
- * FILE: public/receptionist_api/doctors/get-schedule.php
- * ==========================================
- * Get doctor work schedules for a specific date and office
- * Returns working hours for each doctor based on work_schedule table
- */
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
@@ -27,15 +21,13 @@ try {
 
     $conn = getDBConnection();
 
-    // Get the day of week for the given date
-    $dayOfWeek = date('l', strtotime($date)); // Monday, Tuesday, etc.
+    $dayOfWeek = date('l', strtotime($date));
 
-    // Get doctors and their schedules for this office on this day
-    $sql = "SELECT DISTINCT 
-                d.doctor_id, 
-                s.first_name, 
+    $sql = "SELECT DISTINCT
+                d.doctor_id,
+                s.first_name,
                 s.last_name,
-                sp.specialty_name, 
+                sp.specialty_name,
                 sp.specialty_id,
                 ws.start_time,
                 ws.end_time,
@@ -46,7 +38,7 @@ try {
             JOIN specialty sp ON d.specialty = sp.specialty_id
             WHERE ws.office_id = ?
             AND (
-                ws.day_of_week = ? 
+                ws.day_of_week = ?
                 OR (ws.days = ? AND ws.days IS NOT NULL)
             )
             ORDER BY s.last_name, s.first_name";
@@ -54,18 +46,18 @@ try {
     $rows = executeQuery($conn, $sql, 'iss', [$officeId, $dayOfWeek, $date]);
 
     $schedules = array_map(function ($r) {
-        // Parse start and end times
+
         $startTime = null;
         $endTime = null;
         $startHour = 9;
         $endHour = 17;
-        
+
         if (!empty($r['start_time'])) {
             $startParts = explode(':', $r['start_time']);
             $startHour = (int)$startParts[0];
             $startTime = $r['start_time'];
         }
-        
+
         if (!empty($r['end_time'])) {
             $endParts = explode(':', $r['end_time']);
             $endHour = (int)$endParts[0];
@@ -89,8 +81,8 @@ try {
     closeDBConnection($conn);
 
     echo json_encode([
-        'success' => true, 
-        'schedules' => $schedules, 
+        'success' => true,
+        'schedules' => $schedules,
         'count' => count($schedules),
         'date' => $date,
         'day_of_week' => $dayOfWeek

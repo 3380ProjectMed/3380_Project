@@ -1,15 +1,10 @@
 <?php
 
-/**
- * Get doctor availability for a specific date
- * Uses session-based authentication like doctor API
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    // Start session and require that the user is logged in
-    //session_start();
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -26,7 +21,6 @@ try {
     $date = $_GET['date'];
     $user_id = (int) $_SESSION['uid'];
 
-    // Verify receptionist is authenticated
     $conn = getDBConnection();
 
     try {
@@ -49,8 +43,7 @@ try {
         exit;
     }
 
-    // Get doctor's schedule for the specified date
-    $scheduleSql = "SELECT 
+    $scheduleSql = "SELECT
                         ws.schedule_id,
                         ws.day_of_week,
                         ws.start_time,
@@ -78,8 +71,7 @@ try {
 
     $doctorSchedule = $schedule[0];
 
-    // Get existing appointments for this doctor on this date
-    $appointmentsSql = "SELECT 
+    $appointmentsSql = "SELECT
                             Appointment_date,
                             Status
                         FROM appointment
@@ -90,10 +82,9 @@ try {
 
     $existingAppointments = executeQuery($conn, $appointmentsSql, 'is', [$doctor_id, $date]);
 
-    // Generate time slots (30-minute intervals)
     $startTime = new DateTime($date . ' ' . $doctorSchedule['start_time']);
     $endTime = new DateTime($date . ' ' . $doctorSchedule['end_time']);
-    $interval = new DateInterval('PT30M'); // 30 minutes
+    $interval = new DateInterval('PT30M');
 
     $slots = [];
     $bookedTimes = array_map(function ($apt) {

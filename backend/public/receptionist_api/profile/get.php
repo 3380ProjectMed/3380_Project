@@ -5,7 +5,7 @@ require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
 try {
-    //session_start();
+
     if (empty($_SESSION['uid']) || empty($_SESSION['role'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -15,8 +15,7 @@ try {
     $conn = getDBConnection();
     $email = $_SESSION['email'] ?? '';
 
-    // Fetch receptionist profile from staff and work_schedule
-    $sql = "SELECT ua.username, ua.email, ua.role, s.staff_id, s.first_name, s.last_name, 
+    $sql = "SELECT ua.username, ua.email, ua.role, s.staff_id, s.first_name, s.last_name,
                    s.license_number, s.gender, cg.gender_text AS gender_description,
                    ws.office_id, o.name AS office_name, o.address, o.city, o.state, o.zipcode, o.phone AS office_phone
             FROM user_account ua
@@ -59,7 +58,7 @@ try {
             'firstName' => $r['first_name'] ?? $r['username'] ?? '',
             'lastName' => $r['last_name'] ?? '',
             'email' => $r['email'] ?? '',
-            'phoneNumber' => null, // Phone number not stored in staff table
+            'phoneNumber' => null,
             'gender' => $r['gender_description'] ?? null,
             'licenseNumber' => $r['license_number'] ?? '',
             'role' => $r['role'] ?? 'receptionist',

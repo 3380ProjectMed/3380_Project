@@ -1,16 +1,12 @@
 <?php
 header('Content-Type: application/json');
-/**
- * Record copay payment
- * Receptionist collects copay - that's it!
- */
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
-
 try {
-    //session_start();
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -35,7 +31,6 @@ try {
     $amount = (float)$input['amount'];
     $method = isset($input['method']) ? $input['method'] : 'card';
 
-    // Validate payment method
     $valid_methods = ['cash', 'card', 'check'];
     if (!in_array($method, $valid_methods)) {
         $method = 'card';
@@ -49,7 +44,6 @@ try {
 
     $conn = getDBConnection();
 
-    // Get receptionist info
     $staffRows = executeQuery($conn, '
         SELECT ws.office_id, CONCAT(s.first_name, " ", s.last_name) as staff_name
         FROM staff s
@@ -68,7 +62,6 @@ try {
     $receptionist_name = $staffRows[0]['staff_name'];
     $office_id = (int)$staffRows[0]['office_id'];
 
-    // Check visit exists and belongs to this office
     $checkSql = "SELECT payment, office_id, patient_id FROM patient_visit WHERE visit_id = ?";
     $existing = executeQuery($conn, $checkSql, 'i', [$visit_id]);
 
@@ -97,8 +90,7 @@ try {
         exit;
     }
 
-    // Simple update - just save the copay payment
-    $updateSql = "UPDATE patient_visit 
+    $updateSql = "UPDATE patient_visit
                   SET payment = ?,
                       payment_method = ?,
                       copay_amount_due = ?,
@@ -108,7 +100,6 @@ try {
 
     executeQuery($conn, $updateSql, 'dsdsi', [$amount, $method, $amount, $receptionist_name, $visit_id]);
 
-    // Get patient name for response
     $patientSql = "SELECT CONCAT(p.first_name, ' ', p.last_name) as patient_name
                    FROM patient p
                    WHERE p.patient_id = ?";

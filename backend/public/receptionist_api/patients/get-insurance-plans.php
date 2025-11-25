@@ -1,16 +1,11 @@
 <?php
-/**
- * ==========================================
- * FILE: public/receptionist_api/patients/get-insurance-plans.php
- * ==========================================
- * Get list of available insurance plans for adding to patient
- */
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
 try {
-    //session_start();
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -19,8 +14,7 @@ try {
 
     $conn = getDBConnection();
 
-    // Get all active insurance plans with payer information
-    $sql = "SELECT 
+    $sql = "SELECT
                 ip.plan_id,
                 ip.plan_name,
                 ip.plan_type,
@@ -36,7 +30,6 @@ try {
 
     $plans = executeQuery($conn, $sql, '', []);
 
-    // Group plans by payer
     $grouped_plans = [];
     foreach ($plans as $plan) {
         $payer_id = $plan['payer_id'];
@@ -48,7 +41,7 @@ try {
                 'plans' => []
             ];
         }
-        
+
         $grouped_plans[$payer_id]['plans'][] = [
             'plan_id' => $plan['plan_id'],
             'plan_name' => $plan['plan_name'],
