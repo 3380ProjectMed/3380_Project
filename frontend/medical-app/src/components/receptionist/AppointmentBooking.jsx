@@ -507,7 +507,7 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
               <input
                 type="text"
                 className="search-input-large"
-                placeholder="Search by name, phone, or date of birth..."
+                placeholder="Search by name or date of birth..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 autoFocus
@@ -554,13 +554,7 @@ function AppointmentBooking({ preSelectedPatient, preSelectedTimeSlot, editingAp
               ) : null}
             </div>
 
-            <div className="new-patient-option">
-              <p className="or-divider">OR</p>
-              <button className="btn btn-secondary btn-large">
-                <User size={20} />
-                Create New Patient
-              </button>
-            </div>
+            {/* Removed Create New Patient option from booking */}
           </div>
         )}
 
