@@ -414,7 +414,7 @@ function PatientSearch() {
                   {patient.EmergencyContact && (
                     <div className="detail-item">
                       <Phone size={16} />
-                      <span className="detail-label">Emergency Phone</span>
+                      <span className="detail-label">Emergency Phone</span><br />
                       <span className="detail-value">{patient.EmergencyContact}</span>
                     </div>
                   )}

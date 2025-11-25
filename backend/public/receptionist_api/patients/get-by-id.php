@@ -25,10 +25,13 @@ try {
 
     $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob,
              p.email, p.emergency_contact_id, p.insurance_id, p.primary_doctor,
-             pcp_staff.first_name as pcp_first_name, pcp_staff.last_name as pcp_last_name
+             pcp_staff.first_name as pcp_first_name, pcp_staff.last_name as pcp_last_name,
+             ec.ec_phone AS EmergencyContact,
+             ec.relationship AS EmergencyContactRelationship
          FROM patient p
          LEFT JOIN doctor pcp ON p.primary_doctor = pcp.doctor_id
          LEFT JOIN staff pcp_staff ON pcp.staff_id = pcp_staff.staff_id
+         LEFT JOIN emergency_contact ec ON p.emergency_contact_id = ec.emergency_contact_id
          WHERE p.patient_id = ?";
 
     $patientRows = executeQuery($conn, $sql, 'i', [$patientId]);
