@@ -153,10 +153,7 @@ npm run build
 ```
 
 2. **Deploy to Static Hosting**
-   - Azure Static Web Apps
-   - Netlify
-   - Vercel
-   - GitHub Pages
+   - We used Azure Static Web Apps
 
 3. **Update API Configuration**
    - Set production API URL in build configuration
