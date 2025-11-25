@@ -42,7 +42,7 @@ try {
         
         $scheduleRows = executeQuery($conn, $scheduleSQL, 'ii', [(int)$doctor['staff_id'], $officeId]);
         
-        $workSchedule = [];
+            $workSchedule = [];
         foreach ($scheduleRows as $schedule) {
             if ($schedule['day_of_week']) {
                 $workSchedule[] = [

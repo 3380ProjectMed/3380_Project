@@ -146,9 +146,6 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
     }
   };
 
-  /**
-   * Get CSS class for status badge
-   */
   const getStatusClass = (status) => {
     const statusMap = {
       'scheduled': 'status-scheduled',
@@ -164,9 +161,6 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
     return statusMap[status.toLowerCase()] || 'status-scheduled';
   };
 
-  /**
-   * Handle appointment row click
-   */
   const handleAppointmentRowClick = (appointment) => {
     if (onAppointmentClick) {
       onAppointmentClick(appointment);
@@ -214,11 +208,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
         )}
         <button 
           className="action-btn-small btn-cancel"
-          onClick={() => {
-            if (window.confirm('Mark this appointment as No-Show?')) {
-              updateAppointmentStatus(appointment.id, 'No-Show');
-            }
-          }}
+          onClick={() => updateAppointmentStatus(appointment.id, 'No-Show')}
           title="No-Show"
         >
           <XCircle size={14} />
@@ -320,7 +310,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
             </div>
           </div>
 
-          {/* ===== QUICK ACTIONS ===== */}
+          {/* QUICK ACTIONS */}
           <div className="quick-actions">
             <button 
               className="action-btn" 
@@ -345,7 +335,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
             </button>
           </div>
 
-          {/* ===== TODAY'S SCHEDULE ===== */}
+          {/* TODAY'S SCHEDULE */}
           <div className="schedule-section">
             <div className="section-header">
               <div className="section-header-left">

@@ -1,15 +1,12 @@
-/* ========== PROFILE COMPONENT ========== */
 .profile-page {
   padding: 1.5rem;
   max-width: 1200px;
   margin: 0 auto;
-  /* keep font consistent with other pages */
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Enhanced Profile Header */
 .profile-header {
   background: linear-gradient(135deg, var(--fifth-color), white);
   border: 2px solid var(--forth-color);
@@ -21,7 +18,6 @@
   overflow: hidden;
 }
 
-/* Decorative element */
 .profile-header::before {
   content: '';
   position: absolute;
@@ -62,7 +58,6 @@
   position: relative;
 }
 
-/* Profile Tabs */
 .profile-tabs {
   display: flex;
   gap: 0.5rem;
@@ -102,7 +97,6 @@
   box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
 }
 
-/* Profile Content */
 .profile-content {
   background: white;
   border-radius: 1rem;
@@ -123,7 +117,6 @@
   margin-bottom: 2rem;
 }
 
-/* Profile Photo */
 .profile-photo-section {
   display: flex;
   justify-content: center;
@@ -604,7 +597,7 @@
   color: var(--secondary-color);
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
+
 @media (max-width: 1024px) {
   .profile-page {
     padding: 1rem;

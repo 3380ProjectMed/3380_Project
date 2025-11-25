@@ -105,7 +105,7 @@ if (!$result || $result->num_rows === 0) {
 $user = $result->fetch_assoc();
 $stmt->close();
 
-// Check if account is locked - UPDATED: Less alarming message
+// Check if account is locked
 if ($user['password_hash'] === null) {
     http_response_code(403);
     echo json_encode([
@@ -115,7 +115,7 @@ if ($user['password_hash'] === null) {
     exit;
 }
 
-// Check if account is active - UPDATED: Less alarming message
+// Check if account is active
 if ($user['is_active'] == 0) {
     http_response_code(403);
     echo json_encode([
@@ -140,7 +140,6 @@ if (!password_verify($password, $user['password_hash'])) {
         $updateStmt->execute();
         $updateStmt->close();
 
-        // UPDATED: Less alarming message
         http_response_code(403);
         echo json_encode([
             'error' => 'Please reset your password to continue.',

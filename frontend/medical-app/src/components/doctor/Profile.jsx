@@ -12,10 +12,8 @@ function Profile() {
     lastName: '',
     email: '',
     phone: '',
-    // License, workLocation and specialties are intentionally omitted
-    // from the editable UI (doctors cannot change these here)
     gender: '',
-    // bio: '' // keep in state in case other code relies on it, but not editable
+    // bio: '' 
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -26,13 +24,11 @@ function Profile() {
       setLoading(true);
       try {
         if (auth.loading) return;
-        // backend `get.php` will use session when no doctor_id is provided, so try both
         const doctorId = auth.user?.doctor_id ?? auth.user?.doctorId ?? null;
         const url = doctorId ? `/doctor_api/profile/get.php?doctor_id=${doctorId}` : '/doctor_api/profile/get.php';
         const res = await fetch(url, { credentials: 'include' });
         const json = await res.json();
         if (json.success && json.profile) {
-          // Normalize backend profile shape into our state keys
           const p = json.profile;
           setProfile(prev => ({
             ...prev,
@@ -43,7 +39,6 @@ function Profile() {
             email: p.email ?? p.staff_email ?? prev.email,
             phone: p.phone ?? p.phone_number ?? prev.phone,
             gender: p.gender ?? prev.gender,
-            // // Keep bio in state if present, but do not render as editable
             // bio: p.bio ?? prev.bio
           }));
         } else {
@@ -66,8 +61,6 @@ function Profile() {
     setSaving(true);
     setStatus(null);
     try {
-      // Only send editable fields. License number, work location,
-      // specialties and bio are not editable by the doctor in this UI.
       const body = {
         doctor_id: auth.user?.doctor_id ?? auth.user?.doctorId ?? profile.doctorId,
         firstName: profile.firstName,
@@ -124,12 +117,11 @@ function Profile() {
               <label><Phone size={16}/> Phone</label>
               <input value={profile.phone} onChange={(e) => handleChange('phone', e.target.value)} />
             </div>
-            {/* License Number, Work Location and Specialties removed - not editable by doctor */}
+
             <div className="form-group">
               <label>Gender</label>
               <input value={profile.gender} onChange={(e) => handleChange('gender', e.target.value)} disabled />
             </div>
-            {/* Bio removed from editable UI per request */}
           </div>
 
           <div style={{ marginTop: 16 }}>

@@ -221,7 +221,6 @@ try {
             },
             0.0
         );
-        // Clamp and round so we never show > 100%
         $overall_utilization = min(100.0, round($overall_utilization, 1));
     }
 

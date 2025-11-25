@@ -48,7 +48,6 @@ try {
 
     $date = $_GET['date'] ?? date('Y-m-d');
 
-    // Get total appointments for the date (all appointments, not just those with nurse visits)
     $totalSql = "SELECT COUNT(*) as count FROM appointment WHERE DATE(Appointment_date) = ?";
     $totalResult = executeQuery($conn, $totalSql, 's', [$date]);
     $total = $totalResult ? (int)$totalResult[0]['count'] : 0;
@@ -81,7 +80,6 @@ try {
         }
     }
 
-    // Get nurse-specific stats (appointments where nurse is involved via patient_visit)
     $nurseSql = "SELECT COUNT(DISTINCT a.Appointment_id) as count
                  FROM appointment a
                  LEFT JOIN patient_visit pv ON a.Appointment_id = pv.appointment_id

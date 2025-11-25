@@ -47,7 +47,8 @@ export default function NurseDashboard({ setCurrentPage }) {
       setLoading(true);
       setError(null);
       try {
-        const today = getCurrentChicagoDateString();
+        // Use the proper date format for the API (YYYY-MM-DD)
+        const today = new Date().toISOString().slice(0, 10);
         const [s, appts, profile] = await Promise.all([
           getNurseDashboardStats(today),
           getNurseScheduleToday(),
@@ -55,6 +56,7 @@ export default function NurseDashboard({ setCurrentPage }) {
         ]);
         
         if (mounted && s) {
+          console.log('Nurse dashboard stats:', s);
           setStats({
             total: s.total,
             waiting: s.waiting,

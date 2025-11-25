@@ -85,18 +85,15 @@ function DoctorPortal() {
     setSelectedPatient(null);
   };
 
-  // Extract appointmentId from selectedAppointment
   const getAppointmentId = () => {
     if (!selectedAppointment) return null;
     
-    // Try different possible field names for appointment ID
     let apptId = selectedAppointment.appointment_id || 
                  selectedAppointment.Appointment_id || 
                  selectedAppointment.appointmentId || 
                  selectedAppointment.id ||
                  null;
     
-    // Strip the "A" prefix if present (e.g., "A1002" -> "1002")
     if (apptId && typeof apptId === 'string') {
       apptId = apptId.replace(/^A/i, '');
     }

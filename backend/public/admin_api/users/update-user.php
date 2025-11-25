@@ -34,7 +34,6 @@ try {
     $phone     = trim($input['phone_number'] ?? '');          // used for doctors
     $isActive  = isset($input['is_active']) ? (int)$input['is_active'] : 1;
 
-    // Optional, if you want to allow updating these:
     $specialty   = isset($input['specialty']) ? (int)$input['specialty'] : null; // doctor.specialty (FK)
     $department  = trim($input['department'] ?? '');                              // nurse.department
     $licenseNo   = trim($input['license_number'] ?? '');                          // staff.license_number
@@ -46,7 +45,6 @@ try {
     $conn = getDBConnection();
     $conn->begin_transaction();
 
-    // 1) Update user_account core info (email + active)
     $sql = "
         UPDATE user_account
         SET email = ?, is_active = ?
@@ -61,8 +59,6 @@ try {
         throw new RuntimeException('Failed to update user_account');
     }
 
-    // 2) Update staff for ALL staff-based users
-    // staff: staff_id, first_name, last_name, ssn, gender, staff_email, staff_role, license_number
     $sql = "
         UPDATE staff
         SET first_name = ?, last_name = ?, staff_email = ?
@@ -85,7 +81,7 @@ try {
         throw new RuntimeException('Failed to update staff');
     }
 
-    // 3) Role-specific data
+    // Role-specific data
     if ($userType === 'DOCTOR') {
         // doctor: doctor_id, staff_id, specialty (FK), phone
         if ($specialty !== null && $specialty > 0) {

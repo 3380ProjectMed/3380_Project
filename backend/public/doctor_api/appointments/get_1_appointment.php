@@ -1,7 +1,6 @@
 <?php
-/**
- * Get single appointment by ID
- */
+// Get single appointment by ID
+ 
 
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
@@ -17,7 +16,6 @@ try {
     
     $conn = getDBConnection();
     
-    // appointment table has mixed case columns
     $sql = "SELECT 
                 a.Appointment_id,
                 a.Patient_id,

@@ -127,7 +127,7 @@ try {
             $stmt->close();
         }
 
-        // Update doctor table (specialty)
+        // Update doctor table
         if (isset($input['specialty'])) {
             $stmt = $conn->prepare('UPDATE doctor SET specialty = ? WHERE doctor_id = ?');
             if (!$stmt) throw new Exception('Doctor prepare failed: ' . $conn->error);

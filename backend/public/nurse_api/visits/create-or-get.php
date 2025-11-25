@@ -1,8 +1,5 @@
 <?php
 header('Content-Type: application/json');
-/**
- * Create or return an existing patient_visit for a given appointment
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
@@ -74,15 +71,12 @@ try {
     $doctor_id = isset($appt['Doctor_id']) ? intval($appt['Doctor_id']) : null;
     $office_id = isset($appt['Office_id']) ? intval($appt['Office_id']) : null;
 
-    // Insert a new patient_visit row (use status that's valid in schema)
     $sql = 'INSERT INTO patient_visit (appointment_id, patient_id, date, doctor_id, nurse_id, office_id, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-    // types: appointment_id(i), patient_id(i), date(s), doctor_id(i), nurse_id(i), office_id(i), status(s), created_by(s)
     $param_types = 'iisiiiss';
     $created_by = $nurse_name ?: $email;
     executeQuery($conn, $sql, $param_types, [$appointment_id, $patient_id, $appt_date, $doctor_id, $nurse_id, $office_id, 'Scheduled', $created_by]);
     $visit_id = $conn->insert_id;
 
-    // Try to return any initial vitals from patient_visit (likely empty immediately after insert)
     $pv = executeQuery($conn, 'SELECT visit_id, appointment_id, blood_pressure, temperature, present_illnesses FROM patient_visit WHERE visit_id = ? LIMIT 1', 'i', [$visit_id]);
     $existingVitals = [];
     if (!empty($pv)) {

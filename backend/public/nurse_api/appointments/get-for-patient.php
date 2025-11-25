@@ -24,7 +24,6 @@ try {
         exit;
     }
 
-    // scope can be 'today' or 'upcoming'
     $scope = isset($_GET['scope']) ? strtolower(trim($_GET['scope'])) : 'today';
 
     if ($scope === 'today') {
