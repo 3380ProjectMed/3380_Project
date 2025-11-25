@@ -528,13 +528,15 @@ function PatientSearch() {
                     <div className="info-grid">
                       {(selectedPatient.ec_first_name || selectedPatient.ec_last_name) && (
                         <div className="info-field">
-                          <span className="field-label">Name</span>
-                          <span className="field-value">{`${selectedPatient.ec_first_name || ''} ${selectedPatient.ec_last_name || ''}`.trim()}</span>
+                          <span className="field-label">Full Name</span><br />
+                          <span className="field-value">
+                            {`${selectedPatient.ec_first_name || ''} ${selectedPatient.ec_last_name || ''}`.trim()}
+                          </span>
                         </div>
                       )}
                       {selectedPatient.EmergencyContact && (
                         <div className="info-field">
-                          <span className="field-label">Phone</span>
+                          <span className="field-label">Phone</span><br />
                           <a href={`tel:${selectedPatient.EmergencyContact}`} className="field-value link-phone">
                             {selectedPatient.EmergencyContact}
                           </a>
