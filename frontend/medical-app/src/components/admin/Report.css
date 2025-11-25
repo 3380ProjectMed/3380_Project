@@ -2171,3 +2171,72 @@
   gap: 0.5rem;
   margin-bottom: 0.5rem;
 }
+
+
+/* Add these rules to fix the overlapping filters */
+
+.filter-inputs {
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+	flex-wrap: wrap;
+	width: 100%; /* Ensure full width */
+}
+
+.date-range-group {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-shrink: 1; /* Allow shrinking if needed */
+	min-width: 0; /* Allow flex items to shrink below content size */
+}
+
+.date-range-group input {
+	min-width: 130px; /* Prevent inputs from being too narrow */
+	max-width: 150px; /* Prevent inputs from being too wide */
+}
+
+.filter-group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	flex-shrink: 0; /* Prevent group by from shrinking */
+	min-width: 150px; /* Ensure minimum width for dropdown */
+}
+
+/* Better responsive behavior for filter sections */
+@media (max-width: 768px) {
+	.filter-inputs {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	
+	.date-range-group {
+		flex-direction: column;
+		align-items: stretch;
+		width: 100%;
+	}
+	
+	.date-range-group input {
+		max-width: 100%;
+		width: 100%;
+	}
+	
+	.filter-group {
+		width: 100%;
+	}
+}
+
+.filters-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Reduced from 250px */
+	gap: 1.25rem;
+	margin-bottom: 1.25rem;
+}
+
+/* Ensure filter groups don't overflow */
+.filter-group input,
+.filter-group select {
+	width: 100%;
+	box-sizing: border-box;
+}
