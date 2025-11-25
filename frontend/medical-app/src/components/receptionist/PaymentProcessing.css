@@ -1,11 +1,9 @@
-/* ========== PAYMENT PROCESSING PAGE ========== */
 .payment-page {
   padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
 }
 
-/* ===== PAGE HEADER ===== */
 .page-header {
   margin-bottom: 2rem;
 }
@@ -27,7 +25,6 @@
   font-weight: 500;
 }
 
-/* ===== SEARCH SECTION ===== */
 .search-section {
   background: white;
   border-radius: 1rem;
@@ -37,7 +34,6 @@
   margin-bottom: 2rem;
 }
 
-/* Filter Toggle */
 .filter-toggle {
   display: flex;
   gap: 0.75rem;
@@ -74,7 +70,6 @@
   box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
 }
 
-/* Search Box */
 .search-box-container {
   position: relative;
   margin-bottom: 1rem;
@@ -91,7 +86,7 @@
 }
 
 .search-input-main {
-  box-sizing: border-box; /* ensure padding doesn't cause overflow */
+  box-sizing: border-box; 
   width: 100%;
   max-width: 100%;
   padding: 1.25rem 3.5rem 1.25rem 3.5rem;
@@ -135,7 +130,6 @@
   color: #1f2937;
 }
 
-/* Loading Message */
 .loading-message {
   display: flex;
   align-items: center;
@@ -160,7 +154,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* Results Container */
 .results-container {
   margin-top: 1.5rem;
 }
@@ -172,7 +165,6 @@
   margin: 0 0 1rem 0;
 }
 
-/* Results List */
 .results-list {
   display: flex;
   flex-direction: column;
@@ -279,7 +271,6 @@
   border: 2px solid #fbbf24;
 }
 
-/* No Results */
 .no-results {
   text-align: center;
   padding: 4rem 2rem;
@@ -304,7 +295,6 @@
   margin: 0;
 }
 
-/* ===== PAYMENT CONTENT ===== */
 .payment-content {
   background: white;
   border-radius: 1rem;
@@ -313,7 +303,6 @@
   border: 2px solid #e5e7eb;
 }
 
-/* Back Button */
 .btn-back {
   display: flex;
   align-items: center;
@@ -335,7 +324,6 @@
   color: #0077b6;
 }
 
-/* Already Paid Banner */
 .already-paid-banner {
   display: flex;
   gap: 1.25rem;
@@ -370,21 +358,18 @@
   font-weight: 500;
 }
 
-/* Payment Grid */
 .payment-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
 }
 
-/* ===== LEFT COLUMN ===== */
 .payment-left {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-/* Patient Card */
 .patient-card {
   background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
   border: 2px solid #0077b6;
@@ -392,9 +377,6 @@
   padding: 1.5rem;
 }
 
-/* Ensure card text is readable even if a global color is forcing white
-   (some deployments set a dark root color). Enforce visible foreground
-   specifically for the patient card and the large patient name. */
 .patient-card,
 .patient-card * {
   color: #043a57 !important;
@@ -456,7 +438,6 @@
   flex-shrink: 0;
 }
 
-/* Visit Details Section */
 .visit-details-section {
   display: flex;
   flex-direction: column;
@@ -487,7 +468,6 @@
   color: #1f2937;
 }
 
-/* Insurance Card */
 .insurance-card-full {
   background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
   border: 2px solid #00b4d8;
@@ -586,7 +566,6 @@
   font-family: 'Courier New', monospace;
 }
 
-/* Copay Highlight */
 .copay-highlight {
   display: flex;
   justify-content: space-between;
@@ -609,7 +588,6 @@
   color: #f59e0b;
 }
 
-/* No Insurance Card */
 .no-insurance-card {
   display: flex;
   flex-direction: column;
@@ -640,14 +618,12 @@
   margin: 0;
 }
 
-/* ===== RIGHT COLUMN ===== */
 .payment-right {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-/* Payment Card */
 .payment-card {
   background: white;
   border: 2px solid #e5e7eb;
@@ -673,7 +649,6 @@
   text-transform: uppercase;
 }
 
-/* Amount Input */
 .amount-input-group {
   position: relative;
   display: flex;
@@ -719,7 +694,6 @@
   color: #92400e;
 }
 
-/* Payment Method Grid */
 .method-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -766,7 +740,6 @@
   text-align: center;
 }
 
-/* Payment Notes */
 .payment-notes-input {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -790,7 +763,6 @@
   color: #9ca3af;
 }
 
-/* Error Alert */
 .error-alert {
   display: flex;
   align-items: center;
@@ -803,7 +775,6 @@
   font-weight: 600;
 }
 
-/* Submit Button */
 .btn-submit-payment {
   width: 100%;
   display: flex;
@@ -833,13 +804,11 @@
   box-shadow: none;
 }
 
-/* ===== RECEIPT CONTAINER ===== */
 .receipt-container {
   max-width: 900px;
   margin: 0 auto;
 }
 
-/* Receipt Success */
 .receipt-success {
   text-align: center;
   margin-bottom: 2rem;
@@ -871,7 +840,6 @@
   margin: 0;
 }
 
-/* Receipt Card */
 .receipt-card {
   background: white;
   border-radius: 1rem;
@@ -963,7 +931,6 @@
   text-transform: capitalize;
 }
 
-/* Receipt Total */
 .receipt-total {
   display: flex;
   justify-content: space-between;
@@ -986,7 +953,6 @@
   color: #0077b6;
 }
 
-/* Receipt Note */
 .receipt-note {
   display: flex;
   gap: 0.75rem;
@@ -1014,7 +980,6 @@
   font-weight: 700;
 }
 
-/* Receipt Actions */
 .receipt-actions {
   display: flex;
   gap: 1rem;
@@ -1063,7 +1028,6 @@
   box-shadow: 0 8px 20px rgba(0, 119, 182, 0.4);
 }
 
-/* ===== PRINT STYLES ===== */
 @media print {
   .payment-page {
     padding: 0;
@@ -1081,7 +1045,6 @@
   }
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 1200px) {
   .payment-grid {
     grid-template-columns: 1fr;

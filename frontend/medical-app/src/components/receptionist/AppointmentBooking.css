@@ -1,11 +1,9 @@
-/* ========== APPOINTMENT BOOKING PAGE ========== */
 .appointment-booking-page {
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
 }
 
-/* ===== HEADER ===== */
 .booking-header {
   display: flex;
   align-items: center;
@@ -18,7 +16,6 @@
   box-shadow: 0 8px 16px rgba(0, 119, 182, 0.2);
 }
 
-/* Edit banner displayed when editing an existing appointment */
 .edit-banner {
   margin-top: 1rem;
   margin-bottom: 1.5rem;
@@ -58,7 +55,6 @@
   color: #0077b6;
 }
 
-/* ===== STEP INDICATOR ===== */
 .step-indicator {
   display: flex;
   align-items: center;
@@ -119,7 +115,6 @@
   margin: 0 1rem;
 }
 
-/* ===== BOOKING CONTENT ===== */
 .booking-content {
   background: white;
   border-radius: 1rem;
@@ -128,7 +123,6 @@
   border: 2px solid #e5e7eb;
 }
 
-/* ===== STEP 1: PATIENT SEARCH ===== */
 .search-patient-section {
   max-width: 800px;
   margin: 0 auto;
@@ -175,7 +169,6 @@
   box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.1);
 }
 
-/* Patient Results */
 .patient-results {
   display: flex;
   flex-direction: column;
@@ -259,7 +252,6 @@
   font-size: 1.1rem;
 }
 
-/* New Patient Option */
 .new-patient-option {
   text-align: center;
   padding: 2rem 0;
@@ -295,14 +287,12 @@
   font-size: 1.05rem;
 }
 
-/* ===== STEP 2: APPOINTMENT DETAILS ===== */
 .booking-form {
   display: flex;
   flex-direction: column;
   gap: 2rem;
 }
 
-/* Selected Patient Card */
 .selected-patient-card {
   background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
   border: 2px solid #00b4d8;
@@ -359,7 +349,6 @@
   color: #0077b6;
 }
 
-/* Form Sections */
 .form-section {
   padding-bottom: 2rem;
   border-bottom: 2px solid #f3f4f6;
@@ -391,7 +380,6 @@
   margin-left: auto;
 }
 
-/* Doctor Grid */
 .doctor-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -424,7 +412,7 @@
 .doctor-card.unavailable {
   opacity: 0.45;
   cursor: not-allowed;
-  pointer-events: auto; /* allow click handler to show warning */
+  pointer-events: auto; 
 }
 
 .doctor-card.unavailable:hover {
@@ -456,21 +444,18 @@
   margin: 0;
 }
 
-/* Date Time Grid */
 .date-time-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
 }
 
-/* Insurance Grid */
 .insurance-grid {
   display: grid;
   grid-template-columns: 2fr 2fr 1fr;
   gap: 1.5rem;
 }
 
-/* Input with Prefix */
 .input-with-prefix {
   position: relative;
   display: flex;
@@ -489,7 +474,6 @@
   padding-left: 2rem;
 }
 
-/* Booking Channel Options */
 .booking-channel-section {
   background: linear-gradient(135deg, #fef3c7, #ffffff);
   border: 2px solid #fbbf24;
@@ -541,7 +525,6 @@
   font-size: 0.95rem;
 }
 
-/* Form Actions */
 .form-actions {
   display: flex;
   justify-content: space-between;
@@ -549,7 +532,6 @@
   padding-top: 1.5rem;
 }
 
-/* Error Message */
 .error-message {
   color: #ef4444;
   font-size: 0.875rem;
@@ -565,7 +547,6 @@
   border-color: #ef4444;
 }
 
-/* ===== STEP 3: CONFIRMATION ===== */
 .confirmation-card {
   max-width: 900px;
   margin: 0 auto;
@@ -653,7 +634,6 @@
   font-weight: 800;
 }
 
-/* Booking Channel Display */
 .booking-channel-display {
   display: flex;
   align-items: center;
@@ -684,7 +664,6 @@
   margin: 0;
 }
 
-/* Confirmation Actions */
 .confirmation-actions {
   display: flex;
   justify-content: space-between;
@@ -693,7 +672,6 @@
   border-top: 2px solid #e5e7eb;
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 1024px) {
   .insurance-grid {
     grid-template-columns: 1fr;

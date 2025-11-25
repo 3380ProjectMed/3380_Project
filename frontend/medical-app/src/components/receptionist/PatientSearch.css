@@ -1,11 +1,9 @@
-/* ========== PATIENT SEARCH PAGE ========== */
 .patient-search-page {
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-/* ===== PAGE HEADER ===== */
 .page-header {
   margin-bottom: 2rem;
   background: linear-gradient(135deg, #0077b6, #00b4d8);
@@ -38,7 +36,6 @@
   opacity: 0.95;
 }
 
-/* Create Patient Button */
 .btn-create-patient {
   display: flex;
   align-items: center;
@@ -66,7 +63,6 @@
   transform: translateY(0);
 }
 
-/* ===== SEARCH SECTION ===== */
 .search-section {
   margin-bottom: 2rem;
 }
@@ -137,7 +133,6 @@
   padding-left: 0.5rem;
 }
 
-/* ===== PATIENTS GRID ===== */
 .patients-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
@@ -164,7 +159,6 @@
   border-color: #00b4d8;
 }
 
-/* Patient Avatar */
 .patient-avatar-large {
   width: 64px;
   height: 64px;
@@ -178,7 +172,6 @@
   flex-shrink: 0;
 }
 
-/* Patient Info */
 .patient-info-main {
   flex: 1;
 }
@@ -231,7 +224,6 @@
   word-break: break-all;
 }
 
-/* Insurance Badge */
 .patient-insurance-badge {
   display: flex;
   flex-direction: column;
@@ -283,7 +275,6 @@
   font-weight: 700;
 }
 
-/* Balance Alert */
 .balance-alert {
   display: flex;
   align-items: center;
@@ -297,7 +288,6 @@
   font-size: 0.875rem;
 }
 
-/* ===== EMPTY STATE ===== */
 .empty-state-search {
   grid-column: 1 / -1;
   text-align: center;
@@ -325,13 +315,11 @@
   margin: 0 0 1.5rem 0;
 }
 
-/* ===== MODAL STYLES ===== */
 .modal-large {
   max-width: 1400px !important;
   width: 98% !important;
 }
 
-/* Info Sections */
 .info-section {
   margin-bottom: 3rem;
 }
@@ -396,7 +384,6 @@
   text-decoration: underline;
 }
 
-/* Insurance Card Display */
 .insurance-card-display {
   background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
   border: 2px solid #0077b6;
@@ -468,7 +455,6 @@
   font-weight: 700;
 }
 
-/* Visit History */
 .visit-history-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -508,14 +494,12 @@
   color: #059669;
 }
 
-/* Alert Message */
 .alert-message {
   margin: 0.25rem 0 0 0;
   font-size: 0.875rem;
   font-weight: 500;
 }
 
-/* ===== FORM STYLES ===== */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -675,7 +659,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -771,7 +754,6 @@
   border-bottom-right-radius: 1.5rem;
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 1200px) {
   .patients-grid {
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));

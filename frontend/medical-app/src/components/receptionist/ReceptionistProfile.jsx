@@ -2,12 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, Briefcase, MapPin, Building, AlertCircle, Loader } from 'lucide-react';
 import './ReceptionistProfile.css';
 
-/**
- * ReceptionistProfile Component
- * 
- * Displays receptionist profile information from the Staff table
- * Shows personal information and work location (office assignment)
- */
 function ReceptionistProfile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -89,7 +83,7 @@ function ReceptionistProfile() {
       </div>
 
       <div className="profile-content">
-        {/* Personal Information Card */}
+        {}
         <div className="profile-card">
           <div className="card-header">
             <User size={24} />
@@ -149,7 +143,7 @@ function ReceptionistProfile() {
           </div>
         </div>
 
-        {/* Work Location Card */}
+        {}
         {profile.workLocation && (
           <div className="profile-card">
             <div className="card-header">

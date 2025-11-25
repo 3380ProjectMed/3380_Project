@@ -2,21 +2,6 @@ import React from 'react';
 import { Home, Calendar, Users, CreditCard, LogOut, Clipboard, UserCircle } from 'lucide-react';
 import './Sidebar.css';
 
-/**
- * Sidebar Component - Receptionist Navigation
- * 
- * Navigation menu for receptionist portal
- * Shows office assignment (RBAC - Work_Location from Staff table)
- * 
- * Database: Staff table provides Work_Location (links to Office.Office_ID)
- * 
- * Props:
- * @param {String} currentPage - Currently active page ID
- * @param {Function} setCurrentPage - Navigate to different page
- * @param {Function} onLogout - Handle logout
- * @param {String} officeName - Office.Name (e.g., "Downtown Medical Center")
- * @param {Number} officeId - Office.Office_ID (RBAC restriction)
- */
 function Sidebar({ currentPage, setCurrentPage, onLogout, officeName, officeId }) {
   const menuItems = [
     { 
@@ -59,7 +44,7 @@ function Sidebar({ currentPage, setCurrentPage, onLogout, officeName, officeId }
 
   return (
     <div className="sidebar-receptionist">
-      {/* Sidebar Header */}
+      {}
       <div className="sidebar-header">
         <div className="sidebar-brand">
           <div className="brand-icon">
@@ -71,14 +56,14 @@ function Sidebar({ currentPage, setCurrentPage, onLogout, officeName, officeId }
           </div>
         </div>
         
-        {/* Office Badge - Shows Staff.Work_Location */}
+        {}
         <div className="office-badge">
           <p className="office-badge-text">{officeName}</p>
           <p className="office-badge-id">Office ID: {officeId}</p>
         </div>
       </div>
 
-      {/* Navigation Menu */}
+      {}
       <nav className="sidebar-nav">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -104,9 +89,9 @@ function Sidebar({ currentPage, setCurrentPage, onLogout, officeName, officeId }
         })}
       </nav>
 
-      {/* Sidebar Footer */}
+      {}
       <div className="sidebar-footer">
-        {/* User Info - From Staff table */}
+        {}
         <div className="user-info">
           <div className="user-avatar">
             <Users size={20} />
@@ -117,7 +102,7 @@ function Sidebar({ currentPage, setCurrentPage, onLogout, officeName, officeId }
           </div>
         </div>
 
-        {/* Logout Button */}
+        {}
         <button 
           className="logout-btn"
           onClick={onLogout}

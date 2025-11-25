@@ -2,12 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, Check, Shield, Calendar, CreditCard, Users } from 'lucide-react';
 import './AddInsuranceModal.css';
 
-/**
- * AddInsuranceModal Component
- * 
- * Modal for adding or updating patient insurance information
- * Used by receptionists when a patient has no insurance or expired insurance
- */
 function AddInsuranceModal({ patient, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [loadingPlans, setLoadingPlans] = useState(true);
@@ -32,7 +26,6 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
     loadExistingInsurance();
   }, []);
 
-  // Populate form after both plans and existing insurance are loaded
   useEffect(() => {
     if (!loadingPlans && !loadingExisting && existingInsurance && insurancePlans.length > 0) {
       populateFormWithExistingInsurance();
@@ -46,8 +39,7 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
     
     console.log('Populating form with insurance:', ins);
     console.log('Available insurance plans:', insurancePlans);
-    
-    // Pre-populate form with existing insurance data
+
     setFormData({
       plan_id: ins.plan_id || '',
       member_id: ins.member_id || '',
@@ -65,8 +57,7 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
       expiration_date: ins.expiration_date,
       is_primary: ins.is_primary
     });
-    
-    // Set the payer dropdown
+
     if (ins.payer_id) {
       console.log('Setting payer to:', ins.payer_id);
       setSelectedPayer(ins.payer_id.toString());
@@ -76,7 +67,7 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
   const loadExistingInsurance = async () => {
     try {
       setLoadingExisting(true);
-      // Handle different property name formats
+      
       const patientId = patient.Patient_id || patient.patient_id;
       
       if (!patientId) {
@@ -96,7 +87,7 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
       console.log('Insurance data received:', data);
       
       if (data.success && data.has_insurance) {
-        // Store the insurance data to populate later
+        
         console.log('Setting existing insurance:', data.insurance);
         setExistingInsurance(data.insurance);
       } else {
@@ -104,7 +95,7 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
       }
     } catch (err) {
       console.error('Failed to load existing insurance:', err);
-      // Don't show error, just continue with empty form
+      
     } finally {
       setLoadingExisting(false);
     }
@@ -162,8 +153,7 @@ function AddInsuranceModal({ patient, onClose, onSuccess }) {
     try {
       setLoading(true);
       setError('');
-      
-      // Handle different property name formats
+
       const patientId = patient.Patient_id || patient.patient_id;
       
       if (!patientId) {
