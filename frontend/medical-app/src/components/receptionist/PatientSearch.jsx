@@ -313,9 +313,7 @@ function PatientSearch() {
                     {selectedPatient.EmergencyContact && (
                       <div className="info-field">
                         <span className="field-label">Phone</span>
-                        <a href={`tel:${selectedPatient.EmergencyContact}`} className="field-value link-phone">
-                          {selectedPatient.EmergencyContact}
-                        </a>
+                        <span className="field-value">{selectedPatient.EmergencyContact}</span>
                       </div>
                     )}
 
@@ -503,9 +501,7 @@ function PatientSearch() {
                     {(selectedPatient.Email || selectedPatient.email) && (
                       <div className="info-field">
                         <span className="field-label">Email</span>
-                        <a href={`mailto:${selectedPatient.Email || selectedPatient.email}`} className="field-value link-email">
-                          {selectedPatient.Email || selectedPatient.email}
-                        </a>
+                        <span className="field-value">{selectedPatient.Email || selectedPatient.email}</span>
                       </div>
                     )}
                     {selectedPatient.pcp_first_name && selectedPatient.pcp_last_name && (
@@ -537,9 +533,7 @@ function PatientSearch() {
                       {selectedPatient.EmergencyContact && (
                         <div className="info-field">
                           <span className="field-label">Phone</span><br />
-                          <a href={`tel:${selectedPatient.EmergencyContact}`} className="field-value link-phone">
-                            {selectedPatient.EmergencyContact}
-                          </a>
+                          <span className="field-value">{selectedPatient.EmergencyContact}</span>
                         </div>
                       )}
                       {selectedPatient.EmergencyContactRelationship && (
