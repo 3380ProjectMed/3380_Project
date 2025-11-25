@@ -1,13 +1,10 @@
 <?php
 
-/**
- * Get appointments for receptionist's office with intelligent status calculation
- * IMPROVED VERSION: Incorporates best practices from get-today.php and get-by-month.php
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -50,11 +47,13 @@ try {
     $queryTypes = 'i';
 
     if (isset($_GET['date'])) {
+
         $targetDate = $_GET['date'];
         $dateFilter = 'AND DATE(a.Appointment_date) = ?';
         $queryParams[] = $targetDate;
         $queryTypes .= 's';
     } elseif (!isset($_GET['show_all']) || $_GET['show_all'] !== 'true') {
+
         $today = $currentDateTime->format('Y-m-d');
         $dateFilter = 'AND DATE(a.Appointment_date) = ?';
         $queryParams[] = $today;
@@ -114,6 +113,7 @@ try {
     $formatted_appointments = [];
 
     foreach ($appointments as $apt) {
+
         $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
         $dbStatus = $apt['Status'] ?? 'Scheduled';
         $visitStatus = $apt['visit_status'] ?? null;
@@ -121,14 +121,19 @@ try {
         $displayStatus = $dbStatus;
 
         if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
+
             $displayStatus = $dbStatus;
-        } elseif ($dbStatus === 'Checked-in' || $visitStatus === 'Checked In') {
+        }
+
+        elseif ($dbStatus === 'Checked-in' || $visitStatus === 'Checked In') {
             if ($dbStatus === 'In Progress') {
                 $displayStatus = 'In Progress';
             } else {
                 $displayStatus = 'Checked In';
             }
-        } else {
+        }
+
+        else {
             $displayStatus = $dbStatus;
         }
 
@@ -156,28 +161,34 @@ try {
         }
 
         $formatted_appointments[] = [
+
             'id' => $apt['Appointment_id'],
             'Appointment_id' => $apt['Appointment_id'],
             'appointmentId' => 'A' . str_pad($apt['Appointment_id'], 4, '0', STR_PAD_LEFT),
             'Office_id' => $office_id,
+
             'patientId' => $apt['Patient_id'],
             'Patient_id' => $apt['Patient_id'],
             'patientIdFormatted' => 'P' . str_pad($apt['Patient_id'], 3, '0', STR_PAD_LEFT),
             'patientName' => $apt['patient_name'],
             'Patient_First' => $apt['patient_first'],
             'Patient_Last' => $apt['patient_last'],
+
             'doctorId' => $apt['Doctor_id'],
             'Doctor_id' => $apt['Doctor_id'],
             'doctorName' => $apt['doctor_name'],
             'Doctor_First' => $apt['doctor_first'],
             'Doctor_Last' => $apt['doctor_last'],
+
             'time' => date('g:i A', strtotime($apt['Appointment_date'])),
             'appointmentDateTime' => $apt['Appointment_date'],
             'Appointment_date' => $apt['Appointment_date'],
+
             'status' => $displayStatus,
             'Status' => $displayStatus,
             'dbStatus' => $dbStatus,
             'waitingMinutes' => 0,
+
             'reason' => $apt['Reason_for_visit'] ?: 'General Visit',
             'Reason_for_visit' => $apt['Reason_for_visit'] ?: 'General Visit',
             'emergencyContact' => $apt['emergency_contact_id'],

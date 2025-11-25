@@ -3,12 +3,6 @@ import { Calendar, Users, Clock, Check, AlertCircle, DollarSign, Plus, Phone, Ch
 import AddInsuranceModal from './AddInsuranceModal';
 import './ReceptionistDashboard.css';
 
-/**
- * ReceptionistDashboard Component (Backend Integrated)
- * 
- * Main dashboard with monthly calendar and today's appointments
- * Fetches real data from backend APIs including doctors list
- */
 function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, officeName }) {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -16,8 +10,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState(null);
   const [selectedDayDate, setSelectedDayDate] = useState(null);
-  
-  // State for API data
+
   const [stats, setStats] = useState(null);
   const [todayAppointments, setTodayAppointments] = useState([]);
   const [calendarAppointments, setCalendarAppointments] = useState({});
@@ -25,19 +18,16 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [checkingIn, setCheckingIn] = useState(false);
-  
-  // Nurse selection state
+
   const [showNurseModal, setShowNurseModal] = useState(false);
   const [nurses, setNurses] = useState([]);
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [loadingNurses, setLoadingNurses] = useState(false);
-  
-  // Insurance modal state
+
   const [showInsuranceModal, setShowInsuranceModal] = useState(false);
   const [insurancePatient, setInsurancePatient] = useState(null);
   const [validationToken, setValidationToken] = useState(null);
-  
-  // Alert/notification state
+
   const [alertModal, setAlertModal] = useState({
     show: false,
     type: 'info',
@@ -45,16 +35,12 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     message: ''
   });
 
-  // Doctor colors palette for calendar visualization
   const doctorColors = [
     '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', 
     '#ef4444', '#06b6d4', '#84cc16', '#f97316',
     '#ec4899', '#14b8a6'
   ];
 
-  /**
-   * Load dashboard data on mount and when officeId changes
-   */
   useEffect(() => {
     if (officeId) {
       loadDoctors();
@@ -62,18 +48,12 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     }
   }, [officeId]);
 
-  /**
-   * Load calendar when month changes
-   */
   useEffect(() => {
     if (officeId) {
       loadCalendarData();
     }
   }, [currentDate, officeId, doctors]);
 
-  /**
-   * Fetch doctors from the database
-   */
   const loadDoctors = async () => {
     if (!officeId) return;
     
@@ -97,10 +77,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     }
   };
 
-  /**
-   * Load dashboard statistics and today's appointments
-   * Automatically updates appointment statuses first
-   */
   const loadDashboardData = async () => {
     try {
       setLoading(true);
@@ -141,9 +117,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     }
   };
 
-  /**
-   * Load calendar appointments for the current month
-   */
   const loadCalendarData = async () => {
     try {
       const year = currentDate.getFullYear();
@@ -171,9 +144,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     }
   };
 
-  /**
-   * Handle check-in appointment - Step 1: Validate insurance first
-   */
   const handleCheckInAppointment = async () => {
     if (!selectedAppointment) return;
     
@@ -195,9 +165,9 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       
       if (!data.success) {
         if (data.error_type === 'INSURANCE_WARNING' || data.error_type === 'INSURANCE_EXPIRED') {
-          // Show alert modal with option to add/edit insurance
+          
           const isExpired = data.error_type === 'INSURANCE_EXPIRED';
-          // Build a patient object with fallback keys (different endpoints use different casing)
+          
           const patientIdVal = selectedAppointment.Patient_id || selectedAppointment.patient_id || selectedAppointment.patientId || selectedAppointment.id || null;
           const patientFirstVal = selectedAppointment.Patient_First || selectedAppointment.patient_first || selectedAppointment.first_name || (selectedAppointment.patient_name ? selectedAppointment.patient_name.split(' ')[0] : '') || '';
           const patientLastVal = selectedAppointment.Patient_Last || selectedAppointment.patient_last || selectedAppointment.last_name || (selectedAppointment.patient_name ? selectedAppointment.patient_name.split(' ').slice(1).join(' ') : '') || '';
@@ -215,7 +185,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
               Patient_Last: patientLastVal
             }
           });
-          // store validation token if provided so we can acknowledge it when confirming check-in
+          
           if (data.validation_token) setValidationToken(data.validation_token);
         } else {
           setAlertModal({
@@ -276,10 +246,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
       setCheckingIn(false);
     }
   };
-  
-  /**
-   * Handle check-in confirmation - Step 2: Perform actual check-in with selected nurse
-   */
+
   const handleConfirmCheckIn = async () => {
     if (!selectedAppointment || !selectedNurse) return;
     
@@ -457,9 +424,6 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
     });
   };
 
-  /**
-   * Handle clicking on a calendar day to view its appointments
-   */
   const handleDayClick = (day) => {
     const appointments = getAppointmentsForDay(day);
     if (appointments.length === 0) return;
@@ -868,7 +832,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         </div>
       )}
       
-      {/* ===== NURSE SELECTION MODAL ===== */}
+      {}
       {showNurseModal && selectedAppointment && (
         <div className="modal-overlay" onClick={() => setShowNurseModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
@@ -952,7 +916,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         </div>
       )}
       
-      {/* ===== ALERT MODAL ===== */}
+      {}
       {alertModal.show && (
         <div className="modal-overlay" onClick={() => setAlertModal({ ...alertModal, show: false })}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
@@ -1026,7 +990,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         </div>
       )}
       
-      {/* ===== DAY APPOINTMENTS MODAL ===== */}
+      {}
       {selectedDayAppointments && (
         <div className="modal-overlay" onClick={() => setSelectedDayAppointments(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '80vh' }}>
@@ -1099,7 +1063,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
         </div>
       )}
 
-      {/* ===== ADD INSURANCE MODAL ===== */}
+      {}
       {showInsuranceModal && insurancePatient && (
         <AddInsuranceModal
           patient={insurancePatient}
@@ -1110,7 +1074,7 @@ function ReceptionistDashboard({ setCurrentPage, onProcessPayment, officeId, off
           onSuccess={() => {
             setShowInsuranceModal(false);
             setInsurancePatient(null);
-            loadDashboardData(); // Refresh data to reflect new insurance
+            loadDashboardData(); 
           }}
         />
       )}

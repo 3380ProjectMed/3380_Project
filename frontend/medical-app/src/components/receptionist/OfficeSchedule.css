@@ -1,11 +1,9 @@
-/* ========== OFFICE SCHEDULE - AVAILABILITY GRID ========== */
 .office-schedule-page {
   padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
 }
 
-/* ===== HEADER ===== */
 .schedule-header {
   margin-bottom: 2rem;
 }
@@ -35,7 +33,6 @@
   color: #caf0f8;
 }
 
-/* ===== DATE NAVIGATION ===== */
 .date-navigation-section {
   background: white;
   border-radius: 1rem;
@@ -141,7 +138,6 @@
   box-shadow: 0 4px 12px rgba(0, 180, 216, 0.3);
 }
 
-/* ===== LEGEND ===== */
 .availability-legend {
   display: flex;
   gap: 2rem;
@@ -194,7 +190,6 @@
   font-size: 0.95rem;
 }
 
-/* ===== SPECIALTY FILTER ===== */
 .specialty-filter-section {
   display: flex;
   align-items: center;
@@ -238,7 +233,6 @@
   box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.1);
 }
 
-/* ===== AVAILABILITY GRID ===== */
 .availability-grid-container {
   background: white;
   border-radius: 1rem;
@@ -253,7 +247,6 @@
   width: 100%;
 }
 
-/* Grid Header */
 .grid-header {
   display: grid;
   gap: 1rem;
@@ -337,7 +330,6 @@
   background: #fecaca;
 }
 
-/* Grid Body */
 .grid-body {
   display: flex;
   flex-direction: column;
@@ -366,7 +358,6 @@
   font-size: 0.875rem;
 }
 
-/* Slot Cells */
 .slot-cell {
   height: 60px;
   border-radius: 0.5rem;
@@ -399,7 +390,6 @@
   opacity: 0.7;
 }
 
-/* Booked slot content */
 .slot-cell .booked-content {
   display: flex;
   flex-direction: column;
@@ -409,7 +399,7 @@
   text-align: center;
   width: 100%;
   height: 100%;
-  color: #7f1d1d; /* dark red text to contrast booked background */
+  color: #7f1d1d; 
   font-weight: 600;
 }
 
@@ -481,7 +471,6 @@
   opacity: 1;
 }
 
-/* ===== SELECTED SLOT INFO ===== */
 .selected-slot-info {
   position: fixed;
   bottom: 2rem;
@@ -553,7 +542,6 @@
   box-shadow: 0 6px 16px rgba(0, 119, 182, 0.4);
 }
 
-/* ===== EMPTY STATE ===== */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -601,7 +589,6 @@
   box-shadow: 0 6px 16px rgba(0, 119, 182, 0.4);
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 1400px) {
   .availability-grid {
     min-width: 1000px;
@@ -866,7 +853,6 @@
   }
 }
 
-/* ===== ACCESSIBILITY ===== */
 .slot-cell:focus {
   outline: 3px solid #0077b6;
   outline-offset: 2px;
@@ -884,7 +870,6 @@
   }
 }
 
-/* ===== PRINT STYLES ===== */
 @media print {
   .date-navigation-section,
   .availability-legend,
@@ -909,7 +894,6 @@
   }
 }
 
-/* ========== MODAL STYLES ========== */
 .modal-overlay {
   position: fixed;
   top: 0;

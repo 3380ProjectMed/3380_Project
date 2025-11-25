@@ -7,7 +7,7 @@ import {
 import './PaymentProcessing.css';
 
 function PaymentProcessing() {
-  // States
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedVisit, setSelectedVisit] = useState(null);
@@ -21,7 +21,6 @@ function PaymentProcessing() {
   const [filter, setFilter] = useState('unpaid');
   const [receiptData, setReceiptData] = useState(null);
 
-  // Search for visits
   const handleSearch = async () => {
     if (searchTerm.length < 1) return;
     
@@ -46,7 +45,6 @@ function PaymentProcessing() {
     }
   };
 
-  // Load visit details
   const selectVisit = async (visit) => {
     setSelectedVisit(visit);
     setLoading(true);
@@ -61,7 +59,7 @@ function PaymentProcessing() {
       
       if (data.success) {
         setVisitDetails(data);
-        // Auto-fill copay amount
+        
         const copay = data.copay_amount ? parseFloat(data.copay_amount.replace(/,/g, '')) : 0;
         setPaymentAmount(copay > 0 ? copay.toFixed(2) : '');
       } else {
@@ -74,7 +72,6 @@ function PaymentProcessing() {
     }
   };
 
-  // Record payment
   const recordPayment = async () => {
     const amount = parseFloat(paymentAmount);
     
@@ -114,7 +111,6 @@ function PaymentProcessing() {
     }
   };
 
-  // Reset everything
   const reset = () => {
     setSelectedVisit(null);
     setVisitDetails(null);
@@ -128,7 +124,6 @@ function PaymentProcessing() {
     setPaymentMethod('card');
   };
 
-  // Debounced search
   useEffect(() => {
     if (searchTerm.length < 1) {
       setSearchResults([]);
@@ -142,14 +137,13 @@ function PaymentProcessing() {
     return () => clearTimeout(timer);
   }, [searchTerm, filter]);
 
-  // Print receipt
   const printReceipt = () => {
     window.print();
   };
 
   return (
     <div className="payment-page">
-      {/* PAGE HEADER */}
+      {}
       <div className="page-header">
         <h1 className="page-title">
           <DollarSign size={32} style={{display: 'inline', marginRight: '12px'}} />
@@ -160,10 +154,10 @@ function PaymentProcessing() {
 
       {!showReceipt ? (
         <>
-          {/* SEARCH SECTION */}
+          {}
           {!selectedVisit && (
             <div className="search-section">
-              {/* Filter Toggle */}
+              {}
               <div className="filter-toggle">
                 <button
                   className={`filter-btn ${filter === 'unpaid' ? 'filter-active' : ''}`}
@@ -181,7 +175,7 @@ function PaymentProcessing() {
                 </button>
               </div>
 
-              {/* Search Box */}
+              {}
               <div className="search-box-container">
                 <Search className="search-icon-left" size={20} />
                 <input
@@ -205,7 +199,7 @@ function PaymentProcessing() {
                 )}
               </div>
 
-              {/* Loading State */}
+              {}
               {loading && searchTerm && (
                 <div className="loading-message">
                   <div className="loading-spinner"></div>
@@ -213,7 +207,7 @@ function PaymentProcessing() {
                 </div>
               )}
 
-              {/* Search Results */}
+              {}
               {searchResults.length > 0 && (
                 <div className="results-container">
                   <p className="results-count">
@@ -227,12 +221,12 @@ function PaymentProcessing() {
                         onClick={() => !visit.is_paid && selectVisit(visit)}
                         style={{cursor: visit.is_paid ? 'default' : 'pointer'}}
                       >
-                        {/* Patient Avatar */}
+                        {}
                         <div className="result-avatar">
                           <User size={28} />
                         </div>
 
-                        {/* Patient Info */}
+                        {}
                         <div className="result-info">
                           <h3 className="result-name">{visit.patient_name}</h3>
                           <div className="result-meta">
@@ -253,7 +247,7 @@ function PaymentProcessing() {
                           </div>
                         </div>
 
-                        {/* Payment Status */}
+                        {}
                         <div className="result-status">
                           {visit.is_paid ? (
                             <div className="status-badge status-paid">
@@ -273,7 +267,7 @@ function PaymentProcessing() {
                 </div>
               )}
 
-              {/* No Results */}
+              {}
               {searchTerm.length >= 1 && !loading && searchResults.length === 0 && (
                 <div className="no-results">
                   <AlertCircle size={48} />
@@ -284,15 +278,15 @@ function PaymentProcessing() {
             </div>
           )}
 
-          {/* PAYMENT FORM */}
+          {}
           {selectedVisit && visitDetails && !showReceipt && (
             <div className="payment-content">
-              {/* Back Button */}
+              {}
               <button className="btn-back" onClick={reset}>
                 <X size={18} /> Back to Search
               </button>
 
-              {/* Already Paid Banner */}
+              {}
               {visitDetails.visit.already_paid && parseFloat(visitDetails.visit.already_paid) > 0 && (
                 <div className="already-paid-banner">
                   <CheckCircle size={24} />
@@ -307,9 +301,9 @@ function PaymentProcessing() {
               )}
 
               <div className="payment-grid">
-                {/* LEFT COLUMN: Patient & Insurance Info */}
+                {}
                 <div className="payment-left">
-                  {/* Patient Card */}
+                  {}
                   <div className="patient-card">
                     <div className="card-header">
                       <div className="patient-avatar-large">
@@ -334,7 +328,7 @@ function PaymentProcessing() {
                       </div>
                     </div>
 
-                    {/* Visit Details */}
+                    {}
                     <div className="visit-details-section">
                       <div className="detail-row">
                         <span className="detail-label">Visit Date:</span>
@@ -358,7 +352,7 @@ function PaymentProcessing() {
                     </div>
                   </div>
 
-                  {/* Insurance Card */}
+                  {}
                   {visitDetails.insurance && visitDetails.insurance.has_insurance ? (
                     <div className="insurance-card-full">
                       <div className="insurance-header">
@@ -397,7 +391,7 @@ function PaymentProcessing() {
                         </div>
                       </div>
 
-                      {/* Copay Highlight */}
+                      {}
                       <div className="copay-highlight">
                         <span className="copay-label">Patient Copay</span>
                         <span className="copay-amount">${visitDetails.insurance.copay}</span>
@@ -412,11 +406,11 @@ function PaymentProcessing() {
                   )}
                 </div>
 
-                {/* RIGHT COLUMN: Payment Form */}
+                {}
                 <div className="payment-right">
                   {(!visitDetails.visit.already_paid || parseFloat(visitDetails.visit.already_paid) === 0) && (
                     <>
-                      {/* Payment Amount Card */}
+                      {}
                       <div className="payment-card">
                         <h3 className="card-title">
                           <DollarSign size={20} />
@@ -445,7 +439,7 @@ function PaymentProcessing() {
                         )}
                       </div>
 
-                      {/* Payment Method Card */}
+                      {}
                       <div className="payment-card">
                         <h3 className="card-title">
                           <CreditCard size={20} />
@@ -477,7 +471,7 @@ function PaymentProcessing() {
                         </div>
                       </div>
 
-                      {/* Payment Notes Card */}
+                      {}
                       <div className="payment-card">
                         <h3 className="card-title">
                           <FileText size={20} />
@@ -493,7 +487,7 @@ function PaymentProcessing() {
                         />
                       </div>
 
-                      {/* Error Message */}
+                      {}
                       {error && (
                         <div className="error-alert">
                           <AlertCircle size={20} />
@@ -501,7 +495,7 @@ function PaymentProcessing() {
                         </div>
                       )}
 
-                      {/* Submit Button */}
+                      {}
                       <button 
                         className="btn-submit-payment"
                         onClick={recordPayment}
@@ -527,7 +521,7 @@ function PaymentProcessing() {
           )}
         </>
       ) : (
-        /* RECEIPT VIEW */
+        
         <div className="receipt-container">
           <div className="receipt-success">
             <div className="success-icon-large">
@@ -538,7 +532,7 @@ function PaymentProcessing() {
           </div>
 
           <div className="receipt-card">
-            {/* Receipt Header */}
+            {}
             <div className="receipt-header">
               <Receipt size={32} />
               <div>
@@ -547,7 +541,7 @@ function PaymentProcessing() {
               </div>
             </div>
 
-            {/* Receipt Body */}
+            {}
             <div className="receipt-body">
               <div className="receipt-section">
                 <h4 className="receipt-section-title">Patient Information</h4>
@@ -622,14 +616,14 @@ function PaymentProcessing() {
                 )}
               </div>
 
-              {/* Total Amount */}
+              {}
               <div className="receipt-total">
                 <span className="receipt-total-label">Copay Collected</span>
                 <span className="receipt-total-amount">${paymentAmount}</span>
               </div>
             </div>
 
-            {/* Important Note */}
+            {}
             <div className="receipt-note">
               <AlertCircle size={16} />
               <p>
@@ -640,7 +634,7 @@ function PaymentProcessing() {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {}
           <div className="receipt-actions">
             <button className="btn-secondary" onClick={printReceipt}>
               <Printer size={18} />

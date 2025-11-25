@@ -1,14 +1,11 @@
 <?php
 
-/**
- * Get all offices with their assigned doctors based on work_schedule
- * Returns offices and the doctors working at each office
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
 try {
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);

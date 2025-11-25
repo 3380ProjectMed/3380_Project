@@ -1,11 +1,4 @@
 <?php
-/**
- * ==========================================
- * FILE: public/receptionist_api/doctors/get-by-office.php
- * ==========================================
- * Get all doctors assigned to an office based on work_schedule
- * FIXED: Now properly queries work_schedule table to show only doctors who work at the office
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
@@ -37,7 +30,7 @@ try {
     $doctorRows = executeQuery($conn, $sql, 'i', [$officeId]);
     
     $doctors = [];
-
+    
     foreach ($doctorRows as $doctor) {
         $scheduleSQL = "SELECT 
                             day_of_week,

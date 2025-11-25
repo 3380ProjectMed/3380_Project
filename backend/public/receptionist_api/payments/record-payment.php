@@ -1,15 +1,12 @@
 <?php
 header('Content-Type: application/json');
-/**
- * Record copay payment
- * Receptionist collects copay - that's it!
- */
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
-
 try {
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -34,7 +31,6 @@ try {
     $amount = (float)$input['amount'];
     $method = isset($input['method']) ? $input['method'] : 'card';
 
-    
     $valid_methods = ['cash', 'card', 'check'];
     if (!in_array($method, $valid_methods)) {
         $method = 'card';
@@ -94,7 +90,7 @@ try {
         exit;
     }
 
-    $updateSql = "UPDATE patient_visit 
+    $updateSql = "UPDATE patient_visit
                   SET payment = ?,
                       payment_method = ?,
                       copay_amount_due = ?,

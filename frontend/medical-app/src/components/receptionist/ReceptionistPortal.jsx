@@ -10,21 +10,6 @@ import PaymentProcessing from './PaymentProcessing';
 import ReceptionistProfile from './ReceptionistProfile';
 import './ReceptionistPortal.css';
 
-/**
- * ReceptionistPortal Component
- * 
- * Main container for receptionist staff portal
- * Handles navigation between different receptionist pages
- * Role: Front desk operations (scheduling, patient check-in, payments)
- * 
- * Database Tables Used:
- * - Staff (Staff_id, staff_email)
- * - work_schedule (staff_id, office_id) - determines receptionist's office
- * - Office (Office_ID, Name)
- * - Appointment (Appointment_id, Patient_id, Doctor_id, Office_id)
- * - Patient (Patient_ID, InsuranceID)
- * - patient_insurance (copay, deductible_individ, coinsurance_rate_pct)
- */
 function ReceptionistPortal() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -32,12 +17,10 @@ function ReceptionistPortal() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [officeInfo, setOfficeInfo] = useState({ id: null, name: 'Loading...' });
-  
-  
+
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch receptionist's office from work_schedule via backend API
   useEffect(() => {
     const fetchOfficeInfo = async () => {
       try {
@@ -72,44 +55,25 @@ function ReceptionistPortal() {
     }
   };
 
-  /**
-   * Navigate to appointment booking with pre-selected patient
-   * @param {Object} patient - Patient object from Patient table
-   */
   const handleBookAppointment = (patient) => {
     setSelectedPatient(patient);
     setCurrentPage('booking');
   };
 
-  /**
-   * Navigate to payment processing with selected appointment
-   * @param {Object} appointment - Appointment with patient and insurance data
-   */
   const handleProcessPayment = (appointment) => {
     setSelectedAppointment(appointment);
     setCurrentPage('payment');
   };
 
-  /**
-   * Handle appointment click from schedule
-   */
   const handleAppointmentClick = (appointment) => {
     setSelectedAppointment(appointment);
   };
 
-  /**
-   * Handle time slot selection from schedule
-   * Navigates to booking page with pre-filled doctor, date, and time
-   */
   const handleSelectTimeSlot = (slotData) => {
     setSelectedTimeSlot(slotData);
     setCurrentPage('booking');
   };
 
-  /**
-   * Handle editing an existing appointment
-   * Navigates to booking page with appointment data for editing
-   */
   const handleEditAppointment = (appointment) => {
     setEditingAppointment(appointment);
     setCurrentPage('booking');
@@ -148,7 +112,6 @@ function ReceptionistPortal() {
         
         {currentPage === 'patients' && (
           <PatientSearch
-            onBookAppointment={handleBookAppointment}
             selectedPatient={selectedPatient}
             setSelectedPatient={setSelectedPatient}
           />
@@ -175,8 +138,7 @@ function ReceptionistPortal() {
             officeName={officeInfo.name}
           />
         )}
-        
-        
+
         {currentPage === 'payment' && (
           <PaymentProcessing
             preSelectedAppointment={selectedAppointment}

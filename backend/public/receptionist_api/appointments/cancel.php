@@ -1,13 +1,10 @@
 <?php
 
-/**
- * Cancel an appointment
- * Uses session-based authentication like doctor API
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -33,6 +30,7 @@ try {
     $user_id = (int)$_SESSION['uid'];
 
     $conn = getDBConnection();
+
     $verifySql = "SELECT a.Appointment_id, a.Office_id
                   FROM appointment a
                   JOIN user_account ua ON ua.user_id = ?
@@ -52,19 +50,22 @@ try {
     $conn->begin_transaction();
 
     try {
-        $updateApptSql = "UPDATE appointment 
+
+        $updateApptSql = "UPDATE appointment
                          SET Status = 'Cancelled'
                          WHERE Appointment_id = ?";
         executeQuery($conn, $updateApptSql, 'i', [$appointment_id]);
+
         $checkVisitSql = "SELECT visit_id FROM patient_visit WHERE appointment_id = ?";
         $existingVisit = executeQuery($conn, $checkVisitSql, 'i', [$appointment_id]);
 
         if (!empty($existingVisit)) {
-            $updateVisitSql = "UPDATE patient_visit 
+            $updateVisitSql = "UPDATE patient_visit
                               SET status = 'Canceled'
                               WHERE appointment_id = ?";
             executeQuery($conn, $updateVisitSql, 'i', [$appointment_id]);
         }
+
         $conn->commit();
         closeDBConnection($conn);
 

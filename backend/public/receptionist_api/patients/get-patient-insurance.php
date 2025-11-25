@@ -1,15 +1,11 @@
 <?php
-/**
- * ==========================================
- * FILE: public/receptionist_api/patients/get-patient-insurance.php
- * ==========================================
- * Get patient's current insurance information (including expired)
- */
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
 try {
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -26,7 +22,7 @@ try {
 
     $conn = getDBConnection();
 
-    $sql = "SELECT 
+    $sql = "SELECT
                 pi.id,
                 pi.patient_id,
                 pi.plan_id,

@@ -1,13 +1,10 @@
 <?php
 
-/**
- * Update an existing appointment
- * Uses session-based authentication like doctor API
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -33,8 +30,6 @@ try {
 
     if (isset($input['Appointment_id'])) unset($input['Appointment_id']);
     if (isset($input['appointment_id'])) unset($input['appointment_id']);
-    if (isset($input['Appointment_id'])) unset($input['Appointment_id']);
-    if (isset($input['appointment_id'])) unset($input['appointment_id']);
 
     $conn = getDBConnection();
 
@@ -51,11 +46,13 @@ try {
     $isReceptionist = !empty($verifyResult);
 
     if (empty($verifyResult)) {
+
         $patientCheckSql = "SELECT Appointment_id, Patient_id, Status FROM appointment WHERE Appointment_id = ? AND Patient_id = ?";
         $patientResult = executeQuery($conn, $patientCheckSql, 'ii', [$appointment_id, $user_id]);
 
         if (!empty($patientResult)) {
             $isPatientOwner = true;
+
             $appointmentStatus = $patientResult[0]['Status'] ?? null;
         }
     } else {
@@ -69,7 +66,6 @@ try {
         exit;
     }
 
-    
     $updateFields = [];
     $types = '';
     $values = [];
@@ -92,7 +88,6 @@ try {
         $values[] = $input['Doctor_id'];
     }
 
-    
     if (isset($input['Status']) && $isReceptionist) {
         $validStatuses = ['Scheduled', 'Pending', 'Waiting', 'Checked-in', 'In Progress', 'Completed', 'Cancelled', 'No-Show'];
         if (in_array($input['Status'], $validStatuses)) {
@@ -103,6 +98,7 @@ try {
     }
 
     if (isset($input['booking_channel'])) {
+
         $channel = strtolower($input['booking_channel']);
         $bookingMethod = null;
         if ($channel === 'phone') {
@@ -112,7 +108,7 @@ try {
         } elseif ($channel === 'walk-in') {
             $bookingMethod = 'Walk-in';
         }
-        
+
         if ($bookingMethod) {
             $updateFields[] = 'method = ?';
             $types .= 's';
@@ -121,6 +117,7 @@ try {
     }
 
     if ($isPatientOwner) {
+
         $forbiddenStatuses = ['Checked-in', 'Checked in', 'Cancelled', 'Canceled', 'No-Show', 'No-Show'];
         if (in_array($appointmentStatus, $forbiddenStatuses)) {
             closeDBConnection($conn);
@@ -128,7 +125,8 @@ try {
             echo json_encode(['success' => false, 'error' => 'Cannot edit appointment in its current status']);
             exit;
         }
-        $allowedForPatient = ['Appointment_date', 'Reason_for_visit', 'Doctor_id', 'method', 'booking_channel'];
+
+    $allowedForPatient = ['Appointment_date', 'Reason_for_visit', 'Doctor_id', 'method', 'booking_channel'];
         $updateFields = array_values(array_filter($updateFields, function($f) use ($allowedForPatient) {
             foreach ($allowedForPatient as $allowed) {
                 if (stripos($f, $allowed) !== false) return true;
@@ -147,7 +145,8 @@ try {
     $conn->begin_transaction();
 
     try {
-    $values[] = $appointment_id;
+
+        $values[] = $appointment_id;
         $types .= 'i';
 
         $updateSql = "UPDATE appointment SET " . implode(', ', $updateFields) . " WHERE Appointment_id = ?";

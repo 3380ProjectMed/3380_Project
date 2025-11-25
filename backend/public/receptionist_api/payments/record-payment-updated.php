@@ -1,15 +1,12 @@
 <?php
 header('Content-Type: application/json');
-/**
- * Record copay payment with notes support
- * Enhanced version with better validation and tracking
- */
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
-
 try {
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -66,7 +63,7 @@ try {
     $receptionist_name = $staffRows[0]['staff_name'];
     $office_id = (int)$staffRows[0]['office_id'];
 
-    $checkSql = "SELECT payment, office_id, patient_id, appointment_id, date as visit_date 
+    $checkSql = "SELECT payment, office_id, patient_id, appointment_id, date as visit_date
                  FROM patient_visit WHERE visit_id = ?";
     $existing = executeQuery($conn, $checkSql, 'i', [$visit_id]);
 
@@ -99,7 +96,7 @@ try {
     $appointment_id = $existing[0]['appointment_id'];
     $visit_date = $existing[0]['visit_date'];
 
-    $updateSql = "UPDATE patient_visit 
+    $updateSql = "UPDATE patient_visit
                   SET payment = ?,
                       payment_method = ?,
                       copay_amount_due = ?,
@@ -109,7 +106,7 @@ try {
 
     executeQuery($conn, $updateSql, 'dsdsi', [$amount, $method, $amount, $receptionist_name, $visit_id]);
 
-    $patientSql = "SELECT 
+    $patientSql = "SELECT
                        CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                        p.dob,
                        p.email,
@@ -124,14 +121,14 @@ try {
     $patient_email = $patientRows[0]['email'] ?? null;
     $patient_phone = $patientRows[0]['patient_phone'] ?? null;
 
-    $insuranceSql = "SELECT 
+    $insuranceSql = "SELECT
                         ipayer.name as payer_name,
                         iplan.plan_name,
                         pi.member_id
                     FROM patient_insurance pi
                     INNER JOIN insurance_plan iplan ON pi.plan_id = iplan.plan_id
                     INNER JOIN insurance_payer ipayer ON iplan.payer_id = ipayer.payer_id
-                    WHERE pi.patient_id = ? 
+                    WHERE pi.patient_id = ?
                     AND pi.is_primary = 1
                     AND (pi.expiration_date IS NULL OR pi.expiration_date >= CURDATE())
                     LIMIT 1";

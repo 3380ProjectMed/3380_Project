@@ -1,15 +1,12 @@
 <?php
 header('Content-Type: application/json');
-/**
- * Get copay info for visit
- * Receptionists collect copays - show insurance copay amount
- */
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 
-
 try {
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -25,7 +22,7 @@ try {
     $visit_id = (int)$_GET['visit_id'];
     $conn = getDBConnection();
 
-    $sql = "SELECT 
+    $sql = "SELECT
                 pv.visit_id,
                 pv.patient_id,
                 pv.appointment_id,
@@ -53,7 +50,7 @@ try {
 
     $visit = $visits[0];
 
-    $insuranceSql = "SELECT 
+    $insuranceSql = "SELECT
                         pi.id as insurance_id,
                         pi.member_id,
                         pi.group_id,
@@ -66,7 +63,7 @@ try {
                     FROM patient_insurance pi
                     INNER JOIN insurance_plan iplan ON pi.plan_id = iplan.plan_id
                     INNER JOIN insurance_payer ipayer ON iplan.payer_id = ipayer.payer_id
-                    WHERE pi.patient_id = ? 
+                    WHERE pi.patient_id = ?
                     AND pi.is_primary = 1
                     AND (pi.expiration_date IS NULL OR pi.expiration_date >= CURDATE())
                     AND pi.effective_date <= CURDATE()

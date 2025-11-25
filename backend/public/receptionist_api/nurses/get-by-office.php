@@ -1,9 +1,5 @@
 <?php
 
-/**
- * Get all nurses working at a specific office
- * Based on work_schedule table
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';

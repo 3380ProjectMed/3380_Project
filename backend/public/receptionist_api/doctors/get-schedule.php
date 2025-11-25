@@ -1,11 +1,5 @@
 <?php
-/**
- * ==========================================
- * FILE: public/receptionist_api/doctors/get-schedule.php
- * ==========================================
- * Get doctor work schedules for a specific date and office
- * Returns working hours for each doctor based on work_schedule table
- */
+
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 
@@ -29,11 +23,11 @@ try {
 
     $dayOfWeek = date('l', strtotime($date));
 
-    $sql = "SELECT DISTINCT 
-                d.doctor_id, 
-                s.first_name, 
+    $sql = "SELECT DISTINCT
+                d.doctor_id,
+                s.first_name,
                 s.last_name,
-                sp.specialty_name, 
+                sp.specialty_name,
                 sp.specialty_id,
                 ws.start_time,
                 ws.end_time,
@@ -44,7 +38,7 @@ try {
             JOIN specialty sp ON d.specialty = sp.specialty_id
             WHERE ws.office_id = ?
             AND (
-                ws.day_of_week = ? 
+                ws.day_of_week = ?
                 OR (ws.days = ? AND ws.days IS NOT NULL)
             )
             ORDER BY s.last_name, s.first_name";
@@ -52,6 +46,7 @@ try {
     $rows = executeQuery($conn, $sql, 'iss', [$officeId, $dayOfWeek, $date]);
 
     $schedules = array_map(function ($r) {
+
         $startTime = null;
         $endTime = null;
         $startHour = 9;
@@ -86,8 +81,8 @@ try {
     closeDBConnection($conn);
 
     echo json_encode([
-        'success' => true, 
-        'schedules' => $schedules, 
+        'success' => true,
+        'schedules' => $schedules,
         'count' => count($schedules),
         'date' => $date,
         'day_of_week' => $dayOfWeek

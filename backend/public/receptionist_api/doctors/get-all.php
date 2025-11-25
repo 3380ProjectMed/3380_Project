@@ -1,7 +1,4 @@
 <?php
-/**
- * Get all doctors (no office filter)
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 

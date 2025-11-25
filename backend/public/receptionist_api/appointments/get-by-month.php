@@ -1,13 +1,10 @@
 <?php
 
-/**
- * Get appointments by month for calendar view
- * Uses session-based authentication
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -83,8 +80,8 @@ try {
             WHERE a.Office_id = ?
             AND DATE(a.Appointment_date) BETWEEN ? AND ?
             AND EXISTS (
-                SELECT 1 FROM work_schedule ws 
-                WHERE ws.staff_id = d.staff_id 
+                SELECT 1 FROM work_schedule ws
+                WHERE ws.staff_id = d.staff_id
                 AND ws.office_id = a.Office_id
             )
             ORDER BY a.Appointment_date ASC";

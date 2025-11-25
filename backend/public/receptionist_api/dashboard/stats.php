@@ -1,28 +1,10 @@
 <?php
 
-/**
- * Get dashboard statistics for receptionist's office
- * IMPROVED VERSION: Uses intelligent time-based status calculation
- * 
- * DATABASE SCHEMA NOTES:
- * - work_schedule.office_id (receptionist's office via staff_id)
- * - appointment.Patient_id -> patient.patient_id (case-sensitive join)
- * - appointment.Doctor_id -> doctor.doctor_id
- * - appointment.Office_id -> office.office_id
- * - patient_visit.start_at = check-in time
- * - patient_visit.end_at = completion time
- * - patient_visit.payment = payment amount
- * 
- * TEST DATA DATES (for Office 3 - Memorial Park Healthcare):
- * - 2024-01-16: Has appointment 1007 (Patient 4, Doctor 4)
- * - Most other appointments are at Office 1, 2, or 4
- * - To test with data, use date parameter: ?date=2024-01-16
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -111,20 +93,26 @@ try {
     $doctor_stats = [];
 
     foreach ($appointments as $apt) {
+
         $appointmentDateTime = new DateTime($apt['Appointment_date'], $tz);
         $dbStatus = $apt['Status'] ?? 'Scheduled';
 
         $displayStatus = $dbStatus;
 
         if ($dbStatus === 'Completed' || $dbStatus === 'Cancelled' || $dbStatus === 'No-Show') {
+
             $displayStatus = $dbStatus;
-        } elseif ($dbStatus === 'Checked-in') {
+        }
+
+        elseif ($dbStatus === 'Checked-in') {
             if ($dbStatus === 'In Progress') {
                 $displayStatus = 'In Progress';
             } else {
                 $displayStatus = 'Checked In';
             }
-        } else {
+        }
+        else {
+
             $displayStatus = $dbStatus;
         }
 
@@ -164,6 +152,7 @@ try {
             $payment_count++;
             $total_collected += (float) $apt['payment'];
         }
+
         if ($apt['doctor_id']) {
             $doctor_id = $apt['doctor_id'];
             if (!isset($doctor_stats[$doctor_id])) {
@@ -188,7 +177,6 @@ try {
 
     closeDBConnection($conn);
 
-    
     $response = [
         'success' => true,
         'stats' => [

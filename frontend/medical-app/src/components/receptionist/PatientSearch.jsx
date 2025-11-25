@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, User, Phone, Mail, Calendar, CreditCard, DollarSign, AlertCircle, UserCheck, UserPlus } from 'lucide-react';
-// Removed API import as we'll use fetch directly
+
 import './PatientSearch.css';
 
-/**
- * PatientSearch Component (Backend Integrated)
- * 
- * Search and view patient profiles
- * Integrated with backend patient APIs
- */
-function PatientSearch({ onBookAppointment }) {
+function PatientSearch() {
   const [searchTerm, setSearchTerm] = useState('');
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -36,17 +30,13 @@ function PatientSearch({ onBookAppointment }) {
     emergencyPhone: ''
   });
   const [formErrors, setFormErrors] = useState({});
-  // Gender options loaded from server (codes_gender)
+  
   const [genderOptions, setGenderOptions] = useState([]);
 
-  /**
-   * Load initial patients on mount
-   */
   useEffect(() => {
     handleSearch();
   }, []);
 
-  // Load gender options for the create-patient form (uses admin endpoint already used by SignUp)
   useEffect(() => {
     let mounted = true;
     const loadGenderOptions = async () => {
@@ -55,7 +45,7 @@ function PatientSearch({ onBookAppointment }) {
         if (!res.ok) return;
         const data = await res.json();
         if (data.success && Array.isArray(data.genders) && mounted) {
-          setGenderOptions(data.genders); // each item: { id, label }
+          setGenderOptions(data.genders); 
         }
       } catch (err) {
         console.error('Failed to load gender options:', err);
@@ -66,15 +56,12 @@ function PatientSearch({ onBookAppointment }) {
     return () => { mounted = false; };
   }, []);
 
-  /**
-   * Debounced search - triggers after user stops typing
-   */
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchTerm.length >= 2) {
         handleSearch();
       } else if (searchTerm.length === 0) {
-        // Load all patients if search is empty
+        
         handleSearch();
       }
     }, 500);
@@ -82,9 +69,6 @@ function PatientSearch({ onBookAppointment }) {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  /**
-   * Search patients via API
-   */
   const handleSearch = async () => {
     try {
       setLoading(true);
@@ -108,22 +92,15 @@ function PatientSearch({ onBookAppointment }) {
     }
   };
 
-  /**
-   * Clear search
-   */
   const clearSearch = () => {
     setSearchTerm('');
     setPatients([]);
   };
 
-  /**
-   * View patient details
-   */
   const handleViewPatient = async (patient) => {
     try {
       setLoading(true);
-      
-      // Get full patient details including insurance and appointments
+
       const response = await fetch(
         `/receptionist_api/patients/get-by-id.php?id=${patient.Patient_ID}`,
         { credentials: 'include' }
@@ -131,8 +108,16 @@ function PatientSearch({ onBookAppointment }) {
       const data = await response.json();
       
       if (data.success) {
+        // Preserve the EmergencyContact phone we got from the list (get-all)
+        // because get-by-id currently returns only emergency_contact_id.
+        const fallbackEmergency = patient.EmergencyContact || '';
+
         setSelectedPatient({
           ...data.patient,
+          // normalize to EmergencyContact (phone) for UI use
+          EmergencyContact: data.patient.EmergencyContact || data.patient.emergency_contact || data.patient.emergency_contact_id || fallbackEmergency,
+          // normalize relationship from detailed response or fall back to list-level patient info
+          EmergencyContactRelationship: data.patient.EmergencyContactRelationship || data.patient.emergency_relationship || patient.EmergencyContactRelationship || patient.emergency_relationship || null,
           insurance: data.insurance,
           recent_appointments: data.recent_appointments
         });
@@ -146,35 +131,19 @@ function PatientSearch({ onBookAppointment }) {
     }
   };
 
-  /**
-   * Book appointment for patient
-   */
-  const handleBookAppointment = (patient) => {
-    if (onBookAppointment) {
-      onBookAppointment(patient);
-    }
-  };
 
-  /**
-   * Close modal
-   */
+
   const closeModal = () => {
     setShowModal(false);
     setSelectedPatient(null);
   };
 
-  /**
-   * Open create patient modal
-   */
   const openCreateModal = () => {
     setShowCreateModal(true);
     setFormErrors({});
     setError(null);
   };
 
-  /**
-   * Close create patient modal
-   */
   const closeCreateModal = () => {
     setShowCreateModal(false);
     setFormData({
@@ -199,15 +168,11 @@ function PatientSearch({ onBookAppointment }) {
     setError(null);
   };
 
-  /**
-   * Handle form input change with phone formatting
-   */
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
     let formattedValue = value;
-    
-    // Auto-format phone numbers
+
     if (name === 'phone' || name === 'emergencyPhone') {
       formattedValue = formatPhoneNumber(value);
     }
@@ -216,7 +181,7 @@ function PatientSearch({ onBookAppointment }) {
       ...prev,
       [name]: formattedValue
     }));
-    // Clear error for this field
+    
     if (formErrors[name]) {
       setFormErrors(prev => ({
         ...prev,
@@ -225,26 +190,29 @@ function PatientSearch({ onBookAppointment }) {
     }
   };
 
-  /**
-   * Format phone number as (XXX) XXX-XXXX
-   */
   const formatPhoneNumber = (value) => {
-    // Remove all non-digits
+    
     const cleaned = value.replace(/\D/g, '');
-    
-    // Limit to 10 digits
+
     const limited = cleaned.substring(0, 10);
-    
-    // Format based on length
+
     if (limited.length === 0) return '';
     if (limited.length <= 3) return `(${limited}`;
     if (limited.length <= 6) return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
     return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
   };
 
-  /**
-   * Validate form inputs
-   */
+  // Simplified: read normalized datetime provided by backend (appointment_datetime)
+  // Fallbacks: visit_start_at, Appointment_date
+  const formatAppointmentTime = (apt) => {
+    if (!apt) return null;
+    const dt = apt.appointment_datetime || apt.visit_start_at || apt.Appointment_date || apt.appointment_date;
+    if (!dt) return null;
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -275,13 +243,9 @@ function PatientSearch({ onBookAppointment }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  /**
-   * Create new patient
-   */
   const handleCreatePatient = async (e) => {
     e.preventDefault();
-    
-    // Validate form first
+
     if (!validateForm()) {
       return;
     }
@@ -302,12 +266,12 @@ function PatientSearch({ onBookAppointment }) {
       const data = await response.json();
 
       if (data.success) {
-        // Success - close modal and refresh patient list
+        
         closeCreateModal();
-        handleSearch(); // Refresh patient list
+        handleSearch(); 
         alert('Patient created successfully!');
       } else {
-        // Handle errors
+        
         if (data.errors) {
           setFormErrors(data.errors);
         }
@@ -323,7 +287,7 @@ function PatientSearch({ onBookAppointment }) {
 
   return (
     <div className="patient-search-page">
-      {/* ===== PAGE HEADER ===== */}
+      {}
       <div className="page-header">
         <div className="header-content">
           <div>
@@ -337,7 +301,42 @@ function PatientSearch({ onBookAppointment }) {
         </div>
       </div>
 
-      {/* ===== SEARCH SECTION ===== */}
+              {}
+              {/* Emergency Contact section - placed below Personal Information and above Insurance */}
+              {(selectedPatient.ec_first_name || selectedPatient.ec_last_name || selectedPatient.EmergencyContact) && (
+                <div className="info-section">
+                  <h3 className="section-heading">
+                    <Phone size={20} />
+                    Emergency Contact
+                  </h3>
+                  <div className="info-grid">
+                    {(selectedPatient.ec_first_name || selectedPatient.ec_last_name) && (
+                      <div className="info-field">
+                        <span className="field-label">Name</span>
+                        <span className="field-value">{`${selectedPatient.ec_first_name || ''} ${selectedPatient.ec_last_name || ''}`.trim()}</span>
+                      </div>
+                    )}
+
+                    {selectedPatient.EmergencyContact && (
+                      <div className="info-field">
+                        <span className="field-label">Phone</span>
+                        <a href={`tel:${selectedPatient.EmergencyContact}`} className="field-value link-phone">
+                          {selectedPatient.EmergencyContact}
+                        </a>
+                      </div>
+                    )}
+
+                    {selectedPatient.EmergencyContactRelationship && (
+                      <div className="info-field">
+                        <span className="field-label">Relation</span>
+                        <span className="field-value">{selectedPatient.EmergencyContactRelationship}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+      {}
       <div className="search-section">
         <div className="search-box-container">
           <Search className="search-icon-left" size={20} />
@@ -362,14 +361,14 @@ function PatientSearch({ onBookAppointment }) {
         )}
       </div>
 
-      {/* ===== ERROR MESSAGE ===== */}
+      {}
       {error && (
         <div className="alert alert-danger">
           {error}
         </div>
       )}
 
-      {/* ===== PATIENTS GRID ===== */}
+      {}
       <div className="patients-grid">
         {loading && patients.length === 0 ? (
           <div className="empty-state-search">
@@ -422,7 +421,7 @@ function PatientSearch({ onBookAppointment }) {
                   {patient.EmergencyContact && (
                     <div className="detail-item">
                       <Phone size={16} />
-                      <span className="detail-label">Phone</span>
+                      <span className="detail-label">Emergency Phone</span>
                       <span className="detail-value">{patient.EmergencyContact}</span>
                     </div>
                   )}
@@ -467,7 +466,7 @@ function PatientSearch({ onBookAppointment }) {
         )}
       </div>
 
-      {/* ===== PATIENT DETAILS MODAL ===== */}
+      {}
       {showModal && selectedPatient && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
@@ -484,7 +483,7 @@ function PatientSearch({ onBookAppointment }) {
             </div>
 
             <div className="modal-body">
-              {/* Personal Information */}
+              {}
               <div className="info-section">
                 <h3 className="section-heading">
                   <User size={20} />
@@ -512,23 +511,16 @@ function PatientSearch({ onBookAppointment }) {
                     </div>
                   )}
                   
-                  {selectedPatient.Email && (
+                  {(selectedPatient.Email || selectedPatient.email) && (
                     <div className="info-field">
                       <span className="field-label">Email</span>
-                      <a href={`mailto:${selectedPatient.Email}`} className="field-value link-email">
-                        {selectedPatient.Email}
+                      <a href={`mailto:${selectedPatient.Email || selectedPatient.email}`} className="field-value link-email">
+                        {selectedPatient.Email || selectedPatient.email}
                       </a>
                     </div>
                   )}
                   
-                  {selectedPatient.EmergencyContact && (
-                    <div className="info-field">
-                      <span className="field-label">Phone</span>
-                      <a href={`tel:${selectedPatient.EmergencyContact}`} className="field-value link-phone">
-                        {selectedPatient.EmergencyContact}
-                      </a>
-                    </div>
-                  )}
+                  
                   
                   {selectedPatient.pcp_first_name && selectedPatient.pcp_last_name && (
                     <div className="info-field">
@@ -541,7 +533,7 @@ function PatientSearch({ onBookAppointment }) {
                 </div>
               </div>
 
-              {/* Insurance Information */}
+              {}
               {selectedPatient.insurance && (
                 <div className="info-section">
                   <h3 className="section-heading">
@@ -607,7 +599,7 @@ function PatientSearch({ onBookAppointment }) {
                 </div>
               )}
 
-              {/* Recent Appointments */}
+              {}
               {selectedPatient.recent_appointments && selectedPatient.recent_appointments.length > 0 && (
                 <div className="info-section">
                   <h3 className="section-heading">
@@ -630,6 +622,15 @@ function PatientSearch({ onBookAppointment }) {
                             year: 'numeric'
                           })}
                         </p>
+                        {(() => {
+                          const t = formatAppointmentTime(apt);
+                          if (t) {
+                            return (
+                              <p className="visit-time">{t}</p>
+                            );
+                          }
+                          return null;
+                        })()}
                         <p className="visit-doctor">
                           Dr. {apt.Doctor_First} {apt.Doctor_Last}
                         </p>
@@ -647,16 +648,6 @@ function PatientSearch({ onBookAppointment }) {
             </div>
 
             <div className="modal-footer">
-              <button 
-                className="btn btn-primary"
-                onClick={() => {
-                  closeModal();
-                  handleBookAppointment(selectedPatient);
-                }}
-              >
-                <Calendar size={18} />
-                Book Appointment
-              </button>
               <button className="btn btn-ghost" onClick={closeModal}>
                 Close
               </button>
@@ -665,7 +656,7 @@ function PatientSearch({ onBookAppointment }) {
         </div>
       )}
 
-      {/* ===== CREATE PATIENT MODAL ===== */}
+      {}
       {showCreateModal && (
         <div className="modal-overlay" onClick={closeCreateModal}>
           <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
@@ -681,7 +672,7 @@ function PatientSearch({ onBookAppointment }) {
 
             <form onSubmit={handleCreatePatient}>
               <div className="modal-body">
-                {/* Error Message */}
+                {}
                 {error && (
                   <div className="alert alert-danger">
                     <AlertCircle size={20} />
@@ -689,7 +680,7 @@ function PatientSearch({ onBookAppointment }) {
                   </div>
                 )}
 
-                {/* Personal Information */}
+                {}
                 <div className="info-section">
                   <h3 className="section-heading">
                     <User size={20} />
@@ -765,7 +756,7 @@ function PatientSearch({ onBookAppointment }) {
                             <option key={opt.id} value={String(opt.id)}>{opt.label}</option>
                           ))
                         ) : (
-                          // fallback to a few common options while the server options load
+                          
                           <>
                             <option value="1">Male</option>
                             <option value="2">Female</option>
@@ -780,7 +771,7 @@ function PatientSearch({ onBookAppointment }) {
                   </div>
                 </div>
 
-                {/* Contact Information */}
+                {}
                 <div className="info-section">
                   <h3 className="section-heading">
                     <Mail size={20} />
@@ -877,7 +868,7 @@ function PatientSearch({ onBookAppointment }) {
                   </div>
                 </div>
 
-                {/* Emergency Contact */}
+                {}
                 <div className="info-section">
                   <h3 className="section-heading">
                     <Phone size={20} />
@@ -941,7 +932,7 @@ function PatientSearch({ onBookAppointment }) {
                   </div>
                 </div>
 
-                {/* Create Password */}
+                {}
                 <div className="info-section">
                   <h3 className="section-heading">
                     <CreditCard size={20} />

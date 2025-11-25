@@ -1,13 +1,10 @@
 <?php
 
-/**
- * Get doctor availability for a specific date
- * Uses session-based authentication like doctor API
- */
 require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
+
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -46,7 +43,7 @@ try {
         exit;
     }
 
-    $scheduleSql = "SELECT 
+    $scheduleSql = "SELECT
                         ws.schedule_id,
                         ws.day_of_week,
                         ws.start_time,
@@ -74,7 +71,7 @@ try {
 
     $doctorSchedule = $schedule[0];
 
-    $appointmentsSql = "SELECT 
+    $appointmentsSql = "SELECT
                             Appointment_date,
                             Status
                         FROM appointment

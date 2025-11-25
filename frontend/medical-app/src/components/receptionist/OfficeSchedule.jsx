@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, Clock, User, Check, X, Edit, AlertCircle } from 'lucide-react';
-// Removed API import as we'll use fetch directly
+
 import './OfficeSchedule.css';
 import AddInsuranceModal from './AddInsuranceModal';
 
-/**
- * Helper function to format date as YYYY-MM-DD in local timezone
- */
 const formatDateLocal = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -14,13 +11,6 @@ const formatDateLocal = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-/**
- * OfficeSchedule Component (Backend Integrated)
- * 
- * Displays doctor availability grid for appointment booking
- * Shows available time slots per doctor for selected date
- * Integrated with backend APIs for real-time availability
- */
 function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointment }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -32,19 +22,16 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
-  
-  // Nurse selection state
+
   const [showNurseModal, setShowNurseModal] = useState(false);
   const [nurses, setNurses] = useState([]);
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [loadingNurses, setLoadingNurses] = useState(false);
-  
-  // Insurance modal state
+
   const [showInsuranceModal, setShowInsuranceModal] = useState(false);
   const [insurancePatient, setInsurancePatient] = useState(null);
   const [validationToken, setValidationToken] = useState(null);
-  
-  // Alert/notification state
+
   const [alertModal, setAlertModal] = useState({
     show: false,
     type: 'info',
@@ -53,9 +40,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     confirmAction: null
   });
 
-  /**
-   * Load doctors and appointments when component mounts or date changes
-   */
   useEffect(() => {
     loadScheduleData();
   }, [selectedDate, officeId]);
@@ -63,8 +47,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   const loadScheduleData = async () => {
     try {
       setLoading(true);
-      
-      // Get doctors for this office
+
       const doctorsResponse = await fetch(
         `/receptionist_api/doctors/get-by-office.php?office_id=${officeId}`,
         { credentials: 'include' }
@@ -72,30 +55,26 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       const doctorsResult = await doctorsResponse.json();
       
       if (doctorsResult.success) {
-        // Add colors to doctors and process work schedule
+        
         const doctorsWithDetails = (doctorsResult.doctors || []).map((doc, index) => {
           const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
-          
-          // Get the day name for the selected date
+
           const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
           const selectedDayName = dayNames[selectedDate.getDay()];
-          
-          // Find the work schedule for the selected day
+
           const todaySchedule = (doc.work_schedule || []).find(
             schedule => schedule.day === selectedDayName
           );
-          
-          // Convert work schedule days to day numbers (0=Sunday, 1=Monday, etc.)
+
           const workDays = (doc.work_schedule || []).map(schedule => {
             return dayNames.indexOf(schedule.day);
           }).filter(day => day !== -1);
-          
-          // Get start and end times for today (if doctor works today)
-          let startTime = 9;  // default
-          let endTime = 17;   // default
+
+          let startTime = 9;  
+          let endTime = 17;   
           
           if (todaySchedule) {
-            // Parse HH:MM format
+            
             startTime = parseInt(todaySchedule.start.split(':')[0]);
             endTime = parseInt(todaySchedule.end.split(':')[0]);
           }
@@ -113,13 +92,12 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
             workDays: workDays,
             startTime: startTime,
             endTime: endTime,
-            work_schedule: doc.work_schedule // Keep full schedule for reference
+            work_schedule: doc.work_schedule 
           };
         });
         setDoctors(doctorsWithDetails);
       }
-      
-      // Get appointments for selected date
+
       const dateStr = formatDateLocal(selectedDate);
       const appointmentsResponse = await fetch(
         `/receptionist_api/appointments/get-by-date.php?date=${dateStr}`,
@@ -128,17 +106,15 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       const appointmentsResult = await appointmentsResponse.json();
       
       if (appointmentsResult.success) {
-        // Convert appointments to booked slots lookup
-        // Filter out cancelled and no-show appointments so those slots become available
+
         const slots = {};
         (appointmentsResult.appointments || []).forEach(apt => {
-          // Skip cancelled and no-show appointments - they don't block slots
+          
           if (apt.status === 'Cancelled' || apt.status === 'Canceled' || apt.status === 'No-Show') {
             return;
           }
-          
-          // Extract date and time from Appointment_date (format: "YYYY-MM-DD HH:MM:SS")
-          const appointmentDateTime = apt.Appointment_date; // e.g., "2025-11-11 11:00:00"
+
+          const appointmentDateTime = apt.Appointment_date; 
           const key = `${apt.Doctor_id}-${appointmentDateTime}`;
           slots[key] = {
             appointment_id: apt.Appointment_id,
@@ -161,9 +137,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     }
   };
 
-  /**
-   * Date navigation functions
-   */
   const goToPreviousDay = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() - 1);
@@ -183,9 +156,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     setSelectedSlot(null);
   };
 
-  /**
-   * Check if selected date is today
-   */
   const isToday = () => {
     const today = new Date();
     return selectedDate.getDate() === today.getDate() &&
@@ -193,17 +163,11 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
            selectedDate.getFullYear() === today.getFullYear();
   };
 
-  /**
-   * Check if selected date is a weekend
-   */
   const isWeekend = () => {
     const day = selectedDate.getDay();
     return day === 0 || day === 6;
   };
 
-  /**
-   * Check if date is in the past
-   */
   const isPastDate = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -212,9 +176,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     return selected < today;
   };
 
-  /**
-   * Format date for display
-   */
   const formatDate = (date) => {
     return date.toLocaleDateString('en-US', { 
       weekday: 'long', 
@@ -224,9 +185,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     });
   };
 
-  /**
-   * Generate time slots (30-minute intervals)
-   */
   const generateTimeSlots = () => {
     const slots = [];
     for (let hour = 5; hour <= 18; hour++) {
@@ -239,9 +197,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
 
   const timeSlots = generateTimeSlots();
 
-  /**
-   * Get unique specialties from doctors
-   */
   const getUniqueSpecialties = () => {
     const specialties = doctors
       .map(doc => doc.specialty_name)
@@ -250,9 +205,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     return specialties;
   };
 
-  /**
-   * Get filtered doctors based on specialty filter
-   */
   const getFilteredDoctors = () => {
     if (specialtyFilter === 'all') {
       return doctors;
@@ -263,9 +215,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
   const filteredDoctors = getFilteredDoctors();
   const uniqueSpecialties = getUniqueSpecialties();
 
-  /**
-   * Format time slot for display
-   */
   const formatTimeSlot = (hour, minute) => {
     const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
@@ -273,17 +222,11 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     return `${displayHour}:${displayMinute} ${period}`;
   };
 
-  /**
-   * Check if doctor works on selected day
-   */
   const isDoctorWorking = (doctor) => {
     const dayOfWeek = selectedDate.getDay();
     return doctor.workDays.includes(dayOfWeek);
   };
 
-  /**
-   * Check if time slot is within doctor's working hours
-   */
   const isWithinWorkingHours = (doctor, hour, minute) => {
     const timeInMinutes = hour * 60 + minute;
     const startInMinutes = doctor.startTime * 60;
@@ -291,47 +234,35 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     return timeInMinutes >= startInMinutes && timeInMinutes <= endInMinutes;
   };
 
-  /**
-   * Check if time slot is booked (from backend data)
-   * Each appointment only shows at ONE slot - the nearest one (earlier if equidistant)
-   */
   const isSlotBooked = (doctorId, hour, minute) => {
     const dateStr = formatDateLocal(selectedDate);
     const slotTimeInMinutes = hour * 60 + minute;
-    
-    // Check all booked slots for this doctor on this date
+
     for (const key in bookedSlots) {
       if (!key.startsWith(`${doctorId}-${dateStr}`)) continue;
       
       const appointment = bookedSlots[key];
       const apptDate = new Date(appointment.Appointment_date);
       const apptTimeInMinutes = apptDate.getHours() * 60 + apptDate.getMinutes();
-      
-      // Calculate time difference
+
       const timeDiff = apptTimeInMinutes - slotTimeInMinutes;
       const absTimeDiff = Math.abs(timeDiff);
-      
-      // Only show if within 15 minutes
+
       if (absTimeDiff > 15) continue;
-      
-      // For appointments exactly between two slots (e.g., 10:15 or 10:45)
-      // show at the earlier slot only
+
       if (absTimeDiff === 15) {
-        // Only show if appointment is AFTER this slot (not before)
-        // 10:45 appointment: show at 10:30 (timeDiff=15), NOT at 11:00 (timeDiff=-15)
+
         if (timeDiff > 0) {
           return true;
         }
       } else {
-        // For other appointments, show at whichever slot is closer
-        // Check if this is the closest slot
+
         const prevSlotTime = slotTimeInMinutes - 30;
         const nextSlotTime = slotTimeInMinutes + 30;
         
         const distToPrev = Math.abs(apptTimeInMinutes - prevSlotTime);
         const distToNext = Math.abs(apptTimeInMinutes - nextSlotTime);
-        
-        // Show here if this slot is closer than both neighbors
+
         if (absTimeDiff <= distToPrev && absTimeDiff < distToNext) {
           return true;
         }
@@ -341,33 +272,25 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     return false;
   };
 
-  /**
-   * Get the actual appointment for a time slot (if within range)
-   * Prioritizes the closest slot, with preference for earlier slots
-   */
   const getAppointmentForSlot = (doctorId, hour, minute) => {
     const dateStr = formatDateLocal(selectedDate);
     const slotTimeInMinutes = hour * 60 + minute;
     
     let closestAppointment = null;
     let closestDistance = Infinity;
-    
-    // Check all booked slots for this doctor on this date
+
     for (const key in bookedSlots) {
       if (!key.startsWith(`${doctorId}-${dateStr}`)) continue;
       
       const appointment = bookedSlots[key];
       const apptDate = new Date(appointment.Appointment_date);
       const apptTimeInMinutes = apptDate.getHours() * 60 + apptDate.getMinutes();
-      
-      // Calculate time difference
+
       const timeDiff = apptTimeInMinutes - slotTimeInMinutes;
       const absTimeDiff = Math.abs(timeDiff);
-      
-      // If appointment is within 15 minutes of this slot
+
       if (absTimeDiff <= 15) {
-        // For equidistant appointments, prefer showing at the earlier slot
-        // (e.g., 10:15 appointment: show at 10:00, not 10:30)
+
         if (absTimeDiff < closestDistance || (absTimeDiff === closestDistance && timeDiff > 0)) {
           closestDistance = absTimeDiff;
           closestAppointment = appointment;
@@ -378,9 +301,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     return closestAppointment;
   };
 
-  /**
-   * Check if time slot is in the past
-   */
   const isSlotInPast = (hour, minute) => {
     if (!isToday()) return false;
     
@@ -391,9 +311,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     return (hour < currentHour) || (hour === currentHour && minute <= currentMinute);
   };
 
-  /**
-   * Get slot availability status
-   */
   const getSlotStatus = (doctor, hour, minute) => {
     if (isPastDate()) return 'past';
     if (isSlotInPast(hour, minute)) return 'past';
@@ -403,11 +320,8 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     return 'available';
   };
 
-  /**
-   * Handle slot selection
-   */
   const handleSlotClick = (doctor, hour, minute, status) => {
-    // If slot is booked, show appointment details
+    
     if (status === 'booked') {
       const appointmentData = getAppointmentForSlot(doctor.Doctor_id, hour, minute);
       
@@ -416,8 +330,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       }
       return;
     }
-    
-    // If slot is available, select it for booking
+
     if (status !== 'available') return;
     
     const slotKey = `${doctor.Doctor_id}-${hour}-${minute}`;
@@ -434,18 +347,12 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     setSelectedSlotData(slotData);
   };
 
-  /**
-   * Handle continue to booking button click
-   */
   const handleContinueToBooking = () => {
     if (selectedSlotData && onSelectTimeSlot) {
       onSelectTimeSlot(selectedSlotData);
     }
   };
 
-  /**
-   * Show cancel confirmation modal
-   */
   const handleCancelAppointment = () => {
     if (!selectedAppointment || !selectedAppointment.appointment_id) return;
     
@@ -458,9 +365,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     });
   };
 
-  /**
-   * Execute appointment cancellation
-   */
   const confirmCancelAppointment = async () => {
     if (!selectedAppointment || !selectedAppointment.appointment_id) return;
     
@@ -513,26 +417,17 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     }
   };
 
-  /**
-   * Edit appointment - pass appointment data to parent for editing
-   */
   const handleEditAppointment = () => {
     if (!selectedAppointment || !onEditAppointment) return;
-    
-    // Close the modal
+
     setSelectedAppointment(null);
-    
-    // Pass the appointment data to the parent for editing
+
     onEditAppointment(selectedAppointment);
   };
 
-  /**
-   * Check in patient for appointment - Step 1: Validate insurance first
-   */
   const handleCheckInAppointment = async () => {
     if (!selectedAppointment || !selectedAppointment.appointment_id) return;
-    
-    // First, validate insurance by attempting check-in with a dummy nurse_id
+
     setCheckingIn(true);
     
     try {
@@ -544,19 +439,18 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         credentials: 'include',
         body: JSON.stringify({
           Appointment_id: selectedAppointment.appointment_id,
-          nurse_id: 0, // Dummy value for validation
+          nurse_id: 0, 
           validate_only: true
         })
       });
       
       const result = await response.json();
-      
-      // If insurance validation fails, stop here
+
       if (!result.success) {
         if (result.error_type === 'INSURANCE_WARNING' || result.error_type === 'INSURANCE_EXPIRED') {
-          // Show alert modal with option to add/edit insurance
+          
           const isExpired = result.error_type === 'INSURANCE_EXPIRED';
-          // Normalize patient fields from the appointment object (different endpoints use different casing)
+          
           const patientIdVal = selectedAppointment.Patient_id || selectedAppointment.patient_id || selectedAppointment.patientId || selectedAppointment.id || null;
           const patientFirstVal = selectedAppointment.Patient_First || selectedAppointment.patient_first || selectedAppointment.first_name || (selectedAppointment.patient_name ? selectedAppointment.patient_name.split(' ')[0] : '') || '';
           const patientLastVal = selectedAppointment.Patient_Last || selectedAppointment.patient_last || selectedAppointment.last_name || (selectedAppointment.patient_name ? selectedAppointment.patient_name.split(' ').slice(1).join(' ') : '') || '';
@@ -586,8 +480,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         setCheckingIn(false);
         return;
       }
-      
-      // Check if there's an insurance warning (expiring soon) during validation
+
       if (result.insurance_warning) {
         setAlertModal({
           show: true,
@@ -597,8 +490,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         });
         if (result.validation_token) setValidationToken(result.validation_token);
       }
-      
-      // Insurance validation passed, now load nurses and show selection modal
+
       setCheckingIn(false);
       setLoadingNurses(true);
       setShowNurseModal(true);
@@ -612,7 +504,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       if (nursesData.success && nursesData.nurses) {
         setNurses(nursesData.nurses);
         if (nursesData.nurses.length > 0) {
-          setSelectedNurse(nursesData.nurses[0].nurse_id); // Pre-select first nurse
+          setSelectedNurse(nursesData.nurses[0].nurse_id); 
         }
       } else {
         setAlertModal({
@@ -636,10 +528,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       setCheckingIn(false);
     }
   };
-  
-  /**
-   * Handle check-in confirmation - Step 2: Perform actual check-in with selected nurse
-   */
+
   const handleConfirmCheckIn = async () => {
     if (!selectedAppointment || !selectedNurse) return;
     
@@ -661,7 +550,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
       const result = await response.json();
       
       if (result.success) {
-        // Check for insurance warnings (expiring soon)
+        
         if (result.insurance_warning) {
           setAlertModal({
             show: true,
@@ -703,9 +592,6 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     }
   };
 
-  /**
-   * Get status badge class
-   */
   const getStatusClass = (status) => {
     const normalizedStatus = (status || 'scheduled').toLowerCase();
     const statusMap = {
@@ -722,16 +608,13 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
     return statusMap[normalizedStatus] || 'status-scheduled';
   };
 
-  /**
-   * Check if slot is selected
-   */
   const isSlotSelected = (doctorId, hour, minute) => {
     return selectedSlot === `${doctorId}-${hour}-${minute}`;
   };
 
   return (
     <div className="office-schedule-page">
-      {/* ===== HEADER ===== */}
+      {}
       <div className="schedule-header">
         <div className="header-info">
           <h1 className="page-title">Doctor Availability</h1>
@@ -742,7 +625,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         </div>
       </div>
 
-      {/* ===== DATE NAVIGATION ===== */}
+      {}
       <div className="date-navigation-section">
         <div className="date-controls">
           <button className="nav-btn" onClick={goToPreviousDay} title="Previous Day">
@@ -768,7 +651,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         </div>
       </div>
 
-      {/* ===== LEGEND ===== */}
+      {}
       <div className="availability-legend">
         <div className="legend-item">
           <div className="legend-box available"></div>
@@ -788,7 +671,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         </div>
       </div>
 
-      {/* ===== SPECIALTY FILTER ===== */}
+      {}
       {doctors.length > 0 && uniqueSpecialties.length > 1 && (
         <div className="specialty-filter-section">
           <label className="filter-label">Filter by Specialty:</label>
@@ -810,7 +693,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         </div>
       )}
 
-      {/* ===== AVAILABILITY GRID ===== */}
+      {}
       <div className="availability-grid-container">
         {loading ? (
           <div className="empty-state">
@@ -837,7 +720,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
           </div>
         ) : (
           <div className="availability-grid">
-            {/* Header Row - Doctor Names */}
+            {}
             <div 
               className="grid-header"
               style={{ 
@@ -872,7 +755,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
               ))}
             </div>
 
-            {/* Time Slots Grid */}
+            {}
             <div className="grid-body">
               {timeSlots.map(({ hour, minute }) => (
                 <div 
@@ -882,17 +765,16 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
                     gridTemplateColumns: `120px repeat(${filteredDoctors.length}, minmax(240px, 1fr))` 
                   }}
                 >
-                  {/* Time Label */}
+                  {}
                   <div className="time-cell">
                     <span className="time-label">{formatTimeSlot(hour, minute)}</span>
                   </div>
 
-                  {/* Doctor Slots */}
+                  {}
                   {filteredDoctors.map(doctor => {
                     const status = getSlotStatus(doctor, hour, minute);
                     const isSelected = isSlotSelected(doctor.Doctor_id, hour, minute);
-                    
-                    // Get appointment (if any) tied to this slot so we can render details
+
                     const appointmentForThisSlot = getAppointmentForSlot(doctor.Doctor_id, hour, minute);
 
                     return (
@@ -939,7 +821,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         )}
       </div>
 
-      {/* ===== SELECTED SLOT INFO ===== */}
+      {}
       {selectedSlot && (
         <div className="selected-slot-info">
           <div className="info-content">
@@ -955,7 +837,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         </div>
       )}
 
-      {/* ===== APPOINTMENT DETAILS MODAL ===== */}
+      {}
       {selectedAppointment && (
         <div className="modal-overlay" onClick={() => setSelectedAppointment(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -1059,7 +941,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         </div>
       )}
       
-      {/* ===== NURSE SELECTION MODAL ===== */}
+      {}
       {showNurseModal && selectedAppointment && (
         <div className="modal-overlay" onClick={() => setShowNurseModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
@@ -1143,7 +1025,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         </div>
       )}
       
-      {/* ===== ALERT MODAL ===== */}
+      {}
       {alertModal.show && (
         <div className="modal-overlay" onClick={() => setAlertModal({ ...alertModal, show: false })}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
@@ -1234,7 +1116,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
         </div>
       )}
 
-      {/* ===== ADD INSURANCE MODAL ===== */}
+      {}
       {showInsuranceModal && insurancePatient && (
         <AddInsuranceModal
           patient={insurancePatient}
@@ -1245,7 +1127,7 @@ function OfficeSchedule({ officeId, officeName, onSelectTimeSlot, onEditAppointm
           onSuccess={() => {
             setShowInsuranceModal(false);
             setInsurancePatient(null);
-            loadSchedule(); // Refresh schedule to reflect updated insurance
+            loadSchedule(); 
           }}
         />
       )}
