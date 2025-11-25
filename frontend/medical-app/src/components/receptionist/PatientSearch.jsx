@@ -336,7 +336,7 @@ function PatientSearch() {
           <input
             type="text"
             className="search-input-main"
-            placeholder="Search by name, phone, or date of birth..."
+            placeholder="Search by name or date of birth..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
