@@ -12,7 +12,6 @@
   --border: #e6eef8;
 }
 
-/* ========== MAIN CONTAINER ========== */
 .schedule {
   padding: 2rem;
   max-width: 1600px;
@@ -22,7 +21,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ========== HEADER WITH MONTH NAVIGATION ========== */
 .schedule-header {
   margin-bottom: 2rem;
 }
@@ -73,7 +71,6 @@
   text-align: center;
 }
 
-/* ========== FILTER SECTION ========== */
 .filter-section {
   background: white;
   padding: 1.25rem 1.5rem;
@@ -130,7 +127,6 @@
   border-color: var(--secondary-color);
 }
 
-/* ========== CALENDAR CONTAINER ========== */
 .calendar-container {
   background: white;
   padding: 1.5rem;
@@ -139,7 +135,6 @@
   border: 2px solid var(--border);
 }
 
-/* ========== CALENDAR GRID ========== */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -147,7 +142,6 @@
   width: 100%;
 }
 
-/* ========== WEEKDAY HEADERS ========== */
 .weekday-header {
   text-align: center;
   font-weight: 700;
@@ -161,7 +155,6 @@
   border: 1px solid var(--border);
 }
 
-/* ========== CALENDAR DAY CELL ========== */
 .calendar-day {
   min-height: 120px;
   padding: 0.75rem;
@@ -222,7 +215,6 @@
   border-radius: 0.75rem;
 }
 
-/* ========== DAY HEADER ========== */
 .day-header {
   display: flex;
   justify-content: space-between;
@@ -231,7 +223,6 @@
   flex-shrink: 0;
 }
 
-/* ========== DAY NUMBER ========== */
 .day-number {
   font-weight: 700;
   color: var(--primary-color);
@@ -259,7 +250,6 @@
   color: var(--gray);
 }
 
-/* ========== LOCATION BADGE ========== */
 .location-badge {
   font-size: 0.6875rem;
   font-weight: 700;
@@ -289,7 +279,6 @@
   border: 1px solid #f59e0b;
 }
 
-/* ========== DAY CONTENT ========== */
 .day-content {
   flex: 1;
   display: flex;
@@ -301,7 +290,6 @@
   min-height: 0;
 }
 
-/* Custom Scrollbar */
 .day-content::-webkit-scrollbar {
   width: 6px;
 }
@@ -320,7 +308,7 @@
   background: var(--third-color);
 }
 
-/* ========== APPOINTMENTS ========== */
+
 .appointments {
   display: flex;
   flex-direction: column;
@@ -388,7 +376,6 @@
   font-weight: 500;
 }
 
-/* ========== RESPONSIVE DESIGN ========== */
 @media (max-width: 1400px) {
   .schedule {
     padding: 1.5rem;
@@ -538,7 +525,6 @@
   }
 }
 
-/* ========== LOADING & ERROR STATES ========== */
 .schedule-loading,
 .schedule-error {
   display: flex;
@@ -579,12 +565,12 @@
   margin-bottom: 1.5rem;
 }
 
-/* ========== UTILITY CLASSES ========== */
+
 .schedule * {
   box-sizing: border-box;
 }
 
-/* Ensure visibility of key elements */
+
 .schedule .day-number,
 .schedule .day-header,
 .schedule .location-badge,

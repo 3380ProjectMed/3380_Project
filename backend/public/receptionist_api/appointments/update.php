@@ -8,8 +8,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    // Start session and require that the user is logged in
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -33,15 +31,13 @@ try {
     $appointment_id = (int)$input['Appointment_id'];
     $user_id = (int)$_SESSION['uid'];
 
-    // Defensive: do not allow clients to attempt to change the primary key via payload.
-    // We already read Appointment_id to identify the row; remove any accidental or malicious
-    // Appointment_id/appointment_id fields so they're not considered for updates below.
+    if (isset($input['Appointment_id'])) unset($input['Appointment_id']);
+    if (isset($input['appointment_id'])) unset($input['appointment_id']);
     if (isset($input['Appointment_id'])) unset($input['Appointment_id']);
     if (isset($input['appointment_id'])) unset($input['appointment_id']);
 
     $conn = getDBConnection();
 
-    // Authorization: receptionist with work_schedule for the appointment's office OR the patient who owns the appointment
     $verifySql = "SELECT a.Appointment_id, a.Office_id, a.Patient_id, a.Status
                   FROM appointment a
                   JOIN user_account ua ON ua.user_id = ?
@@ -55,13 +51,11 @@ try {
     $isReceptionist = !empty($verifyResult);
 
     if (empty($verifyResult)) {
-        // Not a receptionist with access; check if the logged-in user is the patient who owns the appointment
         $patientCheckSql = "SELECT Appointment_id, Patient_id, Status FROM appointment WHERE Appointment_id = ? AND Patient_id = ?";
         $patientResult = executeQuery($conn, $patientCheckSql, 'ii', [$appointment_id, $user_id]);
 
         if (!empty($patientResult)) {
             $isPatientOwner = true;
-            // Expose appointment status for later validation
             $appointmentStatus = $patientResult[0]['Status'] ?? null;
         }
     } else {
@@ -75,7 +69,7 @@ try {
         exit;
     }
 
-    // Build dynamic update query based on provided fields
+    
     $updateFields = [];
     $types = '';
     $values = [];
@@ -98,7 +92,7 @@ try {
         $values[] = $input['Doctor_id'];
     }
 
-    // Only receptionists/staff may update arbitrary status values.
+    
     if (isset($input['Status']) && $isReceptionist) {
         $validStatuses = ['Scheduled', 'Pending', 'Waiting', 'Checked-in', 'In Progress', 'Completed', 'Cancelled', 'No-Show'];
         if (in_array($input['Status'], $validStatuses)) {
@@ -109,7 +103,6 @@ try {
     }
 
     if (isset($input['booking_channel'])) {
-        // Map booking_channel to method (database column)
         $channel = strtolower($input['booking_channel']);
         $bookingMethod = null;
         if ($channel === 'phone') {
@@ -127,9 +120,7 @@ try {
         }
     }
 
-    // If the logged-in user is the patient owner, restrict what they can update
     if ($isPatientOwner) {
-        // Disallow edits when appointment is checked-in, cancelled, or no-show
         $forbiddenStatuses = ['Checked-in', 'Checked in', 'Cancelled', 'Canceled', 'No-Show', 'No-Show'];
         if (in_array($appointmentStatus, $forbiddenStatuses)) {
             closeDBConnection($conn);
@@ -137,9 +128,7 @@ try {
             echo json_encode(['success' => false, 'error' => 'Cannot edit appointment in its current status']);
             exit;
         }
-
-        // Filter out any fields the patient is not allowed to change
-    $allowedForPatient = ['Appointment_date', 'Reason_for_visit', 'Doctor_id', 'method', 'booking_channel'];
+        $allowedForPatient = ['Appointment_date', 'Reason_for_visit', 'Doctor_id', 'method', 'booking_channel'];
         $updateFields = array_values(array_filter($updateFields, function($f) use ($allowedForPatient) {
             foreach ($allowedForPatient as $allowed) {
                 if (stripos($f, $allowed) !== false) return true;
@@ -158,8 +147,7 @@ try {
     $conn->begin_transaction();
 
     try {
-        // Add appointment_id to values
-        $values[] = $appointment_id;
+    $values[] = $appointment_id;
         $types .= 'i';
 
         $updateSql = "UPDATE appointment SET " . implode(', ', $updateFields) . " WHERE Appointment_id = ?";

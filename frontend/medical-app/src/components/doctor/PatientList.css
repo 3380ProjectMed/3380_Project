@@ -1,4 +1,4 @@
-/* ========== PATIENT LIST COMPONENT ========== */
+/* PATIENT LIST COMPONEN */
 .patient-list {
   height: 100%;
   position: relative;
@@ -12,7 +12,7 @@
   margin-bottom: 1.5rem;
 }
 
-/* ===== SEARCH BAR ===== */
+/* SEARCH BAR */
 .patient-list__search {
   margin-bottom: 1.5rem;
   display: flex;
@@ -69,7 +69,7 @@
   color: var(--primary-color);
 }
 
-/* ===== PATIENTS TABLE ===== */
+/* PATIENTS TABLE */
 .patient-list__table-container {
   background: white;
   border-radius: 0.75rem;
@@ -501,7 +501,6 @@ position: sticky;
     box-shadow: 0 -6px 12px rgba(2,6,23,0.06);
   }
 
-/* Ensure the sidebar has extra bottom padding to avoid content being obscured by the sticky actions */
 .patient-summary {
   padding-bottom: 5rem;
 }

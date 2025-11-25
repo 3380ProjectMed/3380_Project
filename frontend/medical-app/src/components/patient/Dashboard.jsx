@@ -35,7 +35,7 @@ export default function Dashboard(props) {
     });
   };
 
-  // Filter out referrals from recent activity since they'll have their own section
+  // Filter out referrals from recent activity since
   const nonReferralActivity = recentActivity.filter(activity => 
     activity.activity_type !== 'referral' && activity.status !== 'Referral Approved'
   );

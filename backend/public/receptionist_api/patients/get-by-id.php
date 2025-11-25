@@ -10,8 +10,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    // Start session and require that the user is logged in
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -30,7 +28,6 @@ try {
 
     $conn = getDBConnection();
 
-    // Get patient basic info
     $sql = "SELECT p.patient_id, p.first_name, p.last_name, p.dob,
              p.email, p.emergency_contact_id, p.insurance_id, p.primary_doctor,
              pcp_staff.first_name as pcp_first_name, pcp_staff.last_name as pcp_last_name
@@ -49,7 +46,6 @@ try {
 
     $patient = $patientRows[0];
 
-    // Get insurance info
     $insSql = "SELECT pi.id, pi.expiration_date, ip.copay, ip.deductible_individual, ip.coinsurance_rate,
                       ip.plan_name, ip.plan_type,
                       py.name as payer_name
@@ -64,7 +60,6 @@ try {
         $insurance = !empty($insRows) ? $insRows[0] : null;
     }
 
-    // Get recent appointments
     $apptSql = "SELECT a.Appointment_id, a.Appointment_date, a.Reason_for_visit, a.Status,
                        doc_staff.first_name as Doctor_First, doc_staff.last_name as Doctor_Last,
                        pv.status as visit_status

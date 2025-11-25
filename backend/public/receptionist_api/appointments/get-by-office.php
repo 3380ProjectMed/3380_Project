@@ -9,8 +9,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    // Start session and require that the user is logged in
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -19,7 +17,6 @@ try {
 
     $user_id = (int) $_SESSION['uid'];
 
-    // Validate date parameters
     if (!isset($_GET['start_date']) || !isset($_GET['end_date'])) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'start_date and end_date parameters are required']);
@@ -29,7 +26,6 @@ try {
     $start_date = $_GET['start_date'];
     $end_date = $_GET['end_date'];
 
-    // Validate date format (YYYY-MM-DD)
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end_date)) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid date format. Use YYYY-MM-DD']);
@@ -38,7 +34,6 @@ try {
 
     $conn = getDBConnection();
 
-    // Get receptionist's office from work_schedule
     try {
         $rows = executeQuery($conn, '
             SELECT ws.office_id
@@ -61,8 +56,6 @@ try {
 
     $office_id = (int) $rows[0]['office_id'];
 
-    // Fetch appointments with all necessary fields for calendar display
-    // ✅ Returns separate name fields that the frontend expects
     $sql = "SELECT
                 a.Appointment_id,
                 a.Appointment_date,
@@ -90,7 +83,6 @@ try {
 
     closeDBConnection($conn);
 
-    // Return raw appointment data with field names matching frontend expectations
     echo json_encode([
         'success' => true,
         'appointments' => $appointments,

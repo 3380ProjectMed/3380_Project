@@ -8,8 +8,6 @@ require_once '/home/site/wwwroot/cors.php';
 require_once '/home/site/wwwroot/database.php';
 require_once '/home/site/wwwroot/session.php';
 try {
-    // Start session and require that the user is logged in
-    //session_start();
     if (empty($_SESSION['uid'])) {
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Not authenticated']);
@@ -24,7 +22,6 @@ try {
 
     $input = json_decode(file_get_contents('php://input'), true);
 
-    // Validate required fields
     $required = ['Patient_id', 'Doctor_id', 'Appointment_date', 'Office_id'];
     foreach ($required as $field) {
         if (!isset($input[$field])) {
@@ -38,7 +35,6 @@ try {
 
     $conn = getDBConnection();
 
-    // Verify receptionist works at the specified office
     $verifySql = "SELECT ws.office_id
                   FROM staff s
                   JOIN user_account ua ON ua.email = s.staff_email
@@ -54,7 +50,6 @@ try {
         exit;
     }
 
-    // Verify doctor exists and get staff_id for schedule checks
     $doctorSql = "SELECT doctor_id, staff_id FROM doctor WHERE doctor_id = ?";
     $doctorResult = executeQuery($conn, $doctorSql, 'i', [$input['Doctor_id']]);
 
@@ -67,11 +62,10 @@ try {
     $doctorRow = $doctorResult[0];
     $doctor_staff_id = (int)$doctorRow['staff_id'];
 
-    // Validate appointment datetime falls within the doctor's work_schedule for that office
     try {
         $apptDT = new DateTime($input['Appointment_date']);
-        $dayOfWeek = $apptDT->format('l'); // e.g., Monday
-        $timeHHMM = $apptDT->format('H:i'); // e.g., 14:30
+        $dayOfWeek = $apptDT->format('l');
+        $timeHHMM = $apptDT->format('H:i');
 
         $scheduleCheckSql = "SELECT 1 FROM work_schedule WHERE staff_id = ? AND office_id = ? AND day_of_week = ? AND start_time <= ? AND end_time > ? LIMIT 1";
         $scheduleMatch = executeQuery($conn, $scheduleCheckSql, 'iisss', [$doctor_staff_id, $input['Office_id'], $dayOfWeek, $timeHHMM, $timeHHMM]);
@@ -83,14 +77,12 @@ try {
             exit;
         }
     } catch (Exception $e) {
-        // If parsing fails, reject the request
         closeDBConnection($conn);
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Invalid appointment date/time']);
         exit;
     }
 
-    // Verify patient exists
     $patientSql = "SELECT patient_id FROM patient WHERE patient_id = ?";
     $patientResult = executeQuery($conn, $patientSql, 'i', [$input['Patient_id']]);
 
@@ -104,7 +96,6 @@ try {
     $conn->begin_transaction();
 
     try {
-        // Insert appointment
         $insertSql = "INSERT INTO appointment (
                         Patient_id, 
                         Doctor_id, 
@@ -118,8 +109,7 @@ try {
 
         $reason = $input['Reason_for_visit'] ?? 'General Visit';
         
-        // Map booking_channel to method (database column)
-        $bookingMethod = 'Walk-in'; // default
+        $bookingMethod = 'Walk-in';
         if (isset($input['booking_channel'])) {
             $channel = strtolower($input['booking_channel']);
             if ($channel === 'phone') {

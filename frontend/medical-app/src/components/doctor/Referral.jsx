@@ -19,7 +19,6 @@ function Referral() {
   const [showPatientList, setShowPatientList] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  // Filtered patient autocomplete results
   const filteredPatientResults = useMemo(() => {
     const q = (form.patient_name || '').trim().toLowerCase();
     if (!q) return [];
@@ -33,7 +32,6 @@ function Referral() {
   const apiBase = '/doctor_api/referrals';
   const auth = useAuth();
 
-  // Load referrals that were received by the specialist (assigned to this doctor)
   const loadReceived = async (doctorId = null) => {
     setLoading(true);
     try {
@@ -56,14 +54,12 @@ function Referral() {
     }
   };
 
-  // Load referrals for the current specialist once auth is ready
   useEffect(() => {
     if (auth.loading) return;
     const doctorId = auth.user?.doctor_id ?? null;
     loadReceived(doctorId);
   }, [auth.loading, auth.user]);
 
-  // Load patients and specialists for the form
   useEffect(() => {
     const loadLists = async () => {
       try {
@@ -78,8 +74,6 @@ function Referral() {
         
         console.log('🔍 Fetching patients and specialists...');
 
-        // Always fetch specialists and patients. Let the server resolve the
-        // current doctor via session when no explicit doctor_id is provided.
         const specialistsFetch = fetch('/doctor_api/referrals/get-specialists.php', { credentials: 'include' });
         const patientsFetch = fetch('/doctor_api/patients/get-all.php', { credentials: 'include' });
 
@@ -142,7 +136,6 @@ function Referral() {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      // Validate patient_id is set
       if (!form.patient_id) {
         setStatus({ type: 'error', text: 'Please select a valid patient from the list' });
         setTimeout(() => setStatus(null), 3000);
@@ -183,9 +176,6 @@ function Referral() {
     setTimeout(() => setStatus(null), 4000);
   };
 
-  /**
-   * Format date for display
-   */
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
@@ -205,33 +195,7 @@ function Referral() {
     <div className="referral-page">
       <h2 className="page-title">Referrals</h2>
       
-      {/* Debug Panel - shows data loading status
-      <div style={{ 
-        background: loadingData ? '#fef3c7' : '#d1fae5', 
-        padding: '12px', 
-        marginBottom: '20px', 
-        borderRadius: '8px',
-        border: '2px solid ' + (loadingData ? '#fbbf24' : '#10b981')
-      }}>
-        <strong>📊 Data Status:</strong><br />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
-          <div>
-            <strong>Patients:</strong> {loadingData ? 'Loading...' : `${patients.length} loaded`}
-          </div>
-          <div>
-            <strong>Specialists:</strong> {loadingData ? 'Loading...' : `${specialists.length} loaded`}
-          </div>
-          <div>
-            <strong>Auth Status:</strong> {auth.loading ? 'Loading' : 'Ready'}
-          </div>
-          <div>
-            <strong>Doctor ID:</strong> {auth.user?.doctor_id || 'None'}
-          </div>
-        </div>
-      </div> */}
-      
       <div className="referral-grid">
-        {/* ===== RECEIVED REFERRALS ===== */}
         <div className="referral-column">
           <h3>Received Referrals</h3>
           {loading ? (
@@ -246,7 +210,6 @@ function Referral() {
               ) : (
                 referrals.map(r => (
                   <div key={r.referral_id || r.Referral_ID} className="received-referral-card">
-                    {/* Card Header */}
                     <div className="referral-card-header">
                       <div className="referral-id-badge">
                         Referral #{r.referral_id || r.Referral_ID}
@@ -257,7 +220,6 @@ function Referral() {
                       </div>
                     </div>
 
-                    {/* Patient Info */}
                     <div className="referral-section">
                       <div className="section-label">
                         <User size={16} />
@@ -268,7 +230,6 @@ function Referral() {
                       </div>
                     </div>
 
-                    {/* Specialist Info */}
                     <div className="referral-section">
                       <div className="section-label">
                         <Stethoscope size={16} />
@@ -282,7 +243,6 @@ function Referral() {
                       </div>
                     </div>
 
-                    {/* Reason */}
                     <div className="referral-section">
                       <div className="section-label">
                         <AlertCircle size={16} />
@@ -302,7 +262,6 @@ function Referral() {
           )}
         </div>
 
-        {/* ===== CREATE REFERRAL FORM ===== */}
         <div className="referral-column">
           <h3>Create Referral</h3>
           
@@ -313,7 +272,6 @@ function Referral() {
           ) : (
             <form className="referral-form" onSubmit={handleCreate}>
               
-              {/* Patient Autocomplete */}
               <label>
                 Patient
                 <div className="patient-select">
@@ -363,7 +321,6 @@ function Referral() {
                 </div>
               </label>
 
-              {/* Specialist Dropdown */}
               <label>
                 Specialist
                 <select 
@@ -393,7 +350,6 @@ function Referral() {
                 </select>
               </label>
 
-              {/* Reason */}
               <label>
                 Reason for Referral 
                 <textarea 
