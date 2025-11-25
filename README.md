@@ -174,7 +174,7 @@ npm install
 
 3. **Configure API Endpoint**
 
-Edit `src/patientapi.js` and other API files to point to your backend:
+Edit API files to point to your backend:
 ```javascript
 const API_BASE_URL = 'http://localhost:8000'; // For local development
 // For production: const API_BASE_URL = 'https://your-backend-url.azurewebsites.net';
@@ -271,17 +271,6 @@ npm run build
 - `POST /api/signup.php` - Patient registration
 - `POST /api/logout.php` - User logout
 - `POST /api/password-reset.php` - Password recovery
-
-#### Patient Portal
-- `GET /patient_api.php?endpoint=dashboard` - Dashboard data
-- `GET /patient_api.php?endpoint=profile` - Patient profile
-- `PUT /patient_api.php?endpoint=profile` - Update profile
-- `GET /patient_api.php?endpoint=appointments&type=upcoming` - Upcoming appointments
-- `POST /patient_api.php?endpoint=appointments` - Book appointment
-- `DELETE /patient_api.php?endpoint=appointments&id={id}` - Cancel appointment
-- `GET /patient_api.php?endpoint=medical-records&type=medications` - Get medications
-- `GET /patient_api.php?endpoint=billing&type=balance` - Get balance
-- `POST /patient_api.php?endpoint=billing` - Process payment
 
 ## Troubleshooting
 
