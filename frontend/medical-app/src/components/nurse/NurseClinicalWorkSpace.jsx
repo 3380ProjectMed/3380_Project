@@ -765,18 +765,10 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
       <div className="medications-section">
         <div className="section-header">
           <h3>💊 Current Medications (Active Prescriptions)</h3>
-          <button 
-            className="btn-add-item" 
-            onClick={() => {
-              setMedicationForm(prev => ({ ...prev, type: 'prescription' }));
-              setShowMedicationForm(true);
-            }}
-            disabled={managementLoading}
-            title="Add Active Prescription"
-          >
-            <Pill size={16} />
-            Add Prescription
-          </button>
+          <span className="info-badge">View Only - Managed by Doctors</span>
+        </div>
+        <div className="sync-info">
+          <small>💊 <em>Active prescriptions are managed by doctors and displayed here for reference</em></small>
         </div>
         
         {/* Active Prescriptions List */}
@@ -787,14 +779,7 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
                 <div className="med-header">
                   <div className="med-name">{med.medication_name}</div>
                   <div className="med-status active">ACTIVE</div>
-                  <button 
-                    className="btn-remove"
-                    onClick={() => handleRemoveMedication(med.prescription_id, 'prescription')}
-                    disabled={managementLoading}
-                    title="Remove prescription"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="med-managed-by">👨‍⚕️ Doctor Managed</div>
                 </div>
                 <div className="med-details">
                   {med.dosage && <span className="med-dosage">{med.dosage}</span>}
@@ -830,10 +815,10 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
               setShowMedicationForm(true);
             }}
             disabled={managementLoading}
-            title="Add to Medication History"
+            title="Add Medication to History"
           >
             <Plus size={16} />
-            Add to History
+            Add Medication
           </button>
         </div>
         
@@ -896,24 +881,19 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
                 />
               </div>
               
-              {/* Date fields - show for both prescriptions and history */}
+              {/* Date fields for medication history */}
               <div className="form-row">
                 <div className="date-input-group">
-                  <label>
-                    {medicationForm.type === 'prescription' ? 'Start Date *' : 'Start Date (when first taken)'}
-                  </label>
+                  <label>Start Date (when first taken)</label>
                   <input
                     type="date"
                     value={medicationForm.start_date}
                     onChange={(e) => setMedicationForm(prev => ({ ...prev, start_date: e.target.value }))}
                     className="form-input"
-                    required={medicationForm.type === 'prescription'}
                   />
                 </div>
                 <div className="date-input-group">
-                  <label>
-                    {medicationForm.type === 'prescription' ? 'End Date (optional)' : 'End Date (when stopped)'}
-                  </label>
+                  <label>End Date (when stopped)</label>
                   <input
                     type="date"
                     value={medicationForm.end_date}
@@ -935,14 +915,6 @@ function NurseClinicalWorkspace({ selectedPatient, onClose, onSave }) {
                   <option value="Topical">Topical</option>
                   <option value="Inhaled">Inhaled</option>
                   <option value="Other">Other</option>
-                </select>
-                <select
-                  value={medicationForm.type}
-                  onChange={(e) => setMedicationForm(prev => ({ ...prev, type: e.target.value }))}
-                  className="form-select"
-                >
-                  <option value="history">Add to History</option>
-                  <option value="prescription">Add as Prescription</option>
                 </select>
               </div>
               <input
