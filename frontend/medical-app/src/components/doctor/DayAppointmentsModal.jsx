@@ -2,9 +2,6 @@ import React from 'react';
 import { X } from 'lucide-react';
 import './DayAppointmentsModal.css';
 
-/**
- * Modal to display all appointments for a selected day
- */
 function DayAppointmentsModal({ isOpen, onClose, date, appointments, onAppointmentClick }) {
   if (!isOpen) return null;
 
@@ -24,8 +21,8 @@ function DayAppointmentsModal({ isOpen, onClose, date, appointments, onAppointme
   };
 
   const handleAppointmentClick = (appointment) => {
-    onClose(); // Close modal first
-    onAppointmentClick(appointment); // Then open appointment
+    onClose(); 
+    onAppointmentClick(appointment); 
   };
 
   const handleBackdropClick = (e) => {

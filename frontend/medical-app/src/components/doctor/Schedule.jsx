@@ -3,18 +3,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import './Schedule.css';
 import DayAppointmentsModal from './DayAppointmentsModal';
 
-/**
- * Schedule Component - FINAL VERSION
- * 
- * Features:
- * - Monthly calendar view with LARGER day boxes
- * - Location badges for each working day
- * - Today's date highlighted with blue circle (19)
- * - Click on day → Shows modal with list of ALL appointments
- * - Click on individual appointment → Opens directly
- * - Location filtering
- * - Scrollable appointment lists
- */
 function Schedule({ onAppointmentClick }) {
   const [currentDate, setCurrentDate] = useState(new Date()); 
   const [selectedLocation, setSelectedLocation] = useState('all');
@@ -22,8 +10,6 @@ function Schedule({ onAppointmentClick }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Modal state for showing day appointments
   const [showDayModal, setShowDayModal] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
   const [selectedDayAppointments, setSelectedDayAppointments] = useState([]);
@@ -67,16 +53,13 @@ function Schedule({ onAppointmentClick }) {
         const flat = [];
         Object.keys(grouped).forEach(dateKey => {
           grouped[dateKey].forEach(a => {
-            // compute a Chicago date-only string (YYYY-MM-DD) to avoid timezone shifts
             let dateOnlyChicago = null;
             try {
               if (a.appointment_date) {
                 const parsed = new Date(a.appointment_date);
-                // 'en-CA' format produces YYYY-MM-DD
                 dateOnlyChicago = parsed.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
               }
             } catch (err) {
-              // ignore and fallback to group key below
             }
 
             flat.push({
@@ -155,16 +138,13 @@ function Schedule({ onAppointmentClick }) {
     
     if (!assignedLocation) return [];
     
-    // target date in YYYY-MM-DD for the clicked day (Chicago semantics)
     const target = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
     let dayAppointments = appointments.filter(app => {
-      // prefer the precomputed Chicago date-only
       if (app.dateOnlyChicago) {
         return app.dateOnlyChicago === target;
       }
 
-      // fallback: compute Chicago date-only on the fly
       try {
         if (app.appointment_date) {
           const parsed = new Date(app.appointment_date);
@@ -172,10 +152,8 @@ function Schedule({ onAppointmentClick }) {
           if (dChicago === target) return true;
         }
       } catch (err) {
-        // ignore
       }
 
-      // last-resort: original local-parse matching (may be subject to timezone issues)
       const appDate = new Date(app.appointment_date);
       return appDate.getDate() === day &&
              appDate.getMonth() === month &&
@@ -215,20 +193,17 @@ function Schedule({ onAppointmentClick }) {
     return 'LOC';
   };
 
-  // FIXED: Show modal instead of opening first appointment
   const handleDayClick = (day, e) => {
-    // Check if the click was on an appointment item
     if (e.target.closest('.appointment-item')) {
-      return; // Let the appointment click handler deal with it
+      return; 
     }
     
     const dayAppointments = getAppointmentsForDay(day);
     
     if (dayAppointments.length === 0) {
-      return; // Don't show modal if no appointments
+      return; 
     }
     
-    // Show modal with all appointments for this day
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;

@@ -310,7 +310,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
             </div>
           </div>
 
-          {/* ===== QUICK ACTIONS ===== */}
+          {/* QUICK ACTIONS */}
           <div className="quick-actions">
             <button 
               className="action-btn" 
@@ -335,7 +335,7 @@ function Dashboard({ setCurrentPage, onAppointmentClick }) {
             </button>
           </div>
 
-          {/* ===== TODAY'S SCHEDULE ===== */}
+          {/* TODAY'S SCHEDULE */}
           <div className="schedule-section">
             <div className="section-header">
               <div className="section-header-left">

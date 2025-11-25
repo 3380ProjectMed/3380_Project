@@ -8,7 +8,6 @@ import './Report.css';
 
 export default function AppointmentReport() {
 
-  // Filter state
   const [filters, setFilters] = useState({
     StartDate: new Date().toISOString().split('T')[0].slice(0, 8) + '01',
     EndDate: new Date().toISOString().split('T')[0],
@@ -19,14 +18,12 @@ export default function AppointmentReport() {
     NurseID: 'all'
   });
 
-  // Data state
   const [appointments, setAppointments] = useState([]);
   const [statistics, setStatistics] = useState(null);
   const [appointmentsByDay, setAppointmentsByDay] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Dropdown options state
   const [offices, setOffices] = useState([]);
   const [nurses, setNurses] = useState([]);
 
