@@ -905,6 +905,21 @@ const handleEditCondition = (item) => {
       </div>
     );
   }
+  if (!patientData && !loading) {
+    return (
+      <div className="clinical-workspace">
+        <div className="workspace-header">
+          <h2>Clinical Workspace</h2>
+          <button onClick={onClose} className="btn-close">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="workspace-empty" style={{ padding: '2rem', textAlign: 'center' }}>
+          <p style={{ fontSize: '1rem', color: '#444' }}>You have to click on the appointment to see the patient</p>
+        </div>
+      </div>
+    );
+  }
 
   const patientInfo = patientData?.patient;
   const visit = patientData?.visit;
