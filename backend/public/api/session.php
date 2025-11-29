@@ -161,6 +161,6 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
         'cookie_lifetime' => $cookieLifetime,   // how long cookie stays in browser
         'cookie_httponly' => true,
         'cookie_secure'   => $isHttps,
-        'cookie_samesite' => 'Lax',
+        'cookie_samesite' => $isHttps ? 'None' : 'Lax',
     ]);
 }
